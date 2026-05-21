@@ -14,6 +14,7 @@ from pyomo.common.dependencies import (
     pandas as pd,
     pandas_available,
     scipy_available,
+    attempt_import,
 )
 
 from pyomo.common.errors import DeveloperError
@@ -54,6 +55,7 @@ import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
+parameterized, parameterized_available = attempt_import("parameterized")
 
 
 class _DummyExperiment:
@@ -838,19 +840,19 @@ class TestDoEErrors(unittest.TestCase):
         ):
             doe_obj.create_objective_function()
 
-    def test_optimize_experiments_init_argument_validation_cases(self):
-        # These argument checks all fail before any model build, so a single
-        # table-driven test keeps the user-facing validation contracts aligned
-        # without repeating the same dummy DoE setup for each branch.
-        cases = [
+    @unittest.skipIf(
+        not parameterized_available, "The 'parameterized' package is not available"
+    )
+    @parameterized.parameterized.expand(
+        [
             (
-                "unsupported init_method",
+                "unsupported_init_method",
                 {"init_method": "bad"},
                 ValueError,
                 r"``init_method`` must be one of \[None, 'latin_hypercube_sampling'\], got 'bad'.",
             ),
             (
-                "enum init_method still validates init_n_samples",
+                "enum_init_method_still_validates_init_n_samples",
                 {
                     "init_method": InitializationMethod.latin_hypercube_sampling,
                     "init_n_samples": 0,
@@ -859,19 +861,19 @@ class TestDoEErrors(unittest.TestCase):
                 r"``init_n_samples`` must be a positive integer, got 0.",
             ),
             (
-                "non-positive init_n_samples",
+                "non_positive_init_n_samples",
                 {"init_method": "latin_hypercube_sampling", "init_n_samples": 0},
                 ValueError,
                 r"``init_n_samples`` must be a positive integer, got 0.",
             ),
             (
-                "non-integer init_n_samples",
+                "non_integer_init_n_samples",
                 {"init_method": "latin_hypercube_sampling", "init_n_samples": 2.5},
                 ValueError,
                 r"``init_n_samples`` must be a positive integer, got 2.5.",
             ),
             (
-                "init_seed must be integer",
+                "init_seed_must_be_integer",
                 {
                     "n_exp": 2,
                     "init_method": "latin_hypercube_sampling",
@@ -882,12 +884,15 @@ class TestDoEErrors(unittest.TestCase):
                 r"``init_seed`` must be None or an integer",
             ),
         ]
-
-        for label, kwargs, exc_type, regex in cases:
-            with self.subTest(case=label):
-                doe_obj = self._make_dummy_optimize_experiments_doe()
-                with self.assertRaisesRegex(exc_type, regex):
-                    doe_obj.optimize_experiments(**kwargs)
+    )
+    def test_optimize_experiments_init_argument_validation_cases(
+        self, _label, kwargs, exc_type, regex
+    ):
+        # These argument checks all fail before any model build, so this
+        # parameterized test keeps contracts aligned without duplicated setup.
+        doe_obj = self._make_dummy_optimize_experiments_doe()
+        with self.assertRaisesRegex(exc_type, regex):
+            doe_obj.optimize_experiments(**kwargs)
 
     def test_optimize_experiments_lhs_requires_template_mode(self):
         # Tests that LHS initialization is disallowed in user-initialized
@@ -917,12 +922,13 @@ class TestDoEErrors(unittest.TestCase):
         finally:
             doe_module.scipy_available = old_scipy_available
 
-    def test_optimize_experiments_general_argument_validation_cases(self):
-        # These are the remaining lightweight API validations whose only
-        # contract is the error raised for a bad user-facing kwarg/value pair.
-        cases = [
+    @unittest.skipIf(
+        not parameterized_available, "The 'parameterized' package is not available"
+    )
+    @parameterized.parameterized.expand(
+        [
             (
-                "n_exp disallowed with multi-experiment list",
+                "n_exp_disallowed_with_multi_experiment_list",
                 2,
                 {"n_exp": 2},
                 ValueError,
@@ -930,21 +936,21 @@ class TestDoEErrors(unittest.TestCase):
                 "than one experiment",
             ),
             (
-                "n_exp must be positive",
+                "n_exp_must_be_positive",
                 1,
                 {"n_exp": 0},
                 ValueError,
                 r"``n_exp`` must be a positive integer, got 0.",
             ),
             (
-                "results_file must be str or Path",
+                "results_file_must_be_str_or_path",
                 1,
                 {"results_file": 5},
                 ValueError,
                 r"``results_file`` must be either a Path object or a string.",
             ),
             (
-                "init_solver must have solve",
+                "init_solver_must_have_solve",
                 1,
                 {"init_solver": object()},
                 ValueError,
@@ -952,14 +958,15 @@ class TestDoEErrors(unittest.TestCase):
                 "method.",
             ),
         ]
-
-        for label, n_experiments, kwargs, exc_type, regex in cases:
-            with self.subTest(case=label):
-                doe_obj = self._make_dummy_optimize_experiments_doe(
-                    n_experiments=n_experiments
-                )
-                with self.assertRaisesRegex(exc_type, regex):
-                    doe_obj.optimize_experiments(**kwargs)
+    )
+    def test_optimize_experiments_general_argument_validation_cases(
+        self, _label, n_experiments, kwargs, exc_type, regex
+    ):
+        # These are remaining lightweight API validations whose only contract
+        # is the raised error for a bad user-facing kwarg/value pair.
+        doe_obj = self._make_dummy_optimize_experiments_doe(n_experiments=n_experiments)
+        with self.assertRaisesRegex(exc_type, regex):
+            doe_obj.optimize_experiments(**kwargs)
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -970,25 +977,31 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
     def _make_solver(self):
         return make_ipopt_solver()
 
-    def test_optimize_experiments_non_greybox_rejects_e_and_me_objectives(self):
+    @unittest.skipIf(
+        not parameterized_available, "The 'parameterized' package is not available"
+    )
+    @parameterized.parameterized.expand(
+        [("minimum_eigenvalue",), ("condition_number",)]
+    )
+    def test_optimize_experiments_non_greybox_rejects_e_and_me_objectives(
+        self, objective_option
+    ):
         # E-opt and ME-opt require the greybox objective path in
         # optimize_experiments(); the standard algebraic multi-experiment build
         # should fail fast with a user-facing validation error instead.
-        for objective_option in ("minimum_eigenvalue", "condition_number"):
-            with self.subTest(objective=objective_option):
-                doe_obj = DesignOfExperiments(
-                    experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
-                    objective_option=objective_option,
-                    step=1e-2,
-                    solver=self._make_solver(),
-                )
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
+            objective_option=objective_option,
+            step=1e-2,
+            solver=self._make_solver(),
+        )
 
-                with self.assertRaisesRegex(
-                    ValueError,
-                    rf"objective_option='{objective_option}' requires "
-                    r"use_grey_box_objective=True\.",
-                ):
-                    doe_obj.optimize_experiments(n_exp=2)
+        with self.assertRaisesRegex(
+            ValueError,
+            rf"objective_option='{objective_option}' requires "
+            r"use_grey_box_objective=True\.",
+        ):
+            doe_obj.optimize_experiments(n_exp=2)
 
     def test_optimize_experiments_trace_requires_cholesky_or_greybox(self):
         # Multi-experiment trace uses the Cholesky-based build unless the

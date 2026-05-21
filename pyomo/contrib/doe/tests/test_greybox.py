@@ -1563,8 +1563,14 @@ class TestMultiexperimentBuild(unittest.TestCase):
             places=7,
         )
 
+    @unittest.skipIf(
+        not parameterized_available, "The 'parameterized' package is not available"
+    )
+    @parameterized.parameterized.expand(
+        [("minimum_eigenvalue",), ("condition_number",)]
+    )
     def test_optimize_experiments_greybox_lhs_initialization_scores_e_opt_and_me_opt(
-        self,
+        self, objective_option
     ):
         # Rooney-Biegler integration check for the LHS candidate-combination
         # scorer on greybox-only objectives (E-opt and ME-opt). Compare the
@@ -1573,75 +1579,68 @@ class TestMultiexperimentBuild(unittest.TestCase):
         lhs_n_samples = 4
         lhs_seed = 19
 
-        for objective_option in ("minimum_eigenvalue", "condition_number"):
-            with self.subTest(objective=objective_option):
-                doe_obj = _make_multiexperiment_greybox_doe(
-                    objective_option=objective_option,
-                    prior_FIM=np.zeros((2, 2)),
-                    grey_box_solver=_make_cyipopt_solver(tol=1e-6),
-                )
+        doe_obj = _make_multiexperiment_greybox_doe(
+            objective_option=objective_option,
+            prior_FIM=np.zeros((2, 2)),
+            grey_box_solver=_make_cyipopt_solver(tol=1e-6),
+        )
 
-                doe_obj.optimize_experiments(
-                    n_exp=2,
-                    init_method="latin_hypercube_sampling",
-                    init_n_samples=lhs_n_samples,
-                    init_seed=lhs_seed,
-                )
+        doe_obj.optimize_experiments(
+            n_exp=2,
+            init_method="latin_hypercube_sampling",
+            init_n_samples=lhs_n_samples,
+            init_seed=lhs_seed,
+        )
 
-                lhs_init = doe_obj.results["initialization"]
-                lhs_diag = {
-                    "best_obj": lhs_init["best_initial_objective_value"],
-                    "timed_out": lhs_init["timed_out"],
-                }
-                actual_points = lhs_init["selected_initial_designs"]
-                candidate_points = _generate_lhs_candidate_points(
-                    doe_obj, lhs_n_samples=lhs_n_samples, lhs_seed=lhs_seed
-                )
-                candidate_norm = {
-                    tuple(np.round(point, 8)) for point in candidate_points
-                }
+        lhs_init = doe_obj.results["initialization"]
+        lhs_diag = {
+            "best_obj": lhs_init["best_initial_objective_value"],
+            "timed_out": lhs_init["timed_out"],
+        }
+        actual_points = lhs_init["selected_initial_designs"]
+        candidate_points = _generate_lhs_candidate_points(
+            doe_obj, lhs_n_samples=lhs_n_samples, lhs_seed=lhs_seed
+        )
+        candidate_norm = {tuple(np.round(point, 8)) for point in candidate_points}
 
-                self.assertEqual(
-                    doe_obj.results["initialization"]["method"],
-                    "latin_hypercube_sampling",
-                )
-                self.assertTrue(np.isfinite(lhs_diag["best_obj"]))
-                self.assertGreater(lhs_diag["best_obj"], 0.0)
+        self.assertEqual(
+            doe_obj.results["initialization"]["method"], "latin_hypercube_sampling"
+        )
+        self.assertTrue(np.isfinite(lhs_diag["best_obj"]))
+        self.assertGreater(lhs_diag["best_obj"], 0.0)
 
-                for point in actual_points:
-                    self.assertIn(tuple(np.round(point, 8)), candidate_norm)
+        for point in actual_points:
+            self.assertIn(tuple(np.round(point, 8)), candidate_norm)
 
-                if doe_obj.objective_option in DesignOfExperiments._MAXIMIZE_OBJECTIVES:
-                    best_obj = -np.inf
-                    is_better = lambda new, best: new > best
-                else:
-                    best_obj = np.inf
-                    is_better = lambda new, best: new < best
+        if doe_obj.objective_option in DesignOfExperiments._MAXIMIZE_OBJECTIVES:
+            best_obj = -np.inf
+            is_better = lambda new, best: new > best
+        else:
+            best_obj = np.inf
+            is_better = lambda new, best: new < best
 
-                # Build exhaustive reference over all candidate pairs.
-                candidate_fims = [
-                    doe_obj._compute_fim_at_point_no_prior(0, list(point))
-                    for point in candidate_points
-                ]
-                for combo in itertools.combinations(range(len(candidate_points)), 2):
-                    fim_total = sum(
-                        (candidate_fims[idx] for idx in combo), np.zeros((2, 2))
-                    )
-                    obj_val = doe_obj._evaluate_objective_from_fim(fim_total)
-                    if is_better(obj_val, best_obj):
-                        best_obj = obj_val
+        # Build exhaustive reference over all candidate pairs.
+        candidate_fims = [
+            doe_obj._compute_fim_at_point_no_prior(0, list(point))
+            for point in candidate_points
+        ]
+        for combo in itertools.combinations(range(len(candidate_points)), 2):
+            fim_total = sum((candidate_fims[idx] for idx in combo), np.zeros((2, 2)))
+            obj_val = doe_obj._evaluate_objective_from_fim(fim_total)
+            if is_better(obj_val, best_obj):
+                best_obj = obj_val
 
-                actual_fim_total = sum(
-                    (
-                        doe_obj._compute_fim_at_point_no_prior(0, list(point))
-                        for point in actual_points
-                    ),
-                    np.zeros((2, 2)),
-                )
-                actual_obj = doe_obj._evaluate_objective_from_fim(actual_fim_total)
+        actual_fim_total = sum(
+            (
+                doe_obj._compute_fim_at_point_no_prior(0, list(point))
+                for point in actual_points
+            ),
+            np.zeros((2, 2)),
+        )
+        actual_obj = doe_obj._evaluate_objective_from_fim(actual_fim_total)
 
-                self.assertAlmostEqual(actual_obj, best_obj, places=12)
-                self.assertAlmostEqual(lhs_diag["best_obj"], best_obj, places=12)
+        self.assertAlmostEqual(actual_obj, best_obj, places=12)
+        self.assertAlmostEqual(lhs_diag["best_obj"], best_obj, places=12)
 
     def test_optimize_experiments_greybox_initialization_refreshes_inputs_after_square_solve(
         self,
@@ -1891,8 +1890,14 @@ class TestSingleExperimentSolve(unittest.TestCase):
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 @unittest.skipIf(not scipy_available, "scipy is not available")
 @unittest.skipIf(not pandas_available, "pandas is not available")
+@unittest.skipIf(
+    not parameterized_available, "The 'parameterized' package is not available"
+)
 class TestMultiexperimentError(unittest.TestCase):
-    def test_optimize_experiments_greybox_unsupported_objectives_are_rejected(self):
+    @parameterized.parameterized.expand([("pseudo_trace",), ("zero",)])
+    def test_optimize_experiments_greybox_unsupported_objectives_are_rejected(
+        self, objective_option
+    ):
         # These unsupported objectives share the same early-validation path, so
         # keep them in one table-driven test and verify none reaches the
         # external grey_box_solver interface.
@@ -1900,23 +1905,21 @@ class TestMultiexperimentError(unittest.TestCase):
             def solve(self, model, tee=False):
                 raise AssertionError("grey_box_solver.solve should not be reached")
 
-        for objective_option in ("pseudo_trace", "zero"):
-            with self.subTest(objective=objective_option):
-                doe_obj = DesignOfExperiments(
-                    experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
-                    objective_option=objective_option,
-                    use_grey_box_objective=True,
-                    step=1e-2,
-                    solver=make_ipopt_solver(),
-                    grey_box_solver=_UnusedGreyBoxSolver(),
-                )
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
+            objective_option=objective_option,
+            use_grey_box_objective=True,
+            step=1e-2,
+            solver=make_ipopt_solver(),
+            grey_box_solver=_UnusedGreyBoxSolver(),
+        )
 
-                with self.assertRaisesRegex(
-                    ValueError,
-                    "Grey-box objective support in optimize_experiments\\(\\) is only "
-                    "available",
-                ):
-                    doe_obj.optimize_experiments(n_exp=2)
+        with self.assertRaisesRegex(
+            ValueError,
+            "Grey-box objective support in optimize_experiments\\(\\) is only "
+            "available",
+        ):
+            doe_obj.optimize_experiments(n_exp=2)
 
 
 if __name__ == "__main__":
