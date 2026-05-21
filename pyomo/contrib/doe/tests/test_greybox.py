@@ -10,7 +10,6 @@ import copy
 import itertools
 import json
 import os.path
-from parameterized import parameterized
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -18,7 +17,10 @@ from pyomo.common.dependencies import (
     pandas as pd,
     pandas_available,
     scipy_available,
+    attempt_import,
 )
+
+parameterized, parameterized_available = attempt_import('parameterized')
 
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
@@ -1363,7 +1365,10 @@ class TestMultiexperimentBuild(unittest.TestCase):
             places=7,
         )
 
-    @parameterized.expand(
+    @unittest.skipIf(
+        not parameterized_available, "The 'parameterized' package is not available"
+    )
+    @parameterized.parameterized.expand(
         [("determinant",), ("trace",), ("minimum_eigenvalue",), ("condition_number",)]
     )
     def test_optimize_experiments_greybox_outputs_match_numpy_for_supported_objective(
