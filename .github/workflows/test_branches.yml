@@ -150,9 +150,10 @@ jobs:
         - os: ubuntu-latest
           python: '3.10'
           other: /slim
-          slim: 1
+          slim: 2
           TARGET: linux
           PYENV: pip
+
 
     steps:
     - name: Checkout Pyomo source
@@ -168,7 +169,7 @@ jobs:
             echo "GHA_JOBGROUP=other" >> $GITHUB_ENV
         fi
         EXTRAS=tests
-        if test -z "${{matrix.slim}}"; then
+        if test -z "${{matrix.slim}}" -o "${{matrix.slim}}" = 1; then
             EXTRAS="$EXTRAS,docs,optional"
         fi
         echo "EXTRAS=$EXTRAS" >> $GITHUB_ENV
