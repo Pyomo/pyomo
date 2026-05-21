@@ -29,6 +29,7 @@ from io import StringIO
 # specifically later
 from unittest import *
 import unittest as _unittest
+import pyomo.common.dependencies as deps
 
 from pyomo.common.collections import Mapping, Sequence
 from pyomo.common.dependencies import attempt_import, check_min_version, multiprocessing
@@ -43,6 +44,10 @@ from unittest import mock
 # Note that importing test modules may cause this import to be resolved
 # (and then enforce a strict dependence on pytest)
 pytest, pytest_available = attempt_import('pytest')
+
+#: A time limit for acquiring the capture_output_lock lock
+#: before terminating a subprocess
+_timeout_terminate_timeout = 2  # seconds
 
 
 def _defaultFormatter(msg, default):
@@ -487,7 +492,27 @@ def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
                 if pipe_recv.poll(seconds):
                     resultType, result, stdout = pipe_recv.recv()
                 else:
-                    test_proc.terminate()
+                    # Note: because we are using capture_output within
+                    # the _runner handler, we can trigger a deadlock
+                    # when we call terminate() while the _runner's
+                    # capture_output holds the capture_output_lock lock
+                    # (terminate() bypasses all __exit__ handlers!).  To
+                    # avoid that, we will grab the lock here before
+                    # terminating the subprocess.
+                    locked = deps.capture_output_lock.acquire(
+                        timeout=_timeout_terminate_timeout
+                    )
+                    if not locked:
+                        logging.getLogger(__name__).error(
+                            "Failed to acquire capture_output_lock "
+                            "Lock before terminating subprocess on timeout: "
+                            "process deadlock is likely."
+                        )
+                    try:
+                        test_proc.terminate()
+                    finally:
+                        if locked:
+                            deps.capture_output_lock.release()
                     raise timeout_raises(
                         "test timed out after %s seconds" % (seconds,)
                     ) from None

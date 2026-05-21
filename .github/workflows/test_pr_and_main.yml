@@ -161,6 +161,13 @@ jobs:
         - os: ubuntu-latest
           python: '3.10'
           other: /slim
+          slim: 2
+          TARGET: linux
+          PYENV: pip
+
+        - os: ubuntu-latest
+          python: 3.13
+          other: /nosolvers
           slim: 1
           TARGET: linux
           PYENV: pip
@@ -215,7 +222,7 @@ jobs:
             echo "GHA_JOBGROUP=other" >> $GITHUB_ENV
         fi
         EXTRAS=tests
-        if test -z "${{matrix.slim}}"; then
+        if test -z "${{matrix.slim}}" -o "${{matrix.slim}}" = 1; then
             EXTRAS="$EXTRAS,docs,optional"
         fi
         echo "EXTRAS=$EXTRAS" >> $GITHUB_ENV
@@ -382,6 +389,12 @@ jobs:
             python -m pip install --cache-dir cache/pip maingopy \
                 || echo "WARNING: MAiNGO is not available"
             if [[ ${{matrix.python}} == pypy* ]]; then
+                echo "skipping SCIP for pypy"
+            else
+                python -m pip install --cache-dir cache/pip pyscipopt \
+                    || echo "WARNING: SCIP is not available"
+            fi
+            if [[ ${{matrix.python}} == pypy* ]]; then
                 echo "skipping wntr for pypy"
             else
                 python -m pip install wntr \
@@ -470,7 +483,7 @@ jobs:
             else
                 XPRESS='xpress'
             fi
-            for PKG in "$CPLEX" docplex gurobi "$XPRESS" cyipopt pymumps scip; do
+            for PKG in "$CPLEX" docplex gurobi "$XPRESS" cyipopt pymumps scip pyscipopt; do
                 echo ""
                 echo "*** Install $PKG ***"
                 echo ""
