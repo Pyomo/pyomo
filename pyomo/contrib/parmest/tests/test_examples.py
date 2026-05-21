@@ -54,6 +54,23 @@ class TestRooneyBieglerExamples(unittest.TestCase):
 
         likelihood_ratio_example.main()
 
+    def test_regularization_example(self):
+        from pyomo.contrib.parmest.examples.rooney_biegler import regularization_example
+
+        results = regularization_example.main()
+        # Keep this as a lightweight contract test: example must return both
+        # regularization modes with expected outputs
+        self.assertIn("L2", results)
+
+        l2_obj, l2_theta, _ = results["L2"]
+
+        # expected values for the regularized example are close to the reference values
+        # (asymptote ~ 19.14, rate_constant ~ 0.53), which are the same as the unregularized example
+        relative_error = abs(l2_theta['asymptote'] - 19.1426) / 19.1426
+        self.assertTrue(relative_error < 0.01)
+        relative_error = abs(l2_theta['rate_constant'] - 0.5311) / 0.5311
+        self.assertTrue(relative_error < 0.01)
+
 
 @unittest.skipUnless(pynumero_ASL_available, "test requires libpynumero_ASL")
 @unittest.skipUnless(ipopt_available, "The 'ipopt' solver is not available")
