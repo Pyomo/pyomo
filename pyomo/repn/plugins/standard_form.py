@@ -484,7 +484,6 @@ class _LinearStandardFormCompiler_impl:
             obj_index_ptr.append(obj_index_ptr[-1] + N)
             if with_debug_timing:
                 timer.toc('Objective %s', obj, level=logging.DEBUG)
-        objectives = linear_objectives
 
         #
         # Tabulate constraints
@@ -716,7 +715,7 @@ class _LinearStandardFormCompiler_impl:
             rhs,
             rows,
             columns,
-            objectives,
+            linear_objectives,
             eliminated_vars,
             nonlinear_constraints=nonlinear_constraints if allow_nonlinear else None,
             nonlinear_objectives=nonlinear_objectives if allow_nonlinear else None,
