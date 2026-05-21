@@ -4082,7 +4082,7 @@ class TestCloneExpression(unittest.TestCase):
             expr2 = expr1.clone()
             self.assertEqual(expr1(), 75)
             self.assertEqual(expr2(), 75)
-            # Note that since one of the args is a sum expression, the _args_
+            # Note that since one of the args is a sum expression, the _args
             # in the sum is a *list*, which will be duplicated by deepcopy.
             # This will cause the two args in the Product to be different.
             self.assertNotEqual(id(expr1), id(expr2))
@@ -4103,7 +4103,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1(), 0.5)
             self.assertEqual(expr2(), 0.5)
             self.assertNotEqual(id(expr1), id(expr2))
-            # Note: _args_ are the same because tuples are not copied
+            # Note: _args are the same because tuples are not copied
             self.assertEqual(id(expr1._larg), id(expr2._larg))
             self.assertEqual(id(expr1._rarg), id(expr2._rarg))
             self.assertEqual(id(expr1.arg(0)), id(expr2.arg(0)))
@@ -4124,7 +4124,7 @@ class TestCloneExpression(unittest.TestCase):
             expr2 = expr1.clone()
             self.assertEqual(expr1(), 1 / 3.0)
             self.assertEqual(expr2(), 1 / 3.0)
-            # Note that since one of the args is a sum expression, the _args_
+            # Note that since one of the args is a sum expression, the _args
             # in the sum is a *list*, which will be duplicated by deepcopy.
             # This will cause the two args in the Product to be different.
             self.assertNotEqual(id(expr1), id(expr2))

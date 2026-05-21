@@ -23,10 +23,10 @@ def _sum_two_units(_self, _other):
 
 
 def _sum_cumul_and_unit(_cumul, _unit):
-    if _cumul.nargs() == len(_cumul._args_):
+    if _cumul.nargs() == len(_cumul._args):
         # we can just append to the cumul list
-        _cumul._args_.append(_unit)
-        return CumulativeFunction(_cumul._args_, nargs=len(_cumul._args_))
+        _cumul._args.append(_unit)
+        return CumulativeFunction(_cumul._args, nargs=len(_cumul._args))
     else:
         return CumulativeFunction(_cumul.args + [_unit])
 
@@ -38,11 +38,11 @@ def _sum_unit_and_cumul(_unit, _cumul):
 
 
 def _sum_cumuls(_self, _other):
-    if _self.nargs() == len(_self._args_):
-        _self._args_.extend(_other.args)
-        return CumulativeFunction(_self._args_, nargs=len(_self._args_))
+    if _self.nargs() == len(_self._args):
+        _self._args.extend(_other.args)
+        return CumulativeFunction(_self._args, nargs=len(_self._args))
     else:
-        # we have to clone the list of _args_
+        # we have to clone the list of _args
         return CumulativeFunction(_self.args + _other.args)
 
 
@@ -51,10 +51,10 @@ def _subtract_two_units(_self, _other):
 
 
 def _subtract_cumul_and_unit(_cumul, _unit):
-    if _cumul.nargs() == len(_cumul._args_):
+    if _cumul.nargs() == len(_cumul._args):
         # we can just append to the cumul list
-        _cumul._args_.append(NegatedStepFunction((_unit,)))
-        return CumulativeFunction(_cumul._args_, nargs=len(_cumul._args_))
+        _cumul._args.append(NegatedStepFunction((_unit,)))
+        return CumulativeFunction(_cumul._args, nargs=len(_cumul._args))
     else:
         return CumulativeFunction(_cumul.args + [NegatedStepFunction((_unit,))])
 
@@ -68,11 +68,11 @@ def _subtract_unit_and_cumul(_unit, _cumul):
 
 
 def _subtract_cumuls(_self, _other):
-    if _self.nargs() == len(_self._args_):
-        _self._args_.extend([NegatedStepFunction((a,)) for a in _other.args])
-        return CumulativeFunction(_self._args_, nargs=len(_self._args_))
+    if _self.nargs() == len(_self._args):
+        _self._args.extend([NegatedStepFunction((a,)) for a in _other.args])
+        return CumulativeFunction(_self._args, nargs=len(_self._args))
     else:
-        # we have to clone the list of _args_
+        # we have to clone the list of _args
         return CumulativeFunction(
             _self.args + [NegatedStepFunction((a,)) for a in _other.args]
         )
@@ -147,7 +147,7 @@ class StepFunction(ExpressionBase):
 
     @property
     def args(self):
-        return self._args_[: self.nargs()]
+        return self._args[: self.nargs()]
 
 
 class Pulse(StepFunction):
@@ -165,7 +165,7 @@ class Pulse(StepFunction):
             interval_var is scheduled
     """
 
-    __slots__ = '_args_'
+    __slots__ = '_args'
 
     def __init__(self, args=None, interval_var=None, height=None):
         if args:
@@ -175,11 +175,11 @@ class Pulse(StepFunction):
                 )
             # Make sure this is a list because we may add to it if this is
             # summed with other StepFunctions
-            self._args_ = [arg for arg in args]
+            self._args = [arg for arg in args]
         else:
-            self._args_ = [interval_var, height]
+            self._args = [interval_var, height]
 
-        interval_var = self._args_[0]
+        interval_var = self._args[0]
         if (
             not isinstance(interval_var, IntervalVarData)
             or interval_var.ctype is not IntervalVar
@@ -192,11 +192,11 @@ class Pulse(StepFunction):
 
     @property
     def _interval_var(self):
-        return self._args_[0]
+        return self._args[0]
 
     @property
     def _height(self):
-        return self._args_[1]
+        return self._args[1]
 
     def nargs(self):
         return 2
@@ -217,7 +217,7 @@ class Step(StepFunction):
         height (int): The value of the step function after the time point
     """
 
-    __slots__ = '_args_'
+    __slots__ = '_args'
 
     def __new__(cls, time, height):
         if isinstance(time, int):
@@ -237,20 +237,20 @@ class Step(StepFunction):
 
 
 class StepBase(StepFunction):
-    __slots__ = '_args_'
+    __slots__ = '_args'
 
     def __init__(self, args):
         # Make sure this is a list because we may add to it if this is summed
         # with otther StepFunctions
-        self._args_ = [arg for arg in args]
+        self._args = [arg for arg in args]
 
     @property
     def _time(self):
-        return self._args_[0]
+        return self._args[0]
 
     @property
     def _height(self):
-        return self._args_[1]
+        return self._args[1]
 
     def nargs(self):
         return 2
@@ -286,13 +286,13 @@ class CumulativeFunction(StepFunction):
         args (list or tuple): Child elementary step functions of this node
     """
 
-    __slots__ = ('_args_', '_nargs')
+    __slots__ = ('_args', '_nargs')
     PRECEDENCE = SumExpression.PRECEDENCE
 
     def __init__(self, args, nargs=None):
         # We make sure args are a list because we might add to them later, if
         # this is summed with another cumulative function.
-        self._args_ = [arg for arg in args]
+        self._args = [arg for arg in args]
         if nargs is None:
             self._nargs = len(args)
         else:
@@ -321,10 +321,10 @@ class NegatedStepFunction(StepFunction):
        arg (Step or Pulse): Child elementary step function of this node
     """
 
-    __slots__ = '_args_'
+    __slots__ = '_args'
 
     def __init__(self, args):
-        self._args_ = args
+        self._args = args
 
     def nargs(self):
         return 1
@@ -356,9 +356,9 @@ class AlwaysIn(BooleanExpression):
                 raise ValueError(
                     "Cannot specify both args and any of {cumul_func, bounds, times}"
                 )
-            self._args_ = args
+            self._args = args
         else:
-            self._args_ = (cumul_func, bounds[0], bounds[1], times[0], times[1])
+            self._args = (cumul_func, bounds[0], bounds[1], times[0], times[1])
 
     def nargs(self):
         return 5
