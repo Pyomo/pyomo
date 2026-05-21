@@ -161,6 +161,13 @@ jobs:
         - os: ubuntu-latest
           python: '3.10'
           other: /slim
+          slim: 2
+          TARGET: linux
+          PYENV: pip
+
+        - os: ubuntu-latest
+          python: 3.13
+          other: /nosolvers
           slim: 1
           TARGET: linux
           PYENV: pip
@@ -215,7 +222,7 @@ jobs:
             echo "GHA_JOBGROUP=other" >> $GITHUB_ENV
         fi
         EXTRAS=tests
-        if test -z "${{matrix.slim}}"; then
+        if test -z "${{matrix.slim}}" -o "${{matrix.slim}}" -eq 1; then
             EXTRAS="$EXTRAS,docs,optional"
         fi
         echo "EXTRAS=$EXTRAS" >> $GITHUB_ENV
@@ -241,7 +248,7 @@ jobs:
 
     - name: TPL package download cache
       uses: actions/cache@v5
-      if: ${{ ! matrix.slim }}
+      if: ${{ ! matrix.slim || matrix.slim == 1 }}
       id: download-cache
       with:
         path: cache/download
