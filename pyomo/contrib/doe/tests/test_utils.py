@@ -342,7 +342,6 @@ class TestExperimentGradients(unittest.TestCase):
         self.assertEqual(jacobian.shape, expected.shape)
         self.assertTrue(np.allclose(jacobian, expected, atol=1e-7, rtol=1e-7))
 
-    @unittest.skipIf(not scipy_available, "scipy is not available")
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_rooney_biegler_symbolic_and_automatic_jacobians_agree_at_perturbed_point(
         self,
