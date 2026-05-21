@@ -9,13 +9,11 @@
 import copy
 import itertools
 
-from pyomo.common.dependencies import (
-    numpy as np,
-    numpy_available,
-    pandas as pd,
-    pandas_available,
-    scipy_available,
-)
+from pyomo.common.dependencies import attempt_import
+
+np, numpy_available = attempt_import("numpy", defer_import=True)
+pd, pandas_available = attempt_import("pandas", defer_import=True)
+scipy, scipy_available = attempt_import("scipy", defer_import=True)
 
 import pyomo.common.unittest as unittest
 

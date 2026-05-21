@@ -6,13 +6,11 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
-from pyomo.common.dependencies import (
-    numpy as np,
-    numpy_available,
-    pandas as pd,
-    pandas_available,
-    scipy_available,
-)
+from pyomo.common.dependencies import attempt_import
+
+np, numpy_available = attempt_import("numpy", defer_import=True)
+pd, pandas_available = attempt_import("pandas", defer_import=True)
+scipy, scipy_available = attempt_import("scipy", defer_import=True)
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo

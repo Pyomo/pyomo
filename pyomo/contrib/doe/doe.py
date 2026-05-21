@@ -31,14 +31,16 @@ import json
 import logging
 import math
 
-from pyomo.common.dependencies import (
-    numpy as np,
-    numpy_available,
-    pandas as pd,
-    pathlib,
-    matplotlib as plt,
-    scipy_available,
+from pyomo.common.dependencies import attempt_import, pathlib
+
+np, numpy_available = attempt_import("numpy", defer_import=True)
+pd, pandas_available = attempt_import("pandas", defer_import=True)
+plt, matplotlib_available = attempt_import(
+    "matplotlib",
+    defer_import=True,
+    deferred_submodules=["pyplot"],
 )
+scipy, scipy_available = attempt_import("scipy", defer_import=True)
 
 from pyomo.common.errors import DeveloperError
 from pyomo.common.timing import TicTocTimer
