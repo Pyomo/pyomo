@@ -36,9 +36,7 @@ from pyomo.common.dependencies import attempt_import, pathlib
 np, numpy_available = attempt_import("numpy", defer_import=True)
 pd, pandas_available = attempt_import("pandas", defer_import=True)
 plt, matplotlib_available = attempt_import(
-    "matplotlib",
-    defer_import=True,
-    deferred_submodules=["pyplot"],
+    "matplotlib", defer_import=True, deferred_submodules=["pyplot"]
 )
 scipy, scipy_available = attempt_import("scipy", defer_import=True)
 
