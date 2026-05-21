@@ -21,21 +21,26 @@
 ## AI-Use Disclosure
 <!-- Contributors must disclose whether and how AI tools were used and highlight any areas of uncertainty or where they want focused reviewer feedback -->
 
-- [ ] AI tools were NOT used during the preparation of this PR
+- [ ] **AI tools were NOT used during the preparation of this PR**
 
 or
 
-- [ ] AI tools contributed to the development of this PR
+- [ ] **AI tools contributed to the development of this PR**
     - [ ] AI tools generated documentation (including the PR description/comments, code comments, and/or Sphinx documentation)
     - [ ] AI tools generated tests (baselines, examples, and/or code)
     - [ ] AI tools generated code (apart from tests)
     
-    Review process:
-    - [ ] ALL AI-generated content was rewritten by the PR author
-    - [ ] ALL AI-generated content was thoroughly reviewed and verified by the PR author
-    - [ ] AI-generated content was contributed directly to the repository
+    *Review process (select ONE)*:
+    - [ ] **Rewritten**: All AI-generated content was rewritten by me before being committed.
+    - [ ] **Reviewed/verified**: I retained AI-generated content and verified it before committing. Verification included (as applicable):
+        - [ ] Ran the code and fixed issues
+        - [ ] Added and ran tests
+        - [ ] Checked correctness/logic of code and tests
+        - [ ] Checked for alignment with the contribution guide
+        - [ ] Considered security implications
+    - [ ] **As-is**: AI-generated content was commited directly to the repository
     
- Details / discussion:
+ **Notes for reviewers (optional):** <!-- Where should reviewers focus? What are you least confident about? -->
 
 ### Legal Acknowledgement
 
