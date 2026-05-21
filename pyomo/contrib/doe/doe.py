@@ -133,8 +133,11 @@ class DesignOfExperiments:
             Sensitivity-calculation backend used by the DoE workflow. Options
             are ``forward``, ``central``, ``backward``, ``pynumero``, and
             ``kaug``. If omitted, the value from ``fd_formula`` is used for
-            backward compatibility with the existing finite-difference
-            interface.
+            backward compatibility with the existing finite-difference interface.
+
+            Note: The ``kaug`` option is supported for FIM computation
+            through ``compute_FIM()``, but is not supported for DoE
+            optimization through ``run_doe()``.
         fd_formula:
             Finite difference formula for computing the sensitivity matrix. Must be
             one of [``central``, ``forward``, ``backward``], default: ``central``
