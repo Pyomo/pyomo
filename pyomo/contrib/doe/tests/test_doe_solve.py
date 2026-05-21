@@ -335,44 +335,6 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         # Note: When using prior_FIM, the relationship FIM = Q.T @ sigma_inv @ Q + prior_FIM
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q + prior_FIM)))
 
-    # This legacy Cholesky/bad-prior case is kept disabled in
-    # this PR. It is not part of the active regression signal, and this cleanup is
-    # focused on replacing active general-purpose coverage with
-    # Rooney-Biegler or polynomial examples rather than rewriting inactive,
-    # branch-specific tests.
-    def DISABLE_test_rooney_biegler_obj_cholesky_solve_bad_prior(self):
-        # [10/2025] This test has been disabled because it frequently
-        # (and randomly) returns "infeasible" when run on Windows.
-        from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
-
-        fd_method = "central"
-        obj_used = "determinant"
-
-        experiment = get_rooney_biegler_experiment()
-
-        DoE_args = get_standard_args(experiment, fd_method, obj_used)
-
-        # Specify a prior that is slightly negative definite
-        # Because it is less than the tolerance, it should be
-        # adjusted to be positive definite
-        # No error should be thrown
-        DoE_args["prior_FIM"] = -(_SMALL_TOLERANCE_DEFINITENESS / 100) * np.eye(4)
-
-        doe_obj = DesignOfExperiments(**DoE_args)
-
-        doe_obj.run_doe()
-
-        self.assertEqual(doe_obj.results["Solver Status"], "ok")
-
-        # assert that Q, F, and L are the same.
-        FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
-
-        # Since Cholesky is used, there is comparison for FIM and L.T @ L
-        self.assertTrue(np.all(np.isclose(FIM, L @ L.T)))
-
-        # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
-        self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
-
     # This test ensure that compute FIM runs without error using the
     # `sequential` option with central finite differences
     @unittest.skipIf(not pandas_available, "pandas is not available")
