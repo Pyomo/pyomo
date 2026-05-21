@@ -23,6 +23,7 @@ import threading
 import time
 
 import pyomo.common.dependencies as dependencies
+from pyomo.common.enums import CaptureOutputMode
 from pyomo.common.errors import DeveloperError
 from pyomo.common.log import LoggingIntercept, LogStream
 from pyomo.common.shutdown import python_is_shutting_down
@@ -56,6 +57,8 @@ except ImportError:
     _peek_available = False
 
 logger = logging.getLogger(__name__)
+
+OVERRIDE_CAPTURE_OUTPUT = CaptureOutputMode.NORMAL
 
 
 class _SignalFlush:
@@ -305,7 +308,9 @@ class capture_output:
         self.output_stream = None
         self.old = None
         self.tee = None
-        self.capture_fd = capture_fd
+        self.capture_fd = capture_fd and (
+            OVERRIDE_CAPTURE_OUTPUT & CaptureOutputMode.ENABLE_FD_CAPTURE
+        )
         self.context_stack = []
 
     def _enter_context(self, cm, prior_to=None):
@@ -488,8 +493,11 @@ class capture_output:
             # exception.
             self._exit_context_stack(*sys.exc_info())
             raise
-        sys.stdout = self.tee.STDOUT
-        sys.stderr = self.tee.STDERR
+        if OVERRIDE_CAPTURE_OUTPUT & CaptureOutputMode.ENABLE_STREAM_CAPTURE:
+            sys.stdout = self.tee.STDOUT
+            sys.stderr = self.tee.STDERR
+        else:
+            self.old = None
         buf = self.tee.ostreams
         if len(buf) == 1:
             buf = buf[0]

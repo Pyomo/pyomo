@@ -723,6 +723,22 @@ class TestCapture(unittest.TestCase):
         finally:
             tee._poll_timeout, tee._poll_timeout_deadlock = _save
 
+    def test_capture_output_override(self):
+        capture1 = tee.capture_output(capture_fd=True)
+        self.assertTrue(capture1.capture_fd)
+        with capture1 as OUT1:
+            try:
+                orig = tee.OVERRIDE_CAPTURE_OUTPUT
+                tee.OVERRIDE_CAPTURE_OUTPUT = tee.CaptureOutputMode.DISABLE
+                capture2 = tee.capture_output(capture_fd=True)
+                with capture2 as OUT2:
+                    self.assertFalse(capture2.capture_fd)
+                    print("Hello, World")
+                self.assertEqual(OUT2.getvalue(), "")
+            finally:
+                tee.OVERRIDE_CAPTURE_OUTPUT = orig
+        self.assertEqual(OUT1.getvalue(), "Hello, World\n")
+
 
 class BufferTester:
     def setUp(self):
