@@ -436,22 +436,19 @@ class _LinearStandardFormCompiler_impl:
         nonlinear_objectives = []
         for obj in objectives:
             if hasattr(obj, 'template_expr'):
-                if allow_nonlinear:
-                    try:
-                        offset, linear_index, linear_data, lb, ub = (
-                            template_visitor.expand_expression(obj, obj.template_expr())
-                        )
-                    except InvalidExpressionError:
+                try:
+                    offset, linear_index, linear_data, lb, ub = (
+                        template_visitor.expand_expression(obj, obj.template_expr())
+                    )
+                except InvalidExpressionError:
+                    if allow_nonlinear:
                         nonlinear_objectives.append(obj)
                         if with_debug_timing:
                             timer.toc(
                                 'Objective %s (nonlinear)', obj, level=logging.DEBUG
                             )
                         continue
-                else:
-                    offset, linear_index, linear_data, lb, ub = (
-                        template_visitor.expand_expression(obj, obj.template_expr())
-                    )
+                    raise
                 assert lb is None and ub is None
                 N = len(linear_index)
                 obj_index.append(linear_index)
@@ -511,22 +508,19 @@ class _LinearStandardFormCompiler_impl:
                 last_parent = con._component
 
             if hasattr(con, 'template_expr'):
-                if allow_nonlinear:
-                    try:
-                        offset, linear_index, linear_data, lb, ub = (
-                            template_visitor.expand_expression(con, con.template_expr())
-                        )
-                    except InvalidExpressionError:
+                try:
+                    offset, linear_index, linear_data, lb, ub = (
+                        template_visitor.expand_expression(con, con.template_expr())
+                    )
+                except InvalidExpressionError:
+                    if allow_nonlinear:
                         nonlinear_constraints.append(con)
                         if with_debug_timing:
                             timer.toc(
                                 'Constraint %s (nonlinear)', con, level=logging.DEBUG
                             )
                         continue
-                else:
-                    offset, linear_index, linear_data, lb, ub = (
-                        template_visitor.expand_expression(con, con.template_expr())
-                    )
+                    raise
                 N = len(linear_data)
             else:
                 # Note: lb and ub could be a number, expression, or None.
