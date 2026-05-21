@@ -30,6 +30,7 @@ from itertools import permutations, product
 import json
 import logging
 import math
+import sys
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -40,7 +41,7 @@ from pyomo.common.dependencies import (
     scipy_available,
 )
 
-from pyomo.common.errors import DeveloperError
+from pyomo.common.errors import DeveloperError, ApplicationError
 from pyomo.common.timing import TicTocTimer
 
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
@@ -52,10 +53,14 @@ if numpy_available and scipy_available:
 
 import pyomo.environ as pyo
 from pyomo.contrib.doe.utils import (
-    check_FIM,
+    assert_symmetric_positive_definite,
     compute_FIM_metrics,
     _SMALL_TOLERANCE_DEFINITENESS,
+    snake_traversal_grid_sampling,
 )
+
+from pyomo.contrib.parmest.utils.model_utils import update_model_from_suffix
+
 
 from pyomo.opt import SolverStatus
 
@@ -73,6 +78,17 @@ class FiniteDifferenceStep(Enum):
     forward = "forward"
     central = "central"
     backward = "backward"
+
+
+class DesignSpaceTraversal(Enum):
+    snake_traversal = "snake_traversal"
+    nested_for_loop = "nested_for_loop"
+
+
+class FactorialDesignMode(Enum):
+    design_vals = "design_vals"
+    linspace = "linspace"
+    step = "step"
 
 
 class DesignOfExperiments:
@@ -748,6 +764,9 @@ class DesignOfExperiments:
             if self.scale_nominal_param_value:
                 scale_factor *= v
 
+            # TODO: scale by response values (i.e., measurement values)
+            # if self.scale_response_values:
+            #     scale_factor /= measurement_vals_np[:, col_1].mean()
             # Calculate the column of the sensitivity matrix
             self.seq_jac[:, i] = (
                 measurement_vals_np[:, col_1] - measurement_vals_np[:, col_2]
@@ -1750,7 +1769,8 @@ class DesignOfExperiments:
                 )
             )
 
-        check_FIM(FIM)
+        # Check FIM is positive definite and symmetric
+        assert_symmetric_positive_definite(FIM)
 
         self.logger.info(
             "FIM provided matches expected dimensions from model "
@@ -1958,12 +1978,15 @@ class DesignOfExperiments:
                         2,
                     ),
                 )
-            except:
+            except Exception as err:
                 self.logger.warning(
-                    ":::::::::::Warning: Cannot converge this run.::::::::::::"
+                    "Cannot converge this run during FIM computation: %s", err
+                )
+                self.logger.debug(
+                    "Traceback for failed FIM full-factorial run:", exc_info=True
                 )
                 failures += 1
-                self.logger.warning("failed count:", failures)
+                self.logger.warning("failed count: %s", failures)
 
                 self._computed_FIM = np.zeros(self.prior_FIM.shape)
 
@@ -1972,38 +1995,437 @@ class DesignOfExperiments:
 
             FIM = self._computed_FIM
 
-            (
-                det_FIM,
-                trace_cov,
-                trace_FIM,
-                E_vals,
-                E_vecs,
-                D_opt,
-                A_opt,
-                pseudo_A_opt,
-                E_opt,
-                ME_opt,
-            ) = compute_FIM_metrics(FIM)
+            fim_metrics = compute_FIM_metrics(FIM)
 
             # Append the values for each of the experiment inputs
             for k, v in model.experiment_inputs.items():
                 fim_factorial_results[k.name].append(pyo.value(k))
 
-            fim_factorial_results["log10 D-opt"].append(D_opt)
-            fim_factorial_results["log10 A-opt"].append(A_opt)
-            fim_factorial_results["log10 pseudo A-opt"].append(pseudo_A_opt)
-            fim_factorial_results["log10 E-opt"].append(E_opt)
-            fim_factorial_results["log10 ME-opt"].append(ME_opt)
-            fim_factorial_results["eigval_min"].append(E_vals.min())
-            fim_factorial_results["eigval_max"].append(E_vals.max())
-            fim_factorial_results["det_FIM"].append(det_FIM)
-            fim_factorial_results["trace_cov"].append(trace_cov)
-            fim_factorial_results["trace_FIM"].append(trace_FIM)
+            fim_factorial_results["log10 D-opt"].append(fim_metrics.D_opt)
+            fim_factorial_results["log10 A-opt"].append(fim_metrics.A_opt)
+            fim_factorial_results["log10 pseudo A-opt"].append(fim_metrics.pseudo_A_opt)
+            fim_factorial_results["log10 E-opt"].append(fim_metrics.E_opt)
+            fim_factorial_results["log10 ME-opt"].append(fim_metrics.ME_opt)
+            fim_factorial_results["eigval_min"].append(fim_metrics.E_vals.min())
+            fim_factorial_results["eigval_max"].append(fim_metrics.E_vals.max())
+            fim_factorial_results["det_FIM"].append(fim_metrics.det_FIM)
+            fim_factorial_results["trace_cov"].append(fim_metrics.trace_cov)
+            fim_factorial_results["trace_FIM"].append(fim_metrics.trace_FIM)
             fim_factorial_results["solve_time"].append(time_set[-1])
 
         self.fim_factorial_results = fim_factorial_results
 
         return self.fim_factorial_results
+
+    def _resolve_factorial_design_mode(
+        self, design_vals=None, n_design_points=None, abs_step=None, rel_step=None
+    ):
+        """Resolve and validate mutually-exclusive design-space specification mode."""
+        num_des_args_provided = (
+            (design_vals is not None)
+            + (n_design_points is not None)
+            + (abs_step is not None or rel_step is not None)
+        )
+
+        if num_des_args_provided > 1:
+            raise ValueError(
+                "design_vals, n_design_points, and abs_step/rel_step are "
+                "mutually exclusive."
+            )
+
+        if num_des_args_provided == 0:
+            raise ValueError(
+                "Missing required argument: specify one of design_vals, "
+                "n_design_points, or abs_step/rel_step."
+            )
+
+        if design_vals is not None:
+            return FactorialDesignMode.design_vals
+        if n_design_points is not None:
+            return FactorialDesignMode.linspace
+        return FactorialDesignMode.step
+
+    def _normalize_factorial_design_vals(self, model, design_vals):
+        """Normalize design_vals keys to experiment-input components on model."""
+        design_name_map = {k.name: k for k in model.experiment_inputs.keys()}
+        normalized_design_vals = pyo.ComponentMap()
+        invalid_keys = []
+        for key, val in design_vals.items():
+            if isinstance(key, str):
+                mapped_key = None
+            elif isinstance(key, pyo.ComponentUID):
+                mapped_key = key.find_component_on(model)
+            else:
+                try:
+                    mapped_key = pyo.ComponentUID(key).find_component_on(model)
+                except Exception:
+                    mapped_key = None
+
+            if mapped_key is None or mapped_key not in model.experiment_inputs:
+                invalid_keys.append(key)
+                continue
+
+            if mapped_key in normalized_design_vals:
+                raise ValueError(
+                    "design_vals contains multiple keys that resolve to the "
+                    f"same experiment input component: {mapped_key.name}."
+                )
+
+            try:
+                val_array = np.asarray(list(val))
+            except TypeError:
+                raise TypeError("design_vals values must be 1D array-like iterables.")
+            if val_array.ndim != 1:
+                raise ValueError("design_vals values must be 1D array-like.")
+
+            normalized_design_vals[mapped_key] = val_array
+
+        if invalid_keys:
+            raise ValueError(
+                "design_vals keys must identify components in "
+                f"`model.experiment_inputs`. Invalid keys: {invalid_keys}. "
+                "Pass experiment input components (or ComponentUIDs), not names. "
+                "Valid experiment_inputs are: "
+                f"{list(design_name_map.keys())}."
+            )
+
+        design_map_keys = [
+            k for k in model.experiment_inputs.keys() if k in normalized_design_vals
+        ]
+        design_values = [normalized_design_vals[k] for k in design_map_keys]
+
+        design_suff = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        design_suff.update((k, None) for k in design_map_keys)
+        return design_values, design_suff
+
+    def _generate_factorial_design_values_from_bounds(
+        self, model, mode, n_design_points=None, abs_step=None, rel_step=None
+    ):
+        """Build per-variable design values from bounds for linspace/step modes."""
+        design_keys = [k for k in model.experiment_inputs.keys()]
+        use_step_changes = mode is FactorialDesignMode.step
+        if use_step_changes:
+            # Missing absolute/relative inputs default to zero steps.
+            if abs_step is None:
+                abs_step = [0.0] * len(design_keys)
+            if rel_step is None:
+                rel_step = [0.0] * len(design_keys)
+
+            if len(abs_step) != len(design_keys):
+                raise ValueError(
+                    "`abs_step` must have the same length of "
+                    f"`{len(design_keys)}` as `design_keys`."
+                )
+            if len(rel_step) != len(design_keys):
+                raise ValueError(
+                    "`rel_step` must have the same length of "
+                    f"`{len(design_keys)}` as `design_keys`."
+                )
+
+        design_values = []
+        for i, comp in enumerate(design_keys):
+            lb = comp.lb
+            ub = comp.ub
+            if lb is None or ub is None:
+                raise ValueError(f"{comp.name} does not have a lower or upper bound.")
+
+            if not use_step_changes:
+                des_val = np.linspace(lb, ub, n_design_points)
+            else:
+                # step_change = (upper_bound - lower_bound) * rel_step + abs_step
+                span = ub - lb
+                delta_val = span * rel_step[i] + abs_step[i]
+                if delta_val <= 0:
+                    raise ValueError(
+                        f"Design variable {comp.name} has non-positive step "
+                        "in value - check abs_step and rel_step values."
+                    )
+                # Build points by count to avoid float drift from iterative
+                # addition. Keep compatibility with lb > ub behavior.
+                n_steps = max(0, int(np.floor(span / delta_val + 1e-12)) + 1)
+                des_val = lb + delta_val * np.arange(n_steps)
+
+            design_values.append(des_val)
+        return design_values
+
+    def _materialize_factorial_points(self, design_values, traversal_scheme):
+        """Generate concrete factorial design points from design values."""
+        try:
+            scheme_enum = DesignSpaceTraversal(traversal_scheme)
+        except ValueError:
+            raise ValueError(
+                f"{traversal_scheme=} is not recognized. "
+                "Please use one of the following: "
+                f"{[e.value for e in DesignSpaceTraversal]}"
+            )
+
+        if scheme_enum == DesignSpaceTraversal.snake_traversal:
+            factorial_points = snake_traversal_grid_sampling(*design_values)
+        elif scheme_enum == DesignSpaceTraversal.nested_for_loop:
+            factorial_points = product(*design_values)
+        else:
+            raise ValueError(
+                f"{traversal_scheme=} is not recognized. "
+                "Please use one of the following: "
+                f"{[e.value for e in DesignSpaceTraversal]}"
+            )
+        return list(factorial_points)
+
+    def _run_factorial_sweep(
+        self, model, factorial_points_list, method="sequential", design_suff=None
+    ):
+        """Run FIM sweep over materialized factorial points and collect results."""
+        factorial_results = {k.name: [] for k in model.experiment_inputs.keys()}
+        factorial_results.update(
+            {
+                "log10 D-opt": [],
+                "log10 A-opt": [],
+                "log10 pseudo A-opt": [],
+                "log10 E-opt": [],
+                "log10 ME-opt": [],
+                "eigval_min": [],
+                "eigval_max": [],
+                "det_FIM": [],
+                "trace_cov": [],
+                "trace_FIM": [],
+                "solve_time": [],
+            }
+        )
+
+        success_count = 0
+        failure_count = 0
+        total_points = len(factorial_points_list)
+
+        self.n_parameters = len(model.unknown_parameters)
+        FIM_all = np.zeros((total_points, self.n_parameters, self.n_parameters))
+
+        time_set = []
+        curr_point = 1
+        for design_point in factorial_points_list:
+            if design_suff is not None:
+                update_model_from_suffix(design_suff, design_point)
+            else:
+                update_model_from_suffix(model.experiment_inputs, design_point)
+
+            self.logger.info(f"=======Iteration Number: {curr_point} =======")
+            iter_timer = TicTocTimer()
+            iter_timer.tic(msg=None)
+
+            try:
+                curr_point = success_count + failure_count + 1
+                self.logger.info(f"This is run {curr_point} out of {total_points}.")
+                self.compute_FIM(model=model, method=method)
+                success_count += 1
+                iter_t = iter_timer.toc(msg=None)
+                time_set.append(iter_t)
+
+                self.logger.info(
+                    f"The code has run for {round(sum(time_set), 2)} seconds."
+                )
+                self.logger.info(
+                    "Estimated remaining time:  %s seconds",
+                    round(
+                        sum(time_set) / (curr_point) * (total_points - curr_point + 1),
+                        2,
+                    ),
+                )
+            except Exception as err:
+                self.logger.warning(
+                    "Cannot converge this run during FIM computation: %s", err
+                )
+                self.logger.debug(
+                    "Traceback for failed FIM factorial run:", exc_info=True
+                )
+                failure_count += 1
+                self.logger.warning("failed count: %s", failure_count)
+
+                self._computed_FIM = np.zeros(self.prior_FIM.shape)
+
+                iter_t = iter_timer.toc(msg=None)
+                time_set.append(iter_t)
+
+            FIM = self._computed_FIM
+            FIM_all[curr_point - 1, :, :] = FIM
+
+            fim_metrics = compute_FIM_metrics(FIM)
+            for k in model.experiment_inputs.keys():
+                factorial_results[k.name].append(pyo.value(k))
+
+            factorial_results["log10 D-opt"].append(fim_metrics.D_opt)
+            factorial_results["log10 A-opt"].append(fim_metrics.A_opt)
+            factorial_results["log10 pseudo A-opt"].append(fim_metrics.pseudo_A_opt)
+            factorial_results["log10 E-opt"].append(fim_metrics.E_opt)
+            factorial_results["log10 ME-opt"].append(fim_metrics.ME_opt)
+            factorial_results["eigval_min"].append(np.min(fim_metrics.E_vals))
+            factorial_results["eigval_max"].append(np.max(fim_metrics.E_vals))
+            factorial_results["det_FIM"].append(fim_metrics.det_FIM)
+            factorial_results["trace_cov"].append(fim_metrics.trace_cov)
+            factorial_results["trace_FIM"].append(fim_metrics.trace_FIM)
+            factorial_results["solve_time"].append(time_set[-1])
+
+        factorial_results.update(
+            {
+                "total_points": total_points,
+                "success_count": success_count,
+                "failure_count": failure_count,
+                "FIM_all": FIM_all.tolist(),
+            }
+        )
+        return factorial_results
+
+    def _write_factorial_dataframe(self, factorial_results):
+        """Write user-requested factorial tabular output to stdout."""
+        exclude_keys = {"total_points", "success_count", "failure_count", "FIM_all"}
+        dict_for_df = {
+            k: v for k, v in factorial_results.items() if k not in exclude_keys
+        }
+        res_df = pd.DataFrame(dict_for_df)
+        sys.stdout.write("\n\n=========Factorial results===========\n")
+        sys.stdout.write(f"Total points: {factorial_results['total_points']}\n")
+        sys.stdout.write(f"Success count: {factorial_results['success_count']}\n")
+        sys.stdout.write(f"Failure count: {factorial_results['failure_count']}\n\n")
+        sys.stdout.write(f"{res_df}\n")
+
+    def compute_FIM_factorial(
+        self,
+        model=None,
+        design_vals: dict = None,
+        abs_step: list = None,
+        rel_step: list = None,
+        n_design_points: int = None,
+        method="sequential",
+        return_df=True,
+        traversal_scheme="snake_traversal",
+        file_name: str = None,
+    ):
+        """Perform a simulation-based factorial exploration of the experimental input
+        space (a.k.a. a ``grid search`` / ``parameter sweep``) to evaluate how FIM
+        metrics vary over the design space.
+
+        Exactly one design-space specification mode must be provided:
+
+        1. ``design_vals``:
+            Explicit values for selected design variables (component keys).
+        2. ``n_design_points``:
+            Uniform ``np.linspace(lb, ub, n_design_points)`` values for each design
+            variable using model bounds.
+        3. ``abs_step`` and/or ``rel_step``:
+            Step-based values for each design variable using model bounds and:
+            ``delta_i = (ub_i - lb_i) * rel_step[i] + abs_step[i]``.
+            Values are generated from lower to upper bound in steps of ``delta_i``.
+
+        Parameters
+        ----------
+        model : DoE model, optional
+            Reserved for API compatibility. A fresh labeled model clone is built
+            internally for the factorial exploration.
+        design_vals : dict, optional
+            Mapping of design variable components to 1D array-like values:
+            ``{component: [values...]}``. Keys should be a subset of
+            ``model.experiment_inputs`` keys (or ``ComponentUID`` objects that
+            identify those components on a compatible model). Variables not
+            included are fixed at their model values.
+        abs_step : list, optional
+            Absolute step for each design variable. Used only when
+            ``design_vals`` and ``n_design_points`` are not provided. Length must
+            match the number of design variables in ``model.experiment_inputs``.
+            If provided without ``rel_step``, ``rel_step`` is treated as zeros.
+        rel_step : list, optional
+            Relative step for each design variable. Used only when
+            ``design_vals`` and ``n_design_points`` are not provided. Length must
+            match the number of design variables in ``model.experiment_inputs``.
+            If provided without ``abs_step``, ``abs_step`` is treated as zeros.
+        n_design_points : int, optional
+            Number of equally-spaced points per design variable generated from
+            bounds via :func:`np.linspace`. Requires finite lower and upper bounds.
+        method : str, optional
+            Method used for FIM computation. Options: ``kaug`` and
+            ``sequential``. Default: ``sequential``.
+        return_df : bool, optional
+            If ``True``, print results as a pandas DataFrame.
+        traversal_scheme : str, optional
+            Which scheme to use for initializing the design variables.
+            Options are ``snake_traversal`` and ``nested_for_loop``.
+            If ``snake_traversal`` is used, the design variables will be initialized
+            in a snake-like pattern where only one design variables change at a time.
+            If ``nested_for_loop`` is used, the design variables will be initialized
+            using a nested for loop. Default: "snake_traversal"
+        file_name : str, optional
+            If provided, save results to ``<file_name>.json``.
+
+        Returns
+        -------
+        factorial_results: dict
+            A dictionary containing the results of the factorial design with the
+            following keys:
+            - keys of model's experiment_inputs
+            - "log10 D-opt": list of D-optimality values
+            - "log10 A-opt": list of A-optimality values
+            - "log10 pseudo A-opt": list of pseudo A-optimality values
+            - "log10 E-opt": list of E-optimality values
+            - "log10 ME-opt": list of ME-optimality values
+            - "eigval_min": list of minimum eigenvalues
+            - "eigval_max": list of maximum eigenvalues
+            - "det_FIM": list of determinants of the FIM
+            - "trace_cov": list of traces of covariance matrix
+            - "trace_FIM": list of traces of the FIM
+            - "solve_time": list of solve times
+            - "total_points": total number of points in the factorial design
+            - "success_count": number of successful runs
+            - "failure_count": number of failed runs
+            - "FIM_all": list of all FIMs computed for each point in the factorial
+        """
+
+        sp_timer = TicTocTimer()
+        sp_timer.tic(msg=None)
+        self.logger.info("Beginning Factorial Design.")
+
+        self.factorial_model = self.experiment.get_labeled_model(
+            **self.get_labeled_model_args
+        ).clone()
+        model = self.factorial_model
+
+        mode = self._resolve_factorial_design_mode(
+            design_vals=design_vals,
+            n_design_points=n_design_points,
+            abs_step=abs_step,
+            rel_step=rel_step,
+        )
+
+        design_suff = None
+        if mode is FactorialDesignMode.design_vals:
+            design_values, design_suff = self._normalize_factorial_design_vals(
+                model=model, design_vals=design_vals
+            )
+        else:
+            design_values = self._generate_factorial_design_values_from_bounds(
+                model=model,
+                mode=mode,
+                n_design_points=n_design_points,
+                abs_step=abs_step,
+                rel_step=rel_step,
+            )
+
+        factorial_points_list = self._materialize_factorial_points(
+            design_values=design_values, traversal_scheme=traversal_scheme
+        )
+
+        self.factorial_results = self._run_factorial_sweep(
+            model=model,
+            factorial_points_list=factorial_points_list,
+            method=method,
+            design_suff=design_suff,
+        )
+
+        if return_df:
+            self._write_factorial_dataframe(self.factorial_results)
+
+        if file_name is not None:
+            with open(file_name + ".json", "w") as f:
+                json.dump(self.factorial_results, f, indent=4)
+                self.logger.info(f"Results saved to {file_name}.json.")
+
+        return self.factorial_results
 
     # TODO: Overhaul plotting functions to not use strings
     # TODO: Make the plotting functionalities work for >2 design features
@@ -2022,20 +2444,26 @@ class DesignOfExperiments:
         log_scale=True,
     ):
         """
-        Extract results needed for drawing figures from
-        the results dictionary provided by the
-        ``compute_FIM_full_factorial`` function.
+        Extract and filter factorial results for 1D/2D sensitivity plots.
+
+        Results can come from either ``compute_FIM_full_factorial`` or
+        ``compute_FIM_factorial``. Design variable names are specified as strings
+        to align with the factorial APIs.
 
         Draw either the 1D sensitivity curve or 2D heatmap.
 
         Parameters
         ----------
-        results: dictionary, results dictionary from ``compute_FIM_full_factorial``
-                 default: None (self.fim_factorial_results)
-        sensitivity_design_variables: a list, design variable names to draw sensitivity
-        fixed_design_variables: a dictionary, keys are the design variable names to be
-                                fixed, values are the value of it to be fixed.
-        full_design_variable_names: a list, all the design variables in the problem.
+        results: dictionary/pandas.DataFrame
+            Results dictionary (or DataFrame) from factorial evaluation.
+            Default: ``self.fim_factorial_results``.
+        sensitivity_design_variables: iterable of strings
+            Design variable names used as sensitivity degrees of freedom.
+            At most two are currently supported.
+        fixed_design_variables: dict
+            Dictionary of fixed design variable names and values.
+        full_design_variable_names: list of strings
+            All design variable names in the problem.
         title_text: a string, name for the figure
         xlabel_text: a string, label for the x-axis of the figure
                     default: last design variable name
@@ -2071,7 +2499,9 @@ class DesignOfExperiments:
                     "include all the design variable names."
                 )
 
-        des_names = full_design_variable_names
+        des_names = list(full_design_variable_names)
+        if any(not isinstance(name, str) for name in des_names):
+            raise ValueError("``full_design_variable_names`` entries must be strings.")
 
         # Inputs must exist for the function to do anything
         # TODO: Put in a default value function?????
@@ -2081,23 +2511,66 @@ class DesignOfExperiments:
         if fixed_design_variables is None:
             raise ValueError("``fixed_design_variables`` must be included.")
 
-        # Check that the provided design variables are within the results object
-        check_des_vars = True
-        for k, v in fixed_design_variables.items():
-            check_des_vars *= k in ([k2 for k2, v2 in results.items()])
-        check_sens_vars = True
-        for k in sensitivity_design_variables:
-            check_sens_vars *= k in [k2 for k2, v2 in results.items()]
+        if isinstance(sensitivity_design_variables, str):
+            sensitivity_design_variables = [sensitivity_design_variables]
+        else:
+            try:
+                sensitivity_design_variables = list(sensitivity_design_variables)
+            except TypeError:
+                raise TypeError(
+                    "``sensitivity_design_variables`` must be an iterable of strings."
+                )
 
-        if not check_des_vars:
+        try:
+            sens_name_set = set(sensitivity_design_variables)
+        except TypeError:
+            raise TypeError(
+                "``sensitivity_design_variables`` entries must be hashable."
+            )
+        if len(sens_name_set) != len(sensitivity_design_variables):
+            raise ValueError(
+                "Sensitivity design variables contain duplicates. Please provide "
+                "unique design variable names."
+            )
+
+        try:
+            fixed_design_variables = dict(fixed_design_variables)
+        except (TypeError, ValueError):
+            raise TypeError("``fixed_design_variables`` must be mapping-like.")
+
+        des_name_set = set(des_names)
+        missing_from_results = des_name_set - set(results.keys())
+        if missing_from_results:
+            raise ValueError(
+                "The following design variable names were not found in the results "
+                f"object: {missing_from_results}."
+            )
+
+        invalid_fixed_names = set(fixed_design_variables.keys()) - des_name_set
+        if invalid_fixed_names:
             raise ValueError(
                 "Fixed design variables do not all appear "
-                "in the results object keys."
+                "in the results object keys. "
+                f"Invalid entries: {invalid_fixed_names}. "
+                f"Valid design variable names are: {des_name_set}."
             )
-        if not check_sens_vars:
+
+        invalid_sensitivity_names = set(sensitivity_design_variables) - des_name_set
+        if invalid_sensitivity_names:
             raise ValueError(
                 "Sensitivity design variables do not all appear "
-                "in the results object keys."
+                "in the results object keys. "
+                f"Invalid entries: {invalid_sensitivity_names}. "
+                f"Valid design variable names are: {des_name_set}."
+            )
+
+        overlap_names = set(sensitivity_design_variables).intersection(
+            fixed_design_variables.keys()
+        )
+        if overlap_names:
+            raise ValueError(
+                "Design variables cannot be both sensitivity and fixed variables. "
+                f"Overlapping names: {overlap_names}."
             )
 
         # TODO: Make it possible to plot pair-wise sensitivities for all variables
@@ -2124,19 +2597,11 @@ class DesignOfExperiments:
         # filter the results of the DOF needed.
         # an example filter: (self.store_all_results_dataframe["CA0"]==5).
         if len(fixed_design_variables.keys()) != 0:
-            filter = ""
-            i = 0
-            for k, v in fixed_design_variables.items():
-                filter += "(results_pd['"
-                filter += str(k)
-                filter += "']=="
-                filter += str(v)
-                filter += ")"
-                if i < (len(fixed_design_variables.keys()) - 1):
-                    filter += "&"
-                i += 1
             # extract results with other dimensions fixed
-            figure_result_data = results_pd.loc[eval(filter)]
+            mask = pd.Series(True, index=results_pd.index)
+            for k, v in fixed_design_variables.items():
+                mask &= results_pd[k] == v
+            figure_result_data = results_pd.loc[mask]
 
         # if there is no other fixed dimensions
         else:
