@@ -115,7 +115,7 @@ class TestDoEErrors(unittest.TestCase):
         flag_val = 1  # Value for faulty model build mode - 1: No exp outputs
 
         with self.assertRaisesRegex(
-            ValueError, "The 'experiment' parameter is required"
+            ValueError, "The 'experiment' argument is required"
         ):
             # Experiment provided as None
             DoE_args = get_standard_args(None, fd_method, obj_used, flag_val)
@@ -124,7 +124,8 @@ class TestDoEErrors(unittest.TestCase):
 
     def test_experiment_empty_list_error(self):
         with self.assertRaisesRegex(
-            ValueError, "The 'experiment' list cannot be empty"
+            ValueError,
+            "The 'experiment' argument is required and cannot be an empty " "list",
         ):
             DesignOfExperiments(experiment=[], objective_option="pseudo_trace")
 

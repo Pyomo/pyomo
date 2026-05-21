@@ -216,10 +216,11 @@ class DesignOfExperiments:
 
         """
         # Validate experiment(s) are provided
-        if experiment is None:
+        if experiment is None or (isinstance(experiment, list) and not experiment):
             raise ValueError(
-                "The 'experiment' parameter is required. "
-                "Pass a single Experiment object or a list of Experiment objects."
+                "The 'experiment' argument is required and cannot be an empty list. "
+                "Pass a single Experiment object or a non-empty list of Experiment "
+                "objects."
             )
 
         # Auto-convert single experiment to list
@@ -227,10 +228,6 @@ class DesignOfExperiments:
             experiment_list = [experiment]
         else:
             experiment_list = experiment
-
-        # Validate list is not empty
-        if len(experiment_list) == 0:
-            raise ValueError("The 'experiment' list cannot be empty.")
 
         # Check each experiment has get_labeled_model method
         for idx, exp in enumerate(experiment_list):
