@@ -342,12 +342,12 @@ if (
             # IPOPT executable, and the local failure mode we diagnosed was a
             # missing MA57/HSL runtime on that cyipopt solve path.
             cyipopt_skip_reason = (
-                "cyipopt GreyBox solve path cannot access the MA57/HSL runtime"
+                "cyipopt GreyBox solve path requires a working MA57/HSL runtime"
             )
     except Exception:
         cyipopt_call_working = False
         cyipopt_skip_reason = (
-            "cyipopt GreyBox solve path could not be initialized with MA57/HSL"
+            "cyipopt GreyBox solve path requires a working MA57/HSL runtime"
         )
 
 
