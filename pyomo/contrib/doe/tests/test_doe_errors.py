@@ -125,7 +125,7 @@ class TestDoEErrors(unittest.TestCase):
     def test_experiment_empty_list_error(self):
         with self.assertRaisesRegex(
             ValueError,
-            "The 'experiment' argument is required and cannot be an empty " "list",
+            "The 'experiment' argument is required and cannot be an empty list",
         ):
             DesignOfExperiments(experiment=[], objective_option="pseudo_trace")
 
