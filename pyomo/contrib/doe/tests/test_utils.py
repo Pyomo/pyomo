@@ -39,7 +39,6 @@ ipopt_available = SolverFactory("ipopt").available()
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-@unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestUtilsFIM(unittest.TestCase):
     """Test the check_FIM() from utils.py."""
 
@@ -175,7 +174,6 @@ class TestUtilsFIM(unittest.TestCase):
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-@unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestExperimentGradients(unittest.TestCase):
     """Validate symbolic and automatic differentiation helpers."""
 
