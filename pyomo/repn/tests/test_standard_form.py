@@ -435,21 +435,21 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         self.assertIn(id(m.x), col_ids)
         self.assertIn(id(m.y), col_ids)
 
-    def test_extra_valid_ctypes(self):
-        """Component types in extra_valid_ctypes are permitted but not compiled."""
+    def test_ignore_ctypes(self):
+        """Component types in ignore_ctypes are permitted but not compiled."""
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
         m.y = pyo.Var()
         m.obj = pyo.Objective(expr=m.y)
         m.sos = pyo.SOSConstraint(var=m.x, sos=1)
 
-        # Without extra_valid_ctypes, LSFC raises on the SOSConstraint.
+        # Without ignore_ctypes, LSFC raises on the SOSConstraint.
         with self.assertRaises(ValueError):
             LinearStandardFormCompiler().write(m, mixed_form=True)
 
-        # With extra_valid_ctypes, the SOSConstraint is silently skipped.
+        # With ignore_ctypes, the SOSConstraint is silently skipped.
         repn = LinearStandardFormCompiler().write(
-            m, mixed_form=True, extra_valid_ctypes=[pyo.SOSConstraint]
+            m, mixed_form=True, ignore_ctypes=[pyo.SOSConstraint]
         )
         # Only m.y appears in the objective; m.x[i] are unreferenced by
         # linear constraints/objectives so not included in repn.columns.

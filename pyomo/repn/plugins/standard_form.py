@@ -231,7 +231,7 @@ class LinearStandardFormCompiler:
         ),
     )
     CONFIG.declare(
-        'extra_valid_ctypes',
+        'ignore_ctypes',
         ConfigValue(
             default=[],
             description='Additional component types that are permitted to appear '
@@ -364,7 +364,7 @@ class _LinearStandardFormCompiler_impl:
                 Port,
                 # TODO: Piecewise, Complementarity
             }
-            | set(self.config.extra_valid_ctypes),
+            | set(self.config.ignore_ctypes),
             targets={Suffix, Objective},
         )
         if unknown:
