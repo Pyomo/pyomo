@@ -386,10 +386,13 @@ class PyROS(object):
         )
 
         model_data = ModelData(original_model=model, timing=TimingData(), config=None)
-        with time_code(
-            timing_data_obj=model_data.timing,
-            code_block_name="main",
-            is_main_timer=True,
+        with (
+            uncertainty_set._cache_manager(),
+            time_code(
+                timing_data_obj=model_data.timing,
+                code_block_name="main",
+                is_main_timer=True,
+            ),
         ):
             kwds.update(
                 dict(
