@@ -54,7 +54,7 @@ import pyomo.environ as pyo
 from pyomo.contrib.doe.utils import (
     check_FIM,
     compute_FIM_metrics,
-    _SMALL_TOLERANCE_DEFINITENESS,
+    regularize_fim_for_cholesky,
 )
 
 from pyomo.opt import SolverStatus
@@ -485,38 +485,6 @@ class DesignOfExperiments:
         if results_file is not None:
             with open(results_file, "w") as file:
                 json.dump(self.results, file)
-
-
-
-    # Reviewer comment: Is there a reason to have this as a method on the 
-    # DesignOfExperiments class instead of a standalone utility function? 
-    # It isn't using anything from the class instance.
-    #
-    # Also, it's a 1-line method that is only being used once on L555. 
-    # Why did you even abstract this out as a separate method?
-    #
-    # Suggested Action: Let's check if this is only being used in one place. If it is, let's take
-    # the suggestion of removing it as a function and instead putting it back into the calculation.
-    # Otherwise, we can make it into a utility function. But my first choice is to just do the 
-    # calculation is the one place we need it (no function).
-
-    def _compute_cholesky_jitter(self, min_eig):
-        """
-        Compute diagonal regularization for Cholesky initialization.
-
-        Parameters
-        ----------
-        min_eig: float
-            Minimum eigenvalue of the current FIM estimate.
-
-        Returns
-        -------
-        float
-            Nonnegative diagonal shift needed so the minimum eigenvalue
-            is at least ``_SMALL_TOLERANCE_DEFINITENESS``.
-        """
-        return max(0.0, _SMALL_TOLERANCE_DEFINITENESS - float(min_eig))
-
     def _get_fim_numpy(self, model):
         """
         Assemble the current FIM variable values into a NumPy array.
@@ -567,16 +535,7 @@ class DesignOfExperiments:
             return
 
         fim_np = self._get_fim_numpy(model)
-        min_eig = float(np.min(np.linalg.eigvalsh(fim_np)))
-        # Reviewer comment: This implementation is slightly different from 
-        # the implementation where these values are originally calculated on L1443-1465. 
-        # Is there a reason for the difference? Can these be combined to avoid duplication?
-        #
-        # Suggested Action: Let's examine the jitter calculations throughout this file.
-        # If possible, let's standardize (and make a function)
-        # If we cannot standardize, we should explain the difference.
-        jitter = self._compute_cholesky_jitter(min_eig)
-        fim_pd = fim_np + jitter * np.eye(len(model.parameter_names))
+        fim_pd, _ = regularize_fim_for_cholesky(fim_np)
 
         L_vals = np.linalg.cholesky(fim_pd)
         for i, c in enumerate(model.parameter_names):
@@ -1448,29 +1407,14 @@ class DesignOfExperiments:
         model.obj_cons = pyo.Block()
 
         # Assemble the FIM matrix. This is helpful for initialization!
-        fim_vals = [
-            model.fim[bu, un].value
-            for i, bu in enumerate(model.parameter_names)
-            for j, un in enumerate(model.parameter_names)
-        ]
-        fim = np.array(fim_vals).reshape(
-            len(model.parameter_names), len(model.parameter_names)
-        )
+        fim = self._get_fim_numpy(model)
 
         ### Initialize the Cholesky decomposition matrix
         if self.Cholesky_option and self.objective_option in (
             ObjectiveLib.determinant,
             ObjectiveLib.trace,
         ):
-            # Calculate the eigenvalues of the FIM matrix
-            eig = np.linalg.eigvals(fim)
-
-            # If the smallest eigenvalue is (practically) negative,
-            # add a diagonal matrix to make it positive definite
-            if min(eig) < small_number:
-                fim = fim + np.eye(len(model.parameter_names)) * (
-                    small_number - min(eig)
-                )
+            fim, _ = regularize_fim_for_cholesky(fim)
 
             # Compute the Cholesky decomposition of the FIM matrix
             L = np.linalg.cholesky(fim)

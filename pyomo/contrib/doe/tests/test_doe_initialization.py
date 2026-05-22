@@ -12,7 +12,10 @@ import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 
 from pyomo.contrib.doe import DesignOfExperiments
-from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
+from pyomo.contrib.doe.utils import (
+    _SMALL_TOLERANCE_DEFINITENESS,
+    regularize_fim_for_cholesky,
+)
 
 
 class _FakeResult:
@@ -52,32 +55,17 @@ class _MutatingRecordingSolver:
     def __init__(self):
         self.options = {}
 
-
-
-
-
     def solve(self, model, tee=False):
         """Mutate 2x2 FIM values during init-stage solve."""
-        if (
+        if not hasattr(model, "dummy_obj") or not model.dummy_obj.active:
+            return _FakeResult()
 
-            # Reviewer comment: You know the attributes of the model being 
-            # tested with this dummy solver so is this if-statement really necessary?
-            #
-            # Suggested Action: I think we can remove this if-statement and 
-            # just assume the model has the expected attributes, 
-            # since this is a test fixture that we control.
-
-            hasattr(model, "dummy_obj")
-            and model.dummy_obj.active
-            and hasattr(model, "fim")
-            and len(list(model.parameter_names)) == 2
-        ):
-            p1, p2 = list(model.parameter_names)
-            model.fim[p1, p1].set_value(16.0)
-            model.fim[p2, p1].set_value(4.0)
-            if (p1, p2) in model.fim:
-                model.fim[p1, p2].set_value(0.0)
-            model.fim[p2, p2].set_value(9.0)
+        p1, p2 = list(model.parameter_names)
+        model.fim[p1, p1].set_value(16.0)
+        model.fim[p2, p1].set_value(4.0)
+        if (p1, p2) in model.fim:
+            model.fim[p1, p2].set_value(0.0)
+        model.fim[p2, p2].set_value(9.0)
         return _FakeResult()
 
 # Reviewer comment: Should this inherit from the Experiment class?
@@ -155,7 +143,7 @@ class TestCholeskyInitialization(unittest.TestCase):
     # I am thinking the real model can have one of the coefficients be an input, and changing that
     # coefficient changes the FIM. Or we could just have a model where one of the parameters
     # is not structurally identifiable.
-    def test_compute_cholesky_jitter_raises_negative_eigenvalue(self):
+    def test_regularize_fim_for_cholesky_raises_negative_eigenvalue(self):
         """
         Negative minimum eigenvalue should produce positive corrective jitter.
 
@@ -163,14 +151,17 @@ class TestCholeskyInitialization(unittest.TestCase):
         sync path, so we can catch arithmetic regressions independently of the
         solver/modeled example below.
         """
-        doe_obj = _make_trace_doe_object()
-        min_eig = -1.0e-3
-        jitter = doe_obj._compute_cholesky_jitter(min_eig)
+        fim = np.array([[2.0, -1.0], [-1.0, 0.0]])
+        fim_pd, jitter = regularize_fim_for_cholesky(fim)
+        self.assertGreater(jitter, 0.0)
+        min_eig = np.min(np.linalg.eigvalsh(fim_pd))
         self.assertAlmostEqual(
-            jitter, _SMALL_TOLERANCE_DEFINITENESS - min_eig, places=14
+            min_eig,
+            _SMALL_TOLERANCE_DEFINITENESS,
+            delta=_SMALL_TOLERANCE_DEFINITENESS / 10,
         )
 
-    def test_compute_cholesky_jitter_zero_when_not_needed(self):
+    def test_regularize_fim_for_cholesky_zero_when_not_needed(self):
         """
         Positive minimum eigenvalue above tolerance should yield zero jitter.
 
@@ -178,10 +169,10 @@ class TestCholeskyInitialization(unittest.TestCase):
         verifies the helper does not add unnecessary regularization when the
         FIM is already well-conditioned.
         """
-        doe_obj = _make_trace_doe_object()
-        min_eig = 1.0e-2
-        jitter = doe_obj._compute_cholesky_jitter(min_eig)
+        fim = np.array([[1.0e-2]])
+        fim_pd, jitter = regularize_fim_for_cholesky(fim)
         self.assertEqual(jitter, 0.0)
+        self.assertAlmostEqual(fim_pd[0, 0], 1.0e-2)
 
     def test_trace_initialization_resynchronizes_fim_inverse_variables(self):
         """
