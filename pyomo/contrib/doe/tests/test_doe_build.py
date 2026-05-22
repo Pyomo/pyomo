@@ -135,8 +135,7 @@ def get_standard_args(experiment, fd_method, obj_used):
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-@unittest.skipIf(not numpy_available, "Numpy is not available")
-@unittest.skipIf(not scipy_available, "scipy is not available")
+# Tests require NumPy/SciPy, but availability is checked by the file-level SkipTest.
 @unittest.skipIf(not pandas_available, "pandas is not available")
 class TestDoeBuild(unittest.TestCase):
     def test_rooney_biegler_fd_central_check_fd_eqns(self):
@@ -545,7 +544,7 @@ class TestRooneyBieglerExample(unittest.TestCase):
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-@unittest.skipIf(not numpy_available, "Numpy is not available")
+# Test requires NumPy, but availability is checked by the file-level SkipTest.
 @unittest.skipIf(not pandas_available, "pandas is not available")
 class TestDoEObjectiveOptions(unittest.TestCase):
     def test_trace_constraints(self):

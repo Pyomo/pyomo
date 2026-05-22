@@ -82,8 +82,7 @@ def get_standard_args(experiment, fd_method, obj_used, flag):
     return args
 
 
-@unittest.skipIf(not numpy_available, "Numpy is not available")
-@unittest.skipIf(not scipy_available, "scipy is not available")
+# Tests require NumPy/SciPy, but availability is checked by the file-level SkipTest.
 @unittest.skipIf(not pandas_available, "pandas is not available")
 class TestDoEErrors(unittest.TestCase):
     def test_experiment_none_error(self):

@@ -186,8 +186,7 @@ def get_expected_polynomial_fim(x1=2.0, x2=3.0, measurement_error=1.0, prior_FIM
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-@unittest.skipIf(not numpy_available, "Numpy is not available")
-@unittest.skipIf(not scipy_available, "scipy is not available")
+# Tests require NumPy/SciPy, but availability is checked by the file-level SkipTest.
 class TestRooneyBieglerExampleSolving(unittest.TestCase):
     @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_rooney_biegler_fd_central_solve(self):
@@ -376,7 +375,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
     # This test ensure that compute FIM runs without error using the
     # `kaug` option. kaug computes the FIM directly so no finite difference
     # scheme is needed.
-    @unittest.skipIf(not scipy_available, "Scipy is not available")
+    # Test requires SciPy, but availability is checked by the file-level SkipTest.
     @unittest.skipIf(
         not k_aug_available.available(False), "The 'k_aug' command is not available"
     )
@@ -704,7 +703,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
-@unittest.skipIf(not numpy_available, "Numpy is not available")
+# Test requires NumPy, but availability is checked by the file-level SkipTest.
 class TestDoe(unittest.TestCase):
     def test_polynomial_full_factorial(self):
         """Check 2D factorial FIM metrics on the lightweight polynomial example."""
@@ -1027,7 +1026,7 @@ class TestRooneyBieglerExample(unittest.TestCase):
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
-@unittest.skipIf(not numpy_available, "Numpy is not available")
+# Test requires NumPy, but availability is checked by the file-level SkipTest.
 @unittest.skipIf(not pandas_available, "Pandas is not available")
 @unittest.skipIf(not matplotlib_available, "Matplotlib is not available")
 class TestDoEFactorialFigure(unittest.TestCase):
