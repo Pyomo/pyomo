@@ -38,9 +38,13 @@ class PolynomialExperiment(Experiment):
         m.x2 = pyo.Var(bounds=(-5, 5), initialize=3.0)
 
         m.a = pyo.Var(bounds=(-5, 5), initialize=2)
+        m.a.fix()
         m.b = pyo.Var(bounds=(-5, 5), initialize=-1)
+        m.b.fix()
         m.c = pyo.Var(bounds=(-5, 5), initialize=0.5)
+        m.c.fix()
         m.d = pyo.Var(bounds=(-5, 5), initialize=-1)
+        m.d.fix()
 
         m.y = pyo.Var(initialize=0)
 

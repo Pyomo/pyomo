@@ -254,16 +254,18 @@ class TestExperimentGradients(unittest.TestCase):
             .astype(float)
         )
         base_values = {"a": 2.0, "b": -1.0, "c": 0.5, "d": -1.0}
-        step = 1e-6
+        step = 1e-3
         finite_difference = []
+
         for parameter in ("a", "b", "c", "d"):
+            rel_perturbation = step * base_values[parameter]
             forward_values = dict(base_values)
             backward_values = dict(base_values)
-            forward_values[parameter] += step
-            backward_values[parameter] -= step
+            forward_values[parameter] += rel_perturbation
+            backward_values[parameter] -= rel_perturbation
             forward = self._evaluate_polynomial_output(**forward_values)
             backward = self._evaluate_polynomial_output(**backward_values)
-            finite_difference.append((forward - backward) / (2 * step))
+            finite_difference.append((forward - backward) / (2 * rel_perturbation))
 
         self.assertTrue(np.allclose(symbolic, finite_difference, atol=1e-7, rtol=1e-7))
 

@@ -708,60 +708,70 @@ class TestDoe(unittest.TestCase):
     def test_polynomial_full_factorial(self):
         """Check 2D factorial FIM metrics on the lightweight polynomial example."""
         log10_D_opt_expected = [
-            3.771625936657566,
-            5.566143287412265,
-            5.910363131426261,
-            6.173537519214883,
+            0.3010299956639575,
+            1.4313637641588952,
+            1.4313637641588808,
+            2.830588668684976,
         ]
 
         log10_A_opt_expected = [
-            3.771846315265457,
-            5.5661468254334245,
-            5.910364732979566,
-            6.173538392929174,
+            0.544068044350279,
+            0.48245008822473046,
+            0.48245008822473073,
+            0.47733503492673424,
+        ]
+
+        log10_pseudo_A_opt_expected = [
+            0.6989700043360093,
+            1.4771212547195796,
+            1.4771212547195667,
+            2.8325089127060665,
         ]
 
         log10_E_opt_expected = [
+            0.0,
+            0.0,
             -4.821637332766436e-17,
-            -7.8206957537542e-13,
-            -2.4960652144337014e-12,
-            -1.0111706376862954e-10,
+            -4.937356628753111e-14,
         ]
 
         log10_ME_opt_expected = [
-            3.771625936657538,
-            5.566143287414164,
-            5.910363131438886,
-            6.173537519245602,
+            0.3010299956639575,
+            1.4313637641588952,
+            1.431363764158881,
+            2.8305886686849737,
         ]
 
-        eigval_min_expected = [
-            0.9999999999999999,
-            0.9999999999981992,
-            0.9999999999942526,
-            0.9999999997671694,
-        ]
+        eigval_min_expected = [1.0, 1.0, 0.9999999999999999, 0.9999999999998863]
 
         eigval_max_expected = [
-            5910.523340060432,
-            368250.4510100104,
-            813510.4413073618,
-            1491205.5769174611,
+            1.9999999999998908,
+            26.999999999994273,
+            26.999999999993385,
+            676.999999999734,
         ]
 
         det_FIM_expected = [
-            5910.523340060814,
-            368250.45101058815,
-            813510.4413089894,
-            1491205.5769048228,
+            1.9999999999998908,
+            26.99999999999427,
+            26.99999999999338,
+            676.9999999997373,
+        ]
+
+        trace_cov_expected = [
+            3.5000000000000275,
+            3.0370370370370448,
+            3.0370370370370465,
+            3.0014771048744247,
         ]
 
         trace_FIM_expected = [
-            5913.523340060433,
-            368253.4510100104,
-            813513.4413073619,
-            1491208.5769174611,
+            4.999999999999891,
+            29.999999999994273,
+            29.999999999993385,
+            679.999999999734,
         ]
+
         experiment = PolynomialExperiment()
         DoE_args = get_standard_args(experiment, "central", "trace")
         DoE_args["scale_nominal_param_value"] = False
@@ -779,7 +789,10 @@ class TestDoe(unittest.TestCase):
             ff_results["log10 D-opt"], log10_D_opt_expected, abstol=1e-4
         )
         self.assertStructuredAlmostEqual(
-            ff_results["log10 pseudo A-opt"], log10_A_opt_expected, abstol=1e-4
+            ff_results["log10 A-opt"], log10_A_opt_expected, abstol=1e-4
+        )
+        self.assertStructuredAlmostEqual(
+            ff_results["log10 pseudo A-opt"], log10_pseudo_A_opt_expected, abstol=1e-4
         )
         self.assertStructuredAlmostEqual(
             ff_results["log10 E-opt"], log10_E_opt_expected, abstol=1e-4
@@ -790,10 +803,9 @@ class TestDoe(unittest.TestCase):
         self.assertStructuredAlmostEqual(
             ff_results["eigval_min"], eigval_min_expected, abstol=1e-4
         )
-        # abstol of 1e-4 removed for the following values as
-        # their non-log values are large (e.g., >1e10)
         self.assertStructuredAlmostEqual(ff_results["eigval_max"], eigval_max_expected)
         self.assertStructuredAlmostEqual(ff_results["det_FIM"], det_FIM_expected)
+        self.assertStructuredAlmostEqual(ff_results["trace_cov"], trace_cov_expected)
         self.assertStructuredAlmostEqual(ff_results["trace_FIM"], trace_FIM_expected)
 
     @unittest.skipUnless(pandas_available, "test requires pandas")
