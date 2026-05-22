@@ -16,7 +16,6 @@ from io import StringIO
 import sys
 import struct
 import re
-import pathlib
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import InfeasibleConstraintException

@@ -11,7 +11,6 @@ import sys
 import os
 import subprocess
 from itertools import product
-
 from pyomo.common.unittest import pytest
 from parameterized import parameterized, parameterized_class
 import pyomo.common.unittest as unittest
@@ -347,9 +346,29 @@ class TestRooneyBiegler(unittest.TestCase):
         ):
             cov = self.pest.cov_est()
 
-    def test_parmest_exception(self):
+    def test_k_aug_solver_exception(self):
         """
-        Test the exception raised by parmest when the "experiment_outputs"
+        Tests the error message raised when a user passes
+        the solver option as "k_aug"
+        """
+
+        # estimate the parameters
+        with pytest.raises(RuntimeError, match=r"k_aug no longer supported."):
+            obj_val, theta_vals = self.pest.theta_est(solver="k_aug")
+
+    def test_unknown_solver_exception(self):
+        """
+        Tests the error message raised when a user passes an
+        unsupported solver option
+        """
+
+        # estimate the parameters
+        with pytest.raises(RuntimeError, match=r"Unknown solver in Q_Opt=random"):
+            obj_val, theta_vals = self.pest.theta_est(solver="random")
+
+    def test_exp_outputs_exception(self):
+        """
+        Tests the exception raised by parmest when the "experiment_outputs"
         attribute is not defined in the model
         """
         from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
@@ -508,40 +527,6 @@ class TestRooneyBiegler(unittest.TestCase):
             retcode = subprocess.call(rlist)
         self.assertEqual(retcode, 0)
 
-    @unittest.skipIf(not pynumero_ASL_available, "pynumero_ASL is not available")
-    def test_theta_est_cov(self):
-        objval, thetavals, cov = self.pest.theta_est(calc_cov=True, cov_n=6)
-
-        self.assertAlmostEqual(objval, 4.3317112, places=2)
-        self.assertAlmostEqual(
-            thetavals["asymptote"], 19.1426, places=2
-        )  # 19.1426 from the paper
-        self.assertAlmostEqual(
-            thetavals["rate_constant"], 0.5311, places=2
-        )  # 0.5311 from the paper
-
-        # Covariance matrix
-        self.assertAlmostEqual(
-            cov["asymptote"]["asymptote"], 6.155892, places=2
-        )  # 6.22864 from paper
-        self.assertAlmostEqual(
-            cov["asymptote"]["rate_constant"], -0.425232, places=2
-        )  # -0.4322 from paper
-        self.assertAlmostEqual(
-            cov["rate_constant"]["asymptote"], -0.425232, places=2
-        )  # -0.4322 from paper
-        self.assertAlmostEqual(
-            cov["rate_constant"]["rate_constant"], 0.040571, places=2
-        )  # 0.04124 from paper
-
-        """ Why does the covariance matrix from parmest not match the paper? Parmest is
-        calculating the exact reduced Hessian. The paper (Rooney and Bielger, 2001) likely
-        employed the first order approximation common for nonlinear regression. The paper
-        values were verified with Scipy, which uses the same first order approximation.
-        The formula used in parmest was verified against equations (7-5-15) and (7-5-16) in
-        "Nonlinear Parameter Estimation", Y. Bard, 1974.
-        """
-
     def test_cov_scipy_least_squares_comparison(self):
         """
         Scipy results differ in the 3rd decimal place from the paper. It is possible
@@ -655,20 +640,27 @@ class TestModelVariants(unittest.TestCase):
             columns=["hour", "y"],
         )
 
+        # Updated models to use Vars for experiment output, and Constraints
         def rooney_biegler_params(data):
             model = pyo.ConcreteModel()
 
             model.asymptote = pyo.Param(initialize=15, mutable=True)
             model.rate_constant = pyo.Param(initialize=0.5, mutable=True)
 
-            model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
-            model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
+            # Add the experiment inputs
+            model.h = pyo.Var(initialize=data["hour"].iloc[0], bounds=(0, 10))
 
-            def response_rule(m, h):
-                expr = m.asymptote * (1 - pyo.exp(-m.rate_constant * h))
-                return expr
+            # Fix the experiment inputs
+            model.h.fix()
 
-            model.response_function = pyo.Expression(data.hour, rule=response_rule)
+            # Add experiment outputs
+            model.y = pyo.Var(initialize=data['y'].iloc[0], within=pyo.PositiveReals)
+
+            # Define the model equations
+            def response_rule(m):
+                return m.y == m.asymptote * (1 - pyo.exp(-m.rate_constant * m.h))
+
+            model.response_con = pyo.Constraint(rule=response_rule)
 
             return model
 
@@ -683,14 +675,14 @@ class TestModelVariants(unittest.TestCase):
                 m = self.model
 
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update(
-                    [(m.hour, self.data["hour"]), (m.y, self.data["y"])]
-                )
+                m.experiment_outputs.update([(m.y, self.data["y"])])
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update(
                     (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
                 )
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update([(m.y, None)])
 
         rooney_biegler_params_exp_list = []
         for i in range(self.data.shape[0]):
@@ -701,24 +693,30 @@ class TestModelVariants(unittest.TestCase):
         def rooney_biegler_indexed_params(data):
             model = pyo.ConcreteModel()
 
+            # Define the indexed parameters
             model.param_names = pyo.Set(initialize=["asymptote", "rate_constant"])
             model.theta = pyo.Param(
                 model.param_names,
                 initialize={"asymptote": 15, "rate_constant": 0.5},
                 mutable=True,
             )
+            # Add the experiment inputs
+            model.h = pyo.Var(initialize=data["hour"].iloc[0], bounds=(0, 10))
 
-            model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
-            model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
+            # Fix the experiment inputs
+            model.h.fix()
 
-            def response_rule(m, h):
-                expr = m.theta["asymptote"] * (
-                    1 - pyo.exp(-m.theta["rate_constant"] * h)
+            # Add experiment outputs
+            model.y = pyo.Var(initialize=data['y'].iloc[0], within=pyo.PositiveReals)
+
+            # Define the model equations
+            def response_rule(m):
+                return m.y == m.theta["asymptote"] * (
+                    1 - pyo.exp(-m.theta["rate_constant"] * m.h)
                 )
-                return expr
 
-            model.response_function = pyo.Expression(data.hour, rule=response_rule)
-
+            # Add the model equations to the model
+            model.response_con = pyo.Constraint(rule=response_rule)
             return model
 
         class RooneyBieglerExperimentIndexedParams(RooneyBieglerExperiment):
@@ -732,12 +730,13 @@ class TestModelVariants(unittest.TestCase):
                 m = self.model
 
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update(
-                    [(m.hour, self.data["hour"]), (m.y, self.data["y"])]
-                )
+                m.experiment_outputs.update([(m.y, self.data["y"])])
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update((k, pyo.ComponentUID(k)) for k in [m.theta])
+
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update([(m.y, None)])
 
         rooney_biegler_indexed_params_exp_list = []
         for i in range(self.data.shape[0]):
@@ -753,14 +752,20 @@ class TestModelVariants(unittest.TestCase):
             model.asymptote.fixed = True  # parmest will unfix theta variables
             model.rate_constant.fixed = True
 
-            model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
-            model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
+            # Add the experiment inputs
+            model.h = pyo.Var(initialize=data["hour"].iloc[0], bounds=(0, 10))
 
-            def response_rule(m, h):
-                expr = m.asymptote * (1 - pyo.exp(-m.rate_constant * h))
-                return expr
+            # Fix the experiment inputs
+            model.h.fix()
 
-            model.response_function = pyo.Expression(data.hour, rule=response_rule)
+            # Add experiment outputs
+            model.y = pyo.Var(initialize=data['y'].iloc[0], within=pyo.PositiveReals)
+
+            # Define the model equations
+            def response_rule(m):
+                return m.y == m.asymptote * (1 - pyo.exp(-m.rate_constant * m.h))
+
+            model.response_con = pyo.Constraint(rule=response_rule)
 
             return model
 
@@ -775,14 +780,14 @@ class TestModelVariants(unittest.TestCase):
                 m = self.model
 
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update(
-                    [(m.hour, self.data["hour"]), (m.y, self.data["y"])]
-                )
+                m.experiment_outputs.update([(m.y, self.data["y"])])
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update(
                     (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
                 )
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update([(m.y, None)])
 
         rooney_biegler_vars_exp_list = []
         for i in range(self.data.shape[0]):
@@ -802,16 +807,22 @@ class TestModelVariants(unittest.TestCase):
             )
             model.theta["rate_constant"].fixed = True
 
-            model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
-            model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
+            # Add the experiment inputs
+            model.h = pyo.Var(initialize=data["hour"].iloc[0], bounds=(0, 10))
 
-            def response_rule(m, h):
-                expr = m.theta["asymptote"] * (
-                    1 - pyo.exp(-m.theta["rate_constant"] * h)
+            # Fix the experiment inputs
+            model.h.fix()
+
+            # Add experiment outputs
+            model.y = pyo.Var(initialize=data['y'].iloc[0], within=pyo.PositiveReals)
+
+            # Define the model equations
+            def response_rule(m):
+                return m.y == m.theta["asymptote"] * (
+                    1 - pyo.exp(-m.theta["rate_constant"] * m.h)
                 )
-                return expr
 
-            model.response_function = pyo.Expression(data.hour, rule=response_rule)
+            model.response_con = pyo.Constraint(rule=response_rule)
 
             return model
 
@@ -826,12 +837,13 @@ class TestModelVariants(unittest.TestCase):
                 m = self.model
 
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update(
-                    [(m.hour, self.data["hour"]), (m.y, self.data["y"])]
-                )
+                m.experiment_outputs.update([(m.y, self.data["y"])])
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update((k, pyo.ComponentUID(k)) for k in [m.theta])
+
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update([(m.y, None)])
 
         rooney_biegler_indexed_vars_exp_list = []
         for i in range(self.data.shape[0]):
@@ -839,15 +851,7 @@ class TestModelVariants(unittest.TestCase):
                 RooneyBieglerExperimentIndexedVars(self.data.loc[i, :])
             )
 
-        # Sum of squared error function
-        def SSE(model):
-            expr = (
-                model.experiment_outputs[model.y]
-                - model.response_function[model.experiment_outputs[model.hour]]
-            ) ** 2
-            return expr
-
-        self.objective_function = SSE
+        self.objective_function = 'SSE'
 
         theta_vals = pd.DataFrame([20, 1], index=["asymptote", "rate_constant"]).T
         theta_vals_index = pd.DataFrame(
@@ -899,16 +903,16 @@ class TestModelVariants(unittest.TestCase):
 
         self.assertAlmostEqual(objval, 4.3317112, places=2)
         self.assertAlmostEqual(
-            cov.iloc[asymptote_index, asymptote_index], 6.30579403, places=2
+            cov.iloc[asymptote_index, asymptote_index], 6.155892, places=2
         )  # 6.22864 from paper
         self.assertAlmostEqual(
-            cov.iloc[asymptote_index, rate_constant_index], -0.4395341, places=2
+            cov.iloc[asymptote_index, rate_constant_index], -0.425232, places=2
         )  # -0.4322 from paper
         self.assertAlmostEqual(
-            cov.iloc[rate_constant_index, asymptote_index], -0.4395341, places=2
+            cov.iloc[rate_constant_index, asymptote_index], -0.425232, places=2
         )  # -0.4322 from paper
         self.assertAlmostEqual(
-            cov.iloc[rate_constant_index, rate_constant_index], 0.04193591, places=2
+            cov.iloc[rate_constant_index, rate_constant_index], 0.040571, places=2
         )  # 0.04124 from paper
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
@@ -918,8 +922,13 @@ class TestModelVariants(unittest.TestCase):
             pest = parmest.Estimator(
                 parmest_input["exp_list"], obj_function=self.objective_function
             )
-
-            objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
+            # estimate the parameters and covariance matrix
+            objval, thetavals = pest.theta_est()
+            # For covariance, using reduced_hessian method since finite difference
+            # and automatic differentiation may differ from paper results in the
+            # 3rd decimal place, likely due to differences in finite difference
+            # approximation of the Jacobian
+            cov = pest.cov_est(method="reduced_hessian")
             self.check_rooney_biegler_results(objval, cov)
 
             obj_at_theta = pest.objective_at_theta(parmest_input["theta_vals"])
@@ -933,7 +942,8 @@ class TestModelVariants(unittest.TestCase):
                 parmest_input["exp_list"], obj_function=self.objective_function
             )
 
-            objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
+            objval, thetavals = pest.theta_est()
+            cov = pest.cov_est(method="reduced_hessian")
             self.check_rooney_biegler_results(objval, cov)
 
             obj_at_theta = pest.objective_at_theta(
@@ -954,7 +964,8 @@ class TestModelVariants(unittest.TestCase):
                 parmest_input["theta_vals"], initialize_parmest_model=True
             )
 
-            objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
+            objval, thetavals = pest.theta_est()
+            cov = pest.cov_est(method="reduced_hessian")
             self.check_rooney_biegler_results(objval, cov)
 
             self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
@@ -970,7 +981,8 @@ class TestModelVariants(unittest.TestCase):
 
             obj_at_theta = pest.objective_at_theta(initialize_parmest_model=True)
 
-            objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
+            objval, thetavals = pest.theta_est()
+            cov = pest.cov_est(method="reduced_hessian")
             self.check_rooney_biegler_results(objval, cov)
 
 
@@ -1107,7 +1119,8 @@ class TestReactorDesign_DAE(unittest.TestCase):
             def ComputeFirstStageCost_rule(m):
                 return 0
 
-            m.FirstStageCost = pyo.Expression(rule=ComputeFirstStageCost_rule)
+            # Model objective component names adjusted to prevent reserved name error.
+            m.FirstStage = pyo.Expression(rule=ComputeFirstStageCost_rule)
 
             def ComputeSecondStageCost_rule(m):
                 return sum(
@@ -1117,14 +1130,12 @@ class TestReactorDesign_DAE(unittest.TestCase):
                     for t in meas_t
                 )
 
-            m.SecondStageCost = pyo.Expression(rule=ComputeSecondStageCost_rule)
+            m.SecondStage = pyo.Expression(rule=ComputeSecondStageCost_rule)
 
             def total_cost_rule(model):
-                return model.FirstStageCost + model.SecondStageCost
+                return model.FirstStage + model.SecondStage
 
-            m.Total_Cost_Objective = pyo.Objective(
-                rule=total_cost_rule, sense=pyo.minimize
-            )
+            m.Total_Cost = pyo.Objective(rule=total_cost_rule, sense=pyo.minimize)
 
             disc = pyo.TransformationFactory("dae.collocation")
             disc.apply_to(m, nfe=20, ncp=2)
@@ -1165,6 +1176,10 @@ class TestReactorDesign_DAE(unittest.TestCase):
                 m.unknown_parameters.update(
                     (k, pyo.ComponentUID(k)) for k in [m.k1, m.k2]
                 )
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update((m.ca[t], None) for t in meas_time_points)
+                m.measurement_error.update((m.cb[t], None) for t in meas_time_points)
+                m.measurement_error.update((m.cc[t], None) for t in meas_time_points)
 
             def get_labeled_model(self):
                 self.create_model()
@@ -1210,8 +1225,8 @@ class TestReactorDesign_DAE(unittest.TestCase):
         exp_list_df = [ReactorDesignExperimentDAE(data_df)]
         exp_list_dict = [ReactorDesignExperimentDAE(data_dict)]
 
-        self.pest_df = parmest.Estimator(exp_list_df)
-        self.pest_dict = parmest.Estimator(exp_list_dict)
+        self.pest_df = parmest.Estimator(exp_list_df, obj_function="SSE")
+        self.pest_dict = parmest.Estimator(exp_list_dict, obj_function="SSE")
 
         # Estimator object with multiple scenarios
         exp_list_df_multiple = [
@@ -1223,8 +1238,12 @@ class TestReactorDesign_DAE(unittest.TestCase):
             ReactorDesignExperimentDAE(data_dict),
         ]
 
-        self.pest_df_multiple = parmest.Estimator(exp_list_df_multiple)
-        self.pest_dict_multiple = parmest.Estimator(exp_list_dict_multiple)
+        self.pest_df_multiple = parmest.Estimator(
+            exp_list_df_multiple, obj_function="SSE"
+        )
+        self.pest_dict_multiple = parmest.Estimator(
+            exp_list_dict_multiple, obj_function="SSE"
+        )
 
         # Create an instance of the model
         self.m_df = ABC_model(data_df)
@@ -1260,7 +1279,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.exp_list_df_no_params = exp_list_df_no_params
         self.exp_list_dict_no_params = exp_list_dict_no_params
 
-    def test_parmest_exception(self):
+    def test_unknown_parameters_exception(self):
         """
         Test the exception raised by parmest when the "unknown_parameters"
         attribute is not defined in the model
@@ -1312,13 +1331,14 @@ class TestReactorDesign_DAE(unittest.TestCase):
         )
 
         # Number of datapoints.
-        # 3 data components (ca, cb, cc), 20 timesteps, 1 scenario = 60
-        # In this example, this is the number of data points in data_df, but that's
-        # only because the data is indexed by time and contains no additional information.
-        n = 60
+        # In this example, there are 20 time points and 1 experiment = 20 data points
+        # The data is indexed by time, so we do not consider the number of experimental
+        # outputs.
+        n = 20
 
         # Compute covariance using parmest
-        obj, theta, cov = self.pest_df.theta_est(calc_cov=True, cov_n=n)
+        obj, theta = self.pest_df.theta_est()
+        cov = self.pest_df.cov_est(method="reduced_hessian")
 
         # Compute covariance using interior_point
         vars_list = [self.m_df.k1, self.m_df.k2]
@@ -1349,7 +1369,8 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
             RooneyBieglerExperiment,
         )
 
-        # Note, the data used in this test has been corrected to use data.loc[5,'hour'] = 7 (instead of 6)
+        # Note, the data used in this test has been corrected to use
+        # data.loc[5,'hour'] = 7 (instead of 6)
         data = pd.DataFrame(
             data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
             columns=["hour", "y"],
@@ -1414,6 +1435,1012 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
         )  # 0.5311 from the paper
 
         self.pest.diagnostic_mode = False
+
+
+@unittest.skipIf(
+    not parmest.parmest_available,
+    "Cannot test parmest regularization: required dependencies are missing",
+)
+class TestRegularizationCore(unittest.TestCase):
+    # These tests intentionally use a tiny linear model so each expected
+    # regularization term can be computed analytically and reviewed quickly.
+    class LinearExperiment(Experiment):
+        def __init__(self, x, y, theta0_init=0.0, theta1_init=0.0):
+            self.x = float(x)
+            self.y = float(y)
+            self.theta0_init = float(theta0_init)
+            self.theta1_init = float(theta1_init)
+            super().__init__(model=None)
+            self.create_model()
+            self.label_model()
+
+        def create_model(self):
+            m = pyo.ConcreteModel()
+            m.theta0 = pyo.Var(initialize=self.theta0_init)
+            m.theta1 = pyo.Var(initialize=self.theta1_init)
+            m.x = pyo.Param(initialize=self.x, mutable=True)
+            m.pred = pyo.Var(initialize=self.y)
+            m.pred_link = pyo.Constraint(expr=m.pred == m.theta0 + m.theta1 * m.x)
+            self.model = m
+
+        def label_model(self):
+            m = self.model
+            m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+            m.experiment_outputs.update([(m.pred, self.y)])
+            m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+            m.unknown_parameters.update(
+                (k, pyo.ComponentUID(k)) for k in [m.theta0, m.theta1]
+            )
+            m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+            m.measurement_error.update([(m.pred, None)])
+
+    class DummyExperiment(Experiment):
+        def __init__(self):
+            m = pyo.ConcreteModel()
+            m.theta0 = pyo.Var(initialize=0.0)
+            m.theta1 = pyo.Var(initialize=0.0)
+            m.pred = pyo.Var(initialize=0.0)
+            m.pred_link = pyo.Constraint(expr=m.pred == m.theta0 + m.theta1)
+            m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+            m.experiment_outputs.update([(m.pred, 0.0)])
+            m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+            m.unknown_parameters.update(
+                (k, pyo.ComponentUID(k)) for k in [m.theta0, m.theta1]
+            )
+            m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+            m.measurement_error.update([(m.pred, None)])
+            super().__init__(model=m)
+
+    @staticmethod
+    def _make_var_labeled_model(y_obs=5.0):
+        # Var-based helper used for direct objective-expression checks.
+        m = pyo.ConcreteModel()
+        m.theta0 = pyo.Var(initialize=0.0)
+        m.theta1 = pyo.Var(initialize=0.0)
+        m.pred = pyo.Expression(expr=m.theta0 + 2.0 * m.theta1)
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs.update([(m.pred, float(y_obs))])
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update(
+            (k, pyo.ComponentUID(k)) for k in [m.theta0, m.theta1]
+        )
+        return m
+
+    @staticmethod
+    def _obj_at_theta(pest, theta0, theta1):
+        # Evaluate objective for a single theta row to keep assertions explicit.
+        theta = pd.DataFrame([[theta0, theta1]], columns=["theta0", "theta1"])
+        return pest.objective_at_theta(theta_values=theta).iloc[0]["obj"]
+
+    def test_l2_objective_value_matches_manual_quadratic(self):
+        m = self._make_var_labeled_model(y_obs=5.0)
+        m.theta0.set_value(4.0)
+        m.theta1.set_value(-1.0)
+
+        prior_fim = pd.DataFrame(
+            [[2.0, 0.0], [0.0, 4.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+        theta_ref = {"theta0": 1.0, "theta1": 2.0}
+        weight = 3.0
+
+        expr = parmest.L2_regularized_objective(
+            m,
+            prior_FIM=prior_fim,
+            theta_ref=theta_ref,
+            regularization_weight=weight,
+            obj_function=parmest.SSE,
+        )
+
+        sse_expected = 9.0
+        l2_expected = 54.0
+        expected = sse_expected + weight * l2_expected
+
+        self.assertAlmostEqual(pyo.value(expr), expected)
+
+    @unittest.skipUnless(ipopt_available, "Test requires ipopt")
+    def test_l2_penalty_not_double_counted_across_scenarios(self):
+        # Confirms regularization is applied once at the estimator level,
+        # not once per scenario.
+        exp_list = [self.LinearExperiment(1.0, 1.0), self.LinearExperiment(2.0, 2.0)]
+        prior_fim = pd.DataFrame(
+            [[0.0, 0.0], [0.0, 2.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+        theta_ref = {"theta0": 0.0, "theta1": 0.0}
+
+        pest = parmest.Estimator(
+            exp_list,
+            obj_function="SSE",
+            regularization="L2",
+            prior_FIM=prior_fim,
+            theta_ref=theta_ref,
+            regularization_weight=1.0,
+        )
+
+        obj_val = self._obj_at_theta(pest, 0.0, 1.0)
+        self.assertAlmostEqual(obj_val, 2.0)
+
+    def test_regularization_requires_explicit_option_when_prior_supplied(self):
+        # Guardrail: passing prior/FIM arguments without selecting a
+        # regularization mode should fail fast.
+        exp_list = [self.LinearExperiment(1.0, 1.0)]
+        prior_fim = pd.DataFrame(
+            [[1.0, 0.0], [0.0, 1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        with pytest.raises(
+            ValueError, match="regularization must be set when supplying prior_FIM"
+        ):
+            parmest.Estimator(exp_list, obj_function="SSE", prior_FIM=prior_fim)
+
+    def test_l2_regularization_requires_prior_fim(self):
+        exp_list = [self.LinearExperiment(1.0, 1.0)]
+
+        with pytest.raises(ValueError, match="prior_FIM must be provided"):
+            parmest.Estimator(exp_list, obj_function="SSE", regularization="L2")
+
+    def test_user_specified_unsupported_regularization_raises(self):
+        exp_list = [self.LinearExperiment(1.0, 1.0)]
+
+        with pytest.raises(TypeError, match="regularization must be None or one of"):
+            parmest.Estimator(
+                exp_list, obj_function="SSE", regularization=lambda m: m.theta0**2
+            )
+
+    @unittest.skipUnless(ipopt_available, "Test requires ipopt")
+    def test_l2_lambda_zero_matches_unregularized_objective(self):
+        exp_list = [self.LinearExperiment(1.0, 1.0), self.LinearExperiment(2.0, 2.0)]
+        prior_fim = pd.DataFrame(
+            [[2.0, 0.0], [0.0, 1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+        theta_ref = {"theta0": 0.0, "theta1": 0.0}
+
+        pest_base = parmest.Estimator(exp_list, obj_function="SSE")
+        pest_l2_zero = parmest.Estimator(
+            exp_list,
+            obj_function="SSE",
+            regularization="L2",
+            prior_FIM=prior_fim,
+            theta_ref=theta_ref,
+            regularization_weight=0.0,
+        )
+
+        for theta0, theta1 in [(0.0, 0.0), (0.5, 1.5), (-1.0, 2.0)]:
+            obj_base = self._obj_at_theta(pest_base, theta0, theta1)
+            obj_l2_zero = self._obj_at_theta(pest_l2_zero, theta0, theta1)
+            self.assertAlmostEqual(obj_l2_zero, obj_base)
+
+    @unittest.skipUnless(ipopt_available, "Test requires ipopt")
+    def test_prior_subset_penalizes_only_selected_parameter(self):
+        # Prior indexed only by theta1 should leave theta0 unpenalized.
+        exp_list = [self.LinearExperiment(1.0, 1.0)]
+        prior_fim = pd.DataFrame([[4.0]], index=["theta1"], columns=["theta1"])
+
+        pest_base = parmest.Estimator(exp_list, obj_function="SSE")
+        pest_l2 = parmest.Estimator(
+            exp_list,
+            obj_function="SSE",
+            regularization="L2",
+            prior_FIM=prior_fim,
+            theta_ref={"theta1": 0.0},
+            regularization_weight=1.0,
+        )
+
+        obj_base_theta0 = self._obj_at_theta(pest_base, theta0=1.0, theta1=0.0)
+        obj_l2_theta0 = self._obj_at_theta(pest_l2, theta0=1.0, theta1=0.0)
+        self.assertAlmostEqual(obj_l2_theta0, obj_base_theta0)
+
+        obj_base_theta1 = self._obj_at_theta(pest_base, theta0=0.0, theta1=1.0)
+        obj_l2_theta1 = self._obj_at_theta(pest_l2, theta0=0.0, theta1=1.0)
+        expected_penalty = 4.0 * (1.0**2)
+        self.assertAlmostEqual(obj_l2_theta1 - obj_base_theta1, expected_penalty)
+
+    def test_negative_regularization_weight_raises(self):
+        exp_list = [self.LinearExperiment(1.0, 1.0)]
+        prior_fim = pd.DataFrame(
+            [[1.0, 0.0], [0.0, 1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        with pytest.raises(
+            ValueError, match="regularization_weight must be nonnegative"
+        ):
+            parmest.Estimator(
+                exp_list,
+                obj_function="SSE",
+                regularization="L2",
+                prior_FIM=prior_fim,
+                regularization_weight=-1.0,
+            )
+
+    def test_non_dict_theta_ref_raises_type_error(self):
+        exp_list = [self.LinearExperiment(1.0, 1.0)]
+        prior_fim = pd.DataFrame(
+            [[1.0, 0.0], [0.0, 1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        with pytest.raises(
+            TypeError,
+            match="theta_ref must be a dict mapping parameter names to reference values.",
+        ):
+            parmest.Estimator(
+                exp_list,
+                obj_function="SSE",
+                regularization="L2",
+                prior_FIM=prior_fim,
+                theta_ref=pd.Series({"theta0": 0.0, "theta1": 0.0}),
+                regularization_weight=1.0,
+            )
+
+    def test_missing_theta_ref_entries_raise_clear_error(self):
+        exp_list = [self.LinearExperiment(1.0, 1.0)]
+        prior_fim = pd.DataFrame(
+            [[1.0, 0.0], [0.0, 1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        pest = parmest.Estimator(
+            exp_list,
+            obj_function="SSE",
+            regularization="L2",
+            prior_FIM=prior_fim,
+            theta_ref={"theta0": 0.0},
+            regularization_weight=1.0,
+        )
+
+        with pytest.raises(
+            ValueError, match=r"theta_ref is missing values for parameter\(s\): theta1"
+        ):
+            _ = self._obj_at_theta(pest, theta0=0.0, theta1=0.0)
+
+    def test_non_psd_prior_fim_rejected(self):
+        exp_list = [self.LinearExperiment(1.0, 1.0)]
+        non_psd = pd.DataFrame(
+            [[1.0, 2.0], [2.0, -1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        with pytest.raises(ValueError, match="positive semi-definite"):
+            parmest.Estimator(
+                exp_list, obj_function="SSE", regularization="L2", prior_FIM=non_psd
+            )
+
+    def test_prior_fim_must_be_dataframe(self):
+        with pytest.raises(TypeError, match="prior_FIM must be a pandas DataFrame."):
+            parmest._validate_prior_FIM([[1.0, 0.0], [0.0, 1.0]])
+
+    def test_prior_fim_row_and_column_labels_must_match(self):
+        prior_fim = pd.DataFrame(
+            [[1.0, 0.0], [0.0, 1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta2"],
+        )
+
+        with pytest.raises(
+            ValueError,
+            match="prior_FIM row and column labels must match the same parameter names.",
+        ):
+            parmest._validate_prior_FIM(prior_fim)
+
+    def test_prior_fim_entries_must_be_numeric(self):
+        prior_fim = pd.DataFrame(
+            [["a", 0.0], [0.0, "b"]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        with pytest.raises(TypeError, match="prior_FIM entries must be numeric."):
+            parmest._validate_prior_FIM(prior_fim)
+
+    def test_prior_fim_entries_must_be_finite(self):
+        prior_fim = pd.DataFrame(
+            [[1.0, np.nan], [np.nan, 1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        with pytest.raises(ValueError, match="prior_FIM entries must be finite."):
+            parmest._validate_prior_FIM(prior_fim)
+
+    def test_prior_fim_must_be_symmetric(self):
+        prior_fim = pd.DataFrame(
+            [[1.0, 2.0], [0.0, 1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        with pytest.raises(ValueError, match="prior_FIM must be symmetric."):
+            parmest._validate_prior_FIM(prior_fim)
+
+    def test_prior_fim_can_skip_psd_check(self):
+        prior_fim = pd.DataFrame(
+            [[1.0, 2.0], [2.0, -1.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        parmest._validate_prior_FIM(prior_fim, require_psd=False)
+
+    def test_l2_penalty_with_missing_theta_ref_uses_model_reference(self):
+        m = self._make_var_labeled_model(y_obs=5.0)
+        m.theta0.set_value(4.0)
+        m.theta1.set_value(-1.0)
+
+        prior_fim = pd.DataFrame(
+            [[2.0, 0.0], [0.0, 4.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+
+        with self.assertLogs(parmest.logger.name, level="INFO") as logs:
+            penalty = parmest._calculate_L2_penalty(
+                m, prior_FIM=prior_fim, theta_ref=None
+            )
+
+        self.assertAlmostEqual(pyo.value(penalty), 0.0)
+        self.assertTrue(
+            any(
+                "theta_ref is None. Using initialized parameter values as reference."
+                in msg
+                for msg in logs.output
+            )
+        )
+
+    def test_l2_penalty_returns_zero_when_prior_has_no_matching_parameters(self):
+        m = self._make_var_labeled_model(y_obs=5.0)
+        prior_fim = pd.DataFrame([[1.0]], index=["alpha"], columns=["alpha"])
+
+        with self.assertLogs(parmest.logger.name, level="WARNING") as logs:
+            penalty = parmest._calculate_L2_penalty(
+                m, prior_FIM=prior_fim, theta_ref=None
+            )
+
+        self.assertEqual(penalty, 0.0)
+        self.assertTrue(
+            any(
+                "No matching parameters found between Model and Prior FIM" in msg
+                for msg in logs.output
+            )
+        )
+
+    def test_compute_covariance_matrix_adds_twice_weighted_prior_fim_for_sse(self):
+        exp_list = [self.DummyExperiment()]
+
+        data_fim = np.array([[5.0, 1.0], [1.0, 4.0]])
+
+        def fake_finite_difference_FIM(*args, **kwargs):
+            return data_fim
+
+        prior_fim = pd.DataFrame(
+            [[2.0, 0.5], [0.5, 3.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+        theta_vals = {"theta0": 0.0, "theta1": 0.0}
+        regularization_weight = 0.25
+
+        original_finite_difference_FIM = parmest._finite_difference_FIM
+        try:
+            parmest._finite_difference_FIM = fake_finite_difference_FIM
+            cov = parmest.compute_covariance_matrix(
+                experiment_list=exp_list,
+                method=parmest.CovarianceMethod.finite_difference.value,
+                obj_function=parmest.SSE,
+                theta_vals=theta_vals,
+                step=1e-3,
+                solver="ipopt",
+                tee=False,
+                prior_FIM=prior_fim,
+                regularization_weight=regularization_weight,
+            )
+        finally:
+            parmest._finite_difference_FIM = original_finite_difference_FIM
+
+        expected_fim = data_fim + 2.0 * regularization_weight * prior_fim.values
+        expected_cov = np.linalg.inv(expected_fim)
+
+        np.testing.assert_allclose(
+            cov.loc[["theta0", "theta1"], ["theta0", "theta1"]].values,
+            expected_cov,
+            rtol=1e-12,
+            atol=1e-12,
+        )
+
+    def test_compute_covariance_matrix_reorders_prior_fim_by_parameter_name(self):
+        exp_list = [self.DummyExperiment()]
+
+        data_fim = np.array([[5.0, 1.0], [1.0, 4.0]])
+
+        def fake_finite_difference_FIM(*args, **kwargs):
+            return data_fim
+
+        prior_fim = pd.DataFrame(
+            [[3.0, 0.5], [0.5, 2.0]],
+            index=["theta1", "theta0"],
+            columns=["theta1", "theta0"],
+        )
+        theta_vals = {"theta0": 0.0, "theta1": 0.0}
+        regularization_weight = 0.25
+
+        original_finite_difference_FIM = parmest._finite_difference_FIM
+        try:
+            parmest._finite_difference_FIM = fake_finite_difference_FIM
+            cov = parmest.compute_covariance_matrix(
+                experiment_list=exp_list,
+                method=parmest.CovarianceMethod.finite_difference.value,
+                obj_function=parmest.SSE_weighted,
+                theta_vals=theta_vals,
+                step=1e-3,
+                solver="ipopt",
+                tee=False,
+                prior_FIM=prior_fim,
+                regularization_weight=regularization_weight,
+            )
+        finally:
+            parmest._finite_difference_FIM = original_finite_difference_FIM
+
+        expected_prior_fim = np.array([[2.0, 0.5], [0.5, 3.0]])
+        expected_fim = data_fim + regularization_weight * expected_prior_fim
+        expected_cov = np.linalg.inv(expected_fim)
+
+        np.testing.assert_allclose(
+            cov.loc[["theta0", "theta1"], ["theta0", "theta1"]].values,
+            expected_cov,
+            rtol=1e-12,
+            atol=1e-12,
+        )
+
+    def test_compute_covariance_matrix_adds_once_weighted_prior_fim_for_sse_weighted(
+        self,
+    ):
+        exp_list = [self.DummyExperiment()]
+
+        data_fim = np.array([[5.0, 1.0], [1.0, 4.0]])
+
+        def fake_finite_difference_FIM(*args, **kwargs):
+            return data_fim
+
+        prior_fim = pd.DataFrame(
+            [[2.0, 0.5], [0.5, 3.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+        theta_vals = {"theta0": 0.0, "theta1": 0.0}
+        regularization_weight = 0.25
+
+        original_finite_difference_FIM = parmest._finite_difference_FIM
+        try:
+            parmest._finite_difference_FIM = fake_finite_difference_FIM
+            cov = parmest.compute_covariance_matrix(
+                experiment_list=exp_list,
+                method=parmest.CovarianceMethod.finite_difference.value,
+                obj_function=parmest.SSE_weighted,
+                theta_vals=theta_vals,
+                step=1e-3,
+                solver="ipopt",
+                tee=False,
+                prior_FIM=prior_fim,
+                regularization_weight=regularization_weight,
+            )
+        finally:
+            parmest._finite_difference_FIM = original_finite_difference_FIM
+
+        expected_fim = data_fim + regularization_weight * prior_fim.values
+        expected_cov = np.linalg.inv(expected_fim)
+
+        np.testing.assert_allclose(
+            cov.loc[["theta0", "theta1"], ["theta0", "theta1"]].values,
+            expected_cov,
+            rtol=1e-12,
+            atol=1e-12,
+        )
+
+    def test_l2_weighted_objective_applies_half_regularization_factor(self):
+        m = self._make_var_labeled_model(y_obs=5.0)
+        m.theta0.set_value(4.0)
+        m.theta1.set_value(-1.0)
+
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error.update([(m.pred, 1.0)])
+
+        prior_fim = pd.DataFrame(
+            [[2.0, 0.0], [0.0, 4.0]],
+            index=["theta0", "theta1"],
+            columns=["theta0", "theta1"],
+        )
+        theta_ref = {"theta0": 1.0, "theta1": 2.0}
+        weight = 3.0
+
+        expr = parmest.L2_regularized_objective(
+            m,
+            prior_FIM=prior_fim,
+            theta_ref=theta_ref,
+            regularization_weight=weight,
+            obj_function=parmest.SSE_weighted,
+        )
+
+        # pred = 4 + 2*(-1) = 2, residual = 5 - 2 = 3
+        # WSSE = 0.5 * 3**2 = 4.5
+        # raw L2 = [3, -3]^T diag(2, 4) [3, -3] = 54
+        # weighted objective should use 0.5 * raw L2
+        expected = 4.5 + weight * 0.5 * 54.0
+
+        self.assertAlmostEqual(pyo.value(expr), expected)
+
+    @unittest.skipUnless(ipopt_available, "Test requires ipopt")
+    def test_indexed_unknown_parameters_regularization_uses_scalar_theta_names(self):
+        exp_list = [IndexedThetaExperiment(2.0, 5.0)]
+        prior_fim = pd.DataFrame(
+            [[3.0, 0.0], [0.0, 4.0]],
+            index=["theta[a]", "theta[b]"],
+            columns=["theta[a]", "theta[b]"],
+        )
+        theta_ref = {"theta[a]": 0.0, "theta[b]": 1.0}
+
+        pest = parmest.Estimator(
+            exp_list,
+            obj_function="SSE",
+            regularization="L2",
+            prior_FIM=prior_fim,
+            theta_ref=theta_ref,
+        )
+
+        theta_values = pd.DataFrame([[1.0, 2.0]], columns=["theta[a]", "theta[b]"])
+        obj_val = pest.objective_at_theta(theta_values=theta_values).iloc[0]["obj"]
+
+        self.assertAlmostEqual(obj_val, 7.0)
+
+
+class LinearThetaExperiment(Experiment):
+    def __init__(self, x, y, include_second_output=False):
+        self.x_data = x
+        self.y_data = y
+        self.include_second_output = include_second_output
+        self.model = None
+
+    def create_model(self):
+        m = pyo.ConcreteModel()
+
+        m.theta = pyo.Var(initialize=0.0, bounds=(-10.0, 10.0))
+        m.x = pyo.Param(initialize=float(self.x_data), mutable=False)
+        m.y = pyo.Var(initialize=float(self.y_data))
+
+        m.y_link = pyo.Constraint(expr=m.y == m.theta + m.x)
+
+        if self.include_second_output:
+            m.z = pyo.Var(initialize=2.0 * float(self.y_data))
+            m.z_link = pyo.Constraint(expr=m.z == 2.0 * m.theta + m.x)
+
+        self.model = m
+
+    def label_model(self):
+        m = self.model
+
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs.update([(m.y, float(self.y_data))])
+
+        if self.include_second_output:
+            m.experiment_outputs.update([(m.z, float(2.0 * self.y_data))])
+
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update([(m.theta, pyo.ComponentUID(m.theta))])
+
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error.update([(m.y, None)])
+
+        if self.include_second_output:
+            m.measurement_error.update([(m.z, None)])
+
+    def get_labeled_model(self):
+        self.create_model()
+        self.label_model()
+        return self.model
+
+
+class IndexedThetaExperiment(Experiment):
+    def __init__(self, x, y):
+        self.x_data = x
+        self.y_data = y
+        self.model = None
+
+    def create_model(self):
+        m = pyo.ConcreteModel()
+
+        m.theta_index = pyo.Set(initialize=["a", "b"])
+        m.theta = pyo.Var(
+            m.theta_index, initialize={"a": 0.0, "b": 1.0}, bounds=(-10.0, 10.0)
+        )
+
+        m.x = pyo.Param(initialize=float(self.x_data), mutable=False)
+        m.y = pyo.Var(initialize=float(self.y_data))
+
+        m.y_link = pyo.Constraint(expr=m.y == m.theta["a"] + m.theta["b"] * m.x)
+
+        self.model = m
+
+    def label_model(self):
+        m = self.model
+
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs.update([(m.y, float(self.y_data))])
+
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update([(m.theta, pyo.ComponentUID(m.theta))])
+
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error.update([(m.y, None)])
+
+    def get_labeled_model(self):
+        self.create_model()
+        self.label_model()
+        return self.model
+
+
+class BoundedLinearThetaExperiment(Experiment):
+    def __init__(self, x, y):
+        self.x_data = x
+        self.y_data = y
+        self.model = None
+
+    def create_model(self):
+        m = pyo.ConcreteModel()
+
+        m.theta = pyo.Var(initialize=0.0, bounds=(-10.0, 10.0))
+        m.x = pyo.Param(initialize=float(self.x_data), mutable=False)
+        m.y = pyo.Var(initialize=float(self.y_data))
+
+        m.y_link = pyo.Constraint(expr=m.y == m.theta + m.x)
+
+        # This allows fixed-theta tests to create a real infeasible model.
+        # For example, theta=2 and x=1 implies y=3, violating y <= 2.
+        m.upper_limit = pyo.Constraint(expr=m.y <= 2.0)
+
+        self.model = m
+
+    def label_model(self):
+        m = self.model
+
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs.update([(m.y, float(self.y_data))])
+
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update([(m.theta, pyo.ComponentUID(m.theta))])
+
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error.update([(m.y, None)])
+
+    def get_labeled_model(self):
+        self.create_model()
+        self.label_model()
+        return self.model
+
+
+class IndexedOutputExperiment(Experiment):
+    def __init__(self, y_points, z_points):
+        self.y_points = list(y_points)
+        self.z_points = list(z_points)
+        self.model = None
+
+    def create_model(self):
+        m = pyo.ConcreteModel()
+
+        m.theta = pyo.Var(initialize=0.0, bounds=(-10.0, 10.0))
+
+        m.y_index = pyo.Set(dimen=2, ordered=True, initialize=self.y_points)
+        m.z_index = pyo.Set(dimen=2, ordered=True, initialize=self.z_points)
+
+        m.y = pyo.Var(m.y_index, initialize=0.0)
+        m.z = pyo.Var(m.z_index, initialize=0.0)
+
+        self.model = m
+
+    def label_model(self):
+        m = self.model
+
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+
+        m.experiment_outputs.update(
+            (m.y[idx], float(i)) for i, idx in enumerate(self.y_points, start=1)
+        )
+
+        m.experiment_outputs.update(
+            (m.z[idx], float(i)) for i, idx in enumerate(self.z_points, start=1)
+        )
+
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update([(m.theta, pyo.ComponentUID(m.theta))])
+
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+
+        m.measurement_error.update((m.y[idx], None) for idx in self.y_points)
+        m.measurement_error.update((m.z[idx], None) for idx in self.z_points)
+
+    def get_labeled_model(self):
+        self.create_model()
+        self.label_model()
+        return self.model
+
+
+def _build_estimator(data, include_second_output=False):
+    exp_list = [
+        LinearThetaExperiment(x=x, y=y, include_second_output=include_second_output)
+        for x, y in data
+    ]
+
+    return parmest.Estimator(exp_list, obj_function="SSE")
+
+
+def _build_indexed_theta_estimator(data):
+    exp_list = [IndexedThetaExperiment(x=x, y=y) for x, y in data]
+
+    return parmest.Estimator(exp_list, obj_function="SSE")
+
+
+def _build_bounded_estimator(data):
+    exp_list = [BoundedLinearThetaExperiment(x=x, y=y) for x, y in data]
+
+    return parmest.Estimator(exp_list, obj_function="SSE")
+
+
+@unittest.skipIf(
+    not parmest.parmest_available,
+    "Cannot test parmest: required dependencies are missing",
+)
+class TestParmestBlockEF(unittest.TestCase):
+
+    def test_block_ef_structure_counts(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+        model = pest._create_scenario_blocks()
+
+        theta_names = model._parmest_theta_names
+        self.assertEqual(list(model.scenario_indices), [0, 1])
+        self.assertEqual(
+            [pyo.value(model.scenario_number[i]) for i in model.scenario_indices],
+            [0, 1],
+        )
+        self.assertEqual(list(model.exp_scenarios.keys()), list(model.scenario_indices))
+        self.assertEqual(len(list(model.exp_scenarios.keys())), 2)
+        self.assertEqual(len(model.theta_link_constraints), 2 * len(theta_names))
+        self.assertTrue(hasattr(model, "Obj"))
+
+        for block in model.exp_scenarios.values():
+            self.assertFalse(block.Total_Cost_Objective.active)
+            self.assertFalse(block.theta.fixed)
+            self.assertAlmostEqual(
+                pyo.value(block.theta),
+                pyo.value(model.parmest_theta["theta"]),
+                places=10,
+            )
+
+    def test_fix_theta_sets_all_scenario_theta_values(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+        model = pest._create_scenario_blocks(theta_vals={"theta": 1.0}, fix_theta=True)
+
+        self.assertTrue(model.parmest_theta["theta"].fixed)
+        self.assertAlmostEqual(pyo.value(model.parmest_theta["theta"]), 1.0, places=10)
+        self.assertEqual(len(model.theta_link_constraints), 0)
+
+        for block in model.exp_scenarios.values():
+            self.assertTrue(block.theta.fixed)
+            self.assertAlmostEqual(pyo.value(block.theta), 1.0, places=10)
+
+    def test_duplicate_bootlist_preserves_scenario_mapping(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+        model = pest._create_scenario_blocks(bootlist=[0, 1, 1])
+
+        self.assertEqual(pest.obj_probability_constant, 3)
+        self.assertEqual(list(model.scenario_indices), [0, 1, 2])
+        self.assertEqual(list(model.exp_scenarios.keys()), [0, 1, 2])
+        self.assertEqual(
+            [pyo.value(model.scenario_number[i]) for i in model.scenario_indices],
+            [0, 1, 1],
+        )
+        self.assertIsNot(model.exp_scenarios[1], model.exp_scenarios[2])
+        self.assertAlmostEqual(pyo.value(model.exp_scenarios[1].x), 2.0, places=10)
+        self.assertAlmostEqual(pyo.value(model.exp_scenarios[2].x), 2.0, places=10)
+
+    def test_indexed_unknown_parameters_are_expanded_and_fixed(self):
+        pest = _build_indexed_theta_estimator([(1.0, 2.0), (2.0, 4.0)])
+
+        model = pest._create_scenario_blocks(
+            theta_vals={"theta[a]": 1.0, "theta[b]": 2.0}, fix_theta=True
+        )
+
+        self.assertEqual(list(model._parmest_theta_names), ["theta[a]", "theta[b]"])
+        self.assertEqual(len(model.theta_link_constraints), 0)
+
+        for block in model.exp_scenarios.values():
+            self.assertTrue(block.theta["a"].fixed)
+            self.assertTrue(block.theta["b"].fixed)
+            self.assertAlmostEqual(pyo.value(block.theta["a"]), 1.0, places=10)
+            self.assertAlmostEqual(pyo.value(block.theta["b"]), 2.0, places=10)
+
+    def test_indexed_unknown_parameter_names_are_expanded_consistently(self):
+        pest = _build_indexed_theta_estimator([(1.0, 2.0), (2.0, 4.0)])
+
+        self.assertEqual(pest._return_theta_names(), ["theta[a]", "theta[b]"])
+
+    def test_cov_est_counts_expanded_indexed_unknown_parameters(self):
+        pest = _build_indexed_theta_estimator([(1.0, 2.0), (2.0, 4.0)])
+
+        with self.assertRaisesRegex(
+            AssertionError,
+            "The number of datapoints must be greater than the number of parameters to estimate.",
+        ):
+            pest.cov_est()
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_q_opt_solves_block_ef_and_returns_theta(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+
+        obj, theta = pest._Q_opt()
+
+        self.assertAlmostEqual(theta["theta"], 1.5, places=7)
+        self.assertAlmostEqual(obj, 0.25, places=7)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_q_opt_returns_requested_values(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+
+        obj, theta, var_values = pest._Q_opt(return_values=["y"])
+
+        self.assertAlmostEqual(theta["theta"], 1.5, places=7)
+        self.assertIsInstance(var_values, pd.DataFrame)
+        self.assertEqual(list(var_values.columns), ["y"])
+        self.assertEqual(len(var_values), 2)
+        self.assertAlmostEqual(var_values.loc[0, "y"], 2.5, places=7)
+        self.assertAlmostEqual(var_values.loc[1, "y"], 3.5, places=7)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_q_opt_fixed_theta_returns_objective_theta_and_status(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+
+        obj, theta, status = pest._Q_opt(theta_vals={"theta": 1.0}, fix_theta=True)
+
+        self.assertEqual(status, pyo.TerminationCondition.optimal)
+        self.assertEqual(theta, {"theta": 1.0})
+        self.assertAlmostEqual(obj, 0.5, places=8)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_q_opt_fixed_theta_infeasible_returns_none(self):
+        pest = _build_bounded_estimator([(1.0, 2.0), (2.0, 3.0)])
+
+        obj, theta, status = pest._Q_opt(theta_vals={"theta": 2.0}, fix_theta=True)
+
+        self.assertIsNone(obj)
+        self.assertEqual(theta, {"theta": 2.0})
+        self.assertEqual(status, pyo.TerminationCondition.infeasible)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_objective_at_theta_fixed_value(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+
+        theta_values = pd.DataFrame([[1.0]], columns=["theta"])
+        obj_at_theta = pest.objective_at_theta(theta_values=theta_values)
+
+        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 0.5, places=8)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_objective_at_theta_none_uses_initial_theta(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 3.0)])
+
+        obj_at_theta = pest.objective_at_theta()
+
+        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 1.0, places=8)
+        self.assertAlmostEqual(obj_at_theta.loc[0, "theta"], 0.0, places=8)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_objective_at_theta_omits_infeasible_rows(self):
+        pest = _build_bounded_estimator([(1.0, 2.0), (2.0, 3.0)])
+
+        theta_values = pd.DataFrame([[0.0], [2.0]], columns=["theta"])
+
+        obj_at_theta = pest.objective_at_theta(theta_values=theta_values)
+
+        self.assertEqual(len(obj_at_theta), 1)
+        self.assertEqual(list(obj_at_theta.columns), ["theta", "obj"])
+        self.assertAlmostEqual(obj_at_theta.loc[0, "theta"], 0.0, places=8)
+        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 1.0, places=8)
+
+    def test_invalid_solver_name_raises_runtimeerror(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+
+        with self.assertRaisesRegex(
+            RuntimeError, "Unknown solver in Q_Opt=not_a_solver"
+        ):
+            pest.theta_est(solver="not_a_solver")
+
+    def test_theta_values_duplicate_columns_rejected(self):
+        pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
+
+        duplicate_cols = pd.DataFrame([[1.0, 2.0]], columns=["theta", "theta"])
+
+        with self.assertRaisesRegex(
+            ValueError, "Duplicate theta names are not allowed"
+        ):
+            pest.objective_at_theta(theta_values=duplicate_cols)
+
+
+@unittest.skipIf(
+    not parmest.parmest_available,
+    "Cannot test parmest: required dependencies are missing",
+)
+class TestCountTotalExperiments(unittest.TestCase):
+    def test_count_total_experiments_multi_output(self):
+        exp_list = [
+            LinearThetaExperiment(1.0, 2.0, include_second_output=True),
+            LinearThetaExperiment(2.0, 4.0, include_second_output=True),
+        ]
+
+        total_points = parmest._count_total_experiments(exp_list)
+
+        # The current parmest convention counts datapoints for one output family.
+        self.assertEqual(total_points, 2)
+
+    def test_count_total_experiments_tuple_index_multi_output(self):
+        exp_list = [
+            IndexedOutputExperiment(
+                y_points=[(0.0, "A"), (1.0, "A")], z_points=[(0.0, "A"), (1.0, "A")]
+            ),
+            IndexedOutputExperiment(
+                y_points=[(0.5, "A"), (1.5, "A")], z_points=[(0.5, "A"), (1.5, "A")]
+            ),
+        ]
+
+        total_points = parmest._count_total_experiments(exp_list)
+
+        self.assertEqual(total_points, 4)
+
+    def test_count_total_experiments_rejects_mismatched_output_lengths(self):
+        exp_list = [
+            IndexedOutputExperiment(
+                y_points=[(0.0, "A"), (1.0, "A")], z_points=[(0.0, "A")]
+            )
+        ]
+
+        with self.assertRaisesRegex(
+            AssertionError,
+            "Experiment outputs must have the same number of indices or data points",
+        ):
+            parmest._count_total_experiments(exp_list)
+
+    def test_count_total_experiments_rejects_mismatched_time_points(self):
+        exp_list = [
+            IndexedOutputExperiment(
+                y_points=[(0.0, "A"), (1.0, "A")], z_points=[(0.0, "A"), (2.0, "A")]
+            )
+        ]
+
+        with self.assertRaisesRegex(
+            AssertionError,
+            "Experiment outputs must share the same indices or data points",
+        ):
+            parmest._count_total_experiments(exp_list)
+
+    def test_count_total_experiments_rejects_time_not_in_first_index(self):
+        exp_list = [
+            IndexedOutputExperiment(
+                y_points=[(0.0, "A"), (1.0, "A")], z_points=[("A", 0.0), ("A", 1.0)]
+            )
+        ]
+
+        with self.assertRaisesRegex(
+            AssertionError,
+            "The first index of experiment outputs must be the data point",
+        ):
+            parmest._count_total_experiments(exp_list)
 
 
 ###########################
