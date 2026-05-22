@@ -273,9 +273,9 @@ def get_standard_args(experiment, fd_method, obj_used):
     experiment : object
         Experiment fixture implementing ``get_labeled_model``.
     fd_method : str
-        Finite-difference mode passed to DoE (for example, ``"central"``).
+        Finite-difference mode passed to DoE (for example, "central").
     obj_used : str
-        Objective option name (for example, ``"trace"`` or ``"determinant"``).
+        Objective option name (for example, "trace" or "determinant").
     """
     args = {}
     args['experiment'] = experiment
