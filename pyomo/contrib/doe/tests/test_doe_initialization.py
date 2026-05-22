@@ -25,6 +25,19 @@ class _FakeResult:
 
     solver = _SolverData()
 
+# Reviewer comment: Are there any tests in any of the other files that exercise 
+# initialization using a real solver? (I do see changes in other tests in other files, but it's unclear to me if any of them are actually exercising the initialization code.)
+# If not, can you please add a test that uses a real solver / real result as well?
+#
+# Suggested Action: What is this specifically trying to test?
+# I think we should instead create examples where the FIM is not positive definite
+# due to a modeling mistake/issue, and we verify this is properly handled by the code. 
+# This would be a more realistic test of the code, and would also verify that the 
+# jittering logic is working as expected.
+#
+# After we make this change, I think that we can remove this 
+# _MutatingRecordingSolver and _TwoParamExperiment, and instead just have a test that 
+# uses a real solver and a real model, where the FIM is not positive definite.
 
 class _MutatingRecordingSolver:
     """
@@ -39,9 +52,21 @@ class _MutatingRecordingSolver:
     def __init__(self):
         self.options = {}
 
+
+
+
+
     def solve(self, model, tee=False):
         """Mutate 2x2 FIM values during init-stage solve."""
         if (
+
+            # Reviewer comment: You know the attributes of the model being 
+            # tested with this dummy solver so is this if-statement really necessary?
+            #
+            # Suggested Action: I think we can remove this if-statement and 
+            # just assume the model has the expected attributes, 
+            # since this is a test fixture that we control.
+
             hasattr(model, "dummy_obj")
             and model.dummy_obj.active
             and hasattr(model, "fim")
@@ -55,7 +80,9 @@ class _MutatingRecordingSolver:
             model.fim[p2, p2].set_value(9.0)
         return _FakeResult()
 
-
+# Reviewer comment: Should this inherit from the Experiment class?
+#
+# Suggested Action: Let's make this into a real model/example that has a problematic FIM.
 class _TwoParamExperiment:
     """
     Minimal two-parameter experiment fixture for trace/Cholesky tests.
@@ -76,6 +103,10 @@ class _TwoParamExperiment:
         m.y2 = pyo.Var(initialize=3.0)
         m.eq1 = pyo.Constraint(expr=m.y1 == m.theta1 * m.x1)
         m.eq2 = pyo.Constraint(expr=m.y2 == m.theta2 * m.x2)
+
+        # My review comment: We should include in comments of the doc string
+        # the mathematical properties of this model. That would make the test
+        # more clear.
 
         m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.experiment_inputs[m.x1] = 1.0
@@ -114,6 +145,16 @@ def _make_trace_doe_object():
 class TestCholeskyInitialization(unittest.TestCase):
     """Regression tests for DoE initialization and Cholesky sync."""
 
+    # Reviewer comment: I know this is a simple method but in general we don't want to repeat 
+    # the calculation implementation in the test and instead check against a 
+    # hard-coded value. Checking up to 14 places also seems excessive. I would 
+    # also recommend adding a test verifying that the return value 
+    # is non-negative which is the intention of this test mentioned in the docstring.
+    # 
+    # Suggested Action: This is a good suggestion. Also, let's do it with a real model.
+    # I am thinking the real model can have one of the coefficients be an input, and changing that
+    # coefficient changes the FIM. Or we could just have a model where one of the parameters
+    # is not structurally identifiable.
     def test_compute_cholesky_jitter_raises_negative_eigenvalue(self):
         """
         Negative minimum eigenvalue should produce positive corrective jitter.

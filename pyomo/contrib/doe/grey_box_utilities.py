@@ -111,7 +111,8 @@ class FIMExternalGreyBox(
         # Inputs store one triangular half
         # of a symmetric FIM. Reconstruct
         # the full symmetric matrix here,
-        # consistent with manuscript S5.
+        # consistent with manuscript equation S5.
+        # https://arxiv.org/abs/2604.03354v1
         upt_FIM = self._input_values
 
         # Create FIM in the correct way

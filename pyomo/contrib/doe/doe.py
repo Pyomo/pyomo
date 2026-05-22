@@ -486,6 +486,20 @@ class DesignOfExperiments:
             with open(results_file, "w") as file:
                 json.dump(self.results, file)
 
+
+
+    # Reviewer comment: Is there a reason to have this as a method on the 
+    # DesignOfExperiments class instead of a standalone utility function? 
+    # It isn't using anything from the class instance.
+    #
+    # Also, it's a 1-line method that is only being used once on L555. 
+    # Why did you even abstract this out as a separate method?
+    #
+    # Suggested Action: Let's check if this is only being used in one place. If it is, let's take
+    # the suggestion of removing it as a function and instead putting it back into the calculation.
+    # Otherwise, we can make it into a utility function. But my first choice is to just do the 
+    # calculation is the one place we need it (no function).
+
     def _compute_cholesky_jitter(self, min_eig):
         """
         Compute diagonal regularization for Cholesky initialization.
@@ -548,10 +562,19 @@ class DesignOfExperiments:
         if model is None:
             model = self.model
         if not hasattr(model, "L"):
+            # The model doesn't have the Cholesky variables, so we can't initialize them.
+            # This happens if the function is called with a model using GreyBox.
             return
 
         fim_np = self._get_fim_numpy(model)
         min_eig = float(np.min(np.linalg.eigvalsh(fim_np)))
+        # Reviewer comment: This implementation is slightly different from 
+        # the implementation where these values are originally calculated on L1443-1465. 
+        # Is there a reason for the difference? Can these be combined to avoid duplication?
+        #
+        # Suggested Action: Let's examine the jitter calculations throughout this file.
+        # If possible, let's standardize (and make a function)
+        # If we cannot standardize, we should explain the difference.
         jitter = self._compute_cholesky_jitter(min_eig)
         fim_pd = fim_np + jitter * np.eye(len(model.parameter_names))
 

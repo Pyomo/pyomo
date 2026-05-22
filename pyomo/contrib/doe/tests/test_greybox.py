@@ -445,7 +445,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             objective_option=objective_option
         )
 
-        # Set input values to the random testing matrix
+        # Set input values to the random testing matrix (upper triangular part)
         grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
 
         # Grab the values from get_FIM
@@ -453,10 +453,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         self.assertTrue(np.all(np.isclose(grey_box_FIM, testing_matrix)))
 
-    # Testing that getting the
-    # input names works properly
     def test_input_names(self):
-        """Verify the grey-box input ordering matches the expected FIM entries."""
+        """Testing that getting the input names works properly."""
         objective_option = "trace"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
