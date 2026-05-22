@@ -6,8 +6,8 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
-from .doe import DesignOfExperiments, ObjectiveLib, FiniteDifferenceStep
-from .utils import rescale_FIM
+from .doe import DesignOfExperiments, ObjectiveLib, FiniteDifferenceStep, GradientMethod
+from .utils import rescale_FIM, ExperimentGradients
 from .grey_box_utilities import FIMExternalGreyBox
 
 # Deprecation errors for old Pyomo.DoE interface classes and structures
