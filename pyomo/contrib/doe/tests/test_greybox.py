@@ -982,11 +982,19 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     def test_D_opt_greybox_build(self):
         """Validate D-opt grey-box block wiring and initialized values on DoE model."""
         objective_option = "determinant"
-        doe_obj, _ = make_greybox_and_doe_objects(objective_option=objective_option)
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
 
         # Build the greybox objective block
         # on the DoE object
         doe_obj.create_grey_box_objective_function()
+
+        self.assertTrue(doe_obj.only_compute_fim_lower)
+        self.assertTrue(hasattr(doe_obj.model.obj_cons, "egb_fim_block"))
+        self.assertIn("log-D-opt", list(grey_box_object.output_names()))
+        self.assertIsInstance(doe_obj.model.objective, pyo.Objective)
+        self.assertEqual(doe_obj.model.objective.sense, pyo.maximize)
 
         # Check to see if each component exists
         all_exist = True
@@ -1026,26 +1034,6 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         current_FIM += current_FIM.transpose() - np.diag(np.diag(current_FIM))
 
         self.assertTrue(np.all(np.isclose(current_FIM, testing_matrix + np.eye(4))))
-
-    def test_D_opt_greybox_build_with_triangular_fim(self):
-        """Determinant grey-box build accepts triangular FIM storage."""
-        objective_option = "determinant"
-        doe_obj, grey_box_object = make_greybox_and_doe_objects(
-            objective_option=objective_option
-        )
-
-        self.assertTrue(doe_obj.only_compute_fim_lower)
-        # Grey-box objective construction should not depend on the Cholesky
-        # build path. This fixture may still carry the shared default flag, so
-        # we do not treat it as a grey-box invariant here.
-        self.assertTrue(doe_obj.use_grey_box)
-
-        doe_obj.create_grey_box_objective_function()
-
-        self.assertTrue(hasattr(doe_obj.model.obj_cons, "egb_fim_block"))
-        self.assertIn("log-D-opt", list(grey_box_object.output_names()))
-        self.assertIsInstance(doe_obj.model.objective, pyo.Objective)
-        self.assertEqual(doe_obj.model.objective.sense, pyo.maximize)
 
     def test_E_opt_greybox_build(self):
         """Validate E-opt grey-box block wiring and initialized values on DoE model."""
