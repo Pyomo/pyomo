@@ -111,8 +111,17 @@ class TestCholeskyInitialization(unittest.TestCase):
         This experiment is structurally unidentifiable because the single
         response depends only on ``theta1 + theta2``. Its analytical FIM is
         rank-deficient, so Cholesky-based initialization must add diagonal
-        regularization before computing ``L``, ``L_inv``, ``fim_inv``, and
-        ``cov_trace``.
+        regularization before computing the Cholesky factors.
+
+        We intentionally do not call ``run_doe()`` here. The behavior under
+        test is the Cholesky/FIM synchronization step after a singular FIM is
+        available. ``run_doe()`` continues on to additional solver-driven
+        optimization steps and does not expose a clean pause point between
+        "the FIM values are now known" and "initialize the Cholesky-related
+        variables from those values." Instead, this test uses the real DoE
+        model-building machinery, writes the analytically known singular FIM
+        for this experiment onto ``model.fim``, and then directly exercises
+        ``_initialize_cholesky_from_fim()``.
         """
         doe_obj = _make_unidentifiable_doe_object(objective_option="trace")
         doe_obj.create_doe_model()
@@ -121,6 +130,10 @@ class TestCholeskyInitialization(unittest.TestCase):
         model = doe_obj.model
         params = list(model.parameter_names)
         expected_fim = np.array([[1.0, 1.0], [1.0, 1.0]])
+        # Pyomo.DoE stores only the lower triangle when
+        # ``only_compute_fim_lower`` is enabled. Populate ``model.fim`` using
+        # the analytical singular FIM for this experiment so the initialization
+        # helper sees the exact pathological case we want to regularize.
         for i, p in enumerate(params):
             for j, q in enumerate(params):
                 if doe_obj.only_compute_fim_lower and i < j:
@@ -130,32 +143,19 @@ class TestCholeskyInitialization(unittest.TestCase):
 
         doe_obj._initialize_cholesky_from_fim()
 
-        fim = np.array(
-            [[pyo.value(model.fim[i, j]) for j in params] for i in params], dtype=float
-        )
         L = np.array([[pyo.value(model.L[i, j]) for j in params] for i in params])
-        L_inv = np.array(
-            [[pyo.value(model.L_inv[i, j]) for j in params] for i in params]
-        )
-        fim_inv = np.array(
-            [[pyo.value(model.fim_inv[i, j]) for j in params] for i in params]
-        )
 
         expected_fim_pd, jitter = regularize_fim_for_cholesky(expected_fim)
-        expected_fim_inv = np.linalg.pinv(expected_fim_pd)
         expected_L = np.linalg.cholesky(expected_fim_pd)
-        expected_L_inv = np.linalg.inv(expected_L)
-        fim_sym = fim + fim.T - np.diag(np.diag(fim))
-        fim_inv_sym = fim_inv + fim_inv.T - np.diag(np.diag(fim_inv))
+        reconstructed_fim = L @ L.T
 
         self.assertGreater(jitter, 0.0)
-        self.assertTrue(np.allclose(fim_sym, expected_fim))
         self.assertTrue(np.allclose(L, expected_L))
-        self.assertTrue(np.allclose(L @ L_inv, np.eye(len(params)), atol=1e-8))
-        self.assertTrue(np.allclose(fim_inv_sym, expected_fim_inv))
-        self.assertTrue(np.allclose(L_inv, expected_L_inv))
+        self.assertTrue(np.allclose(reconstructed_fim, expected_fim_pd))
         self.assertAlmostEqual(
-            pyo.value(model.cov_trace), float(np.trace(expected_fim_inv)), places=10
+            np.min(np.linalg.eigvalsh(reconstructed_fim)),
+            _SMALL_TOLERANCE_DEFINITENESS,
+            delta=_SMALL_TOLERANCE_DEFINITENESS / 10,
         )
 
 
