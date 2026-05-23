@@ -439,7 +439,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     # set the inputs for the
     # Grey Box object
     def test_set_inputs(self):
-        """Verify packed upper-triangular inputs reconstruct the full FIM."""
+        """Verify grey-box packed inputs reconstruct the full symmetric FIM."""
         objective_option = "trace"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -454,7 +454,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(grey_box_FIM, testing_matrix)))
 
     def test_input_names(self):
-        """Testing that getting the input names works properly."""
+        """Verify grey-box input names follow the expected packed triangular order."""
         objective_option = "trace"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
