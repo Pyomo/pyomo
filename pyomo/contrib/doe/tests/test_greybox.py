@@ -426,7 +426,7 @@ if (
         cyipopt_call_working = not (
             bad_message in doe_object.results["Termination Message"]
         )
-    except:
+    except Exception:
         cyipopt_call_working = False
 
 
@@ -942,35 +942,17 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # on the DoE object
         doe_obj.create_grey_box_objective_function()
 
-        # Check to see if each component exists
-        all_exist = True
-
         # Check output and value
         # FIM Initial will be the prior FIM
         # added with the identity matrix.
         A_opt_val = np.trace(np.linalg.inv(testing_matrix + np.eye(4)))
-
-        try:
-            A_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["A-opt"].value
-        except:
-            A_opt_val_gb = -10.0  # Trace should never be negative
-            all_exist = False
-
-        # Intermediate check for output existence
-        self.assertTrue(all_exist)
+        A_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["A-opt"].value
         self.assertAlmostEqual(A_opt_val, A_opt_val_gb)
 
         # Check inputs and values
-        try:
-            input_values = []
-            for i in _.input_names():
-                input_values.append(doe_obj.model.obj_cons.egb_fim_block.inputs[i]())
-        except:
-            input_values = np.zeros_like(testing_matrix)
-            all_exist = False
-
-        # Final check on existence of inputs
-        self.assertTrue(all_exist)
+        input_values = []
+        for i in grey_box_object.input_names():
+            input_values.append(doe_obj.model.obj_cons.egb_fim_block.inputs[i]())
         # Rebuild the current FIM from the input
         # values taken from the egb_fim_block
         current_FIM = np.zeros_like(testing_matrix)
@@ -996,37 +978,17 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertIsInstance(doe_obj.model.objective, pyo.Objective)
         self.assertEqual(doe_obj.model.objective.sense, pyo.maximize)
 
-        # Check to see if each component exists
-        all_exist = True
-
         # Check output and value
         # FIM Initial will be the prior FIM
         # added with the identity matrix.
         D_opt_val = np.log(np.linalg.det(testing_matrix + np.eye(4)))
-
-        try:
-            D_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs[
-                "log-D-opt"
-            ].value
-        except:
-            D_opt_val_gb = -100.0  # Determinant should never be negative beyond -64
-            all_exist = False
-
-        # Intermediate check for output existence
-        self.assertTrue(all_exist)
+        D_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["log-D-opt"].value
         self.assertAlmostEqual(D_opt_val, D_opt_val_gb)
 
         # Check inputs and values
-        try:
-            input_values = []
-            for i in _.input_names():
-                input_values.append(doe_obj.model.obj_cons.egb_fim_block.inputs[i]())
-        except:
-            input_values = np.zeros_like(testing_matrix)
-            all_exist = False
-
-        # Final check on existence of inputs
-        self.assertTrue(all_exist)
+        input_values = []
+        for i in grey_box_object.input_names():
+            input_values.append(doe_obj.model.obj_cons.egb_fim_block.inputs[i]())
         # Rebuild the current FIM from the input
         # values taken from the egb_fim_block
         current_FIM = np.zeros_like(testing_matrix)
@@ -1038,7 +1000,9 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     def test_E_opt_greybox_build(self):
         """Validate E-opt grey-box block wiring and initialized values on DoE model."""
         objective_option = "minimum_eigenvalue"
-        doe_obj, _ = make_greybox_and_doe_objects(objective_option=objective_option)
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
 
         # Build the greybox objective block
         # on the DoE object
@@ -1052,28 +1016,13 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # added with the identity matrix.
         vals, vecs = np.linalg.eig(testing_matrix + np.eye(4))
         E_opt_val = np.min(vals)
-
-        try:
-            E_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["E-opt"].value
-        except:
-            E_opt_val_gb = -10.0  # Determinant should never be negative
-            all_exist = False
-
-        # Intermediate check for output existence
-        self.assertTrue(all_exist)
+        E_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["E-opt"].value
         self.assertAlmostEqual(E_opt_val, E_opt_val_gb)
 
         # Check inputs and values
-        try:
-            input_values = []
-            for i in _.input_names():
-                input_values.append(doe_obj.model.obj_cons.egb_fim_block.inputs[i]())
-        except:
-            input_values = np.zeros_like(testing_matrix)
-            all_exist = False
-
-        # Final check on existence of inputs
-        self.assertTrue(all_exist)
+        input_values = []
+        for i in grey_box_object.input_names():
+            input_values.append(doe_obj.model.obj_cons.egb_fim_block.inputs[i]())
         # Rebuild the current FIM from the input
         # values taken from the egb_fim_block
         current_FIM = np.zeros_like(testing_matrix)
@@ -1085,42 +1034,26 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     def test_ME_opt_greybox_build(self):
         """Validate ME-opt grey-box block wiring and initialized values on DoE model."""
         objective_option = "condition_number"
-        doe_obj, _ = make_greybox_and_doe_objects(objective_option=objective_option)
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
 
         # Build the greybox objective block
         # on the DoE object
         doe_obj.create_grey_box_objective_function()
-
-        # Check to see if each component exists
-        all_exist = True
 
         # Check output and value
         # FIM Initial will be the prior FIM
         # added with the identity matrix.
         vals, vecs = np.linalg.eig(testing_matrix + np.eye(4))
         ME_opt_val = np.log(np.abs(np.max(vals) / np.min(vals)))
-
-        try:
-            ME_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["ME-opt"].value
-        except:
-            ME_opt_val_gb = -10.0  # Condition number should not be negative
-            all_exist = False
-
-        # Intermediate check for output existence
-        self.assertTrue(all_exist)
+        ME_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["ME-opt"].value
         self.assertAlmostEqual(ME_opt_val, ME_opt_val_gb)
 
         # Check inputs and values
-        try:
-            input_values = []
-            for i in _.input_names():
-                input_values.append(doe_obj.model.obj_cons.egb_fim_block.inputs[i]())
-        except:
-            input_values = np.zeros_like(testing_matrix)
-            all_exist = False
-
-        # Final check on existence of inputs
-        self.assertTrue(all_exist)
+        input_values = []
+        for i in grey_box_object.input_names():
+            input_values.append(doe_obj.model.obj_cons.egb_fim_block.inputs[i]())
         # Rebuild the current FIM from the input
         # values taken from the egb_fim_block
         current_FIM = np.zeros_like(testing_matrix)

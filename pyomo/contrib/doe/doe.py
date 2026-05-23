@@ -52,6 +52,7 @@ if numpy_available and scipy_available:
 
 import pyomo.environ as pyo
 from pyomo.contrib.doe.utils import (
+    _SMALL_TOLERANCE_DEFINITENESS,
     check_FIM,
     compute_FIM_metrics,
     regularize_fim_for_cholesky,
