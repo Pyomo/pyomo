@@ -485,6 +485,7 @@ class DesignOfExperiments:
         if results_file is not None:
             with open(results_file, "w") as file:
                 json.dump(self.results, file)
+
     def _get_fim_numpy(self, model):
         """
         Assemble the current FIM variable values into a NumPy array.
