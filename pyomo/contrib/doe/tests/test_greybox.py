@@ -936,7 +936,9 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     def test_A_opt_greybox_build(self):
         """Validate A-opt grey-box block wiring and initialized values on DoE model."""
         objective_option = "trace"
-        doe_obj, _ = make_greybox_and_doe_objects(objective_option=objective_option)
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
 
         # Build the greybox objective block
         # on the DoE object
@@ -1008,9 +1010,6 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # on the DoE object
         doe_obj.create_grey_box_objective_function()
 
-        # Check to see if each component exists
-        all_exist = True
-
         # Check output and value
         # FIM Initial will be the prior FIM
         # added with the identity matrix.
@@ -1069,7 +1068,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             ValueError,
             "DoE Object must be provided to build external grey box of the FIM.",
         ):
-            grey_box_object = FIMExternalGreyBox(doe_object=None)
+            FIMExternalGreyBox(doe_object=None)
 
     def test_constructor_objective_lib_error(self):
         """Ensure constructor rejects unsupported objective option strings."""
@@ -1080,7 +1079,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError, "'Bad Objective Option' is not a valid ObjectiveLib"
         ):
-            bad_grey_box_object = FIMExternalGreyBox(
+            FIMExternalGreyBox(
                 doe_object=doe_object, objective_option="Bad Objective Option"
             )
 
