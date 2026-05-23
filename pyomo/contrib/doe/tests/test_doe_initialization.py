@@ -12,119 +12,58 @@ import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 
 from pyomo.contrib.doe import DesignOfExperiments
+from pyomo.contrib.parmest.experiment import Experiment
 from pyomo.contrib.doe.utils import (
     _SMALL_TOLERANCE_DEFINITENESS,
     regularize_fim_for_cholesky,
 )
+from pyomo.opt import SolverFactory
+
+ipopt_available = SolverFactory("ipopt").available()
 
 
-class _FakeResult:
-    """Minimal fake solver result object matching attributes used by DoE."""
-
-    class _SolverData:
-        status = "ok"
-        termination_condition = "optimal"
-        message = "fake solve"
-
-    solver = _SolverData()
-
-# Reviewer comment: Are there any tests in any of the other files that exercise 
-# initialization using a real solver? (I do see changes in other tests in other files, but it's unclear to me if any of them are actually exercising the initialization code.)
-# If not, can you please add a test that uses a real solver / real result as well?
-#
-# Suggested Action: What is this specifically trying to test?
-# I think we should instead create examples where the FIM is not positive definite
-# due to a modeling mistake/issue, and we verify this is properly handled by the code. 
-# This would be a more realistic test of the code, and would also verify that the 
-# jittering logic is working as expected.
-#
-# After we make this change, I think that we can remove this 
-# _MutatingRecordingSolver and _TwoParamExperiment, and instead just have a test that 
-# uses a real solver and a real model, where the FIM is not positive definite.
-
-class _MutatingRecordingSolver:
+class _StructurallyUnidentifiableExperiment(Experiment):
     """
-    Fake solver that perturbs FIM during dummy-objective initialization solve.
+    Minimal real experiment with a rank-deficient FIM.
 
-    The key behavior we want to exercise is not optimization success, but the
-    fact that the square initialization solve can change the FIM after the
-    object has already created Cholesky-related variables. That is exactly the
-    bug this regression test protects.
-    """
-
-    def __init__(self):
-        self.options = {}
-
-    def solve(self, model, tee=False):
-        """Mutate 2x2 FIM values during init-stage solve."""
-        if not hasattr(model, "dummy_obj") or not model.dummy_obj.active:
-            return _FakeResult()
-
-        p1, p2 = list(model.parameter_names)
-        model.fim[p1, p1].set_value(16.0)
-        model.fim[p2, p1].set_value(4.0)
-        if (p1, p2) in model.fim:
-            model.fim[p1, p2].set_value(0.0)
-        model.fim[p2, p2].set_value(9.0)
-        return _FakeResult()
-
-# Reviewer comment: Should this inherit from the Experiment class?
-#
-# Suggested Action: Let's make this into a real model/example that has a problematic FIM.
-class _TwoParamExperiment:
-    """
-    Minimal two-parameter experiment fixture for trace/Cholesky tests.
-
-    Two parameters is the smallest useful case here because it creates a real
-    matrix-valued FIM while still keeping the expected values easy to reason
-    about by hand. That makes it a good target for the initialization
-    synchronization regression.
+    The single measured response depends only on ``theta1 + theta2``:
+    ``y = (theta1 + theta2) * x``. With one output and two parameters, both
+    sensitivities are identical, so the analytical FIM is
+    ``[[1, 1], [1, 1]]`` when ``x = 1`` and the measurement error is 1.
     """
 
     def get_labeled_model(self):
         m = pyo.ConcreteModel()
-        m.x1 = pyo.Var(initialize=1.0)
-        m.x2 = pyo.Var(initialize=1.0)
+        m.x = pyo.Var(initialize=1.0, bounds=(1.0, 1.0))
         m.theta1 = pyo.Var(initialize=2.0)
         m.theta2 = pyo.Var(initialize=3.0)
-        m.y1 = pyo.Var(initialize=2.0)
-        m.y2 = pyo.Var(initialize=3.0)
-        m.eq1 = pyo.Constraint(expr=m.y1 == m.theta1 * m.x1)
-        m.eq2 = pyo.Constraint(expr=m.y2 == m.theta2 * m.x2)
-
-        # My review comment: We should include in comments of the doc string
-        # the mathematical properties of this model. That would make the test
-        # more clear.
+        m.theta1.fix()
+        m.theta2.fix()
+        m.y = pyo.Var(initialize=5.0)
+        m.response = pyo.Constraint(expr=m.y == (m.theta1 + m.theta2) * m.x)
 
         m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_inputs[m.x1] = 1.0
-        m.experiment_inputs[m.x2] = 1.0
+        m.experiment_inputs[m.x] = 1.0
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.unknown_parameters[m.theta1] = 2.0
         m.unknown_parameters[m.theta2] = 3.0
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs[m.y1] = 2.0
-        m.experiment_outputs[m.y2] = 3.0
+        m.experiment_outputs[m.y] = 5.0
         m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.measurement_error[m.y1] = 1.0
-        m.measurement_error[m.y2] = 1.0
+        m.measurement_error[m.y] = 1.0
         return m
 
 
-def _make_trace_doe_object():
+def _make_unidentifiable_doe_object(objective_option="trace"):
     """
-    Build a trace-objective DoE object with a FIM-mutating fake solver.
-
-    The trace objective is the path that introduces ``L``, ``L_inv``,
-    ``fim_inv``, and ``cov_trace``, so it is the right place to check that the
-    helper re-synchronizes all of those values after the init solve.
+    Build a DoE object for the structurally unidentifiable two-parameter model.
     """
     return DesignOfExperiments(
-        experiment=_TwoParamExperiment(),
+        experiment=_StructurallyUnidentifiableExperiment(),
         fd_formula="central",
         step=1e-3,
-        objective_option="trace",
-        solver=_MutatingRecordingSolver(),
+        objective_option=objective_option,
+        solver=SolverFactory("ipopt"),
         tee=False,
     )
 
@@ -133,16 +72,6 @@ def _make_trace_doe_object():
 class TestCholeskyInitialization(unittest.TestCase):
     """Regression tests for DoE initialization and Cholesky sync."""
 
-    # Reviewer comment: I know this is a simple method but in general we don't want to repeat 
-    # the calculation implementation in the test and instead check against a 
-    # hard-coded value. Checking up to 14 places also seems excessive. I would 
-    # also recommend adding a test verifying that the return value 
-    # is non-negative which is the intention of this test mentioned in the docstring.
-    # 
-    # Suggested Action: This is a good suggestion. Also, let's do it with a real model.
-    # I am thinking the real model can have one of the coefficients be an input, and changing that
-    # coefficient changes the FIM. Or we could just have a model where one of the parameters
-    # is not structurally identifiable.
     def test_regularize_fim_for_cholesky_raises_negative_eigenvalue(self):
         """
         Negative minimum eigenvalue should produce positive corrective jitter.
@@ -174,23 +103,33 @@ class TestCholeskyInitialization(unittest.TestCase):
         self.assertEqual(jitter, 0.0)
         self.assertAlmostEqual(fim_pd[0, 0], 1.0e-2)
 
-    def test_trace_initialization_resynchronizes_fim_inverse_variables(self):
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_trace_initialization_regularizes_structurally_unidentifiable_fim(self):
         """
-        Verify trace-mode initialization re-synchronizes inverse-related vars.
+        Verify trace-mode initialization regularizes a singular real-model FIM.
 
-        The fake solver mutates the FIM during the square solve. After that
-        solve, the DoE code should rebuild the dependent quantities from the
-        updated FIM so that:
-        - ``L`` matches the Cholesky factor of the current FIM,
-        - ``L_inv`` is the inverse of that Cholesky factor,
-        - ``fim_inv`` matches the inverse FIM, and
-        - ``cov_trace`` matches the trace of the inverse FIM.
+        This experiment is structurally unidentifiable because the single
+        response depends only on ``theta1 + theta2``. Its analytical FIM is
+        rank-deficient, so Cholesky-based initialization must add diagonal
+        regularization before computing ``L``, ``L_inv``, ``fim_inv``, and
+        ``cov_trace``.
         """
-        doe_obj = _make_trace_doe_object()
-        doe_obj.run_doe()
+        doe_obj = _make_unidentifiable_doe_object(objective_option="trace")
+        doe_obj.create_doe_model()
+        doe_obj.create_objective_function()
 
         model = doe_obj.model
         params = list(model.parameter_names)
+        expected_fim = np.array([[1.0, 1.0], [1.0, 1.0]])
+        for i, p in enumerate(params):
+            for j, q in enumerate(params):
+                if doe_obj.only_compute_fim_lower and i < j:
+                    model.fim[p, q].set_value(0.0)
+                else:
+                    model.fim[p, q].set_value(expected_fim[i, j])
+
+        doe_obj._initialize_cholesky_from_fim()
+
         fim = np.array(
             [[pyo.value(model.fim[i, j]) for j in params] for i in params], dtype=float
         )
@@ -202,16 +141,14 @@ class TestCholeskyInitialization(unittest.TestCase):
             [[pyo.value(model.fim_inv[i, j]) for j in params] for i in params]
         )
 
-        expected_fim = np.array([[16.0, 4.0], [4.0, 9.0]])
-        expected_fim_inv = np.linalg.inv(expected_fim)
-        expected_L = np.linalg.cholesky(expected_fim)
+        expected_fim_pd, jitter = regularize_fim_for_cholesky(expected_fim)
+        expected_fim_inv = np.linalg.pinv(expected_fim_pd)
+        expected_L = np.linalg.cholesky(expected_fim_pd)
         expected_L_inv = np.linalg.inv(expected_L)
         fim_sym = fim + fim.T - np.diag(np.diag(fim))
         fim_inv_sym = fim_inv + fim_inv.T - np.diag(np.diag(fim_inv))
 
-        # The model stores only the lower triangle when only_compute_fim_lower=True.
-        # Reconstruct the symmetric FIM before checking the initialization math,
-        # because Cholesky and inverse quantities are defined on the full matrix.
+        self.assertGreater(jitter, 0.0)
         self.assertTrue(np.allclose(fim_sym, expected_fim))
         self.assertTrue(np.allclose(L, expected_L))
         self.assertTrue(np.allclose(L @ L_inv, np.eye(len(params)), atol=1e-8))
