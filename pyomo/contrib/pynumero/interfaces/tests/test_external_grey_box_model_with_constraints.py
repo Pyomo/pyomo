@@ -51,97 +51,42 @@ from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
 class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
     """Tests for ExternalGreyBoxBlock with implicit_constraint_objects"""
 
-    def test_pressure_drop_single_output_constraint_creation(self):
-        """Test that constraint objects are created for outputs"""
-        m = pyo.ConcreteModel()
-        m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(ex_models.PressureDropSingleOutput())
-
-        # Check that the constraint object was created for the output
-        self.assertTrue(hasattr(m.egb, 'eq_constraints'))
-        self.assertTrue(len(m.egb.eq_constraints) == 0)
-        self.assertTrue(hasattr(m.egb, 'output_constraints'))
-        self.assertIsInstance(
-            m.egb.output_constraints['Pout'], ExternalGreyBoxConstraintData
-        )
-
-        # Check that no equality constraint objects were created (no equality constraints)
-        egbm = m.egb.get_external_model()
-        eq_con_names = egbm.equality_constraint_names()
-        self.assertEqual(eq_con_names, [])
-
-    def test_pressure_drop_single_equality_constraint_creation(self):
-        """Test that constraint objects are created for equality constraints"""
-        m = pyo.ConcreteModel()
-        m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(ex_models.PressureDropSingleEquality())
-
-        # Check that the constraint object was created for the equality constraint
-        self.assertTrue(hasattr(m.egb, 'eq_constraints'))
-        self.assertIsInstance(
-            m.egb.eq_constraints['pdrop'], ExternalGreyBoxConstraintData
-        )
-        self.assertTrue(hasattr(m.egb, 'output_constraints'))
-        self.assertTrue(len(m.egb.output_constraints) == 0)
-
-        # Check that no output constraint objects were created (no outputs)
-        egbm = m.egb.get_external_model()
-        output_names = egbm.output_names()
-        self.assertEqual(output_names, [])
-
-    def test_pressure_drop_two_outputs_constraint_creation(self):
-        """Test that constraint objects are created for multiple outputs"""
-        m = pyo.ConcreteModel()
-        m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(ex_models.PressureDropTwoOutputs())
-
-        # Check that constraint objects were created for both outputs
-        self.assertTrue(hasattr(m.egb, 'output_constraints'))
-        self.assertIsInstance(
-            m.egb.output_constraints['P2'], ExternalGreyBoxConstraintData
-        )
-        self.assertIsInstance(
-            m.egb.output_constraints['Pout'], ExternalGreyBoxConstraintData
-        )
-
-    def test_pressure_drop_two_equalities_constraint_creation(self):
-        """Test that constraint objects are created for multiple equality constraints"""
-        m = pyo.ConcreteModel()
-        m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(ex_models.PressureDropTwoEqualities())
-
-        # Check that constraint objects were created for both equality constraints
-        self.assertTrue(hasattr(m.egb, 'eq_constraints'))
-        self.assertIsInstance(
-            m.egb.eq_constraints['pdrop2'], ExternalGreyBoxConstraintData
-        )
-        self.assertIsInstance(
-            m.egb.eq_constraints['pdropout'], ExternalGreyBoxConstraintData
-        )
-
     def test_pressure_drop_two_equalities_two_outputs_constraint_creation(self):
-        """Test that constraint objects are created for both equality constraints and outputs"""
+        """Here we test that output and equality constraints are created as expected"""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(ex_models.PressureDropTwoEqualitiesTwoOutputs())
 
-        # Check that constraint objects were created for equality constraints
-        self.assertTrue(hasattr(m.egb, 'eq_constraints'))
-        self.assertIsInstance(
-            m.egb.eq_constraints['pdrop1'], ExternalGreyBoxConstraintData
-        )
-        self.assertIsInstance(
-            m.egb.eq_constraints['pdrop3'], ExternalGreyBoxConstraintData
-        )
+        # Check that constraint objects have the expected shape and type
+        eqcons = m.egb.eq_constraints
+        self.assertIs(eqcons.ctype, ExternalGreyBoxConstraint)
+        self.assertIsInstance(eqcons["pdrop1"], ExternalGreyBoxConstraintData)
+        self.assertIsInstance(eqcons["pdrop3"], ExternalGreyBoxConstraintData)
+        self.assertEqual(len(eqcons), 2)
 
-        # Check that constraint objects were created for outputs
-        self.assertTrue(hasattr(m.egb, 'output_constraints'))
-        self.assertIsInstance(
-            m.egb.output_constraints['P2'], ExternalGreyBoxConstraintData
-        )
-        self.assertIsInstance(
-            m.egb.output_constraints['Pout'], ExternalGreyBoxConstraintData
-        )
+        outcons = m.egb.output_constraints
+        self.assertIs(outcons.ctype, ExternalGreyBoxConstraint)
+        self.assertIsInstance(outcons["P2"], ExternalGreyBoxConstraintData)
+        self.assertIsInstance(outcons["Pout"], ExternalGreyBoxConstraintData)
+        self.assertEqual(len(outcons), 2)
+
+        # For good measure, test that get_incident_variables works as expected
+        inputs = m.egb.inputs
+        expected_vars = [inputs["Pin"], inputs["c"], inputs["F"], inputs["P1"]]
+        expected_vars = ComponentSet(expected_vars)
+        actual_vars = ComponentSet(eqcons["pdrop1"].body.get_incident_variables())
+        self.assertEqual(expected_vars, actual_vars)
+
+        # Test get_incident_variables for an output constraint
+        expected_vars = [m.egb.outputs["Pout"], inputs["Pin"], inputs["F"], inputs["c"]]
+        expected_vars = ComponentSet(expected_vars)
+        actual_vars = ComponentSet(outcons["Pout"].body.get_incident_variables())
+        self.assertEqual(expected_vars, actual_vars)
+
+        # Check that component_data_objects works as expected
+        predicted_conset = ComponentSet(list(outcons[:]) + list(eqcons[:]))
+        conset = ComponentSet(m.egb.component_data_objects(ExternalGreyBoxConstraint))
+        self.assertEqual(predicted_conset, conset)
 
     def test_pressure_drop_single_equality_with_constraints(self):
         """Test PyomoGreyBoxNLP with single equality constraint and constraint objects"""
@@ -156,19 +101,19 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(ex_model)
-        m.egb.inputs['Pin'].value = 100
-        m.egb.inputs['Pin'].setlb(50)
-        m.egb.inputs['Pin'].setub(150)
-        m.egb.inputs['c'].value = 2
-        m.egb.inputs['c'].setlb(1)
-        m.egb.inputs['c'].setub(5)
-        m.egb.inputs['F'].value = 3
-        m.egb.inputs['F'].setlb(1)
-        m.egb.inputs['F'].setub(5)
-        m.egb.inputs['Pout'].value = 50
-        m.egb.inputs['Pout'].setlb(0)
-        m.egb.inputs['Pout'].setub(100)
-        m.obj = pyo.Objective(expr=(m.egb.inputs['Pout'] - 20) ** 2)
+        m.egb.inputs["Pin"].value = 100
+        m.egb.inputs["Pin"].setlb(50)
+        m.egb.inputs["Pin"].setub(150)
+        m.egb.inputs["c"].value = 2
+        m.egb.inputs["c"].setlb(1)
+        m.egb.inputs["c"].setub(5)
+        m.egb.inputs["F"].value = 3
+        m.egb.inputs["F"].setlb(1)
+        m.egb.inputs["F"].setub(5)
+        m.egb.inputs["Pout"].value = 50
+        m.egb.inputs["Pout"].setlb(0)
+        m.egb.inputs["Pout"].setub(100)
+        m.obj = pyo.Objective(expr=(m.egb.inputs["Pout"] - 20) ** 2)
         pyomo_nlp = PyomoGreyBoxNLP(m)
 
         self.assertEqual(4, pyomo_nlp.n_primals())
@@ -178,13 +123,13 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
             self.assertEqual(3, pyomo_nlp.nnz_hessian_lag())
 
         comparison_x_order = [
-            'egb.inputs[Pin]',
-            'egb.inputs[c]',
-            'egb.inputs[F]',
-            'egb.inputs[Pout]',
+            "egb.inputs[Pin]",
+            "egb.inputs[c]",
+            "egb.inputs[F]",
+            "egb.inputs[Pout]",
         ]
         x_order = pyomo_nlp.variable_names()
-        comparison_c_order = ['egb.pdrop']
+        comparison_c_order = ["egb.pdrop"]
         c_order = pyomo_nlp.constraint_names()
 
         xlb = pyomo_nlp.primals_lb()
@@ -219,13 +164,13 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
             self, duals_init, c_order, comparison_duals_init, comparison_c_order
         )
 
-        self.assertEqual(4, len(pyomo_nlp.create_new_vector('primals')))
-        self.assertEqual(1, len(pyomo_nlp.create_new_vector('constraints')))
-        self.assertEqual(1, len(pyomo_nlp.create_new_vector('duals')))
-        self.assertEqual(1, len(pyomo_nlp.create_new_vector('eq_constraints')))
-        self.assertEqual(0, len(pyomo_nlp.create_new_vector('ineq_constraints')))
-        self.assertEqual(1, len(pyomo_nlp.create_new_vector('duals_eq')))
-        self.assertEqual(0, len(pyomo_nlp.create_new_vector('duals_ineq')))
+        self.assertEqual(4, len(pyomo_nlp.create_new_vector("primals")))
+        self.assertEqual(1, len(pyomo_nlp.create_new_vector("constraints")))
+        self.assertEqual(1, len(pyomo_nlp.create_new_vector("duals")))
+        self.assertEqual(1, len(pyomo_nlp.create_new_vector("eq_constraints")))
+        self.assertEqual(0, len(pyomo_nlp.create_new_vector("ineq_constraints")))
+        self.assertEqual(1, len(pyomo_nlp.create_new_vector("duals_eq")))
+        self.assertEqual(0, len(pyomo_nlp.create_new_vector("duals_ineq")))
 
         pyomo_nlp.set_primals(np.asarray([1, 2, 3, 4], dtype=np.float64))
         x = pyomo_nlp.get_primals()
@@ -322,22 +267,22 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(ex_model)
-        m.egb.inputs['Pin'].value = 100
-        m.egb.inputs['Pin'].setlb(50)
-        m.egb.inputs['Pin'].setub(150)
-        m.egb.inputs['c'].value = 2
-        m.egb.inputs['c'].setlb(1)
-        m.egb.inputs['c'].setub(5)
-        m.egb.inputs['F'].value = 3
-        m.egb.inputs['F'].setlb(1)
-        m.egb.inputs['F'].setub(5)
-        m.egb.inputs['P2'].value = 80
-        m.egb.inputs['P2'].setlb(10)
-        m.egb.inputs['P2'].setub(90)
-        m.egb.inputs['Pout'].value = 50
-        m.egb.inputs['Pout'].setlb(0)
-        m.egb.inputs['Pout'].setub(100)
-        m.obj = pyo.Objective(expr=(m.egb.inputs['Pout'] - 20) ** 2)
+        m.egb.inputs["Pin"].value = 100
+        m.egb.inputs["Pin"].setlb(50)
+        m.egb.inputs["Pin"].setub(150)
+        m.egb.inputs["c"].value = 2
+        m.egb.inputs["c"].setlb(1)
+        m.egb.inputs["c"].setub(5)
+        m.egb.inputs["F"].value = 3
+        m.egb.inputs["F"].setlb(1)
+        m.egb.inputs["F"].setub(5)
+        m.egb.inputs["P2"].value = 80
+        m.egb.inputs["P2"].setlb(10)
+        m.egb.inputs["P2"].setub(90)
+        m.egb.inputs["Pout"].value = 50
+        m.egb.inputs["Pout"].setlb(0)
+        m.egb.inputs["Pout"].setub(100)
+        m.obj = pyo.Objective(expr=(m.egb.inputs["Pout"] - 20) ** 2)
         pyomo_nlp = PyomoGreyBoxNLP(m)
 
         self.assertEqual(5, pyomo_nlp.n_primals())
@@ -347,14 +292,14 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
             self.assertEqual(3, pyomo_nlp.nnz_hessian_lag())
 
         comparison_x_order = [
-            'egb.inputs[Pin]',
-            'egb.inputs[c]',
-            'egb.inputs[F]',
-            'egb.inputs[P2]',
-            'egb.inputs[Pout]',
+            "egb.inputs[Pin]",
+            "egb.inputs[c]",
+            "egb.inputs[F]",
+            "egb.inputs[P2]",
+            "egb.inputs[Pout]",
         ]
         x_order = pyomo_nlp.variable_names()
-        comparison_c_order = ['egb.pdrop2', 'egb.pdropout']
+        comparison_c_order = ["egb.pdrop2", "egb.pdropout"]
         c_order = pyomo_nlp.constraint_names()
 
         xlb = pyomo_nlp.primals_lb()
@@ -389,13 +334,13 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
             self, duals_init, c_order, comparison_duals_init, comparison_c_order
         )
 
-        self.assertEqual(5, len(pyomo_nlp.create_new_vector('primals')))
-        self.assertEqual(2, len(pyomo_nlp.create_new_vector('constraints')))
-        self.assertEqual(2, len(pyomo_nlp.create_new_vector('duals')))
-        self.assertEqual(2, len(pyomo_nlp.create_new_vector('eq_constraints')))
-        self.assertEqual(0, len(pyomo_nlp.create_new_vector('ineq_constraints')))
-        self.assertEqual(2, len(pyomo_nlp.create_new_vector('duals_eq')))
-        self.assertEqual(0, len(pyomo_nlp.create_new_vector('duals_ineq')))
+        self.assertEqual(5, len(pyomo_nlp.create_new_vector("primals")))
+        self.assertEqual(2, len(pyomo_nlp.create_new_vector("constraints")))
+        self.assertEqual(2, len(pyomo_nlp.create_new_vector("duals")))
+        self.assertEqual(2, len(pyomo_nlp.create_new_vector("eq_constraints")))
+        self.assertEqual(0, len(pyomo_nlp.create_new_vector("ineq_constraints")))
+        self.assertEqual(2, len(pyomo_nlp.create_new_vector("duals_eq")))
+        self.assertEqual(0, len(pyomo_nlp.create_new_vector("duals_ineq")))
 
         pyomo_nlp.set_primals(np.asarray([1, 2, 3, 4, 5], dtype=np.float64))
         x = pyomo_nlp.get_primals()
@@ -506,13 +451,13 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
         m.P2 = pyo.Var()
         m.Pout = pyo.Var()
 
-        m.link_Pin = pyo.Constraint(expr=m.Pin == m.egb.inputs['Pin'])
-        m.link_c = pyo.Constraint(expr=m.c == m.egb.inputs['c'])
-        m.link_F = pyo.Constraint(expr=m.F == m.egb.inputs['F'])
-        m.link_P1 = pyo.Constraint(expr=m.P1 == m.egb.inputs['P1'])
-        m.link_P3 = pyo.Constraint(expr=m.P3 == m.egb.inputs['P3'])
-        m.link_P2 = pyo.Constraint(expr=m.P2 == m.egb.outputs['P2'])
-        m.link_Pout = pyo.Constraint(expr=m.Pout == m.egb.outputs['Pout'])
+        m.link_Pin = pyo.Constraint(expr=m.Pin == m.egb.inputs["Pin"])
+        m.link_c = pyo.Constraint(expr=m.c == m.egb.inputs["c"])
+        m.link_F = pyo.Constraint(expr=m.F == m.egb.inputs["F"])
+        m.link_P1 = pyo.Constraint(expr=m.P1 == m.egb.inputs["P1"])
+        m.link_P3 = pyo.Constraint(expr=m.P3 == m.egb.inputs["P3"])
+        m.link_P2 = pyo.Constraint(expr=m.P2 == m.egb.outputs["P2"])
+        m.link_Pout = pyo.Constraint(expr=m.Pout == m.egb.outputs["Pout"])
 
         return m
 
@@ -525,54 +470,54 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
 
         # Check that the get_incident_variables method on the implicit constraint body returns the correct variables
         # Implicit constraint: 'pdrop1'
-        body_obj1 = m.egb.eq_constraints['pdrop1'].body
+        body_obj1 = m.egb.eq_constraints["pdrop1"].body
         incident_vars1 = body_obj1.get_incident_variables()
 
         incident_var_set = ComponentSet(
             [
-                m.egb.inputs['Pin'],
-                m.egb.inputs['c'],
-                m.egb.inputs['F'],
-                m.egb.inputs['P1'],
+                m.egb.inputs["Pin"],
+                m.egb.inputs["c"],
+                m.egb.inputs["F"],
+                m.egb.inputs["P1"],
             ]
         )
         self.assertEqual(ComponentSet(incident_vars1), incident_var_set)
 
         # Implicit constraint: 'pdrop3'
-        body_obj1 = m.egb.eq_constraints['pdrop3'].body
+        body_obj1 = m.egb.eq_constraints["pdrop3"].body
         incident_vars1 = body_obj1.get_incident_variables()
         incident_var_set = ComponentSet(
             [
-                m.egb.inputs['c'],
-                m.egb.inputs['F'],
-                m.egb.inputs['P1'],
-                m.egb.inputs['P3'],
+                m.egb.inputs["c"],
+                m.egb.inputs["F"],
+                m.egb.inputs["P1"],
+                m.egb.inputs["P3"],
             ]
         )
         self.assertEqual(ComponentSet(incident_vars1), incident_var_set)
 
         # Implicit constraint: 'P2_constraint'
-        body_obj1 = m.egb.output_constraints['P2'].body
+        body_obj1 = m.egb.output_constraints["P2"].body
         incident_vars1 = body_obj1.get_incident_variables()
         incident_var_set = ComponentSet(
             [
-                m.egb.inputs['c'],
-                m.egb.inputs['F'],
-                m.egb.inputs['P1'],
-                m.egb.outputs['P2'],
+                m.egb.inputs["c"],
+                m.egb.inputs["F"],
+                m.egb.inputs["P1"],
+                m.egb.outputs["P2"],
             ]
         )
         self.assertEqual(ComponentSet(incident_vars1), incident_var_set)
 
         # Implicit constraint: 'Pout_constraint'
-        body_obj1 = m.egb.output_constraints['Pout'].body
+        body_obj1 = m.egb.output_constraints["Pout"].body
         incident_vars1 = body_obj1.get_incident_variables()
         incident_var_set = ComponentSet(
             [
-                m.egb.inputs['Pin'],
-                m.egb.inputs['c'],
-                m.egb.inputs['F'],
-                m.egb.outputs['Pout'],
+                m.egb.inputs["Pin"],
+                m.egb.inputs["c"],
+                m.egb.inputs["F"],
+                m.egb.outputs["Pout"],
             ]
         )
         self.assertEqual(ComponentSet(incident_vars1), incident_var_set)
@@ -599,13 +544,13 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
             self.assertIn(
                 v.name,
                 [
-                    'egb.inputs[Pin]',
-                    'egb.inputs[c]',
-                    'egb.inputs[F]',
-                    'egb.inputs[P1]',
-                    'egb.inputs[P3]',
-                    'egb.outputs[P2]',
-                    'egb.outputs[Pout]',
+                    "egb.inputs[Pin]",
+                    "egb.inputs[c]",
+                    "egb.inputs[F]",
+                    "egb.inputs[P1]",
+                    "egb.inputs[P3]",
+                    "egb.outputs[P2]",
+                    "egb.outputs[Pout]",
                 ],
             )
 
@@ -618,11 +563,11 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
             self.assertIn(
                 v.name,
                 [
-                    'egb.inputs[Pin]',
-                    'egb.inputs[c]',
-                    'egb.inputs[F]',
-                    'egb.inputs[P1]',
-                    'egb.inputs[P3]',
+                    "egb.inputs[Pin]",
+                    "egb.inputs[c]",
+                    "egb.inputs[F]",
+                    "egb.inputs[P1]",
+                    "egb.inputs[P3]",
                 ],
             )
 
@@ -632,10 +577,10 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
             self.assertIn(
                 c,
                 [
-                    'egb.eq_constraints[pdrop1]',
-                    'egb.eq_constraints[pdrop3]',
-                    'egb.output_constraints[P2]',
-                    'egb.output_constraints[Pout]',
+                    "egb.eq_constraints[pdrop1]",
+                    "egb.eq_constraints[pdrop3]",
+                    "egb.output_constraints[P2]",
+                    "egb.output_constraints[Pout]",
                 ],
             )
 
@@ -669,20 +614,20 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
             self.assertIn(
                 v,
                 [
-                    'egb.inputs[Pin]',
-                    'egb.inputs[c]',
-                    'egb.inputs[F]',
-                    'egb.inputs[P1]',
-                    'egb.inputs[P3]',
-                    'egb.outputs[P2]',
-                    'egb.outputs[Pout]',
-                    'Pin',
-                    'c',
-                    'F',
-                    'P1',
-                    'P3',
-                    'P2',
-                    'Pout',
+                    "egb.inputs[Pin]",
+                    "egb.inputs[c]",
+                    "egb.inputs[F]",
+                    "egb.inputs[P1]",
+                    "egb.inputs[P3]",
+                    "egb.outputs[P2]",
+                    "egb.outputs[Pout]",
+                    "Pin",
+                    "c",
+                    "F",
+                    "P1",
+                    "P3",
+                    "P2",
+                    "Pout",
                 ],
             )
 
@@ -692,17 +637,17 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
             self.assertIn(
                 c,
                 [
-                    'egb.eq_constraints[pdrop1]',
-                    'egb.eq_constraints[pdrop3]',
-                    'egb.output_constraints[P2]',
-                    'egb.output_constraints[Pout]',
-                    'link_Pin',
-                    'link_c',
-                    'link_F',
-                    'link_P1',
-                    'link_P3',
-                    'link_P2',
-                    'link_Pout',
+                    "egb.eq_constraints[pdrop1]",
+                    "egb.eq_constraints[pdrop3]",
+                    "egb.output_constraints[P2]",
+                    "egb.output_constraints[Pout]",
+                    "link_Pin",
+                    "link_c",
+                    "link_F",
+                    "link_P1",
+                    "link_P3",
+                    "link_P2",
+                    "link_Pout",
                 ],
             )
 
@@ -738,21 +683,21 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
             self.assertIn(
                 v,
                 [
-                    'egb.inputs[Pin]',
-                    'egb.inputs[c]',
-                    'egb.inputs[F]',
-                    'egb.inputs[P1]',
-                    'egb.inputs[P3]',
-                    'egb.outputs[P2]',
-                    'egb.outputs[Pout]',
+                    "egb.inputs[Pin]",
+                    "egb.inputs[c]",
+                    "egb.inputs[F]",
+                    "egb.inputs[P1]",
+                    "egb.inputs[P3]",
+                    "egb.outputs[P2]",
+                    "egb.outputs[Pout]",
                     # These three re fixed, so do not appear by default
                     # 'Pin',
                     # 'c',
                     # 'F',
-                    'P1',
-                    'P3',
-                    'P2',
-                    'Pout',
+                    "P1",
+                    "P3",
+                    "P2",
+                    "Pout",
                 ],
             )
 
@@ -762,17 +707,17 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
             self.assertIn(
                 c,
                 [
-                    'egb.eq_constraints[pdrop1]',
-                    'egb.eq_constraints[pdrop3]',
-                    'egb.output_constraints[P2]',
-                    'egb.output_constraints[Pout]',
-                    'link_Pin',
-                    'link_c',
-                    'link_F',
-                    'link_P1',
-                    'link_P3',
-                    'link_P2',
-                    'link_Pout',
+                    "egb.eq_constraints[pdrop1]",
+                    "egb.eq_constraints[pdrop3]",
+                    "egb.output_constraints[P2]",
+                    "egb.output_constraints[Pout]",
+                    "link_Pin",
+                    "link_c",
+                    "link_F",
+                    "link_P1",
+                    "link_P3",
+                    "link_P2",
+                    "link_Pout",
                 ],
             )
 
@@ -872,5 +817,5 @@ def test_custom_input_and_output_names():
     assert len(matching) == 4
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
