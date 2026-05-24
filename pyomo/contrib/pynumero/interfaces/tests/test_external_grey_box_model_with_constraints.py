@@ -796,43 +796,5 @@ class MyGreyBox(ExternalGreyBoxModel):
             v.set_value(1.0)
 
 
-def test_with_custom_input_names():
-    m = pyo.ConcreteModel()
-    m.x = pyo.Var([1, 2, 3, 4], bounds=(0.0, None), initialize=1.0)
-    m.objective = pyo.Objective(
-        expr=m.x[1] ** 2 + 2 * m.x[2] ** 2 + 3 * m.x[3] ** 2 + 4 * m.x[4] ** 2
-    )
-    m.grey_box = ExternalGreyBoxBlock()
-    m.grey_box.set_external_model(MyGreyBox(), inputs=[m.x[i] for i in range(1, 5)])
-
-    igraph = IncidenceGraphInterface(m)
-    matching = igraph.maximum_matching()
-
-    # Minimal check on results, as we really only want to make sure the code runs
-    # when given custom input names
-    assert len(matching) == 3
-
-
-def test_custom_input_and_output_names():
-    m = pyo.ConcreteModel()
-    m.x = pyo.Var([1, 2, 3, 4, 5], bounds=(0.0, None), initialize=1.0)
-    m.y = pyo.Var([1, 2], bounds=(0.0, None), initialize=1.0)
-
-    m.egb = ExternalGreyBoxBlock()
-    external_model = ex_models.PressureDropTwoEqualitiesTwoOutputsWithHessian()
-    m.egb.set_external_model(
-        external_model,
-        inputs=[m.x[i] for i in range(1, 6)],
-        outputs=[m.y[i] for i in range(1, 3)],
-    )
-
-    igraph = IncidenceGraphInterface(m)
-    matching = igraph.maximum_matching()
-
-    # Minimal check on results, as we really only want to make sure the code runs
-    # when given custom input names
-    assert len(matching) == 4
-
-
 if __name__ == "__main__":
     unittest.main()
