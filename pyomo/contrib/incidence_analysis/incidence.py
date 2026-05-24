@@ -208,6 +208,6 @@ def get_variables_incident_to_constraint(constraint, **kwds):
 
     """
     if constraint.ctype is ExternalGreyBoxConstraint:
-        return constraint.body.get_incident_variables()
+        return constraint.body.identify_variables()
     else:
         return get_incident_variables(constraint.body, **kwds)

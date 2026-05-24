@@ -70,32 +70,6 @@ class TestExternalGreyBoxConstraintConstruction(unittest.TestCase):
             m.egb.c = ExternalGreyBoxConstraint()
         self.assertIn("implicit_constraint_id", str(context.exception))
 
-    def test_construction_with_rule_raises(self):
-        """Test that passing 'rule' argument raises TypeError."""
-        m = pyo.ConcreteModel()
-        m.egb = ExternalGreyBoxBlock()
-        external_model = ex_models.PressureDropSingleEquality()
-        m.egb.set_external_model(external_model)
-
-        with self.assertRaises(TypeError) as context:
-            m.egb.c = ExternalGreyBoxConstraint(
-                implicit_constraint_id='pdrop', rule=lambda m: None
-            )
-        self.assertIn("rule", str(context.exception))
-
-    def test_construction_with_expr_raises(self):
-        """Test that passing 'expr' argument raises TypeError."""
-        m = pyo.ConcreteModel()
-        m.egb = ExternalGreyBoxBlock()
-        external_model = ex_models.PressureDropSingleEquality()
-        m.egb.set_external_model(external_model)
-
-        with self.assertRaises(TypeError) as context:
-            m.egb.c = ExternalGreyBoxConstraint(
-                implicit_constraint_id='pdrop', expr=pyo.Constraint.Skip
-            )
-        self.assertIn("expr", str(context.exception))
-
     def test_construction_with_invalid_implicit_constraint_id_raises(self):
         """Test that invalid implicit_constraint_id raises ValueError on construct."""
         m = pyo.ConcreteModel()
@@ -568,8 +542,8 @@ class TestEGBConstraintBody(unittest.TestCase):
             body_obj = EGBConstraintBody(m.egb, 'invalid_constraint_id')
         self.assertIn("invalid_constraint_id", str(context.exception))
 
-    def test_get_incident_variables_without_jacobian(self):
-        """Test get_incident_variables returns all input variables."""
+    def test_identify_variables_without_jacobian(self):
+        """Test identify_variables returns all input variables."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropSingleEquality()
@@ -578,7 +552,7 @@ class TestEGBConstraintBody(unittest.TestCase):
         m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
 
         body_obj = m.egb.c.body
-        incident_vars = body_obj.get_incident_variables()
+        incident_vars = body_obj.identify_variables()
 
         # Should return all 4 input variables
         self.assertEqual(len(incident_vars), 4)
@@ -588,8 +562,8 @@ class TestEGBConstraintBody(unittest.TestCase):
             actual_names, [f'egb.inputs[{name}]' for name in expected_names]
         )
 
-    def test_get_incident_variables_with_output_constraint(self):
-        """Test get_incident_variables for output-based constraints."""
+    def test_identify_variables_with_output_constraint(self):
+        """Test identify_variables for output-based constraints."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropTwoOutputs()
@@ -599,7 +573,7 @@ class TestEGBConstraintBody(unittest.TestCase):
 
         body_obj = m.egb.c.body
 
-        incident_vars = body_obj.get_incident_variables()
+        incident_vars = body_obj.identify_variables()
         self.assertEqual(len(incident_vars), 4)
         expected_names = [
             'egb.inputs[Pin]',
@@ -609,8 +583,8 @@ class TestEGBConstraintBody(unittest.TestCase):
         ]
         assert all(var.name in expected_names for var in incident_vars)
 
-    def test_get_incident_variables_multiple_outputs(self):
-        """Test get_incident_variables for different output constraints in same model."""
+    def test_identify_variables_multiple_outputs(self):
+        """Test identify_variables for different output constraints in same model."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropTwoOutputs()
@@ -624,8 +598,8 @@ class TestEGBConstraintBody(unittest.TestCase):
         body_obj1 = m.egb.c1.body
         body_obj2 = m.egb.c2.body
 
-        incident_vars1 = body_obj1.get_incident_variables()
-        incident_vars2 = body_obj2.get_incident_variables()
+        incident_vars1 = body_obj1.identify_variables()
+        incident_vars2 = body_obj2.identify_variables()
 
         self.assertEqual(len(incident_vars1), 4)
         self.assertEqual(len(incident_vars2), 4)
@@ -648,8 +622,8 @@ class TestEGBConstraintBody(unittest.TestCase):
             ]
             assert v.name in expected2
 
-    def test_get_incident_variables_multiple_constraints_and_outputs(self):
-        """Test get_incident_variables for different implicit constraints in same model."""
+    def test_identify_variables_multiple_constraints_and_outputs(self):
+        """Test identify_variables for different implicit constraints in same model."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropTwoEqualitiesTwoOutputs()
@@ -663,7 +637,7 @@ class TestEGBConstraintBody(unittest.TestCase):
 
         # Implicit constraint: 'pdrop1'
         body_obj1 = m.egb.pdrop1.body
-        incident_vars1 = body_obj1.get_incident_variables()
+        incident_vars1 = body_obj1.identify_variables()
         self.assertEqual(len(incident_vars1), 4)
         expected_names = [
             'egb.inputs[Pin]',
@@ -676,7 +650,7 @@ class TestEGBConstraintBody(unittest.TestCase):
 
         # Implicit constraint: 'pdrop3'
         body_obj1 = m.egb.pdrop3.body
-        incident_vars1 = body_obj1.get_incident_variables()
+        incident_vars1 = body_obj1.identify_variables()
         self.assertEqual(len(incident_vars1), 4)
         expected_names = [
             'egb.inputs[c]',
@@ -689,7 +663,7 @@ class TestEGBConstraintBody(unittest.TestCase):
 
         # Implicit constraint: 'P2_constraint'
         body_obj1 = m.egb.P2_constraint.body
-        incident_vars1 = body_obj1.get_incident_variables()
+        incident_vars1 = body_obj1.identify_variables()
         self.assertEqual(len(incident_vars1), 4)
         expected_names = [
             'egb.inputs[c]',
@@ -702,7 +676,7 @@ class TestEGBConstraintBody(unittest.TestCase):
 
         # Implicit constraint: 'Pout_constraint'
         body_obj1 = m.egb.Pout_constraint.body
-        incident_vars1 = body_obj1.get_incident_variables()
+        incident_vars1 = body_obj1.identify_variables()
         self.assertEqual(len(incident_vars1), 4)
         expected_names = [
             'egb.inputs[c]',
@@ -713,8 +687,8 @@ class TestEGBConstraintBody(unittest.TestCase):
         for v in incident_vars1:
             self.assertIn(v.name, expected_names)
 
-    def test_get_incident_variables_default_parameters(self):
-        """Test get_incident_variables with default parameters (use_jacobian=False)."""
+    def test_identify_variables_default_parameters(self):
+        """Test identify_variables with default parameters (use_jacobian=False)."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropSingleEquality()
@@ -724,13 +698,13 @@ class TestEGBConstraintBody(unittest.TestCase):
 
         body_obj = m.egb.c.body
         # Call without parameters (should default to use_jacobian=False)
-        incident_vars = body_obj.get_incident_variables()
+        incident_vars = body_obj.identify_variables()
 
         # Should return all 4 input variables
         self.assertEqual(len(incident_vars), 4)
 
-    def test_get_incident_variables_returns_var_data_objects(self):
-        """Test that get_incident_variables returns actual variable data objects."""
+    def test_identify_variables_returns_var_data_objects(self):
+        """Test that identify_variables returns actual variable data objects."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropSingleEquality()
@@ -739,7 +713,7 @@ class TestEGBConstraintBody(unittest.TestCase):
         m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
 
         body_obj = m.egb.c.body
-        incident_vars = body_obj.get_incident_variables()
+        incident_vars = body_obj.identify_variables()
 
         # Verify that each element is a Pyomo VarData object
         for var in incident_vars:

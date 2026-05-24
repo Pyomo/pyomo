@@ -73,10 +73,10 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
         """
         m = self.build_model()
 
-        # Check that the get_incident_variables method on the implicit constraint body returns the correct variables
+        # Check that the identify_variables method on the implicit constraint body returns the correct variables
         # Implicit constraint: 'pdrop1'
         body_obj1 = m.egb.eq_constraints["pdrop1"].body
-        incident_vars1 = body_obj1.get_incident_variables()
+        incident_vars1 = body_obj1.identify_variables()
 
         incident_var_set = ComponentSet(
             [
@@ -90,7 +90,7 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
 
         # Implicit constraint: 'pdrop3'
         body_obj1 = m.egb.eq_constraints["pdrop3"].body
-        incident_vars1 = body_obj1.get_incident_variables()
+        incident_vars1 = body_obj1.identify_variables()
         incident_var_set = ComponentSet(
             [
                 m.egb.inputs["c"],
@@ -103,7 +103,7 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
 
         # Implicit constraint: 'P2_constraint'
         body_obj1 = m.egb.output_constraints["P2"].body
-        incident_vars1 = body_obj1.get_incident_variables()
+        incident_vars1 = body_obj1.identify_variables()
         incident_var_set = ComponentSet(
             [
                 m.egb.inputs["c"],
@@ -116,7 +116,7 @@ class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
 
         # Implicit constraint: 'Pout_constraint'
         body_obj1 = m.egb.output_constraints["Pout"].body
-        incident_vars1 = body_obj1.get_incident_variables()
+        incident_vars1 = body_obj1.identify_variables()
         incident_var_set = ComponentSet(
             [
                 m.egb.inputs["Pin"],

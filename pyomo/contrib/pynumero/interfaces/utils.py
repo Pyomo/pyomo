@@ -172,7 +172,7 @@ class CondensedSparseSummation:
 
         # Check to ensure we have some non-zeroes.
         # If not, we still need to maintain consistent internal state and maps so sum() returns a valid empty matrix.
-        if len(nz_tuples) == 0:
+        if not nz_tuples:
             # All matrices have empty nonzero structure (e.g., linear models with empty Hessian).
             # Maintain consistent internal state and maps so sum() returns a valid empty matrix.
             self._row = np.array([], dtype=np.int64)

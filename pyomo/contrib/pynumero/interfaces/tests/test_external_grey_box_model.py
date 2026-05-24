@@ -2193,16 +2193,16 @@ class TestExternalGreyBoxBlockConstraints(unittest.TestCase):
         self.assertIsInstance(outcons["Pout"], ExternalGreyBoxConstraintData)
         self.assertEqual(len(outcons), 2)
 
-        # For good measure, test that get_incident_variables works as expected
+        # For good measure, test that identify_variables works as expected
         expected_vars = [inputs["Pin"], inputs["c"], inputs["F"], inputs["P1"]]
         expected_vars = ComponentSet(expected_vars)
-        actual_vars = ComponentSet(eqcons["pdrop1"].body.get_incident_variables())
+        actual_vars = ComponentSet(eqcons["pdrop1"].body.identify_variables())
         self.assertEqual(expected_vars, actual_vars)
 
-        # Test get_incident_variables for an output constraint
+        # Test identify_variables for an output constraint
         expected_vars = [outputs["Pout"], inputs["Pin"], inputs["F"], inputs["c"]]
         expected_vars = ComponentSet(expected_vars)
-        actual_vars = ComponentSet(outcons["Pout"].body.get_incident_variables())
+        actual_vars = ComponentSet(outcons["Pout"].body.identify_variables())
         self.assertEqual(expected_vars, actual_vars)
 
         # Check that component_data_objects works as expected
