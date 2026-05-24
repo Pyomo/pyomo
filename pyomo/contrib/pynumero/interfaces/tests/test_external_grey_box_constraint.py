@@ -1706,63 +1706,64 @@ class TestIndexedExternalGreyBoxConstraintAdvanced(unittest.TestCase):
 
 
 @skip_implicit_constraint_construction
-def test_component_data_objects_with_EGBC():
-    """Test that ExternalGreyBoxConstraints can be iterated over using component_data_objects."""
-    m = pyo.ConcreteModel()
-    m.egb = ExternalGreyBoxBlock()
-    external_model = ex_models.PressureDropTwoEqualitiesTwoOutputsWithHessian()
-    m.egb.set_external_model(external_model)
+class TestComponentDataObjectsWithEGBC(unittest.TestCase):
+    """Test component_data_objects and indexed EGBC functionality."""
 
-    # Manually create the implicit constraint objects
-    m.egb.pdrop1 = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop1')
-    m.egb.pdrop3 = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop3')
-    m.egb.P2_constraint = ExternalGreyBoxConstraint(implicit_constraint_id='P2')
-    m.egb.Pout_constraint = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+    def test_component_data_objects_with_EGBC(self):
+        """Test that ExternalGreyBoxConstraints can be iterated over using component_data_objects."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropTwoEqualitiesTwoOutputsWithHessian()
+        m.egb.set_external_model(external_model)
 
-    count = 0
-    for c in m.egb.component_data_objects(
-        ctype=ExternalGreyBoxConstraint, descend_into=False
-    ):
-        assert isinstance(c, ExternalGreyBoxConstraintData)
-        assert c.local_name in ['P2_constraint', 'Pout_constraint', 'pdrop1', 'pdrop3']
-        count += 1
-    assert count == 4
+        # Manually create the implicit constraint objects
+        m.egb.pdrop1 = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop1')
+        m.egb.pdrop3 = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop3')
+        m.egb.P2_constraint = ExternalGreyBoxConstraint(implicit_constraint_id='P2')
+        m.egb.Pout_constraint = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
 
+        count = 0
+        for c in m.egb.component_data_objects(
+            ctype=ExternalGreyBoxConstraint, descend_into=False
+        ):
+            self.assertIsInstance(c, ExternalGreyBoxConstraintData)
+            self.assertIn(c.local_name, ['P2_constraint', 'Pout_constraint', 'pdrop1', 'pdrop3'])
+            count += 1
+        self.assertEqual(count, 4)
 
-@skip_implicit_constraint_construction
-def test_indexed_egbc_no_implicit_constraint_id():
-    m = pyo.ConcreteModel()
-    m.egb = ExternalGreyBoxBlock()
-    external_model = ex_models.PressureDropTwoEqualitiesTwoOutputs()
-    m.egb.set_external_model(external_model)
+    def test_indexed_egbc_no_implicit_constraint_id(self):
+        """Test indexed EGBC with no explicit implicit_constraint_id."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropTwoEqualitiesTwoOutputs()
+        m.egb.set_external_model(external_model)
 
-    m.set = pyo.Set(initialize=['P2', 'Pout', 'pdrop1', 'pdrop3'])
+        m.set = pyo.Set(initialize=['P2', 'Pout', 'pdrop1', 'pdrop3'])
 
-    m.egb.c = ExternalGreyBoxConstraint(m.set)
+        m.egb.c = ExternalGreyBoxConstraint(m.set)
 
-    assert m.egb.c["P2"]._implicit_constraint_id == "P2"
-    assert m.egb.c["Pout"]._implicit_constraint_id == "Pout"
-    assert m.egb.c["pdrop1"]._implicit_constraint_id == "pdrop1"
-    assert m.egb.c["pdrop3"]._implicit_constraint_id == "pdrop3"
+        self.assertEqual(m.egb.c["P2"]._implicit_constraint_id, "P2")
+        self.assertEqual(m.egb.c["Pout"]._implicit_constraint_id, "Pout")
+        self.assertEqual(m.egb.c["pdrop1"]._implicit_constraint_id, "pdrop1")
+        self.assertEqual(m.egb.c["pdrop3"]._implicit_constraint_id, "pdrop3")
 
+    def test_indexed_egbc_implicit_constraint_id_mapping(self):
+        """Test indexed EGBC with explicit implicit_constraint_id mapping."""
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropTwoEqualitiesTwoOutputs()
+        m.egb.set_external_model(external_model)
 
-@skip_implicit_constraint_construction
-def test_indexed_egbc_implicit_constraint_id_mapping():
-    m = pyo.ConcreteModel()
-    m.egb = ExternalGreyBoxBlock()
-    external_model = ex_models.PressureDropTwoEqualitiesTwoOutputs()
-    m.egb.set_external_model(external_model)
+        m.set = pyo.Set(initialize=['P2', 'Pout', 'pdrop1', 'pdrop3'])
 
-    m.set = pyo.Set(initialize=['P2', 'Pout', 'pdrop1', 'pdrop3'])
+        m.egb.c = ExternalGreyBoxConstraint(
+            m.set, implicit_constraint_id={i: i for i in m.set}
+        )
 
-    m.egb.c = ExternalGreyBoxConstraint(
-        m.set, implicit_constraint_id={i: i for i in m.set}
-    )
-
-    assert m.egb.c["P2"]._implicit_constraint_id == "P2"
-    assert m.egb.c["Pout"]._implicit_constraint_id == "Pout"
-    assert m.egb.c["pdrop1"]._implicit_constraint_id == "pdrop1"
-    assert m.egb.c["pdrop3"]._implicit_constraint_id == "pdrop3"
+        self.assertEqual(m.egb.c["P2"]._implicit_constraint_id, "P2")
+        self.assertEqual(m.egb.c["Pout"]._implicit_constraint_id, "Pout")
+        self.assertEqual(m.egb.c["pdrop1"]._implicit_constraint_id, "pdrop1")
+        self.assertEqual(m.egb.c["pdrop3"]._implicit_constraint_id, "pdrop3")
 
 
 if __name__ == '__main__':

@@ -17,10 +17,8 @@ from pyomo.common.tempfiles import TempfileManager
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np,
     numpy_available,
-    scipy,
     scipy_available,
 )
-from pyomo.common.dependencies.scipy import sparse as spa
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
@@ -907,17 +905,13 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         )
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout'] - 20) ** 2)
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
-        # m.scaling_factor[m.obj] = 0.1 # scale the objective
         m.scaling_factor[m.egb.inputs['Pin']] = 1.1  # scale the variable
         m.scaling_factor[m.egb.inputs['c']] = 1.2  # scale the variable
         m.scaling_factor[m.egb.inputs['F']] = 1.3  # scale the variable
-        # m.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
         m.scaling_factor[m.egb.inputs['P3']] = 1.5  # scale the variable
         m.scaling_factor[m.egb.outputs['P2']] = 1.6  # scale the variable
         m.scaling_factor[m.egb.outputs['Pout']] = 1.7  # scale the variable
-        # m.scaling_factor[m.hin] = 1.8
         m.scaling_factor[m.hout] = 1.9
-        # m.scaling_factor[m.incon] = 2.1
         m.scaling_factor[m.outcon] = 2.2
         egb_nlp = _ExternalGreyBoxAsNLP(m.egb)
 
@@ -1028,7 +1022,6 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         m.egb.outputs['Pout'].value = 50
         m.egb.outputs['Pout'].setlb(0)
         m.egb.outputs['Pout'].setub(100)
-        # m.dummy = pyo.Constraint(expr=sum(m.egb.inputs[i] for i in m.egb.inputs) + sum(m.egb.outputs[i] for i in m.egb.outputs) <= 1e6)
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout'] - 20) ** 2)
 
         pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m)
@@ -2218,17 +2211,13 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         )
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout'] - 20) ** 2)
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
-        # m.scaling_factor[m.obj] = 0.1 # scale the objective
         m.scaling_factor[m.egb.inputs['Pin']] = 1.1  # scale the variable
         m.scaling_factor[m.egb.inputs['c']] = 1.2  # scale the variable
         m.scaling_factor[m.egb.inputs['F']] = 1.3  # scale the variable
-        # m.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
         m.scaling_factor[m.egb.inputs['P3']] = 1.5  # scale the variable
         m.scaling_factor[m.egb.outputs['P2']] = 1.6  # scale the variable
         m.scaling_factor[m.egb.outputs['Pout']] = 1.7  # scale the variable
-        # m.scaling_factor[m.hin] = 1.8
         m.scaling_factor[m.hout] = 1.9
-        # m.scaling_factor[m.incon] = 2.1
         m.scaling_factor[m.outcon] = 2.2
         pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m)
 
@@ -2343,17 +2332,13 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         )
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout'] - 20) ** 2)
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
-        # m.scaling_factor[m.obj] = 0.1 # scale the objective
         m.scaling_factor[m.egb.inputs['Pin']] = 1.1  # scale the variable
         m.scaling_factor[m.egb.inputs['c']] = 1.2  # scale the variable
         m.scaling_factor[m.egb.inputs['F']] = 1.3  # scale the variable
-        # m.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
         m.scaling_factor[m.egb.inputs['P3']] = 1.5  # scale the variable
         m.scaling_factor[m.egb.outputs['P2']] = 1.6  # scale the variable
         m.scaling_factor[m.egb.outputs['Pout']] = 1.7  # scale the variable
-        # m.scaling_factor[m.hin] = 1.8
         m.scaling_factor[m.hout] = 1.9
-        # m.scaling_factor[m.incon] = 2.1
         m.scaling_factor[m.outcon] = 2.2
         pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m)
 
@@ -2439,7 +2424,6 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         m.scaling_factor[m.egb.inputs['Pin']] = 1.1  # scale the variable
         m.scaling_factor[m.egb.inputs['c']] = 1.2  # scale the variable
         m.scaling_factor[m.egb.inputs['F']] = 1.3  # scale the variable
-        # m.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
         m.scaling_factor[m.egb.inputs['P3']] = 1.5  # scale the variable
         m.scaling_factor[m.egb.outputs['P2']] = 1.6  # scale the variable
         m.scaling_factor[m.egb.outputs['Pout']] = 1.7  # scale the variable
@@ -2589,16 +2573,14 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertAlmostEqual(m.dual[m.egb]['egb.u2_con'], 62.5, places=3)
 
 
+@unittest.skipIf(not cyipopt_available, "CyIpopt needed to run tests with solve")
 class TestGreyBoxObjectives(unittest.TestCase):
-    @unittest.skipIf(not cyipopt_available, "CyIpopt needed to run tests with solve")
     def test_unconstrained(self):
         solve_unconstrained()
 
-    @unittest.skipIf(not cyipopt_available, "CyIpopt needed to run tests with solve")
     def test_constrained(self):
         solve_constrained()
 
-    @unittest.skipIf(not cyipopt_available, "CyIpopt needed to run tests with solve")
     def test_constrained_with_hessian(self):
         solve_constrained_with_hessian()
 

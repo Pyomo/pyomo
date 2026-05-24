@@ -609,15 +609,6 @@ class _ExternalGreyBoxAsNLP(NLP):
             ]
         )
 
-        # # Collect implicit constraints.
-        # self._constraint_names = []
-        # self._constraint_datas = []
-        # for c in self._block.component_data_objects(
-        #     ExternalGreyBoxConstraint, active=True, descend_into=False
-        # ):
-        #     self._constraint_names.append(c.getname(fully_qualified=True))
-        #     self._constraint_datas.append(c)
-
         # create the numpy arrays of bounds on the primals
         self._primals_lb = BlockVector(2)
         self._primals_ub = BlockVector(2)
