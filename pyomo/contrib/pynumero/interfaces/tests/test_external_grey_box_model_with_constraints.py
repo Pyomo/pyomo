@@ -51,12 +51,30 @@ from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
 class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
     """Tests for ExternalGreyBoxBlock with implicit_constraint_objects"""
 
-    def test_pressure_drop_two_equalities_two_outputs_constraint_creation(self):
-        """Here we test that output and equality constraints are created as expected"""
+    def test_pressure_drop_egb_constraints(self):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(ex_models.PressureDropTwoEqualitiesTwoOutputs())
+        self._test_pressure_drop_egb_constraints(m, m.egb.inputs, m.egb.outputs)
 
+    def test_pressure_drop_egb_constraints_existing_inputs_outputs(self):
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        m.inputs = pyo.Var(range(5))
+        m.outputs = pyo.Var(range(2))
+        m.egb.set_external_model(
+            ex_models.PressureDropTwoEqualitiesTwoOutputs(),
+            inputs=m.inputs,
+            outputs=m.outputs,
+        )
+        # Note that here we are ducktyping IndexedVar with these dicts.
+        # The lower-level test method just uses these names as keys in inputs/outputs.
+        inputs = dict(zip(["Pin", "c", "F", "P1", "P3"], m.inputs.values()))
+        outputs = dict(zip(["P2", "Pout"], m.outputs.values()))
+        self._test_pressure_drop_egb_constraints(m, inputs, outputs)
+
+    def _test_pressure_drop_egb_constraints(self, m, inputs, outputs):
+        """Here we test that output and equality constraints are created as expected"""
         # Check that constraint objects have the expected shape and type
         eqcons = m.egb.eq_constraints
         self.assertIs(eqcons.ctype, ExternalGreyBoxConstraint)
@@ -71,14 +89,13 @@ class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
         self.assertEqual(len(outcons), 2)
 
         # For good measure, test that get_incident_variables works as expected
-        inputs = m.egb.inputs
         expected_vars = [inputs["Pin"], inputs["c"], inputs["F"], inputs["P1"]]
         expected_vars = ComponentSet(expected_vars)
         actual_vars = ComponentSet(eqcons["pdrop1"].body.get_incident_variables())
         self.assertEqual(expected_vars, actual_vars)
 
         # Test get_incident_variables for an output constraint
-        expected_vars = [m.egb.outputs["Pout"], inputs["Pin"], inputs["F"], inputs["c"]]
+        expected_vars = [outputs["Pout"], inputs["Pin"], inputs["F"], inputs["c"]]
         expected_vars = ComponentSet(expected_vars)
         actual_vars = ComponentSet(outcons["Pout"].body.get_incident_variables())
         self.assertEqual(expected_vars, actual_vars)
