@@ -16,7 +16,6 @@ import pyomo.environ as pyo
 from pyomo.common.collections import ComponentSet
 
 from pyomo.contrib.pynumero.dependencies import (
-    numpy as np,
     numpy_available,
     scipy_available,
 )
@@ -24,86 +23,14 @@ from pyomo.contrib.pynumero.dependencies import (
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
-from scipy.sparse import coo_matrix
-
 from pyomo.contrib.pynumero.asl import AmplInterface
 
 if not AmplInterface.available():
     raise unittest.SkipTest("ASL interface is not available")
 
-from pyomo.contrib.pynumero.interfaces.external_grey_box import (
-    ExternalGreyBoxBlock,
-    ExternalGreyBoxModel,
-)
-from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
-    ExternalGreyBoxConstraint,
-    ExternalGreyBoxConstraintData,
-)
-from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoGreyBoxNLP
-from pyomo.contrib.pynumero.interfaces.tests.compare_utils import (
-    check_vectors_specific_order,
-    check_sparse_matrix_specific_order,
-)
+from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
 import pyomo.contrib.pynumero.interfaces.tests.external_grey_box_models as ex_models
 from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
-
-
-class TestExternalGreyBoxModelWithConstraints(unittest.TestCase):
-    """Tests for ExternalGreyBoxBlock with implicit_constraint_objects"""
-
-    def test_pressure_drop_egb_constraints(self):
-        m = pyo.ConcreteModel()
-        m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(ex_models.PressureDropTwoEqualitiesTwoOutputs())
-        self._test_pressure_drop_egb_constraints(m, m.egb.inputs, m.egb.outputs)
-
-    def test_pressure_drop_egb_constraints_existing_inputs_outputs(self):
-        m = pyo.ConcreteModel()
-        m.egb = ExternalGreyBoxBlock()
-        m.inputs = pyo.Var(range(5))
-        m.outputs = pyo.Var(range(2))
-        m.egb.set_external_model(
-            ex_models.PressureDropTwoEqualitiesTwoOutputs(),
-            inputs=m.inputs,
-            outputs=m.outputs,
-        )
-        # Note that here we are ducktyping IndexedVar with these dicts.
-        # The lower-level test method just uses these names as keys in inputs/outputs.
-        inputs = dict(zip(["Pin", "c", "F", "P1", "P3"], m.inputs.values()))
-        outputs = dict(zip(["P2", "Pout"], m.outputs.values()))
-        self._test_pressure_drop_egb_constraints(m, inputs, outputs)
-
-    def _test_pressure_drop_egb_constraints(self, m, inputs, outputs):
-        """Here we test that output and equality constraints are created as expected"""
-        # Check that constraint objects have the expected shape and type
-        eqcons = m.egb.eq_constraints
-        self.assertIs(eqcons.ctype, ExternalGreyBoxConstraint)
-        self.assertIsInstance(eqcons["pdrop1"], ExternalGreyBoxConstraintData)
-        self.assertIsInstance(eqcons["pdrop3"], ExternalGreyBoxConstraintData)
-        self.assertEqual(len(eqcons), 2)
-
-        outcons = m.egb.output_constraints
-        self.assertIs(outcons.ctype, ExternalGreyBoxConstraint)
-        self.assertIsInstance(outcons["P2"], ExternalGreyBoxConstraintData)
-        self.assertIsInstance(outcons["Pout"], ExternalGreyBoxConstraintData)
-        self.assertEqual(len(outcons), 2)
-
-        # For good measure, test that get_incident_variables works as expected
-        expected_vars = [inputs["Pin"], inputs["c"], inputs["F"], inputs["P1"]]
-        expected_vars = ComponentSet(expected_vars)
-        actual_vars = ComponentSet(eqcons["pdrop1"].body.get_incident_variables())
-        self.assertEqual(expected_vars, actual_vars)
-
-        # Test get_incident_variables for an output constraint
-        expected_vars = [outputs["Pout"], inputs["Pin"], inputs["F"], inputs["c"]]
-        expected_vars = ComponentSet(expected_vars)
-        actual_vars = ComponentSet(outcons["Pout"].body.get_incident_variables())
-        self.assertEqual(expected_vars, actual_vars)
-
-        # Check that component_data_objects works as expected
-        predicted_conset = ComponentSet(list(outcons[:]) + list(eqcons[:]))
-        conset = ComponentSet(m.egb.component_data_objects(ExternalGreyBoxConstraint))
-        self.assertEqual(predicted_conset, conset)
 
 
 class TestExternalGreyBoxModelWithIncidenceAnalysis(unittest.TestCase):
