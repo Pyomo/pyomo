@@ -17,27 +17,27 @@ from pyomo.core.expr.visitor import identify_variables
 
 def get_vars(m: BlockData):
     vset = ComponentSet()
-    for c in m.component_data_objects(pe.Constraint, active=True, descend_into=True):
+    for c in m.component_data_objects(pyo.Constraint, active=True, descend_into=True):
         vset.update(identify_variables(c.body, include_fixed=False))
-    for o in m.component_data_objects(pe.Objective, active=True, descend_into=True):
+    for o in m.component_data_objects(pyo.Objective, active=True, descend_into=True):
         vset.update(identify_variables(o.expr, include_fixed=False))
     return vset
 
 
 def shallow_clone(m1):
-    m2 = pe.ConcreteModel()
-    m2.cons = pe.ConstraintList()
+    m2 = pyo.ConcreteModel()
+    m2.cons = pyo.ConstraintList()
 
-    for con in m1.component_data_objects(pe.Constraint, active=True, descend_into=True):
+    for con in m1.component_data_objects(pyo.Constraint, active=True, descend_into=True):
         m2.cons.add(con.expr)
 
     objlist = list(
-        m1.component_data_objects(pe.Objective, active=True, descend_into=True)
+        m1.component_data_objects(pyo.Objective, active=True, descend_into=True)
     )
     assert len(objlist) <= 1
     if objlist:
         obj = objlist[0]
-        m2.obj = pe.Objective(expr=obj.expr, sense=obj.sense)
+        m2.obj = pyo.Objective(expr=obj.expr, sense=obj.sense)
 
     return m2
 

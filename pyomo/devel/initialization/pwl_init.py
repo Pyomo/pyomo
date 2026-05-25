@@ -63,22 +63,22 @@ logger = logging.getLogger(__name__)
 
 
 def _minimize_infeasibility(m):
-    m.slacks = pe.VarList()
-    m.extra_cons = pe.ConstraintList()
+    m.slacks = pyo.VarList()
+    m.extra_cons = pyo.ConstraintList()
 
     obj_expr = 0
 
     found_obj = False
-    for obj in m.component_data_objects(pe.Objective, active=True, descend_into=True):
+    for obj in m.component_data_objects(pyo.Objective, active=True, descend_into=True):
         assert not found_obj
-        if obj.sense == pe.minimize:
+        if obj.sense == pyo.minimize:
             obj_expr += 0.1 * obj.expr
         else:
             obj_expr -= 0.1 * obj.expr
         obj.deactivate()
         found_obj = True
 
-    for con in m.component_data_objects(pe.Constraint, active=True, descend_into=True):
+    for con in m.component_data_objects(pyo.Constraint, active=True, descend_into=True):
         lb, body, ub = con.to_bounded_expression(evaluate_bounds=True)
         if lb == ub:
             ps = m.slacks.add()
@@ -103,7 +103,7 @@ def _minimize_infeasibility(m):
             m.extra_cons.add(body - ub - ps <= 0)
             m.extra_cons.add(body - lb + ns >= 0)
 
-    m.slack_obj = pe.Objective(expr=10 * sum(m.slacks.values()) + obj_expr)
+    m.slack_obj = pyo.Objective(expr=10 * sum(m.slacks.values()) + obj_expr)
 
 
 def _get_pwl_constraints(
@@ -113,10 +113,10 @@ def _get_pwl_constraints(
     comp_types.add(PiecewiseLinearExpression)
     pwl_expr_to_con_map = ComponentMap()
     con_list = list(
-        m.component_data_objects(pe.Constraint, active=True, descend_into=True)
+        m.component_data_objects(pyo.Constraint, active=True, descend_into=True)
     )
     obj_list = list(
-        m.component_data_objects(pe.Objective, active=True, descend_into=True)
+        m.component_data_objects(pyo.Objective, active=True, descend_into=True)
     )
     for comp in con_list + obj_list:
         pwl_exprs = list(identify_components(comp.expr, comp_types))
@@ -287,7 +287,7 @@ def _initialize_with_piecewise_linear_approximation(
 
     # first introduce auxiliary variables so that we don't try to
     # approximate any functions of more than two variables
-    trans = pe.TransformationFactory(
+    trans = pyo.TransformationFactory(
         'contrib.piecewise.univariate_nonlinear_decomposition'
     )
     trans.apply_to(pwl, aggressive_substitution=aggressive_substitution)
@@ -310,7 +310,7 @@ def _initialize_with_piecewise_linear_approximation(
     logger.info('reformulated model to minimize infeasibility')
 
     # build the PWL approximation
-    trans = pe.TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+    trans = pyo.TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
     trans.apply_to(pwl, num_points=2, additively_decompose=False)
     logger.info('replaced nonlinear expressions with piecewise linear expressions')
 
@@ -331,7 +331,7 @@ def _initialize_with_piecewise_linear_approximation(
         # PWL transformation (and map the variables)
         orig_vars = list(get_vars(pwl))
         pwl.orig_vars = orig_vars
-        trans = pe.TransformationFactory('contrib.piecewise.disaggregated_logarithmic')
+        trans = pyo.TransformationFactory('contrib.piecewise.disaggregated_logarithmic')
         _pwl = trans.create_using(pwl)
         new_vars = _pwl.orig_vars
         del pwl.orig_vars
