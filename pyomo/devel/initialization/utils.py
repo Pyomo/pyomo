@@ -7,11 +7,12 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-import pyomo.environ as pe
+import math
+
+import pyomo.environ as pyo
 from pyomo.common.collections import ComponentSet
 from pyomo.core.base.block import BlockData
 from pyomo.core.expr.visitor import identify_variables
-import math
 
 
 def get_vars(m: BlockData):
