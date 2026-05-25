@@ -9,7 +9,7 @@
 
 import os
 
-from .dependencies import ctypes, multiprocessing
+from pyomo.common.dependencies import ctypes, multiprocessing
 
 
 def _as_bytes(val):
