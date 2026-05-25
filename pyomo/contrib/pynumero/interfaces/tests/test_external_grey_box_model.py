@@ -31,9 +31,7 @@ if not AmplInterface.available():
 
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import cyipopt_available
 
-from pyomo.contrib.pynumero.interfaces.external_grey_box import (
-    ExternalGreyBoxBlock,
-)
+from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
 from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
     ExternalGreyBoxConstraint,
     ExternalGreyBoxConstraintData,

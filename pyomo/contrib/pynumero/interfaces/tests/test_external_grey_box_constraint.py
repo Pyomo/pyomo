@@ -633,7 +633,9 @@ class TestEGBConstraintBody(unittest.TestCase):
         m.egb.pdrop1 = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop1')
         m.egb.pdrop3 = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop3')
         m.egb.P2_constraint = ExternalGreyBoxConstraint(implicit_constraint_ids='P2')
-        m.egb.Pout_constraint = ExternalGreyBoxConstraint(implicit_constraint_ids='Pout')
+        m.egb.Pout_constraint = ExternalGreyBoxConstraint(
+            implicit_constraint_ids='Pout'
+        )
 
         # Implicit constraint: 'pdrop1'
         body_obj1 = m.egb.pdrop1.body
@@ -1694,14 +1696,18 @@ class TestComponentDataObjectsWithEGBC(unittest.TestCase):
         m.egb.pdrop1 = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop1')
         m.egb.pdrop3 = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop3')
         m.egb.P2_constraint = ExternalGreyBoxConstraint(implicit_constraint_ids='P2')
-        m.egb.Pout_constraint = ExternalGreyBoxConstraint(implicit_constraint_ids='Pout')
+        m.egb.Pout_constraint = ExternalGreyBoxConstraint(
+            implicit_constraint_ids='Pout'
+        )
 
         count = 0
         for c in m.egb.component_data_objects(
             ctype=ExternalGreyBoxConstraint, descend_into=False
         ):
             self.assertIsInstance(c, ExternalGreyBoxConstraintData)
-            self.assertIn(c.local_name, ['P2_constraint', 'Pout_constraint', 'pdrop1', 'pdrop3'])
+            self.assertIn(
+                c.local_name, ['P2_constraint', 'Pout_constraint', 'pdrop1', 'pdrop3']
+            )
             count += 1
         self.assertEqual(count, 4)
 

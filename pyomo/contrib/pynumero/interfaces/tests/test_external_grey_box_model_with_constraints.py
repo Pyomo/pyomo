@@ -15,10 +15,7 @@ import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.common.collections import ComponentSet
 
-from pyomo.contrib.pynumero.dependencies import (
-    numpy_available,
-    scipy_available,
-)
+from pyomo.contrib.pynumero.dependencies import numpy_available, scipy_available
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")

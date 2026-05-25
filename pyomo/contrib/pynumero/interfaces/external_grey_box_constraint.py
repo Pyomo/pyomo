@@ -66,9 +66,7 @@ class EGBConstraintBody:
                 self._constraint_id
             )
         elif self._constraint_id in ext_model.output_names():
-            self._output_idx = ext_model.output_names().index(
-                self._constraint_id
-            )
+            self._output_idx = ext_model.output_names().index(self._constraint_id)
         else:
             raise ValueError(
                 f"Implicit_constraint_id '{self._constraint_id}' is not a valid identifier in "
@@ -97,9 +95,11 @@ class EGBConstraintBody:
         if self._eq_cons_idx is not None:
             # For an implicit constraint, return the residual
             try:
-                return self._egb().get_external_model().evaluate_equality_constraints()[
-                    self._eq_cons_idx
-                ]
+                return (
+                    self._egb()
+                    .get_external_model()
+                    .evaluate_equality_constraints()[self._eq_cons_idx]
+                )
             except Exception as e:
                 raise RuntimeError(
                     f"Error evaluating implicit equality constraint '{self._constraint_id}' "
@@ -107,9 +107,9 @@ class EGBConstraintBody:
                 ) from e
         # For an output, the ExternalGreyBox will always return the value
         # of the output as a function of the inputs.
-        evaluated_value = self._egb().get_external_model().evaluate_outputs()[
-            self._output_idx
-        ]
+        evaluated_value = (
+            self._egb().get_external_model().evaluate_outputs()[self._output_idx]
+        )
         var_value = value(self.get_output_var(), exception=exception)
         return var_value - evaluated_value
 
@@ -158,9 +158,7 @@ class EGBConstraintBody:
         # We do not check value, as we assume entries indicate potential incident variables,
         # however they may currently have zero derivative values.
         var_indices = jac.getrow(con_idx).indices
-        incident_variables.extend(
-            list(egb.inputs.values())[j] for j in var_indices
-        )
+        incident_variables.extend(list(egb.inputs.values())[j] for j in var_indices)
 
         return incident_variables
 
@@ -264,8 +262,7 @@ class ExternalGreyBoxConstraintData(ComponentData):
             # weakref back to the parent block (see EGBConstraintBody.__init__),
             # so storing a strong reference here does not create a cycle.
             self._body = EGBConstraintBody(
-                grey_box=self.parent_block(),
-                constraint_id=self._implicit_constraint_id,
+                grey_box=self.parent_block(), constraint_id=self._implicit_constraint_id
             )
         return self._body
 
@@ -826,8 +823,7 @@ class IndexedExternalGreyBoxConstraint(ExternalGreyBoxConstraint):
                     implicit_constraint_id = idx
 
                 obj = self._ComponentDataClass(
-                    implicit_constraint_id=implicit_constraint_id,
-                    component=self,
+                    implicit_constraint_id=implicit_constraint_id, component=self
                 )
                 obj._index = idx
                 # Validate against the external model on the data object itself,
@@ -840,5 +836,3 @@ class IndexedExternalGreyBoxConstraint(ExternalGreyBoxConstraint):
     def __getitem__(self, index) -> ExternalGreyBoxConstraintData: ...
 
     __getitem__ = IndexedComponent.__getitem__  # type: ignore
-
-
