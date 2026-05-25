@@ -6,9 +6,6 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
-#
-#  Additional contributions Copyright (c) 2026 OLI Systems, Inc.
-#  ___________________________________________________________________________________
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo

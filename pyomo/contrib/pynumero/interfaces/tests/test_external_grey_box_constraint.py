@@ -724,6 +724,29 @@ class TestEGBConstraintBody(unittest.TestCase):
             self.assertTrue(hasattr(var, 'lb'))
             self.assertTrue(hasattr(var, 'ub'))
 
+    def test_identify_variables_raises_if_variable_is_fixed(self):
+        """identify_variables raises ValueError when an incident variable is fixed.
+
+        EGB variables cannot be fixed; fixing one is a modeling error that
+        would surface as a cryptic solver failure.  identify_variables is the
+        right place to catch this early so the user gets an actionable message.
+        """
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        external_model = ex_models.PressureDropSingleEquality()
+        m.egb.set_external_model(external_model)
+
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
+
+        # Fix one of the EGB input variables — this is a modeling error.
+        m.egb.inputs['Pin'].fix(100.0)
+
+        body_obj = m.egb.c.body
+        with self.assertRaises(ValueError) as ctx:
+            body_obj.identify_variables()
+        self.assertIn('cannot be fixed', str(ctx.exception))
+        self.assertIn('egb.inputs[Pin]', str(ctx.exception))
+
 
 @skip_implicit_constraint_construction
 class TestExternalGreyBoxConstraintSlack(unittest.TestCase):

@@ -73,13 +73,35 @@ class EGBConstraintBody:
                 f"the external model."
             )
 
+    def _dereference_egb(self):
+        """Dereference the weakref to the parent ExternalGreyBoxBlock.
+
+        Raises
+        ------
+        ReferenceError
+            If the ExternalGreyBoxBlock has been garbage-collected while this
+            EGBConstraintBody is still alive.  This indicates that the caller
+            is holding a constraint body beyond the lifetime of the owning
+            block.
+        """
+        egb = self._egb()
+        if egb is None:
+            raise ReferenceError(
+                f"The ExternalGreyBoxBlock that owns implicit constraint "
+                f"'{self._constraint_id}' has been garbage-collected while "
+                "this EGBConstraintBody is still alive. Ensure the block "
+                "remains in scope as long as any constraint bodies derived "
+                "from it are used."
+            )
+        return egb
+
     def get_output_var(self):
         """
         If this EGBConstraintBody corresponds to an output variable, return the corresponding Pyomo VarData object.
         Otherwise, return None.
         """
         if self._output_idx is not None:
-            out_var = list(self._egb().outputs.values())[self._output_idx]
+            out_var = list(self._dereference_egb().outputs.values())[self._output_idx]
             return out_var
         return None
 
@@ -96,7 +118,7 @@ class EGBConstraintBody:
             # For an implicit constraint, return the residual
             try:
                 return (
-                    self._egb()
+                    self._dereference_egb()
                     .get_external_model()
                     .evaluate_equality_constraints()[self._eq_cons_idx]
                 )
@@ -108,7 +130,9 @@ class EGBConstraintBody:
         # For an output, the ExternalGreyBox will always return the value
         # of the output as a function of the inputs.
         evaluated_value = (
-            self._egb().get_external_model().evaluate_outputs()[self._output_idx]
+            self._dereference_egb()
+            .get_external_model()
+            .evaluate_outputs()[self._output_idx]
         )
         var_value = value(self.get_output_var(), exception=exception)
         return var_value - evaluated_value
@@ -117,20 +141,47 @@ class EGBConstraintBody:
         """
         Get the variables that are incident on this implicit constraint.
 
+        This method evaluates the Jacobian of the external model to determine
+        which input variables have a structural non-zero entry for this
+        constraint.  As a result, **the external model's input values must be
+        initialised** (via :meth:`ExternalGreyBoxModel.set_input_values`) before
+        calling this method; if they have not been set, the behaviour depends on
+        the :class:`ExternalGreyBoxModel` implementation — typically the
+        Jacobian evaluation will raise or return incorrect sparsity.
+
         Returns
         -------
         list of VarData
-            List containing the variables that participate in the expression
+            List of Pyomo variable data objects that participate in this
+            implicit constraint.  For output-variable constraints the output
+            variable itself is always included, followed by any input variables
+            with a structural non-zero Jacobian entry.
 
+        Raises
+        ------
+        ValueError
+            If any of the incident variables are fixed.  EGB variables cannot
+            be fixed; fixing one is a modelling error that would otherwise
+            surface as a cryptic failure at solve time.
+        RuntimeError
+            If the external model raises when its Jacobian is evaluated.
+
+        Notes
+        -----
+        There are (at least) three ways incident variables could be defined for
+        an implicit constraint:
+
+        1. All inputs to the external model are considered incident.
+        2. The sparsity pattern of the Jacobian returned by the
+           ExternalGreyBoxModel defines which inputs are potentially incident
+           (entries may be structurally non-zero but numerically zero at the
+           current point).
+        3. Only inputs with a numerically non-zero Jacobian entry are
+           considered incident.
+
+        Option 2 is used here as it is the most general.
         """
-        # There are (at least) three ways incident variables could be defined for an implicit constraint:
-        # 1) We consider all inputs to the external model to be incident on the implicit constraint
-        # 2) We trust the shape of the Jacobian returned by the ExternalGreyBoxModel to contain all elements
-        # that could possibly be non-zero (i.e. incident)
-        # 3) We consider only the inputs that have a non-zero Jacobian entry for the implicit constraint
-        # to be incident on the implicit constraint
-        # For now, we will go with option 2 as it is the most general.
-        egb = self._egb()
+        egb = self._dereference_egb()
         ext_model = egb.get_external_model()
         incident_variables = []
 
@@ -159,6 +210,19 @@ class EGBConstraintBody:
         # however they may currently have zero derivative values.
         var_indices = jac.getrow(con_idx).indices
         incident_variables.extend(list(egb.inputs.values())[j] for j in var_indices)
+
+        # EGB variables cannot be fixed — the solver interface will raise a
+        # cryptic error at solve time if any are.  Check here to surface the
+        # problem early with an actionable message.
+        fixed_vars = [v.name for v in incident_variables if v.fixed]
+        if fixed_vars:
+            raise ValueError(
+                f"ExternalGreyBoxBlock variables cannot be fixed, but the "
+                f"following variables incident to implicit constraint "
+                f"'{self._constraint_id}' are fixed: {fixed_vars}. Use an "
+                "equality Constraint instead of fixing an EGB input or output "
+                "variable."
+            )
 
         return incident_variables
 
