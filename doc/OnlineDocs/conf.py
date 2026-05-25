@@ -428,7 +428,7 @@ dot_sens_available = bool(_opt.check_available_solvers('dot_sens'))
 baron_available = bool(_opt.check_available_solvers('baron'))
 glpk_available = bool(_opt.check_available_solvers('glpk'))
 gurobipy_available = bool(_opt.check_available_solvers('gurobi_direct'))
-scip_available = bool(_opt.check_available_solvers('scip_direct'))
+pyscipopt_available = bool(_opt.check_available_solvers('scip_direct'))
 
 baron = _opt.SolverFactory('baron')
 

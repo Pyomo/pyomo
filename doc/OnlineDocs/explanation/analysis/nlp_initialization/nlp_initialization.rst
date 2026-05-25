@@ -51,7 +51,7 @@ time limit, so it can be useful to specify a time limit before
 calling :func:`initialize_nlp <pyomo.devel.initialization.initialize.initialize_nlp>`:
 
 .. testcode::
-   :skipif: not scip_available
+   :skipif: not pyscipopt_available
 
    import pyomo.environ as pyo
    from pyomo.contrib.solver.common.factory import SolverFactory

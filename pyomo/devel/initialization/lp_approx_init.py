@@ -8,7 +8,7 @@
 # ____________________________________________________________________________________
 
 from pyomo.core.base.block import BlockData
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo.devel.initialization.bounds.bound_variables import (
     bound_all_nonlinear_variables,
 )
@@ -102,7 +102,7 @@ def _replace_expression_with_linear_approx(expr, num_samples=100, seed=None):
     for sample_ndx in range(num_samples):
         for v, val in zip(vlist, sample[sample_ndx, :]):
             v.value = float(val)
-        b[sample_ndx] = pe.value(expr)
+        b[sample_ndx] = pyo.value(expr)
     coefs = np.linalg.solve(A.transpose().dot(A), A.transpose().dot(b))
     coefs = [float(i) for i in coefs]
 
@@ -114,14 +114,14 @@ def _replace_expression_with_linear_approx(expr, num_samples=100, seed=None):
 
 
 def _build_lp_approx(nlp: BlockData, num_samples=100, seed=None) -> BlockData:
-    lp = pe.Block(concrete=True)
-    lp.cons = pe.ConstraintList()
+    lp = pyo.Block(concrete=True)
+    lp.cons = pyo.ConstraintList()
     visitor = LinearRepnVisitor(subexpression_cache={})
 
     seed_handler = np.random.default_rng(seed)
 
     objs = list(
-        nlp.component_data_objects(pe.Objective, active=True, descend_into=True)
+        nlp.component_data_objects(pyo.Objective, active=True, descend_into=True)
     )
     if objs:
         if len(objs) > 1:
@@ -142,10 +142,10 @@ def _build_lp_approx(nlp: BlockData, num_samples=100, seed=None) -> BlockData:
                 repn.nonlinear, num_samples=num_samples, seed=seed_handler.spawn(1)[0]
             )
             new_obj_expr += replacement
-        lp.obj = pe.Objective(expr=new_obj_expr, sense=obj.sense)
+        lp.obj = pyo.Objective(expr=new_obj_expr, sense=obj.sense)
 
     for con in nlp.component_data_objects(
-        pe.Constraint, active=True, descend_into=True
+        pyo.Constraint, active=True, descend_into=True
     ):
         lb, body, ub = con.to_bounded_expression()
         repn = visitor.walk_expression(body)
@@ -185,7 +185,7 @@ def _initialize_with_LP_approximation(
     # approximate any functions of more than two variables
     # actually, this is not necessary for this method
     # we will just comment this out for now
-    # trans = pe.TransformationFactory('contrib.piecewise.univariate_nonlinear_decomposition')
+    # trans = pyo.TransformationFactory('contrib.piecewise.univariate_nonlinear_decomposition')
     # trans.apply_to(nlp, aggressive_substitution=False)
     # logger.info('applied the univariate_nonlinear_decomposition transformation')
 
