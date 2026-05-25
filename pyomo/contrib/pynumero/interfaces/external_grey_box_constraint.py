@@ -49,13 +49,17 @@ class EGBConstraintBody:
     """
 
     def __init__(self, grey_box, constraint_id):
-        self._egb = grey_box
+        # Store a weakref to the parent ExternalGreyBoxBlock to avoid a
+        # circular reference: EGBData -> EGBConstraint -> EGBConstraintBody
+        # -> EGBData.  EGBData always outlives EGBConstraintBody (it owns the
+        # chain), so a weakref from child back to parent is safe.
+        self._egb = weakref_ref(grey_box)
         self._constraint_id = constraint_id
 
         self._output_idx = None
         self._eq_cons_idx = None
 
-        ext_model = self._egb.get_external_model()
+        ext_model = self._egb().get_external_model()
 
         if self._constraint_id in ext_model.equality_constraint_names():
             self._eq_cons_idx = ext_model.equality_constraint_names().index(
@@ -77,7 +81,7 @@ class EGBConstraintBody:
         Otherwise, return None.
         """
         if self._output_idx is not None:
-            out_var = list(self._egb.outputs.values())[self._output_idx]
+            out_var = list(self._egb().outputs.values())[self._output_idx]
             return out_var
         return None
 
@@ -93,7 +97,7 @@ class EGBConstraintBody:
         if self._eq_cons_idx is not None:
             # For an implicit constraint, return the residual
             try:
-                return self._egb.get_external_model().evaluate_equality_constraints()[
+                return self._egb().get_external_model().evaluate_equality_constraints()[
                     self._eq_cons_idx
                 ]
             except Exception as e:
@@ -103,7 +107,7 @@ class EGBConstraintBody:
                 ) from e
         # For an output, the ExternalGreyBox will always return the value
         # of the output as a function of the inputs.
-        evaluated_value = self._egb.get_external_model().evaluate_outputs()[
+        evaluated_value = self._egb().get_external_model().evaluate_outputs()[
             self._output_idx
         ]
         var_value = value(self.get_output_var(), exception=exception)
@@ -126,7 +130,8 @@ class EGBConstraintBody:
         # 3) We consider only the inputs that have a non-zero Jacobian entry for the implicit constraint
         # to be incident on the implicit constraint
         # For now, we will go with option 2 as it is the most general.
-        ext_model = self._egb.get_external_model()
+        egb = self._egb()
+        ext_model = egb.get_external_model()
         incident_variables = []
 
         # First, if this implicit constraint corresponds to an output variable, we need to include that output
@@ -154,35 +159,46 @@ class EGBConstraintBody:
         # however they may currently have zero derivative values.
         var_indices = jac.getrow(con_idx).indices
         incident_variables.extend(
-            list(self._egb.inputs.values())[j] for j in var_indices
+            list(egb.inputs.values())[j] for j in var_indices
         )
 
         return incident_variables
 
 
 class ExternalGreyBoxConstraintData(ComponentData):
-    """This class defines the data for a single algebraic constraint.
+    """Data object for a single implicit ExternalGreyBoxConstraint.
 
     Parameters
     ----------
-    expr : ExpressionBase
-        The Pyomo expression stored in this constraint.
-
-    component : ExternalGreyBoxConstraint
-        The ExternalGreyBoxConstraint object that owns this data.
+    implicit_constraint_id : str, optional
+        The identifier for this implicit constraint or output variable in
+        the external model.
+    component : ExternalGreyBoxConstraint, optional
+        The ExternalGreyBoxConstraint component that owns this data object.
+        ``component`` is the last positional argument, following the
+        convention of other Pyomo ComponentData subclasses.  The ``_index``
+        attribute is **not** accepted here; it is set by the owning
+        component (via ``construct`` or ``__setitem__``) after the object
+        is created, matching the standard Pyomo pattern.
 
     """
 
-    __slots__ = ('_implicit_constraint_id', '_body', '_index')
+    # _index is intentionally omitted: ComponentData already defines it in
+    # its own __slots__.  Redefining it here would create a second, shadowing
+    # slot descriptor and waste memory.
+    __slots__ = ('_implicit_constraint_id', '_body')
 
-    def __init__(self, implicit_constraint_id=None, component=None, index=NOTSET):
+    def __init__(self, implicit_constraint_id=None, component=None):
         #
         # These lines represent in-lining of the
         # following constructors:
         #   - ExternalGreyBoxConstraintData
         #   - ComponentData
+        # Note: _index is intentionally left as NOTSET here; callers are
+        # responsible for setting obj._index after construction, following
+        # the standard Pyomo ComponentData convention.
         self._component = weakref_ref(component) if (component is not None) else None
-        self._index = index
+        self._index = NOTSET
         self._implicit_constraint_id = implicit_constraint_id
 
         # Placeholder for body
@@ -211,7 +227,9 @@ class ExternalGreyBoxConstraintData(ComponentData):
     def body(self):
         """Value (residual) of the implicit ExternalGreyBoxConstraint."""
         if self._body is None:
-            # Create the EGBConstraintBody object
+            # Create the EGBConstraintBody object. EGBConstraintBody holds a
+            # weakref back to the parent block (see EGBConstraintBody.__init__),
+            # so storing a strong reference here does not create a cycle.
             self._body = EGBConstraintBody(
                 grey_box=self.parent_block(),
                 constraint_id=self._implicit_constraint_id,
@@ -344,8 +362,10 @@ class ExternalGreyBoxConstraintData(ComponentData):
 
     def deactivate(self):
         """Raise a TypeError, as ExternalGreyBoxConstraints cannot be activated or deactivated."""
-        # Refer back to the activate method to ensure message consistency.
-        self.activate()
+        raise TypeError(
+            "ExternalGreyBoxConstraints cannot be activated or deactivated individually. "
+            "Activate or deactivate the parent ExternalGreyBoxBlock instead."
+        )
 
 
 @ModelComponentFactory.register("General ExternalGreyBoxConstraint expressions.")
@@ -728,11 +748,12 @@ class IndexedExternalGreyBoxConstraint(ExternalGreyBoxConstraint):
                 # Check that implicit_constraint_id is a valid constraint in the external model
                 _validate_implicit_constraint_id(self, implicit_constraint_id)
 
-                self._data[idx] = self._ComponentDataClass(
-                    component=self,
+                obj = self._ComponentDataClass(
                     implicit_constraint_id=implicit_constraint_id,
-                    index=idx,
+                    component=self,
                 )
+                obj._index = idx
+                self._data[idx] = obj
 
     @overload
     def __getitem__(self, index) -> ExternalGreyBoxConstraintData: ...
