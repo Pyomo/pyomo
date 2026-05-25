@@ -7,63 +7,66 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-from pyomo.core.base.block import BlockData
-import pyomo.environ as pe
-from pyomo.devel.initialization.bounds.bound_variables import (
-    bound_all_nonlinear_variables,
-)
-from pyomo.devel.initialization.utils import (
-    fix_vars_with_equal_bounds,
-    shallow_clone,
-    get_vars,
-)
-from pyomo.core.expr.visitor import identify_components
+import logging
+import math
+from typing import List, MutableMapping, Sequence
+
+import pyomo.environ as pyo
+from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.dependencies import attempt_import
+from pyomo.common.dependencies import numpy as np
+from pyomo.common.modeling import unique_component_name
+from pyomo.common.numeric_types import native_numeric_types
+from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.piecewise.piecewise_linear_expression import (
     PiecewiseLinearExpression,
 )
 from pyomo.contrib.piecewise.piecewise_linear_function import PiecewiseLinearFunction
+from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.results import SolutionStatus
-from pyomo.common.collections import ComponentMap, ComponentSet
-from typing import MutableMapping, Sequence, List
+from pyomo.core.base.block import BlockData
 from pyomo.core.base.constraint import ConstraintData
-from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
-from pyomo.common.numeric_types import native_numeric_types
+from pyomo.core.base.expression import ExpressionData, ScalarExpression
+from pyomo.core.base.param import ParamData, ScalarParam
+from pyomo.core.base.var import ScalarVar, VarData
 from pyomo.core.expr.numvalue import NumericConstant
 from pyomo.core.expr.numeric_expr import (
-    NegationExpression,
-    PowExpression,
-    ProductExpression,
-    MonomialTermExpression,
     DivisionExpression,
-    SumExpression,
     LinearExpression,
-    UnaryFunctionExpression,
+    MonomialTermExpression,
+    NegationExpression,
+    NPV_DivisionExpression,
     NPV_NegationExpression,
     NPV_PowExpression,
     NPV_ProductExpression,
-    NPV_DivisionExpression,
     NPV_SumExpression,
     NPV_UnaryFunctionExpression,
+    PowExpression,
+    ProductExpression,
+    SumExpression,
+    UnaryFunctionExpression,
 )
 from pyomo.core.expr.relational_expr import (
     EqualityExpression,
     InequalityExpression,
     RangedExpression,
 )
-from pyomo.repn.util import ExitNodeDispatcher
-from pyomo.core.base.var import ScalarVar, VarData
-from pyomo.core.base.param import ScalarParam, ParamData
-from pyomo.core.base.expression import ScalarExpression, ExpressionData
-import math
-from pyomo.contrib.solver.common.base import SolverBase
-import logging
-from pyomo.common.modeling import unique_component_name
+from pyomo.core.expr.visitor import (
+    StreamBasedExpressionVisitor,
+    identify_components,
+    identify_variables,
+)
+from pyomo.devel.initialization.bounds.bound_variables import (
+    bound_all_nonlinear_variables,
+)
 from pyomo.devel.initialization.pwl_init import _minimize_infeasibility
-from pyomo.contrib.fbbt.fbbt import fbbt
-from pyomo.repn.linear import LinearRepnVisitor, LinearRepn
-from pyomo.core.expr.visitor import identify_variables
-from pyomo.common.dependencies import numpy as np
-from pyomo.common.dependencies import attempt_import
+from pyomo.devel.initialization.utils import (
+    fix_vars_with_equal_bounds,
+    get_vars,
+    shallow_clone,
+)
+from pyomo.repn.linear import LinearRepn, LinearRepnVisitor
+from pyomo.repn.util import ExitNodeDispatcher
 
 qmc, qmc_avail = attempt_import('scipy.stats.qmc')
 
