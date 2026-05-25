@@ -213,7 +213,7 @@ class TestInit(unittest.TestCase):
         m.y = pyo.Var()
         m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
         m.c1 = pyo.Constraint(expr=m.y - pyo.exp(m.x) >= 0)
-        m.c2 = pyo.Constraint(expr=(-1, (m.x - 1)**2 - m.y, 0))
+        m.c2 = pyo.Constraint(expr=(-1, (m.x - 1) ** 2 - m.y, 0))
 
         mip_solver = SolverFactory('highs')
         results = ini.initialize_nlp(
