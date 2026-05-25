@@ -59,8 +59,8 @@ def skip_implicit_constraint_construction(test_class):
 class TestExternalGreyBoxConstraintConstruction(unittest.TestCase):
     """Test construction and initialization of ExternalGreyBoxConstraint."""
 
-    def test_construction_without_implicit_constraint_id_raises(self):
-        """Test that constructing without implicit_constraint_id raises ValueError."""
+    def test_construction_without_implicit_constraint_ids_raises(self):
+        """Test that constructing without implicit_constraint_ids raises ValueError."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropSingleEquality()
@@ -68,10 +68,10 @@ class TestExternalGreyBoxConstraintConstruction(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             m.egb.c = ExternalGreyBoxConstraint()
-        self.assertIn("implicit_constraint_id", str(context.exception))
+        self.assertIn("implicit_constraint_ids", str(context.exception))
 
-    def test_construction_with_invalid_implicit_constraint_id_raises(self):
-        """Test that invalid implicit_constraint_id raises ValueError on construct."""
+    def test_construction_with_invalid_implicit_constraint_ids_raises(self):
+        """Test that invalid implicit_constraint_ids raises ValueError on construct."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropSingleEquality()
@@ -79,7 +79,7 @@ class TestExternalGreyBoxConstraintConstruction(unittest.TestCase):
 
         # Construction happens automatically when adding to block
         with self.assertRaises(ValueError) as context:
-            m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='nonexistent')
+            m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='nonexistent')
         self.assertIn("does not exist", str(context.exception))
 
     def test_construction_not_in_external_grey_box_block_raises(self):
@@ -89,7 +89,7 @@ class TestExternalGreyBoxConstraintConstruction(unittest.TestCase):
         # Construction happens automatically when added to block
         # This should raise either ValueError or AttributeError depending on validation order
         with self.assertRaises((ValueError, AttributeError)) as context:
-            m.c = ExternalGreyBoxConstraint(implicit_constraint_id='test')
+            m.c = ExternalGreyBoxConstraint(implicit_constraint_ids='test')
         # Check that error message indicates the problem is related to ExternalGreyBoxBlock
         self.assertTrue(
             "ExternalGreyBoxBlock" in str(context.exception)
@@ -103,10 +103,10 @@ class TestExternalGreyBoxConstraintConstruction(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         self.assertIsInstance(m.egb.c, ScalarExternalGreyBoxConstraint)
-        self.assertEqual(m.egb.c.implicit_constraint_id, 'pdrop')
+        self.assertEqual(m.egb.c.implicit_constraint_ids, 'pdrop')
         self.assertTrue(m.egb.c.active)
 
     def test_scalar_construction_with_output(self):
@@ -116,10 +116,10 @@ class TestExternalGreyBoxConstraintConstruction(unittest.TestCase):
         external_model = ex_models.PressureDropSingleOutput()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='Pout')
 
         self.assertIsInstance(m.egb.c, ScalarExternalGreyBoxConstraint)
-        self.assertEqual(m.egb.c.implicit_constraint_id, 'Pout')
+        self.assertEqual(m.egb.c.implicit_constraint_ids, 'Pout')
 
 
 class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
@@ -132,7 +132,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         # Set input values directly on external model: Pin=100, c=2, F=3, Pout=50
         # Expected residual: Pout - (Pin - 4*c*F^2) = 50 - (100 - 4*2*9) = 50 - 28 = 22
@@ -148,7 +148,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         external_model = ex_models.PressureDropSingleOutput()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='Pout')
 
         # Set input values directly on external model
         # Pin=100, c=2, F=3 => Pout_evaluated = 100 - 4*2*3^2 = 100 - 72 = 28
@@ -169,7 +169,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         m.egb.set_external_model(external_model)
 
         # Create constraint with valid id, then manually change it
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
         m.egb.c._implicit_constraint_id = 'invalid_id'
 
         with self.assertRaises(ValueError) as context:
@@ -183,7 +183,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         # External model initializes with zeros, so evaluation should work
         # Expected: 0 - (0 - 4*0*0) = 0
@@ -197,7 +197,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         self.assertEqual(m.egb.c.lower, 0.0)
 
@@ -208,7 +208,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         self.assertEqual(m.egb.c.upper, 0.0)
 
@@ -219,7 +219,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         self.assertEqual(m.egb.c.lb, 0.0)
 
@@ -230,7 +230,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         self.assertEqual(m.egb.c.ub, 0.0)
 
@@ -241,7 +241,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         self.assertTrue(m.egb.c.equality)
 
@@ -252,7 +252,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         self.assertFalse(m.egb.c.strict_lower)
 
@@ -263,7 +263,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         self.assertFalse(m.egb.c.strict_upper)
 
@@ -274,7 +274,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         self.assertTrue(m.egb.c.has_lb())
 
@@ -285,7 +285,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         self.assertTrue(m.egb.c.has_ub())
 
@@ -296,7 +296,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         with self.assertRaises(TypeError) as context:
             _ = m.egb.c.expr
@@ -309,7 +309,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         with self.assertRaises(TypeError) as context:
             m.egb.c.get_value()
@@ -322,7 +322,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         with self.assertRaises(TypeError) as context:
             m.egb.c.set_value(None)
@@ -335,7 +335,7 @@ class TestExternalGreyBoxConstraintProperties(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         with self.assertRaises(TypeError) as context:
             m.egb.c.to_bounded_expression()
@@ -353,7 +353,7 @@ class TestEGBConstraintBody(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         body_obj = m.egb.c.body
         self.assertIsInstance(body_obj, EGBConstraintBody)
@@ -365,7 +365,7 @@ class TestEGBConstraintBody(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         body_obj = m.egb.c.body
         self.assertTrue(body_obj.is_numeric_type)
@@ -377,7 +377,7 @@ class TestEGBConstraintBody(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         external_model.set_input_values(np.asarray([100, 2, 3, 50], dtype=np.float64))
 
@@ -392,7 +392,7 @@ class TestEGBConstraintBody(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         external_model.set_input_values(np.asarray([100, 2, 3, 50], dtype=np.float64))
 
@@ -407,7 +407,7 @@ class TestEGBConstraintBody(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         body_obj1 = m.egb.c.body
         body_obj2 = m.egb.c.body
@@ -420,7 +420,7 @@ class TestEGBConstraintBody(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         body_obj = m.egb.c.body
 
@@ -441,7 +441,7 @@ class TestEGBConstraintBody(unittest.TestCase):
         external_model = ex_models.PressureDropSingleOutput()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='Pout')
 
         # Pin=100, c=2, F=3 => Pout_evaluated = 100 - 4*2*3^2 = 28
         external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
@@ -460,7 +460,7 @@ class TestEGBConstraintBody(unittest.TestCase):
         external_model = ex_models.PressureDropSingleOutput()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='Pout')
 
         # Set inputs: Pin=100, c=2, F=3 => Pout_evaluated = 100 - 4*2*3^2 = 28
         external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
@@ -480,7 +480,7 @@ class TestEGBConstraintBody(unittest.TestCase):
         external_model = ex_models.PressureDropSingleOutput()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='Pout')
 
         # Set inputs: Pin=100, c=2, F=3 => Pout_evaluated = 100 - 4*2*3^2 = 28
         external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
@@ -506,7 +506,7 @@ class TestEGBConstraintBody(unittest.TestCase):
         external_model = ex_models.PressureDropSingleOutput()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='Pout')
 
         # Initial inputs: Pin=100, c=2, F=3 => Pout_evaluated = 100 - 4*2*9 = 28
         external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
@@ -549,7 +549,7 @@ class TestEGBConstraintBody(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         body_obj = m.egb.c.body
         incident_vars = body_obj.identify_variables()
@@ -569,7 +569,7 @@ class TestEGBConstraintBody(unittest.TestCase):
         external_model = ex_models.PressureDropTwoOutputs()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='Pout')
 
         body_obj = m.egb.c.body
 
@@ -590,8 +590,8 @@ class TestEGBConstraintBody(unittest.TestCase):
         external_model = ex_models.PressureDropTwoOutputs()
         m.egb.set_external_model(external_model)
 
-        m.egb.c1 = ExternalGreyBoxConstraint(implicit_constraint_id='P2')
-        m.egb.c2 = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+        m.egb.c1 = ExternalGreyBoxConstraint(implicit_constraint_ids='P2')
+        m.egb.c2 = ExternalGreyBoxConstraint(implicit_constraint_ids='Pout')
 
         external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
 
@@ -630,10 +630,10 @@ class TestEGBConstraintBody(unittest.TestCase):
         m.egb.set_external_model(external_model)
 
         # Manually create the implicit constraint objects
-        m.egb.pdrop1 = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop1')
-        m.egb.pdrop3 = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop3')
-        m.egb.P2_constraint = ExternalGreyBoxConstraint(implicit_constraint_id='P2')
-        m.egb.Pout_constraint = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+        m.egb.pdrop1 = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop1')
+        m.egb.pdrop3 = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop3')
+        m.egb.P2_constraint = ExternalGreyBoxConstraint(implicit_constraint_ids='P2')
+        m.egb.Pout_constraint = ExternalGreyBoxConstraint(implicit_constraint_ids='Pout')
 
         # Implicit constraint: 'pdrop1'
         body_obj1 = m.egb.pdrop1.body
@@ -694,7 +694,7 @@ class TestEGBConstraintBody(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         body_obj = m.egb.c.body
         # Call without parameters (should default to use_jacobian=False)
@@ -710,7 +710,7 @@ class TestEGBConstraintBody(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         body_obj = m.egb.c.body
         incident_vars = body_obj.identify_variables()
@@ -734,7 +734,7 @@ class TestExternalGreyBoxConstraintSlack(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         external_model.set_input_values(np.asarray([100, 2, 3, 50], dtype=np.float64))
 
@@ -749,7 +749,7 @@ class TestExternalGreyBoxConstraintSlack(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         external_model.set_input_values(np.asarray([100, 2, 3, 50], dtype=np.float64))
 
@@ -764,7 +764,7 @@ class TestExternalGreyBoxConstraintSlack(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         external_model.set_input_values(np.asarray([100, 2, 3, 50], dtype=np.float64))
 
@@ -779,7 +779,7 @@ class TestExternalGreyBoxConstraintSlack(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         external_model.set_input_values(np.asarray([100, 2, 3, 50], dtype=np.float64))
 
@@ -799,7 +799,7 @@ class TestExternalGreyBoxConstraintActive(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         self.assertTrue(m.egb.c.active)
 
@@ -816,7 +816,7 @@ class TestExternalGreyBoxConstraintActive(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         with self.assertRaises(TypeError) as context:
             m.egb.c.activate()
@@ -829,7 +829,7 @@ class TestExternalGreyBoxConstraintActive(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         with self.assertRaises(TypeError) as context:
             m.egb.c.deactivate()
@@ -847,7 +847,7 @@ class TestScalarExternalGreyBoxConstraint(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
         m.egb.c.clear()  # Clear the data
 
         with self.assertRaises(ValueError) as context:
@@ -864,7 +864,7 @@ class TestScalarExternalGreyBoxConstraint(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
         m.egb.c.clear()
 
         with self.assertRaises(ValueError) as context:
@@ -881,7 +881,7 @@ class TestScalarExternalGreyBoxConstraint(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
         m.egb.c.clear()
 
         with self.assertRaises(ValueError) as context:
@@ -898,7 +898,7 @@ class TestScalarExternalGreyBoxConstraint(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
         m.egb.c.clear()
 
         with self.assertRaises(ValueError) as context:
@@ -915,7 +915,7 @@ class TestScalarExternalGreyBoxConstraint(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
         m.egb.c.clear()
 
         with self.assertRaises(ValueError) as context:
@@ -932,7 +932,7 @@ class TestScalarExternalGreyBoxConstraint(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
         m.egb.c.clear()
 
         with self.assertRaises(ValueError) as context:
@@ -949,7 +949,7 @@ class TestScalarExternalGreyBoxConstraint(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         with self.assertRaises(ValueError) as context:
             m.egb.c.add(1, None)
@@ -969,8 +969,8 @@ class TestExternalGreyBoxConstraintMultipleConstraints(unittest.TestCase):
         external_model = ex_models.PressureDropTwoEqualities()
         m.egb.set_external_model(external_model)
 
-        m.egb.c1 = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop2')
-        m.egb.c2 = ExternalGreyBoxConstraint(implicit_constraint_id='pdropout')
+        m.egb.c1 = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop2')
+        m.egb.c2 = ExternalGreyBoxConstraint(implicit_constraint_ids='pdropout')
 
         # Set input values directly on external model: Pin=100, c=2, F=3, P2=82, Pout=64
         external_model.set_input_values(
@@ -992,8 +992,8 @@ class TestExternalGreyBoxConstraintMultipleConstraints(unittest.TestCase):
         external_model = ex_models.PressureDropTwoOutputs()
         m.egb.set_external_model(external_model)
 
-        m.egb.c1 = ExternalGreyBoxConstraint(implicit_constraint_id='P2')
-        m.egb.c2 = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+        m.egb.c1 = ExternalGreyBoxConstraint(implicit_constraint_ids='P2')
+        m.egb.c2 = ExternalGreyBoxConstraint(implicit_constraint_ids='Pout')
 
         # Set input values directly on external model
         # Pin=100, c=2, F=3
@@ -1021,7 +1021,7 @@ class TestExternalGreyBoxConstraintDisplay(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         external_model.set_input_values(np.asarray([100, 2, 3, 50], dtype=np.float64))
 
@@ -1044,7 +1044,7 @@ class TestExternalGreyBoxConstraintDisplay(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
         m.egb.deactivate()
 
         import io
@@ -1063,7 +1063,7 @@ class TestExternalGreyBoxConstraintDisplay(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         external_model.set_input_values(np.asarray([100, 2, 3, 50], dtype=np.float64))
 
@@ -1082,30 +1082,30 @@ class TestExternalGreyBoxConstraintDisplay(unittest.TestCase):
 
 
 @skip_implicit_constraint_construction
-class TestExternalGreyBoxConstraintImplicitConstraintId(unittest.TestCase):
-    """Test implicit_constraint_id property."""
+class TestExternalGreyBoxConstraintImplicitConstraintIds(unittest.TestCase):
+    """Test implicit_constraint_ids property."""
 
-    def test_implicit_constraint_id_property(self):
-        """Test implicit_constraint_id property returns correct value."""
+    def test_implicit_constraint_ids_property(self):
+        """Test implicit_constraint_ids property returns correct value."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
         constraint_id = 'pdrop'
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id=constraint_id)
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids=constraint_id)
 
-        self.assertEqual(m.egb.c.implicit_constraint_id, constraint_id)
+        self.assertEqual(m.egb.c.implicit_constraint_ids, constraint_id)
 
-    def test_implicit_constraint_id_stored_correctly(self):
-        """Test implicit_constraint_id is stored in _implicit_constraint_id."""
+    def test_implicit_constraint_ids_stored_correctly(self):
+        """Test implicit_constraint_ids is copied to each datum's _implicit_constraint_id."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropTwoEqualities()
         m.egb.set_external_model(external_model)
 
-        m.egb.c1 = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop2')
-        m.egb.c2 = ExternalGreyBoxConstraint(implicit_constraint_id='pdropout')
+        m.egb.c1 = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop2')
+        m.egb.c2 = ExternalGreyBoxConstraint(implicit_constraint_ids='pdropout')
 
         self.assertEqual(m.egb.c1._implicit_constraint_id, 'pdrop2')
         self.assertEqual(m.egb.c2._implicit_constraint_id, 'pdropout')
@@ -1122,7 +1122,7 @@ class TestExternalGreyBoxConstraintIntegration(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEqualityWithHessian()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         external_model.set_input_values(np.asarray([100, 2, 3, 28], dtype=np.float64))
 
@@ -1137,7 +1137,7 @@ class TestExternalGreyBoxConstraintIntegration(unittest.TestCase):
         external_model = ex_models.PressureDropSingleOutputWithHessian()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='Pout')
 
         # Pin=100, c=2, F=3 => Pout_evaluated = 100 - 4*2*9 = 28
         external_model.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
@@ -1155,12 +1155,12 @@ class TestExternalGreyBoxConstraintIntegration(unittest.TestCase):
         m.egb1 = ExternalGreyBoxBlock()
         external_model1 = ex_models.PressureDropSingleEquality()
         m.egb1.set_external_model(external_model1)
-        m.egb1.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb1.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         m.egb2 = ExternalGreyBoxBlock()
         external_model2 = ex_models.PressureDropSingleOutput()
         m.egb2.set_external_model(external_model2)
-        m.egb2.c = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+        m.egb2.c = ExternalGreyBoxConstraint(implicit_constraint_ids='Pout')
 
         # Set inputs for first block
         external_model1.set_input_values(np.asarray([100, 2, 3, 28], dtype=np.float64))
@@ -1188,7 +1188,7 @@ class TestExternalGreyBoxConstraintEdgeCases(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         # Set all inputs to zero directly on external model
         external_model.set_input_values(np.asarray([0, 0, 0, 0], dtype=np.float64))
@@ -1203,7 +1203,7 @@ class TestIndexedExternalGreyBoxConstraint(unittest.TestCase):
     """Test indexed ExternalGreyBoxConstraint functionality."""
 
     def test_indexed_with_explicit_mapping(self):
-        """Test indexed constraint with explicit implicit_constraint_id mapping."""
+        """Test indexed constraint with explicit implicit_constraint_ids mapping."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropTwoEqualitiesTwoOutputs()
@@ -1213,19 +1213,19 @@ class TestIndexedExternalGreyBoxConstraint(unittest.TestCase):
 
         # Create indexed constraint with explicit mapping
         m.egb.c = ExternalGreyBoxConstraint(
-            m.set, implicit_constraint_id={i: i for i in m.set}
+            m.set, implicit_constraint_ids={i: i for i in m.set}
         )
 
         # Verify construction
         self.assertTrue(m.egb.c.is_indexed())
         self.assertEqual(len(m.egb.c), 4)
 
-        # Verify each index has correct implicit_constraint_id
+        # Verify each index has correct _implicit_constraint_id (data slot)
         for idx in m.set:
             self.assertEqual(m.egb.c[idx]._implicit_constraint_id, idx)
 
     def test_indexed_with_implicit_ids(self):
-        """Test indexed constraint with inferred implicit_constraint_id from index."""
+        """Test indexed constraint with implicit_constraint_ids inferred from index."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropTwoEqualitiesTwoOutputs()
@@ -1240,7 +1240,7 @@ class TestIndexedExternalGreyBoxConstraint(unittest.TestCase):
         self.assertTrue(m.egb.c.is_indexed())
         self.assertEqual(len(m.egb.c), 4)
 
-        # Verify each index has implicit_constraint_id equal to the index
+        # Verify each index has _implicit_constraint_id (data slot) equal to the index
         for idx in m.set:
             self.assertEqual(m.egb.c[idx]._implicit_constraint_id, idx)
 
@@ -1358,7 +1358,7 @@ class TestIndexedExternalGreyBoxConstraint(unittest.TestCase):
             (2, 'pdrop3'): 'pdrop3',
         }
 
-        m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_id=id_map)
+        m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_ids=id_map)
 
         # Verify construction
         self.assertEqual(len(m.egb.c), 4)
@@ -1372,7 +1372,7 @@ class TestIndexedExternalGreyBoxConstraintValidation(unittest.TestCase):
     """Test validation errors for indexed ExternalGreyBoxConstraint."""
 
     def test_indexed_missing_keys_raises(self):
-        """Test that missing keys in implicit_constraint_id mapping raises ValueError."""
+        """Test that missing keys in implicit_constraint_ids mapping raises ValueError."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropTwoEqualitiesTwoOutputs()
@@ -1385,7 +1385,7 @@ class TestIndexedExternalGreyBoxConstraintValidation(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             m.egb.c = ExternalGreyBoxConstraint(
-                m.set, implicit_constraint_id=incomplete_map
+                m.set, implicit_constraint_ids=incomplete_map
             )
 
         self.assertIn("Missing keys", str(context.exception))
@@ -1393,7 +1393,7 @@ class TestIndexedExternalGreyBoxConstraintValidation(unittest.TestCase):
         self.assertIn("pdrop3", str(context.exception))
 
     def test_indexed_extra_keys_raises(self):
-        """Test that extra keys in implicit_constraint_id mapping raises ValueError."""
+        """Test that extra keys in implicit_constraint_ids mapping raises ValueError."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropTwoEqualitiesTwoOutputs()
@@ -1411,7 +1411,7 @@ class TestIndexedExternalGreyBoxConstraintValidation(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             m.egb.c = ExternalGreyBoxConstraint(
-                m.set, implicit_constraint_id=mapping_with_extras
+                m.set, implicit_constraint_ids=mapping_with_extras
             )
 
         self.assertIn("Invalid keys", str(context.exception))
@@ -1434,14 +1434,14 @@ class TestIndexedExternalGreyBoxConstraintValidation(unittest.TestCase):
         }  # Missing 'Pout' and 'pdrop1', extra 'extra'
 
         with self.assertRaises(ValueError) as context:
-            m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_id=bad_map)
+            m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_ids=bad_map)
 
         error_msg = str(context.exception)
         self.assertIn("Missing keys", error_msg)
         self.assertIn("Invalid keys", error_msg)
 
     def test_indexed_invalid_type_raises(self):
-        """Test that invalid type for implicit_constraint_id raises TypeError."""
+        """Test that invalid type for implicit_constraint_ids raises TypeError."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropTwoEqualitiesTwoOutputs()
@@ -1451,7 +1451,7 @@ class TestIndexedExternalGreyBoxConstraintValidation(unittest.TestCase):
 
         # Pass a string instead of mapping (invalid for indexed)
         with self.assertRaises(TypeError) as context:
-            m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_id='P2')
+            m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_ids='P2')
 
         self.assertIn("must be a mapping", str(context.exception))
 
@@ -1471,13 +1471,13 @@ class TestIndexedExternalGreyBoxConstraintValidation(unittest.TestCase):
         }
 
         with self.assertRaises(ValueError) as context:
-            m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_id=bad_map)
+            m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_ids=bad_map)
 
         self.assertIn("invalid_constraint", str(context.exception))
         self.assertIn("does not exist", str(context.exception))
 
     def test_indexed_non_string_constraint_id_raises(self):
-        """Test that non-string implicit_constraint_id value raises TypeError."""
+        """Test that non-string implicit_constraint_ids value raises TypeError."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropTwoOutputs()
@@ -1489,12 +1489,12 @@ class TestIndexedExternalGreyBoxConstraintValidation(unittest.TestCase):
         bad_map = {'P2': 123, 'Pout': 'Pout'}  # Not a string
 
         with self.assertRaises(TypeError) as context:
-            m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_id=bad_map)
+            m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_ids=bad_map)
 
         self.assertIn("must be strings", str(context.exception))
 
     def test_indexed_with_inferred_id_invalid_raises(self):
-        """Test that inferred implicit_constraint_id that doesn't exist raises ValueError."""
+        """Test that inferred implicit_constraint_ids that doesn't exist raises ValueError."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropTwoOutputs()
@@ -1559,7 +1559,7 @@ class TestIndexedExternalGreyBoxConstraintAdvanced(unittest.TestCase):
 
         id_map = {'P2': 'P2', 'pdrop1': 'pdrop1'}  # output  # equality constraint
 
-        m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_id=id_map)
+        m.egb.c = ExternalGreyBoxConstraint(m.set, implicit_constraint_ids=id_map)
 
         # Set inputs
         # Using  6 inputs: Pin, c, F, P1, P3, and one for the missing input of the equality constraint
@@ -1648,7 +1648,7 @@ class TestIndexedExternalGreyBoxConstraintAdvanced(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         # Set negative inputs directly on external model
         external_model.set_input_values(
@@ -1667,7 +1667,7 @@ class TestIndexedExternalGreyBoxConstraintAdvanced(unittest.TestCase):
         external_model = ex_models.PressureDropSingleEquality()
         m.egb.set_external_model(external_model)
 
-        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop')
+        m.egb.c = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop')
 
         # Set large inputs directly on external model
         external_model.set_input_values(
@@ -1691,10 +1691,10 @@ class TestComponentDataObjectsWithEGBC(unittest.TestCase):
         m.egb.set_external_model(external_model)
 
         # Manually create the implicit constraint objects
-        m.egb.pdrop1 = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop1')
-        m.egb.pdrop3 = ExternalGreyBoxConstraint(implicit_constraint_id='pdrop3')
-        m.egb.P2_constraint = ExternalGreyBoxConstraint(implicit_constraint_id='P2')
-        m.egb.Pout_constraint = ExternalGreyBoxConstraint(implicit_constraint_id='Pout')
+        m.egb.pdrop1 = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop1')
+        m.egb.pdrop3 = ExternalGreyBoxConstraint(implicit_constraint_ids='pdrop3')
+        m.egb.P2_constraint = ExternalGreyBoxConstraint(implicit_constraint_ids='P2')
+        m.egb.Pout_constraint = ExternalGreyBoxConstraint(implicit_constraint_ids='Pout')
 
         count = 0
         for c in m.egb.component_data_objects(
@@ -1705,8 +1705,8 @@ class TestComponentDataObjectsWithEGBC(unittest.TestCase):
             count += 1
         self.assertEqual(count, 4)
 
-    def test_indexed_egbc_no_implicit_constraint_id(self):
-        """Test indexed EGBC with no explicit implicit_constraint_id."""
+    def test_indexed_egbc_no_implicit_constraint_ids(self):
+        """Test indexed EGBC with no explicit implicit_constraint_ids."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropTwoEqualitiesTwoOutputs()
@@ -1721,8 +1721,8 @@ class TestComponentDataObjectsWithEGBC(unittest.TestCase):
         self.assertEqual(m.egb.c["pdrop1"]._implicit_constraint_id, "pdrop1")
         self.assertEqual(m.egb.c["pdrop3"]._implicit_constraint_id, "pdrop3")
 
-    def test_indexed_egbc_implicit_constraint_id_mapping(self):
-        """Test indexed EGBC with explicit implicit_constraint_id mapping."""
+    def test_indexed_egbc_implicit_constraint_ids_mapping(self):
+        """Test indexed EGBC with explicit implicit_constraint_ids mapping."""
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         external_model = ex_models.PressureDropTwoEqualitiesTwoOutputs()
@@ -1731,7 +1731,7 @@ class TestComponentDataObjectsWithEGBC(unittest.TestCase):
         m.set = pyo.Set(initialize=['P2', 'Pout', 'pdrop1', 'pdrop3'])
 
         m.egb.c = ExternalGreyBoxConstraint(
-            m.set, implicit_constraint_id={i: i for i in m.set}
+            m.set, implicit_constraint_ids={i: i for i in m.set}
         )
 
         self.assertEqual(m.egb.c["P2"]._implicit_constraint_id, "P2")
