@@ -28,7 +28,9 @@ def shallow_clone(m1):
     m2 = pyo.ConcreteModel()
     m2.cons = pyo.ConstraintList()
 
-    for con in m1.component_data_objects(pyo.Constraint, active=True, descend_into=True):
+    for con in m1.component_data_objects(
+        pyo.Constraint, active=True, descend_into=True
+    ):
         m2.cons.add(con.expr)
 
     objlist = list(
