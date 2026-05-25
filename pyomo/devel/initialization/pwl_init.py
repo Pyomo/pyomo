@@ -48,10 +48,7 @@ from pyomo.core.expr.relational_expr import (
     InequalityExpression,
     RangedExpression,
 )
-from pyomo.core.expr.visitor import (
-    StreamBasedExpressionVisitor,
-    identify_components,
-)
+from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, identify_components
 from pyomo.devel.initialization.bounds.bound_variables import (
     bound_all_nonlinear_variables,
 )
