@@ -237,9 +237,6 @@ def _refine_pwl_approx(
                 if val >= v.ub - 1e-6 - 1e-6 * abs(v.ub):
                     val -= 1e-5
             var_vals.append(val)
-        # var_vals = tuple(i.value for i in expr.args)
-        # for v, val in zip(expr.args, var_vals):
-        #     print(f'{str(v):<20}{val:<20.5f}{v.lb:<20.5f}{v.ub:<20.5f}{id(v):<20}')
         if any(i is None for i in var_vals):
             logger.info(f'missing variable values for {expr}')
             continue
