@@ -207,6 +207,8 @@ class TestInit(unittest.TestCase):
             aggressive_substitution=False,
         )
 
+    @unittest.skipUnless(highs.available(), 'highs is not available')
+    @unittest.skipUnless(ipopt.available(), 'ipopt is not available')
     def test_pwl_ineq(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var(bounds=(-2, 2))
