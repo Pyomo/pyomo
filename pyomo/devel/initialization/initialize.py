@@ -54,7 +54,7 @@ def initialize_nlp(
     num_pwl_cons_to_refine_per_iter: int = 5,
     aggressive_substitution: bool = True,
     num_samples_per_nonlinear_constraint: int = 100,
-    seed=None,
+    seed=0,
 ) -> Results:
     """
     Attempt to initialize and subsequently solve the model given by ``nlp``.
