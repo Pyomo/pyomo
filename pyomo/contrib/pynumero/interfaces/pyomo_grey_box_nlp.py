@@ -691,9 +691,6 @@ class _ExternalGreyBoxAsNLP(NLP):
     def constraint_names(self):
         return list(self._constraint_names)
 
-    def constraint_datas(self):
-        return list(self._constraint_datas)
-
     def nnz_jacobian(self):
         if self._nnz_jacobian is None:
             J = self.evaluate_jacobian()
