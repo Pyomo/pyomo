@@ -151,7 +151,11 @@ def initialize_nlp(
         if nlp_solver is None:
             nlp_solver = _get_solver('ipopt', 'local NLP solver')
         res = _initialize_with_LP_approximation(
-            nlp=nlp, lp_solver=mip_solver, nlp_solver=nlp_solver, num_samples=num_samples_per_nonlinear_constraint, seed=seed,
+            nlp=nlp,
+            lp_solver=mip_solver,
+            nlp_solver=nlp_solver,
+            num_samples=num_samples_per_nonlinear_constraint,
+            seed=seed,
         )
     elif method == InitializationMethod.global_opt:
         if global_solver is None:

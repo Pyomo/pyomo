@@ -138,7 +138,9 @@ def _build_lp_approx(nlp: BlockData, num_samples=100, seed=None) -> BlockData:
         linear_part.nonlinear = None
         new_obj_expr = linear_part.to_expression(visitor=visitor)
         if repn.nonlinear is not None:
-            replacement = _replace_expression_with_linear_approx(repn.nonlinear, num_samples=num_samples, seed=seed_handler.spawn(1)[0])
+            replacement = _replace_expression_with_linear_approx(
+                repn.nonlinear, num_samples=num_samples, seed=seed_handler.spawn(1)[0]
+            )
             new_obj_expr += replacement
         lp.obj = pe.Objective(expr=new_obj_expr, sense=obj.sense)
 
@@ -155,7 +157,9 @@ def _build_lp_approx(nlp: BlockData, num_samples=100, seed=None) -> BlockData:
         linear_part.nonlinear = None
         new_body = linear_part.to_expression(visitor=visitor)
         if repn.nonlinear is not None:
-            replacement = _replace_expression_with_linear_approx(repn.nonlinear, num_samples=num_samples, seed=seed_handler.spawn(1)[0])
+            replacement = _replace_expression_with_linear_approx(
+                repn.nonlinear, num_samples=num_samples, seed=seed_handler.spawn(1)[0]
+            )
             new_body += replacement
         if lb == ub:
             lp.cons.add(new_body == lb)
@@ -165,7 +169,12 @@ def _build_lp_approx(nlp: BlockData, num_samples=100, seed=None) -> BlockData:
 
 
 def _initialize_with_LP_approximation(
-    nlp: BlockData, lp_solver: SolverBase, nlp_solver: SolverBase, default_bound=1.0e8, num_samples=100, seed=None,
+    nlp: BlockData,
+    lp_solver: SolverBase,
+    nlp_solver: SolverBase,
+    default_bound=1.0e8,
+    num_samples=100,
+    seed=None,
 ):
     orig_nlp = nlp
     logger.info('Starting initialization using a linear programming approximation')
