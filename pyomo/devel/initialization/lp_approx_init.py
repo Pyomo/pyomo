@@ -70,7 +70,7 @@ qmc, qmc_avail = attempt_import('scipy.stats.qmc')
 logger = logging.getLogger(__name__)
 
 
-def _replace_expression_with_linear_approx(expr, num_samples=100):
+def _replace_expression_with_linear_approx(expr, num_samples=100, seed=None):
     vset = ComponentSet(identify_variables(expr, include_fixed=False))
     vlist = list(vset)
     n_vars = len(vlist)
@@ -85,7 +85,7 @@ def _replace_expression_with_linear_approx(expr, num_samples=100):
         else:
             ub = v.ub
         bnds_list.append((lb, ub))
-    sampler = qmc.LatinHypercube(d=n_vars)
+    sampler = qmc.LatinHypercube(d=n_vars, seed=seed)
     sample = sampler.random(n=num_samples)
     l_bounds = [i[0] for i in bnds_list]
     u_bounds = [i[1] for i in bnds_list]
@@ -113,10 +113,12 @@ def _replace_expression_with_linear_approx(expr, num_samples=100):
     return new_expr
 
 
-def _build_lp_approx(nlp: BlockData) -> BlockData:
+def _build_lp_approx(nlp: BlockData, num_samples=100, seed=None) -> BlockData:
     lp = pe.Block(concrete=True)
     lp.cons = pe.ConstraintList()
     visitor = LinearRepnVisitor(subexpression_cache={})
+
+    seed_handler = np.random.default_rng(seed)
 
     objs = list(
         nlp.component_data_objects(pe.Objective, active=True, descend_into=True)
@@ -136,7 +138,7 @@ def _build_lp_approx(nlp: BlockData) -> BlockData:
         linear_part.nonlinear = None
         new_obj_expr = linear_part.to_expression(visitor=visitor)
         if repn.nonlinear is not None:
-            replacement = _replace_expression_with_linear_approx(repn.nonlinear)
+            replacement = _replace_expression_with_linear_approx(repn.nonlinear, num_samples=num_samples, seed=seed_handler.spawn(1)[0])
             new_obj_expr += replacement
         lp.obj = pe.Objective(expr=new_obj_expr, sense=obj.sense)
 
@@ -153,7 +155,7 @@ def _build_lp_approx(nlp: BlockData) -> BlockData:
         linear_part.nonlinear = None
         new_body = linear_part.to_expression(visitor=visitor)
         if repn.nonlinear is not None:
-            replacement = _replace_expression_with_linear_approx(repn.nonlinear)
+            replacement = _replace_expression_with_linear_approx(repn.nonlinear, num_samples=num_samples, seed=seed_handler.spawn(1)[0])
             new_body += replacement
         if lb == ub:
             lp.cons.add(new_body == lb)
@@ -163,7 +165,7 @@ def _build_lp_approx(nlp: BlockData) -> BlockData:
 
 
 def _initialize_with_LP_approximation(
-    nlp: BlockData, lp_solver: SolverBase, nlp_solver: SolverBase, default_bound=1.0e8
+    nlp: BlockData, lp_solver: SolverBase, nlp_solver: SolverBase, default_bound=1.0e8, num_samples=100, seed=None,
 ):
     orig_nlp = nlp
     logger.info('Starting initialization using a linear programming approximation')
@@ -193,7 +195,7 @@ def _initialize_with_LP_approximation(
     logger.info('reformulated model to minimize infeasibility')
 
     # build the LP approximation
-    lp = _build_lp_approx(nlp)
+    lp = _build_lp_approx(nlp, num_samples=num_samples, seed=seed)
     logger.info('replaced nonlinear expressions with linear approximations')
 
     # solve the LP

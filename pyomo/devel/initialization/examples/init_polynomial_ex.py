@@ -31,6 +31,7 @@ def main(method: ini.InitializationMethod):
         mip_solver=mip_solver,
         global_solver=global_solver,
         method=method,
+        seed=0,
     )
 
     return results.solution_status, m.x.value

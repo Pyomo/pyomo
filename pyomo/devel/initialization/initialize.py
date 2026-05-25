@@ -53,6 +53,8 @@ def initialize_nlp(
     max_pwl_refinement_iter: int = 100,
     num_pwl_cons_to_refine_per_iter: int = 5,
     aggressive_substitution: bool = True,
+    num_samples_per_nonlinear_constraint: int = 100,
+    seed=None,
 ) -> Results:
     """
     Attempt to initialize and subsequently solve the model given by ``nlp``.
@@ -96,6 +98,14 @@ def initialize_nlp(
         Only used when method = InitializationMethod.pwl_approximation. This is
         passed along to the contrib.piecewise.univariate_nonlinear_decomposition
         transformation.
+    num_samples_per_nonlinear_constraint: int
+        Only used when method = InitializationMethod.lp_approximation. This is
+        the number of random samples used to build the linear least squares
+        problem for each nonlinear constraint.
+    seed: int | np.random.Generator
+        Only used when method = InitializationMethod.lp_approximation. This is
+        used to make the sampling for the linear least squares problems
+        deterministic.
 
     Returns
     -------
@@ -141,7 +151,7 @@ def initialize_nlp(
         if nlp_solver is None:
             nlp_solver = _get_solver('ipopt', 'local NLP solver')
         res = _initialize_with_LP_approximation(
-            nlp=nlp, lp_solver=mip_solver, nlp_solver=nlp_solver
+            nlp=nlp, lp_solver=mip_solver, nlp_solver=nlp_solver, num_samples=num_samples_per_nonlinear_constraint, seed=seed,
         )
     elif method == InitializationMethod.global_opt:
         if global_solver is None:
