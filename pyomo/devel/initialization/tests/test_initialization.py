@@ -14,6 +14,7 @@ import pyomo.devel.initialization as ini
 from pyomo.devel.initialization.lp_approx_init import qmc_avail
 from pyomo.devel.initialization.examples.init_polynomial_ex import main
 from pyomo.common import unittest
+from pyomo.common.dependencies import scipy_available
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import (
     SolutionStatus,
@@ -60,6 +61,7 @@ class MockNLPSolver(SolverBase):
 
 
 @unittest.skipUnless(ipopt.available(), 'ipopt is not available')
+@unittest.skipUnless(scipy_available, 'scipy is not available')
 class TestExamples(unittest.TestCase):
     @unittest.skipUnless(scip.available(), 'scip is not available')
     def test_poly_global(self):
