@@ -80,7 +80,7 @@ def _minimize_infeasibility(m):
 
     for con in m.component_data_objects(pyo.Constraint, active=True, descend_into=True):
         lb, body, ub = con.to_bounded_expression(evaluate_bounds=True)
-        if lb == ub:
+        if lb is not None and lb == ub:
             ps = m.slacks.add()
             ns = m.slacks.add()
             ps.setlb(0)

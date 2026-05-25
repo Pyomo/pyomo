@@ -45,9 +45,9 @@ def _get_solver(sname, reason):
 
 def initialize_nlp(
     nlp: BlockData,
-    nlp_solver: SolverBase,
-    mip_solver: Optional[SolverBase] = None,
-    global_solver: Optional[SolverBase] = None,
+    nlp_solver: SolverBase | None = None,
+    mip_solver: SolverBase | None = None,
+    global_solver: SolverBase | None = None,
     method: InitializationMethod = InitializationMethod.global_opt,
     default_bound: float = 1.0e8,
     max_pwl_refinement_iter: int = 100,
@@ -113,6 +113,8 @@ def initialize_nlp(
         The results object obtained the last time the nlp_solver was used to
         try and solve the model.
     """
+    if nlp_solver is None:
+        nlp_solver = _get_solver('ipopt', 'local NLP solver')
     # in all cases, try to solve the nlp before doing extra work
     res = nlp_solver.solve(
         nlp, load_solutions=False, raise_exception_on_nonoptimal_result=False
@@ -134,8 +136,6 @@ def initialize_nlp(
     if method == InitializationMethod.pwl_approximation:
         if mip_solver is None:
             mip_solver = _get_solver('gurobi_persistent', 'MILP solver')
-        if nlp_solver is None:
-            nlp_solver = _get_solver('ipopt', 'local NLP solver')
         res = _initialize_with_piecewise_linear_approximation(
             nlp=nlp,
             mip_solver=mip_solver,
@@ -148,8 +148,6 @@ def initialize_nlp(
     elif method == InitializationMethod.lp_approximation:
         if mip_solver is None:
             mip_solver = _get_solver('gurobi_persistent', 'MILP solver')
-        if nlp_solver is None:
-            nlp_solver = _get_solver('ipopt', 'local NLP solver')
         res = _initialize_with_LP_approximation(
             nlp=nlp,
             lp_solver=mip_solver,
@@ -160,8 +158,6 @@ def initialize_nlp(
     elif method == InitializationMethod.global_opt:
         if global_solver is None:
             global_solver = _get_solver('gurobi_direct_minlp', 'global NLP solver')
-        if nlp_solver is None:
-            nlp_solver = _get_solver('ipopt', 'local NLP solver')
         res = _initialize_with_global_solver(
             nlp=nlp, global_solver=global_solver, nlp_solver=nlp_solver
         )
