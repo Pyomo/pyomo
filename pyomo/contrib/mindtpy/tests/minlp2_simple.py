@@ -47,13 +47,21 @@ from pyomo.environ import (
 from pyomo.common.collections import ComponentMap
 
 
-class SimpleMINLP(ConcreteModel):
+class Minlp2Simple(ConcreteModel):
     """Example 1 Outer Approximation and Extended Cutting Planes."""
 
     def __init__(self, *args, **kwargs):
-        """Create the problem."""
-        kwargs.setdefault('name', 'SimpleMINLP2')
-        super(SimpleMINLP, self).__init__(*args, **kwargs)
+        """Create the problem.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments forwarded to ``ConcreteModel``.
+        **kwargs
+            Keyword arguments forwarded to ``ConcreteModel``.
+        """
+        kwargs.setdefault('name', 'Minlp2Simple')
+        super(Minlp2Simple, self).__init__(*args, **kwargs)
         m = self
 
         """Set declarations"""
@@ -113,3 +121,7 @@ class SimpleMINLP(ConcreteModel):
         m.optimal_solution[m.Y[1]] = 0.0
         m.optimal_solution[m.Y[2]] = 1.0
         m.optimal_solution[m.Y[3]] = 0.0
+
+
+# Backward-compatible alias.
+SimpleMINLP = Minlp2Simple
