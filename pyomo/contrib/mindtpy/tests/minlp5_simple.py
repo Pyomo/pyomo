@@ -10,10 +10,13 @@
 # -*- coding: utf-8 -*-
 """Example in paper 'Using regularization and second order information in outer approximation for convex MINLP'
 
-Ref:
-Kronqvist J, Bernal D E, Grossmann I E. Using regularization and second order information in outer approximation for convex MINLP[J]. Mathematical Programming, 2020, 180(1): 285-310.
+References
+----------
+Kronqvist, J., Bernal, D. E., and Grossmann, I. E. (2020). Using
+regularization and second order information in outer approximation for convex
+MINLP. Mathematical Programming, 180(1), 285-310.
 
-Problem type:   nonconvex MINLP
+Problem type:   convex MINLP
         size:   1  binary variable
                 1  continuous variables
                 3  constraints
@@ -33,11 +36,21 @@ from pyomo.environ import (
 from pyomo.common.collections import ComponentMap
 
 
-class SimpleMINLP5(ConcreteModel):
+class Minlp5Simple(ConcreteModel):
+    """Convex MINLP test instance used by regularization and utility tests."""
+
     def __init__(self, *args, **kwargs):
-        """Create the problem."""
-        kwargs.setdefault('name', 'SimpleMINLP5')
-        super(SimpleMINLP5, self).__init__(*args, **kwargs)
+        """Create the problem.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments forwarded to ``ConcreteModel``.
+        **kwargs
+            Keyword arguments forwarded to ``ConcreteModel``.
+        """
+        kwargs.setdefault('name', 'Minlp5Simple')
+        super(Minlp5Simple, self).__init__(*args, **kwargs)
         m = self
 
         m.x = Var(within=Reals, bounds=(1, 20), initialize=5.29)
@@ -57,3 +70,7 @@ class SimpleMINLP5(ConcreteModel):
         m.optimal_solution = ComponentMap()
         m.optimal_solution[m.x] = 4.991797840270567
         m.optimal_solution[m.y] = 7.0
+
+
+# Backward-compatible alias.
+SimpleMINLP5 = Minlp5Simple

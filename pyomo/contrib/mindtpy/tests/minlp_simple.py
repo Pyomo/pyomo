@@ -13,9 +13,10 @@ Author: David Bernal <https://github.com/bernalde>
 
 The expected optimal solution is 3.5.
 
-Ref:
-    IGNACIO GROSSMANN.
-    CARNEGIE-MELLON UNIVERSITY , PITTSBURGH , PA.
+References
+----------
+Grossmann, I. E. (Advanced PSE lecture, Assignment 6). Carnegie-Mellon
+University, Pittsburgh, PA.
 
     Problem type:    convex MINLP
             size:    3  binary variables
@@ -36,23 +37,37 @@ from pyomo.environ import (
     Block,
 )
 from pyomo.common.collections import ComponentMap
-from pyomo.contrib.mindtpy.tests.MINLP_simple_grey_box import (
+from pyomo.contrib.mindtpy.tests.minlp_simple_grey_box import (
     GreyBoxModel,
     build_model_external,
 )
 
 
-class SimpleMINLP(ConcreteModel):
+class MinlpSimple(ConcreteModel):
     """Convex MINLP problem Assignment 6 APSE."""
 
     def __init__(self, grey_box=False, *args, **kwargs):
-        """Create the problem."""
-        kwargs.setdefault('name', 'SimpleMINLP')
-        if grey_box and GreyBoxModel is None:
-            m = None
-            return
+        """Create the problem.
 
-        super(SimpleMINLP, self).__init__(*args, **kwargs)
+        Parameters
+        ----------
+        grey_box : bool, optional
+            Whether to formulate the model using an external grey-box block.
+            When ``True``, the model adds linking constraints ``con_X_1``,
+            ``con_X_2``, ``con_Y_1``, ``con_Y_2``, and ``con_Y_3``.
+        *args
+            Positional arguments forwarded to ``ConcreteModel``.
+        **kwargs
+            Keyword arguments forwarded to ``ConcreteModel``.
+        """
+        kwargs.setdefault('name', 'MinlpSimple')
+        if grey_box and GreyBoxModel is None:
+            raise RuntimeError(
+                'The grey-box MinlpSimple variant requires '
+                'pyomo.contrib.pynumero.interfaces.external_grey_box.'
+            )
+
+        super(MinlpSimple, self).__init__(*args, **kwargs)
         m = self
 
         """Set declarations"""
@@ -99,6 +114,13 @@ class SimpleMINLP(ConcreteModel):
         else:
 
             def _model_i(b):
+                """Build the external grey-box block for this model.
+
+                Parameters
+                ----------
+                b : Block
+                    Block receiving the external grey-box declaration.
+                """
                 build_model_external(b)
 
             m.my_block = Block(rule=_model_i)
@@ -106,6 +128,13 @@ class SimpleMINLP(ConcreteModel):
             for i in m.I:
 
                 def eq_inputX(m):
+                    """Link continuous variable ``X[i]`` to grey-box input ``Xi``.
+
+                    Parameters
+                    ----------
+                    m : Block
+                        Model block used to build the linking constraint.
+                    """
                     return m.X[i] == m.my_block.egb.inputs["X" + str(i)]
 
                 con_name = "con_X_" + str(i)
@@ -114,6 +143,13 @@ class SimpleMINLP(ConcreteModel):
             for j in m.J:
 
                 def eq_inputY(m):
+                    """Link binary variable ``Y[j]`` to grey-box input ``Yj``.
+
+                    Parameters
+                    ----------
+                    m : Block
+                        Model block used to build the linking constraint.
+                    """
                     return m.Y[j] == m.my_block.egb.inputs["Y" + str(j)]
 
                 con_name = "con_Y_" + str(j)
@@ -135,3 +171,7 @@ class SimpleMINLP(ConcreteModel):
         m.optimal_solution[m.Y[1]] = 0.0
         m.optimal_solution[m.Y[2]] = 1.0
         m.optimal_solution[m.Y[3]] = 0.0
+
+
+# Backward-compatible alias.
+SimpleMINLP = MinlpSimple
