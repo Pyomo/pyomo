@@ -48,9 +48,10 @@ from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
 import pyomo.environ as pyo
 from pyomo.contrib.doe.utils import (
+    _SMALL_TOLERANCE_DEFINITENESS,
     check_FIM,
     compute_FIM_metrics,
-    _SMALL_TOLERANCE_DEFINITENESS,
+    regularize_fim_for_cholesky,
 )
 from pyomo.contrib.parmest.utils.model_utils import update_model_from_suffix
 
@@ -380,7 +381,6 @@ class DesignOfExperiments:
         results_file: string name of the file path to save the results
                       to in the form of a .json file
                       default: None --> don't save
-
         """
         # Check results file name
         if results_file is not None:
@@ -461,11 +461,31 @@ class DesignOfExperiments:
         model.obj_cons.activate()
 
         if self.use_grey_box:
-            self._initialize_grey_box_block(
-                model.obj_cons.egb_fim_block,
-                np.asarray(self.get_FIM(model=model), dtype=np.float64),
-                model.parameter_names,
-            )
+            # Initialize grey box inputs to be fim values currently
+            for i in model.parameter_names:
+                for j in model.parameter_names:
+                    if list(model.parameter_names).index(i) >= list(
+                        model.parameter_names
+                    ).index(j):
+                        model.obj_cons.egb_fim_block.inputs[(j, i)].set_value(
+                            pyo.value(model.fim[(i, j)])
+                        )
+            # Set objective value
+            if self.objective_option == ObjectiveLib.trace:
+                trace_val = np.trace(np.linalg.pinv(self.get_FIM()))
+                model.obj_cons.egb_fim_block.outputs["A-opt"].set_value(trace_val)
+            elif self.objective_option == ObjectiveLib.determinant:
+                det_val = np.linalg.det(np.array(self.get_FIM()))
+                model.obj_cons.egb_fim_block.outputs["log-D-opt"].set_value(
+                    np.log(det_val)
+                )
+            elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
+                eig, _ = np.linalg.eig(np.array(self.get_FIM()))
+                model.obj_cons.egb_fim_block.outputs["E-opt"].set_value(np.min(eig))
+            elif self.objective_option == ObjectiveLib.condition_number:
+                eig, _ = np.linalg.eig(np.array(self.get_FIM()))
+                cond_number = np.log(np.abs(np.max(eig) / np.min(eig)))
+                model.obj_cons.egb_fim_block.outputs["ME-opt"].set_value(cond_number)
 
         # If the model has L, initialize it with the solved FIM
         if hasattr(model, "L"):
@@ -487,7 +507,7 @@ class DesignOfExperiments:
             # Check if the FIM is positive definite
             # If not, add jitter to the diagonal
             # to ensure positive definiteness
-            min_eig = np.min(np.real(np.linalg.eigvals(fim_np)))
+            min_eig = np.min(np.linalg.eigvals(fim_np))
 
             if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
                 # Raise the minimum eigenvalue to at
@@ -618,6 +638,92 @@ class DesignOfExperiments:
         if results_file is not None:
             with open(results_file, "w") as file:
                 json.dump(self.results, file)
+
+    def _get_fim_numpy(self, model):
+        """
+        Assemble the current FIM variable values into a NumPy array.
+
+        Parameters
+        ----------
+        model: ConcreteModel
+            DoE model containing variable ``fim``.
+
+        Returns
+        -------
+        ndarray
+            Dense FIM array. If ``only_compute_fim_lower`` is True, the
+            returned array is symmetrized from the lower triangle.
+        """
+        fim_vals = [
+            pyo.value(model.fim[i, j])
+            for i in model.parameter_names
+            for j in model.parameter_names
+        ]
+        fim_np = np.array(fim_vals, dtype=float).reshape(
+            (len(model.parameter_names), len(model.parameter_names))
+        )
+        if self.only_compute_fim_lower:
+            fim_np = fim_np + fim_np.T - np.diag(np.diag(fim_np))
+        return fim_np
+
+    def _initialize_cholesky_from_fim(self, model=None):
+        """
+        Synchronize Cholesky-related variables using the current FIM.
+
+        Parameters
+        ----------
+        model: ConcreteModel, optional
+            DoE model to update. Defaults to ``self.model``.
+
+        Returns
+        -------
+        None
+            Updates model values in place for available variables:
+            ``L``, ``L_inv``, ``fim_inv``, and ``cov_trace``.
+        """
+        if model is None:
+            model = self.model
+        if not hasattr(model, "L"):
+            # The model doesn't have the Cholesky variables, so we can't initialize them.
+            # This happens if the function is called with a model using GreyBox.
+            return
+
+        fim_np = self._get_fim_numpy(model)
+        fim_pd, _ = regularize_fim_for_cholesky(fim_np)
+
+        L_vals = np.linalg.cholesky(fim_pd)
+        for i, c in enumerate(model.parameter_names):
+            for j, d in enumerate(model.parameter_names):
+                if i >= j:
+                    model.L[c, d].value = L_vals[i, j]
+                else:
+                    model.L[c, d].value = 0.0
+
+        if hasattr(model, "L_inv"):
+            L_inv_vals = np.linalg.inv(L_vals)
+            for i, c in enumerate(model.parameter_names):
+                for j, d in enumerate(model.parameter_names):
+                    if i >= j:
+                        model.L_inv[c, d].value = L_inv_vals[i, j]
+                    else:
+                        model.L_inv[c, d].value = 0.0
+
+        if hasattr(model, "fim_inv"):
+            # Use the pseudo-inverse here rather than the strict inverse.
+            # The jittered matrix should be positive definite, but ``pinv``
+            # is safer for borderline ill-conditioned cases and matches the
+            # defensive approach already used when initializing ``fim_inv``
+            # from user-provided starting values.
+            fim_inv_vals = np.linalg.pinv(fim_pd)
+            for i, c in enumerate(model.parameter_names):
+                for j, d in enumerate(model.parameter_names):
+                    if self.only_compute_fim_lower and i < j:
+                        model.fim_inv[c, d].value = 0.0
+                    else:
+                        model.fim_inv[c, d].value = fim_inv_vals[i, j]
+
+        if hasattr(model, "cov_trace"):
+            model.cov_trace.value = np.trace(fim_inv_vals)
 
     def optimize_experiments(
         self,
@@ -2297,6 +2403,7 @@ class DesignOfExperiments:
             self.only_compute_fim_lower
             and self.objective_option == ObjectiveLib.determinant
             and not self.Cholesky_option
+            and not self.use_grey_box
         ):
             raise ValueError(
                 "Cannot compute determinant with explicit formula "
@@ -2811,30 +2918,14 @@ class DesignOfExperiments:
         model.obj_cons = pyo.Block()
 
         # Assemble the FIM matrix. This is helpful for initialization!
-        # collect current FIM values in row-major order
-        fim_vals = [
-            model.fim[bu, un].value
-            for bu in model.parameter_names
-            for un in model.parameter_names
-        ]
-        fim = np.array(fim_vals).reshape(
-            len(model.parameter_names), len(model.parameter_names)
-        )
+        fim = self._get_fim_numpy(model)
 
         ### Initialize the Cholesky decomposition matrix
         if self.Cholesky_option and self.objective_option in (
             ObjectiveLib.determinant,
             ObjectiveLib.trace,
         ):
-            # Calculate the eigenvalues of the FIM matrix
-            eig = np.linalg.eigvals(fim)
-
-            # If the smallest eigenvalue is (practically) negative,
-            # add a diagonal matrix to make it positive definite
-            if min(eig) < small_number:
-                fim = fim + np.eye(len(model.parameter_names)) * (
-                    small_number - min(eig)
-                )
+            fim, _ = regularize_fim_for_cholesky(fim)
 
             # Compute the Cholesky decomposition of the FIM matrix
             L = np.linalg.cholesky(fim)
@@ -3466,6 +3557,20 @@ class DesignOfExperiments:
         )
 
         if build_objective:
+            if self.objective_option == ObjectiveLib.trace:
+                output_name = "A-opt"
+            elif self.objective_option == ObjectiveLib.pseudo_trace:
+                output_name = "pseudo-A-opt"
+            elif self.objective_option == ObjectiveLib.determinant:
+                output_name = "log-D-opt"
+            elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
+                output_name = "E-opt"
+            elif self.objective_option == ObjectiveLib.condition_number:
+                output_name = "ME-opt"
+            else:
+                # Error path is intentionally deferred to the external model.
+                output_name = "A-opt"
+
             model.objective = pyo.Objective(
                 expr=model.obj_cons.egb_fim_block.outputs[output_name],
                 sense=(

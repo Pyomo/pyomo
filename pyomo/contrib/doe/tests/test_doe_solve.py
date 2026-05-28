@@ -34,7 +34,6 @@ if not (numpy_available and scipy_available):
 
 if scipy_available:
     from pyomo.contrib.doe import DesignOfExperiments
-    from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
     from pyomo.contrib.doe.examples.reactor_example import (
         ReactorExperiment as FullReactorExperiment,
         run_reactor_doe,
@@ -123,10 +122,6 @@ def get_FIM_Q_L(doe_obj=None):
     sigma_inv = [
         1 / v**2 for k, v in model.fd_scenario_blocks[0].measurement_error.items()
     ]
-    param_vals = np.array(
-        [[v for k, v in model.fd_scenario_blocks[0].unknown_parameters.items()]]
-    )
-
     FIM_vals_np = np.array(FIM_vals).reshape((n_param, n_param))
 
     for i in range(n_param):
