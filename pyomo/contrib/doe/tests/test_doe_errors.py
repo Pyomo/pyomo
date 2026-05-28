@@ -1239,6 +1239,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
                         n_exp=2,
                         init_method="latin_hypercube_sampling",
                         init_n_samples=10001,
+                        # Set random seed to keep LHS initialization deterministic.
                         init_seed=11,
                     )
                 finally:

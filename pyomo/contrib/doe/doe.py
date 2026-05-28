@@ -321,6 +321,8 @@ class DesignOfExperiments:
         """Return the output label exposed by the FIM grey box model."""
         if self.objective_option == ObjectiveLib.trace:
             return "A-opt"
+        if self.objective_option == ObjectiveLib.pseudo_trace:
+            return "pseudo-A-opt"
         if self.objective_option == ObjectiveLib.determinant:
             return "log-D-opt"
         if self.objective_option == ObjectiveLib.minimum_eigenvalue:
@@ -329,7 +331,7 @@ class DesignOfExperiments:
             return "ME-opt"
         raise ValueError(
             "Grey-box objective support is only available for "
-            "objective_option in ['determinant', 'trace', "
+            "objective_option in ['determinant', 'trace', 'pseudo_trace', "
             "'minimum_eigenvalue', 'condition_number']."
         )
 
@@ -357,6 +359,8 @@ class DesignOfExperiments:
         # an objective value consistent with the current square-solve FIM.
         if self.objective_option == ObjectiveLib.trace:
             output_value = np.trace(np.linalg.pinv(fim_np))
+        elif self.objective_option == ObjectiveLib.pseudo_trace:
+            output_value = np.trace(fim_np)
         elif self.objective_option == ObjectiveLib.determinant:
             output_value = np.log(np.linalg.det(fim_np))
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
@@ -3150,11 +3154,11 @@ class DesignOfExperiments:
         """
         # Validate objective option for multi-experiment.
         if self.use_grey_box:
-            if self.objective_option in [ObjectiveLib.pseudo_trace, ObjectiveLib.zero]:
+            if self.objective_option == ObjectiveLib.zero:
                 raise ValueError(
                     "Grey-box objective support in optimize_experiments() is only "
                     "available for objective_option in ['determinant', 'trace', "
-                    "'minimum_eigenvalue', 'condition_number']."
+                    "'pseudo_trace', 'minimum_eigenvalue', 'condition_number']."
                 )
             self._grey_box_output_name()
         else:

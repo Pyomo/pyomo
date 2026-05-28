@@ -479,6 +479,7 @@ def _generate_lhs_candidate_points(doe_obj, lhs_n_samples, lhs_seed):
     lb_vals = np.array([v.lb for v in exp_input_vars])
     ub_vals = np.array([v.ub for v in exp_input_vars])
 
+    # Set random seed to keep LHS candidate generation deterministic.
     rng = np.random.default_rng(lhs_seed)
     per_dim_samples = []
     for i in range(len(exp_input_vars)):
@@ -1749,6 +1750,7 @@ class TestMultiexperimentBuild(unittest.TestCase):
         # selected initial designs against an independent exhaustive reference
         # built from real candidate FIM evaluations.
         lhs_n_samples = 4
+        # Set random seed to keep LHS initialization deterministic.
         lhs_seed = 19
 
         doe_obj = _make_multiexperiment_greybox_doe(
@@ -1821,6 +1823,7 @@ class TestMultiexperimentBuild(unittest.TestCase):
         # changes the starting point the square-solve refresh should reseed the
         # block from the new aggregated FIM before the final solve.
         lhs_n_samples = 4
+        # Set random seed to keep LHS initialization deterministic.
         lhs_seed = 29
         captured = {}
         doe_obj = _make_multiexperiment_greybox_doe(
@@ -2066,13 +2069,12 @@ class TestSingleExperimentSolve(unittest.TestCase):
     not parameterized_available, "The 'parameterized' package is not available"
 )
 class TestMultiexperimentError(unittest.TestCase):
-    @parameterized.parameterized.expand([("pseudo_trace",), ("zero",)])
-    def test_optimize_experiments_greybox_unsupported_objectives_are_rejected(
-        self, objective_option
-    ):
+    def test_optimize_experiments_greybox_unsupported_objectives_are_rejected(self):
         # These unsupported objectives share the same early-validation path, so
         # keep them in one table-driven test and verify none reaches the
         # external grey_box_solver interface.
+        objective_option = "zero"
+
         class _UnusedGreyBoxSolver:
             def solve(self, model, tee=False):
                 raise AssertionError("grey_box_solver.solve should not be reached")

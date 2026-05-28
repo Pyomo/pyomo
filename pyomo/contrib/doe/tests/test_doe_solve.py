@@ -1122,6 +1122,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         # instead of the later NLP solve and result-payload bookkeeping.
         n_exp = 2
         lhs_n_samples = 3
+        # Set random seed to keep LHS initialization deterministic.
         lhs_seed = 17
 
         # Build expected best combo using the same helper path and objective scoring.
@@ -1199,6 +1200,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         # Force candidate FIM evaluations to return None so we exercise the
         # LHS fallback path when no candidate FIM can be scored.
         doe._compute_fim_at_point_no_prior = lambda experiment_index, input_values: None
+        # Set random seed to keep LHS initialization deterministic.
         points, diag = doe._lhs_initialize_experiments(
             lhs_n_samples=3, lhs_seed=8, n_exp=1
         )
@@ -1213,6 +1215,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         # the generated candidates.
         n_exp = 2
         lhs_n_samples = 4
+        # Set random seed to keep LHS initialization deterministic.
         lhs_seed = 61
 
         doe_ref = self._make_template_doe("trace")
@@ -1268,6 +1271,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         doe = self._make_template_doe("pseudo_trace")
         self._build_template_model_for_multi_experiment(doe, n_exp=3)
         lhs_n_samples = 3
+        # Set random seed to keep LHS initialization deterministic.
         lhs_seed = 13
         first_exp_block = doe.model.param_scenario_blocks[0].exp_blocks[0]
         exp_input_vars = doe._get_experiment_input_vars(first_exp_block)
@@ -1318,6 +1322,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         # (different from the optimized n_exp==2 branch).
         self._build_template_model_for_multi_experiment(doe_ref, n_exp=n_exp)
         lhs_n_samples = 5
+        # Set random seed to keep LHS initialization deterministic.
         lhs_seed = 2
 
         # Recreate the exact candidate points from LHS generation and compute
@@ -1372,6 +1377,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         doe = self._make_template_doe("pseudo_trace")
         self._build_template_model_for_multi_experiment(doe, n_exp=2)
         lhs_n_samples = 3
+        # Set random seed to keep LHS initialization deterministic.
         lhs_seed = 123
         first_exp_block = doe.model.param_scenario_blocks[0].exp_blocks[0]
         exp_input_vars = doe._get_experiment_input_vars(first_exp_block)

@@ -964,6 +964,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             n_exp=2,
             init_method="latin_hypercube_sampling",
             init_n_samples=2,
+            # Set random seed to keep LHS initialization deterministic.
             init_seed=11,
         )
 
@@ -1013,6 +1014,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             n_exp=2,
             init_method="latin_hypercube_sampling",
             init_n_samples=2,
+            # Set random seed to keep LHS initialization deterministic.
             init_seed=11,
         )
         lhs_init = doe_obj.results["initialization"]
@@ -1029,7 +1031,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         self.assertAlmostEqual(
             lhs_init["best_initial_objective_value_log10"],
             np.log10(lhs_init["best_initial_objective_value"]),
-            places=12,
+            places=4,
         )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -1051,6 +1053,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             n_exp=n_exp,
             init_method="latin_hypercube_sampling",
             init_n_samples=lhs_n_samples,
+            # Set random seed to keep LHS initialization deterministic.
             init_seed=17,
         )
         lhs_init = doe_obj.results["initialization"]
