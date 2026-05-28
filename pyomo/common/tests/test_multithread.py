@@ -8,10 +8,15 @@
 # ____________________________________________________________________________________
 
 import threading
-import pyomo.common.unittest as unittest
-from pyomo.common.multithread import *
 from threading import Thread
+from multiprocessing.dummy import Pool as ThreadPool
+
+import pyomo.common.unittest as unittest
+
+from pyomo.common.multithread import MultiThreadWrapper, MultiThreadWrapperWithMain
 from pyomo.opt.base.solvers import check_available_solvers
+
+import pyomo.environ as pyo
 
 
 class Dummy:
@@ -103,10 +108,6 @@ class TestMultithreading(unittest.TestCase):
     )
     def test_solve(self):
         # Based on the minimal example in https://github.com/Pyomo/pyomo/issues/2475
-        import pyomo.environ as pyo
-        from pyomo.opt import SolverFactory
-        from multiprocessing.dummy import Pool as ThreadPool
-
         model = pyo.ConcreteModel()
         model.nVars = pyo.Param(initialize=4)
         model.N = pyo.RangeSet(model.nVars)
@@ -115,7 +116,7 @@ class TestMultithreading(unittest.TestCase):
         model.cuts = pyo.ConstraintList()
 
         def test(model):
-            opt = SolverFactory('glpk')
+            opt = pyo.SolverFactory('glpk')
             opt.solve(model)
 
             # Iterate, adding a cut to exclude the previously found solution
