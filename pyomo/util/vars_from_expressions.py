@@ -15,7 +15,7 @@ not used in any expressions and it does not care if the Vars it finds are
 actually in the Block subtree or not.
 """
 
-from pyomo.core import Block
+from pyomo.core import Block, Constraint, Objective
 from pyomo.core.expr.visitor import IdentifyVariableVisitor
 
 
