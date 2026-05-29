@@ -21,7 +21,7 @@ and (at least) one global NLP solver
 (e.g.,
 `BARON <https://minlp.com/baron-solver>`_,
 `COUENNE <https://www.coin-or.org/Couenne/>`_,
-`SCIP <https://www.scipopt.org/>`_)
+SCIP)
 installed and licensed on your system.
 
 PyROS can be installed as follows:
@@ -60,7 +60,7 @@ PyROS can be installed as follows:
    `IPOPT <https://github.com/coin-or/Ipopt>`_,
    `BARON <https://minlp.com/baron-solver>`_,
    or
-   `SCIP <https://www.scipopt.org/>`_
+   SCIP
    is not 
    pre-installed and licensed on your system.
 
