@@ -269,7 +269,9 @@ class TestExpressionUtilities(unittest.TestCase):
         seen = {}
         v = IdentifyVariableVisitor(var_cache=seen)
         self.assertEqual(list(v.walk_expression(e2)), [m.y, m.z])
-        self.assertEqual(list(v.walk_expression(e1)), [m.y, m.z, m.x])
+        self.assertEqual(list(seen.values()), [m.y, m.z])
+        self.assertEqual(list(v.walk_expression(e1)), [m.x])
+        self.assertEqual(list(seen.values()), [m.y, m.z, m.x])
 
 
 class TestIdentifyParams(unittest.TestCase):

@@ -9,6 +9,7 @@
 
 
 import inspect
+import itertools
 import logging
 import sys
 from copy import deepcopy
@@ -1401,6 +1402,12 @@ class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
         """Visitor that collects all unique variables participating in an
         expression
 
+        :meth:`walk_expression` returns a generator of the unique
+        variables found in the expression.  If `var_cache` was
+        specified, then only the *new* variables found in `expr` are
+        returned (the full list of all variables is maintained in the
+        `var_cache` dict).
+
         Parameters
         ----------
         include_fixed : bool
@@ -1444,6 +1451,8 @@ class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
         if self._seen is None:
             self._seen = {}
             self._expr_stack.append(None)
+        else:
+            self._expr_stack.append(len(self._seen))
         self._exprs = None
         if not self.beforeChild(None, expr, 0)[0]:
             return False, self.finalizeResult(None)
@@ -1476,11 +1485,16 @@ class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
 
     def finalizeResult(self, result):
         seen = self._seen
-        if self._expr_stack:
-            assert self._expr_stack.pop() is None
-            self._seen = None
+        initial_num_seen = self._expr_stack.pop()
         assert not self._expr_stack
-        return seen.values()
+        if initial_num_seen is None:
+            self._seen = None
+            return seen.values()
+        else:
+            # Only return the *new* variables found on this walk.  This
+            # relies on dict iteration being in insertion order (which,
+            # since python 3.7, it is)
+            return itertools.islice(seen.values(), initial_num_seen, len(seen))
 
     def _merge_obj_lists(self, _seen, _exprs):
         self._seen.update(_seen)
