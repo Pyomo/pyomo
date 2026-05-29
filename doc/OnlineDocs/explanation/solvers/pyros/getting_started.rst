@@ -14,14 +14,14 @@ Installation
 In advance of using PyROS to solve robust optimization problems,
 you will need (at least) one local nonlinear programming (NLP) solver
 (e.g.,
-`CONOPT <https://conopt.gams.com/>`_,
-`IPOPT <https://github.com/coin-or/Ipopt>`_,
-`Knitro <https://www.artelys.com/solvers/knitro/>`_)
+`CONOPT <https://conopt.gams.com/>`__,
+`IPOPT <https://github.com/coin-or/Ipopt>`__,
+`Knitro <https://www.artelys.com/solvers/knitro/>`__)
 and (at least) one global NLP solver
 (e.g.,
-`BARON <https://minlp.com/baron-solver>`_,
-`COUENNE <https://www.coin-or.org/Couenne/>`_,
-SCIP)
+`BARON <https://minlp.com/baron-solver>`__,
+`COUENNE <https://www.coin-or.org/Couenne/>`__,
+`SCIP <https://www.scipopt.org>`__)
 installed and licensed on your system.
 
 PyROS can be installed as follows:
@@ -57,10 +57,10 @@ PyROS can be installed as follows:
 
    Some tests involving deterministic NLP solvers may be skipped
    if
-   `IPOPT <https://github.com/coin-or/Ipopt>`_,
-   `BARON <https://minlp.com/baron-solver>`_,
+   `IPOPT <https://github.com/coin-or/Ipopt>`__,
+   `BARON <https://minlp.com/baron-solver>`__,
    or
-   SCIP
+   `SCIP <https://www.scipopt.org>`__
    is not 
    pre-installed and licensed on your system.
 

@@ -79,11 +79,11 @@ the license requirements for their desired solver.
    * - SCIP (Command-line)
      - N/A
      - ``conda install ‑c conda‑forge scip``
-     - (see SCIP project)
+     - (see `SCIP <https://www.scipopt.org>`__ project)
    * - SCIP (Python)
      - ``pip install pyscipopt``
      - ``conda install ‑c conda‑forge pyscipopt``
-     - (see SCIP project)
+     - (see `SCIP <https://www.scipopt.org>`__ project)
    * - XPRESS
      - ``pip install xpress``
      - ``conda install ‑c fico‑xpress xpress``

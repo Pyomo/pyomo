@@ -255,9 +255,7 @@ Augmented Penalty refers to the introduction of (non-negative) slack variables o
 Global Outer-Approximation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Apart from the decomposition methods for convex MINLP problems [`Kronqvist et al., 2019`_], MindtPy provides an implementation of Global Outer Approximation (GOA) as described in [`Kesavan & Allgor, 2004`_], to provide optimality guaranteed for nonconvex MINLP problems. Here, the validity of the Mixed-integer Linear Programming relaxation of the original problem is guaranteed via the usage of Generalized McCormick envelopes, computed using the :ref:`interface to the MC++ package <MC++>`. The NLP subproblems, in this case, need to be solved to global optimality, which can be achieved through global NLP solvers such as `BARON`_ or SCIP.
-
-.. _BARON: https://minlp.com/baron-solver
+Apart from the decomposition methods for convex MINLP problems [`Kronqvist et al., 2019`_], MindtPy provides an implementation of Global Outer Approximation (GOA) as described in [`Kesavan & Allgor, 2004`_], to provide optimality guaranteed for nonconvex MINLP problems. Here, the validity of the Mixed-integer Linear Programming relaxation of the original problem is guaranteed via the usage of Generalized McCormick envelopes, computed using the :ref:`interface to the MC++ package <MC++>`. The NLP subproblems, in this case, need to be solved to global optimality, which can be achieved through global NLP solvers such as `BARON <https://minlp.com/baron-solver>`__ or `SCIP <https://www.scipopt.org>`__.
 
 
 Convergence
