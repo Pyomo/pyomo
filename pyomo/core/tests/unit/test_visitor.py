@@ -61,6 +61,7 @@ from pyomo.core.expr.visitor import (
     SimpleExpressionVisitor,
     StreamBasedExpressionVisitor,
     ExpressionReplacementVisitor,
+    IdentifyVariableVisitor,
     evaluate_expression,
     expression_to_string,
     replace_expressions,
@@ -251,6 +252,24 @@ class TestExpressionUtilities(unittest.TestCase):
         m.x = Var()
         expr = quicksum([m.x, m.x], linear=True)
         self.assertEqual(list(identify_variables(expr, include_fixed=False)), [m.x])
+
+    def test_identify_vars_seen_cache(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.z = Var()
+
+        e1 = m.x + m.y
+        e2 = m.y + m.z
+
+        v = IdentifyVariableVisitor()
+        self.assertEqual(list(v.walk_expression(e1)), [m.x, m.y])
+        self.assertEqual(list(v.walk_expression(e2)), [m.y, m.z])
+
+        seen = {}
+        v = IdentifyVariableVisitor(seen=seen)
+        self.assertEqual(list(v.walk_expression(e2)), [m.y, m.z])
+        self.assertEqual(list(v.walk_expression(e1)), [m.y, m.z, m.x])
 
 
 class TestIdentifyParams(unittest.TestCase):

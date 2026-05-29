@@ -1395,32 +1395,53 @@ def identify_components(expr, component_types):
 
 
 class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
-    def __init__(self, include_fixed=False, named_expression_cache=None):
+    def __init__(self, include_fixed=False, named_expression_cache=None, seen=None):
         """Visitor that collects all unique variables participating in an
         expression
 
-        Args:
-            include_fixed (bool): Whether to include fixed variables
-            named_expression_cache (optional, dict): Dict mapping ids of named
-                expressions to a tuple of the list of all variables and the
-                set of all variable ids contained in the named expression.
+        Parameters
+        ----------
+        include_fixed : bool
+            If True, fixed variables will be reported
+
+        named_expression_cache : dict
+            Cache of named expressions that have been visited by this
+            walker.  The value includes the variables within the named
+            expression as well as information for detecting when the
+            named expression has changed (for cache invalidation).
+
+        seen : dict[int, VarData]
+            Dict mapping the :func:`id()` of variables to
+            :class:`VarData` for all variables "seen" by this walker.
+            If provided, this dictionary is preserved between calls to
+            :meth:`walk_expression` (so repeated variables are not
+            returned more than once)
 
         """
         super().__init__()
         self._include_fixed = include_fixed
+        # cache of visited named expressions.  This dict maps
+        #    {eid: (seen, exprs)}.
+        # - eid is the id() of the named expression
+        # - seen is the processed result for the named expression
+        #   (including any nested named expressions)
+        # - exprs is used for automatically invalidating the cache (see below).
         self._cache = named_expression_cache
         # Stack of named expressions. This holds the tuple
         #     (eid, _seen, _exprs)
         # where eid is the id() of the subexpression we are currently
         # processing, and _seen and _exprs are from the parent context.
         self._expr_stack = []
-        # The following attributes will be added by initializeWalker:
-        # self._seen: dict(eid: obj)
+        # cache of "seen" variables: dict(eid: VarData)
+        self._seen = seen
+        # The following attribute will be added by initializeWalker:
         # self._exprs: list of (e, e.expr) for any (nested) named expressions
 
     def initializeWalker(self, expr):
         assert not self._expr_stack
-        self._seen = {}
+        if self._seen is None:
+            self._seen = {}
+            self._expr_stack.append(None)
         self._exprs = None
         if not self.beforeChild(None, expr, 0)[0]:
             return False, self.finalizeResult(None)
@@ -1452,8 +1473,12 @@ class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
             self._merge_obj_lists(_seen, _exprs)
 
     def finalizeResult(self, result):
+        seen = self._seen
+        if self._expr_stack:
+            assert self._expr_stack.pop() is None
+            self._seen = None
         assert not self._expr_stack
-        return self._seen.values()
+        return seen.values()
 
     def _merge_obj_lists(self, _seen, _exprs):
         self._seen.update(_seen)
