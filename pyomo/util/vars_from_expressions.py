@@ -78,7 +78,7 @@ def get_vars(
 
     active : bool | None
         If True, only variables accessible through the active component
-        tree will be erturned
+        tree will be returned
 
     sort: SortOrder | None
         sort method for iterating through Constraint objects
