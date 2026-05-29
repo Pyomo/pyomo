@@ -31,7 +31,7 @@ env:
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver linear-tree
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels linear-tree
-  CACHE_VER: v260304.0
+  CACHE_VER: v260512.3
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
   PYOMO_WORKFLOW: |
@@ -151,23 +151,31 @@ jobs:
           PYENV: pip
           PACKAGES: cython
 
-        - os: windows-latest
+        # [13 May 26] Disabled until we can sort out the seg fault issue
+        #- os: windows-latest
+        #  python: '3.10'
+        #  other: /pip
+        #  TARGET: win
+        #  PYENV: pip
+
+        - os: ubuntu-latest
           python: '3.10'
-          other: /pip
-          TARGET: win
+          other: /slim
+          slim: 2
+          TARGET: linux
+          PYENV: pip
+
+        - os: ubuntu-latest
+          python: 3.13
+          other: /nosolvers
+          slim: 1
+          TARGET: linux
           PYENV: pip
 
         - os: ubuntu-latest
           python: 3.11
           other: /singletest
           category: "-m 'neos or importtest'"
-          TARGET: linux
-          PYENV: pip
-
-        - os: ubuntu-latest
-          python: '3.10'
-          other: /slim
-          slim: 1
           TARGET: linux
           PYENV: pip
 
@@ -214,7 +222,7 @@ jobs:
             echo "GHA_JOBGROUP=other" >> $GITHUB_ENV
         fi
         EXTRAS=tests
-        if test -z "${{matrix.slim}}"; then
+        if test -z "${{matrix.slim}}" -o "${{matrix.slim}}" = 1; then
             EXTRAS="$EXTRAS,docs,optional"
         fi
         echo "EXTRAS=$EXTRAS" >> $GITHUB_ENV
@@ -365,14 +373,7 @@ jobs:
         python -m pip install --cache-dir cache/pip pymysql || \
             python -m pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
-            # Disallow cplex 22.1.2.1 because it errors fatally when
-            #  computing IIS on python 3.13 and 3.14
-            if [[ ${{matrix.python}} =~ 3.1[34] ]]; then
-                CPLEX='cplex!=22.1.2.1'
-            else
-                CPLEX='cplex'
-            fi
-            python -m pip install --cache-dir cache/pip "$CPLEX" docplex \
+            python -m pip install --cache-dir cache/pip cplex docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
             python -m pip install --cache-dir cache/pip gurobipy \
                 || echo "WARNING: Gurobi is not available"
@@ -380,6 +381,12 @@ jobs:
                 || echo "WARNING: Xpress Community Edition is not available"
             python -m pip install --cache-dir cache/pip maingopy \
                 || echo "WARNING: MAiNGO is not available"
+            if [[ ${{matrix.python}} == pypy* ]]; then
+                echo "skipping SCIP for pypy"
+            else
+                python -m pip install --cache-dir cache/pip pyscipopt \
+                    || echo "WARNING: SCIP is not available"
+            fi
             if [[ ${{matrix.python}} == pypy* ]]; then
                 echo "skipping wntr for pypy"
             else
@@ -409,6 +416,8 @@ jobs:
         python --version
         # We need setuptools so we can run Pyomo's setup.py
         conda install setuptools
+        # Make sure pip is installed for dependencies not available through conda
+        conda install pip
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
@@ -447,14 +456,8 @@ jobs:
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
             #
-            # Disallow cplex 22.1.2 and 22.1.2.1, as they error fatally when
-            #   computing IIS on Python 3.13 and 3.14
             # Disallow cplex 12.9 (caused segfaults in tests)
-            if [[ ${{matrix.python}} =~ 3.1[34] ]]; then
-                CPLEX='cplex>=12.10,<22.1.2|>22.1.2.1'
-            else
-                CPLEX='cplex>=12.10'
-            fi
+            CPLEX='cplex>=12.10'
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
             # on GHA/Windows under Python 3.10 and 3.11.  Exclude that
             # release on that platform.
@@ -467,7 +470,7 @@ jobs:
             else
                 XPRESS='xpress'
             fi
-            for PKG in "$CPLEX" docplex gurobi "$XPRESS" cyipopt pymumps scip; do
+            for PKG in "$CPLEX" docplex gurobi "$XPRESS" cyipopt pymumps scip pyscipopt; do
                 echo ""
                 echo "*** Install $PKG ***"
                 echo ""
@@ -619,7 +622,7 @@ jobs:
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $INSTALLER = "${env:DOWNLOAD_DIR}/gams_install.exe"
         # Demo licenses are included for 5mo from the newest release
-        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/52.5.0"
+        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/latest"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $URL = "$URL/windows/windows_x64_64.exe"
         } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
@@ -733,9 +736,9 @@ jobs:
             cd gjh_asl_json-master/Thirdparty
             # Patch get.ASL to use curl
             URL="http://www.ampl.com/netlib/ampl/solvers.tgz"
-            sed -i "s|wget |curl -o solvers.tgz |" get.ASL
-            cat get.ASL
-            ./get.ASL
+            sed "s|wget |curl -o solvers.tgz |" get.ASL > get.ASL.patched
+            cat get.ASL.patched
+            bash ./get.ASL.patched
             cd ..
             make
             mv bin "$INSTALL_DIR/bin"
