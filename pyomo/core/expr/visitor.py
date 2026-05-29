@@ -1395,7 +1395,9 @@ def identify_components(expr, component_types):
 
 
 class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
-    def __init__(self, include_fixed=False, named_expression_cache=None, seen=None):
+    def __init__(
+        self, include_fixed=False, named_expression_cache=None, var_cache=None
+    ):
         """Visitor that collects all unique variables participating in an
         expression
 
@@ -1410,12 +1412,12 @@ class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
             expression as well as information for detecting when the
             named expression has changed (for cache invalidation).
 
-        seen : dict[int, VarData]
+        var_cache : dict[int, VarData]
             Dict mapping the :func:`id()` of variables to
-            :class:`VarData` for all variables "seen" by this walker.
-            If provided, this dictionary is preserved between calls to
-            :meth:`walk_expression` (so repeated variables are not
-            returned more than once)
+            :class:`VarData` for all variables that have been "seen" by
+            this walker.  If provided, this dictionary is preserved
+            between calls to :meth:`walk_expression` (so repeated
+            variables are not returned more than once).
 
         """
         super().__init__()
@@ -1433,7 +1435,7 @@ class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
         # processing, and _seen and _exprs are from the parent context.
         self._expr_stack = []
         # cache of "seen" variables: dict(eid: VarData)
-        self._seen = seen
+        self._seen = var_cache
         # The following attribute will be added by initializeWalker:
         # self._exprs: list of (e, e.expr) for any (nested) named expressions
 

@@ -42,17 +42,17 @@ def get_vars_from_components(
         descent_order: Traversal strategy for finding the objects of type ctype
 
     """
-    seen = {}
-    visitor = IdentifyVariableVisitor(include_fixed, {}, seen=seen)
-    for constraint in block.component_data_objects(
+    var_cache = {}
+    visitor = IdentifyVariableVisitor(include_fixed, {}, var_cache=var_cache)
+    for component in block.component_data_objects(
         ctype,
         active=active,
         sort=sort,
         descend_into=descend_into,
         descent_order=descent_order,
     ):
-        visitor.walk_expression(constraint.expr)
-    return seen.values()
+        visitor.walk_expression(component.expr)
+    return var_cache.values()
 
 
 def get_vars(
