@@ -11,7 +11,7 @@ NLP Initialization
 The initialization module within ``pyomo.devel.initialization`` is intended to 
 provide methods to help initialize nonconvex nonlinear programs (NLPs). The 
 goal is to increase the chance of finding a local minimizer (i.e., decrease the
-chance of getting stuck a point that locally minimizes infeasibility). If 
+chance of getting stuck at a point that locally minimizes infeasibility). If 
 you are already able to solve your problem with a local NLP solver, these 
 tools will not help you. Example usage is shown below.
 
