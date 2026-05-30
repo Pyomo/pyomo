@@ -10,7 +10,7 @@
 from typing import Optional
 from pyomo.core.base.block import BlockData
 from enum import Enum
-from pyomo.devel.initialization.utils import get_vars, shallow_clone
+from pyomo.devel.initialization.utils import get_vars
 from pyomo.common.collections import ComponentMap
 from pyomo.devel.initialization.pwl_init import (
     _initialize_with_piecewise_linear_approximation,
