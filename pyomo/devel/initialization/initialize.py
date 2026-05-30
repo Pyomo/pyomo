@@ -43,6 +43,14 @@ def _get_solver(sname, reason):
     return opt
 
 
+def _setup():
+    pass
+
+
+def _cleanup():
+    pass
+
+
 def initialize_nlp(
     nlp: BlockData,
     nlp_solver: SolverBase | None = None,
@@ -128,9 +136,9 @@ def initialize_nlp(
 
     # get all variable bounds, domains, etc. to restore them later
     orig_vars = get_vars(nlp)
-    orig_var_data = ComponentMap(
+    orig_var_data = [
         (v, (v.lower, v.upper, v.domain, v.fixed, v.value)) for v in orig_vars
-    )
+    ]
 
     # run the initialization
     if method == InitializationMethod.pwl_approximation:
@@ -165,7 +173,7 @@ def initialize_nlp(
         raise ValueError(f'unexpected initialization method: {method}')
 
     # restore variable bounds, domain, etc.
-    for v, (lb, ub, domain, fixed, value) in orig_var_data.items():
+    for v, (lb, ub, domain, fixed, value) in orig_var_data:
         v.setlb(lb)
         v.setub(ub)
         v.domain = domain

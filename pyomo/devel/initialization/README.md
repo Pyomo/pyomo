@@ -1,1 +1,0 @@
-The purpose of this module is to provide methods for initializing nonlinear programming models.

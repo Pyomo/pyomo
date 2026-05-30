@@ -43,7 +43,6 @@ Explanations
       `Design of Experiments`
       `MPC`
       `AOS`
-      `NLP Initialization`
    `Modeling Utilities`
       `Latex Printer`
       `FME`

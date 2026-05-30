@@ -79,14 +79,11 @@ def _replace_expression_with_linear_approx(expr, num_samples=100, seed=None):
     n_vars = len(vlist)
     bnds_list = []
     for v in vlist:
-        if v.lb is None:
-            lb = -1e6
-        else:
-            lb = v.lb
-        if v.ub is None:
-            ub = 1e6
-        else:
-            ub = v.ub
+        # the bounds should not be None because we 
+        # set the bounds to default_bound in 
+        # bound_all_nonlinear_variables
+        lb = v.lb
+        ub = v.ub
         bnds_list.append((lb, ub))
     sampler = qmc.LatinHypercube(d=n_vars, seed=seed)
     sample = sampler.random(n=num_samples)
