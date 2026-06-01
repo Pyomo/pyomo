@@ -58,6 +58,7 @@ from pyomo.devel.initialization.utils import (
     shallow_clone,
 )
 from pyomo.repn.util import ExitNodeDispatcher
+from pyomo.contrib.solver.common.results import Results
 
 logger = logging.getLogger(__name__)
 
