@@ -123,7 +123,9 @@ class TestInit(unittest.TestCase):
         )
         mip_solver = SolverFactory('highs')
         results = ini.initialize_with_LP_approximation(
-            nlp=m, nlp_solver=nlp_solver, lp_solver=mip_solver, 
+            nlp=m,
+            nlp_solver=nlp_solver,
+            lp_solver=mip_solver,
             use_univariate_nonlinear_decomposition=False,
         )
 
