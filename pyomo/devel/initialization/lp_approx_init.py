@@ -79,8 +79,8 @@ def _replace_expression_with_linear_approx(expr, num_samples=100, seed=None):
     n_vars = len(vlist)
     bnds_list = []
     for v in vlist:
-        # the bounds should not be None because we 
-        # set the bounds to default_bound in 
+        # the bounds should not be None because we
+        # set the bounds to default_bound in
         # bound_all_nonlinear_variables
         lb = v.lb
         ub = v.ub
@@ -187,7 +187,9 @@ def _initialize_with_LP_approximation(
     # approximate any functions of more than two variables
     # this does not matter as much as it does for PWL
     if use_univariate_nonlinear_decomposition:
-        trans = pyo.TransformationFactory('contrib.piecewise.univariate_nonlinear_decomposition')
+        trans = pyo.TransformationFactory(
+            'contrib.piecewise.univariate_nonlinear_decomposition'
+        )
         trans.apply_to(nlp, aggressive_substitution=aggressive_substitution)
         logger.info('applied the univariate_nonlinear_decomposition transformation')
 

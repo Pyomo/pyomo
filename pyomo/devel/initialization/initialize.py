@@ -83,7 +83,7 @@ def initialize_with_piecewise_linear_approximation(
     skip_initial_nlp_solve: bool = False,
 ) -> Results:
     """
-    Attempt to initialize the problem with a piecewise linear approximation 
+    Attempt to initialize the problem with a piecewise linear approximation
     and subsequently solve the model given by ``nlp``.
 
     Parameters
@@ -158,7 +158,7 @@ def initialize_with_LP_approximation(
     skip_initial_nlp_solve: bool = False,
 ) -> Results:
     """
-    Attempt to initialize the problem with an LP approximation and 
+    Attempt to initialize the problem with an LP approximation and
     subsequently solve the model given by ``nlp``.
 
     Parameters

@@ -123,9 +123,7 @@ class TestInit(unittest.TestCase):
         )
         mip_solver = SolverFactory('highs')
         results = ini.initialize_with_LP_approximation(
-            nlp=m,
-            nlp_solver=nlp_solver,
-            lp_solver=mip_solver,
+            nlp=m, nlp_solver=nlp_solver, lp_solver=mip_solver
         )
 
     @unittest.skipUnless(scip.available(), 'scip is not available')
@@ -149,9 +147,7 @@ class TestInit(unittest.TestCase):
         )
         global_solver = SolverFactory('scip_direct')
         results = ini.initialize_with_global_opt(
-            nlp=m,
-            nlp_solver=nlp_solver,
-            global_solver=global_solver,
+            nlp=m, nlp_solver=nlp_solver, global_solver=global_solver
         )
 
     @unittest.skipUnless(highs.available(), 'highs is not available')
@@ -220,8 +216,7 @@ class TestInit(unittest.TestCase):
 
         mip_solver = SolverFactory('highs')
         results = ini.initialize_with_piecewise_linear_approximation(
-            nlp=m,
-            mip_solver=mip_solver,
+            nlp=m, mip_solver=mip_solver
         )
 
         self.assertEqual(results.solution_status, SolutionStatus.optimal)

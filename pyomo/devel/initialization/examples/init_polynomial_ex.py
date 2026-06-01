@@ -25,10 +25,7 @@ def lp_init_ex():
     nlp_solver = SolverFactory('ipopt')
     lp_solver = SolverFactory('highs')
     results = ini.initialize_with_LP_approximation(
-        nlp=m,
-        nlp_solver=nlp_solver,
-        lp_solver=lp_solver,
-        seed=0,
+        nlp=m, nlp_solver=nlp_solver, lp_solver=lp_solver, seed=0
     )
 
     return results.solution_status, m.x.value
@@ -39,9 +36,7 @@ def pwl_init_ex():
     nlp_solver = SolverFactory('ipopt')
     mip_solver = SolverFactory('highs')
     results = ini.initialize_with_piecewise_linear_approximation(
-        nlp=m,
-        nlp_solver=nlp_solver,
-        mip_solver=mip_solver,
+        nlp=m, nlp_solver=nlp_solver, mip_solver=mip_solver
     )
 
     return results.solution_status, m.x.value
@@ -52,9 +47,7 @@ def global_init_ex():
     nlp_solver = SolverFactory('ipopt')
     global_solver = SolverFactory('scip_direct')
     results = ini.initialize_with_global_opt(
-        nlp=m,
-        nlp_solver=nlp_solver,
-        global_solver=global_solver,
+        nlp=m, nlp_solver=nlp_solver, global_solver=global_solver
     )
 
     return results.solution_status, m.x.value
