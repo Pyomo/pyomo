@@ -74,8 +74,7 @@ logger = logging.getLogger(__name__)
 
 
 def _replace_expression_with_linear_approx(expr, num_samples=100, seed=None):
-    vset = ComponentSet(identify_variables(expr, include_fixed=False))
-    vlist = list(vset)
+    vlist = list(identify_variables(expr, include_fixed=False))
     n_vars = len(vlist)
     bnds_list = []
     for v in vlist:
@@ -101,10 +100,9 @@ def _replace_expression_with_linear_approx(expr, num_samples=100, seed=None):
     A[:, n_vars] = 1
     for sample_ndx in range(num_samples):
         for v, val in zip(vlist, sample[sample_ndx, :]):
-            v.value = float(val)
+            v.value = val
         b[sample_ndx] = pyo.value(expr)
-    coefs = np.linalg.solve(A.transpose().dot(A), A.transpose().dot(b))
-    coefs = [float(i) for i in coefs]
+    coefs = np.linalg.solve(A.transpose().dot(A), A.transpose().dot(b)).to_list()
 
     new_expr = 0
     for c, v in zip(coefs[:n_vars], vlist):
