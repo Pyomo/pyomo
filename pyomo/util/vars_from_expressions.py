@@ -44,7 +44,7 @@ def get_vars_from_components(
 
     active : bool | None
         If True, only variables accessible through the active component
-        tree will be returned.  If None, all variables accessibile
+        tree will be returned.  If None, all variables accessible
         through either active or inactive components will be returned.
 
     sort: SortComponents | bool | None
@@ -97,7 +97,7 @@ def get_vars(
 
     active : bool | None
         If True, only variables accessible through the active component
-        tree will be returned.  If None, all variables accessibile
+        tree will be returned.  If None, all variables accessible
         through either active or inactive components will be returned.
 
     sort: SortComponents | bool | None
