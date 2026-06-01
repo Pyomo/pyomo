@@ -39,6 +39,10 @@ These publications describe various Pyomo capabilities or subpackages:
    and algebraic equations", *Mathematical Programming Computation*, 10(2),
    187-223. 2018.
 
+.. [PyomoDOE-paper] Wang, Jialu, and Alexander W. Dowling. "Pyomo.DOE: An open‐source
+   package for model‐based design of experiments in Python", *AIChE Journal*,
+   68(12), e17813. 2022. DOI `10.1002/aic.17813 <https://doi.org/10.1002/aic.17813>`_
+
 .. [Parmest-paper] Katherine A. Klise, Bethany L. Nicholson, Andrea
    Staid, David L.Woodruff.  "Parmest: Parameter Estimation Via Pyomo."
    *Computer Aided Chemical Engineering*, 47, 41-46. 2019.
@@ -179,7 +183,3 @@ Bibliography
 
 .. [NW99] Nocedal, Jorge, and Stephen J. Wright, eds. Numerical
    optimization. New York, NY: Springer New York, 1999.
-
-.. [WD22] Wang, Jialu, and Alexander W. Dowling. "Pyomo.DOE: An open‐source
-   package for model‐based design of experiments in Python", *AIChE Journal*,
-   68(12), e17813. 2022. DOI `10.1002/aic.17813Y <https://doi.org/10.1002/aic.17813Y>`_
