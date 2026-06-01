@@ -18,9 +18,9 @@ tools will not help you. Example usage is shown below.
 .. literalinclude:: /../../pyomo/devel/initialization/examples/init_polynomial_ex.py
     :start-after: # === Required imports ===
 
-The :func:`initialize_nlp <pyomo.devel.initialization.initialize.initialize_nlp>` 
-function uses the specified method to try to find a good starting point for the
-NLP solver and then attempts to solve the problem with the given NLP solver. 
+This example shows the three different initialization methods currently available.
+Each method tries to find a good starting point for the NLP solver and then attempts
+to solve the problem with the given NLP solver.
 
 .. note::
     
@@ -30,8 +30,7 @@ NLP solver and then attempts to solve the problem with the given NLP solver.
 Initialization Methods
 ======================
 
-The initialization method is selected using the 
-:class:`InitializationMethod <pyomo.devel.initialization.initialize.InitializationMethod>` enum.
+There are currently three initialization methods available.
 
 .. note::
 
@@ -40,15 +39,15 @@ The initialization method is selected using the
     variables are bounded (the tighter the bounds, the better).
 
 
-Method ``global_opt``
----------------------
+Method :func:`initialize_with_global_opt <pyomo.devel.initialization.initialize.initialize_with_global_opt>`
+------------------------------------------------------------------------------------------------------------
 
 This method uses an MINLP solver to try to find a feasible solution. We 
 adjust the solver parameters so that the solver will stop as soon as any 
 feasible solution is found. We then initialize the NLP solver at that 
 feasible solution. Many MINLP solvers will default to a very large 
 time limit, so it can be useful to specify a time limit before 
-calling :func:`initialize_nlp <pyomo.devel.initialization.initialize.initialize_nlp>`:
+calling :func:`initialize_with_global_opt <pyomo.devel.initialization.initialize.initialize_with_global_opt>`:
 
 .. testcode::
    :skipif: not pyscipopt_available
@@ -58,7 +57,7 @@ calling :func:`initialize_nlp <pyomo.devel.initialization.initialize.initialize_
 
    global_solver = SolverFactory('scip_direct')
    global_solver.config.time_limit = 600  # 10 minutes
-   # now call initialize_nlp
+   # now call initialize_with_global_opt
 
 This method currently works with the following solver interfaces for MINLP solvers:
 
@@ -80,8 +79,8 @@ Disadvantages
   work with external functions.
 
 
-Method ``pwl_approximation``
-----------------------------
+Method :func:`initialize_with_piecewise_linear_approximation <pyomo.devel.initialization.initialize.initialize_with_piecewise_linear_approximation>`
+----------------------------------------------------------------------------------------------------------------------------------------------------
 
 This method builds a piecewise linear (PWL) approximation of the model, solves
 it, and initializes the NLP solver at the solution. If the NLP solver does not 
@@ -106,8 +105,8 @@ Disadvantages
 * Requires all nonlinear variables to be bounded
 
 
-Method ``lp_approximation``
----------------------------
+Method :func:`initialize_with_lp_approximation <pyomo.devel.initialization.initialize.initialize_with_lp_approximation>`
+------------------------------------------------------------------------------------------------------------------------
 
 This method is similar to the PWL approximation method, but it builds
 an LP approximation instead and does not do any refinement. Another 
