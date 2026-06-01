@@ -1539,6 +1539,7 @@ class TestRegularizationCore(unittest.TestCase):
 
         self.assertAlmostEqual(pyo.value(expr), expected)
 
+    @unittest.skipUnless(ipopt_available, "Test requires ipopt")
     def test_l2_penalty_not_double_counted_across_scenarios(self):
         # Confirms regularization is applied once at the estimator level,
         # not once per scenario.
@@ -1591,6 +1592,7 @@ class TestRegularizationCore(unittest.TestCase):
                 exp_list, obj_function="SSE", regularization=lambda m: m.theta0**2
             )
 
+    @unittest.skipUnless(ipopt_available, "Test requires ipopt")
     def test_l2_lambda_zero_matches_unregularized_objective(self):
         exp_list = [self.LinearExperiment(1.0, 1.0), self.LinearExperiment(2.0, 2.0)]
         prior_fim = pd.DataFrame(
@@ -1615,6 +1617,7 @@ class TestRegularizationCore(unittest.TestCase):
             obj_l2_zero = self._obj_at_theta(pest_l2_zero, theta0, theta1)
             self.assertAlmostEqual(obj_l2_zero, obj_base)
 
+    @unittest.skipUnless(ipopt_available, "Test requires ipopt")
     def test_prior_subset_penalizes_only_selected_parameter(self):
         # Prior indexed only by theta1 should leave theta0 unpenalized.
         exp_list = [self.LinearExperiment(1.0, 1.0)]
@@ -1976,6 +1979,7 @@ class TestRegularizationCore(unittest.TestCase):
 
         self.assertAlmostEqual(pyo.value(expr), expected)
 
+    @unittest.skipUnless(ipopt_available, "Test requires ipopt")
     def test_indexed_unknown_parameters_regularization_uses_scalar_theta_names(self):
         exp_list = [IndexedThetaExperiment(2.0, 5.0)]
         prior_fim = pd.DataFrame(
