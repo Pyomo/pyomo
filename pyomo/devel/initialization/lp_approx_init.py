@@ -73,7 +73,7 @@ qmc, qmc_avail = attempt_import('scipy.stats.qmc')
 logger = logging.getLogger(__name__)
 
 
-def _replace_expression_with_linear_approx(expr, num_samples=100, seed=None):
+def _generate_linear_approx(expr, num_samples=100, seed=None):
     vlist = list(identify_variables(expr, include_fixed=False))
     n_vars = len(vlist)
     bnds_list = []
@@ -128,38 +128,41 @@ def _build_lp_approx(nlp: BlockData, num_samples=100, seed=None) -> BlockData:
             )
         obj = objs[0]
         repn = visitor.walk_expression(obj)
-        assert repn.multiplier == 1
-        linear_part = LinearRepn()
-        linear_part.multiplier = 1
-        linear_part.constant = repn.constant
-        linear_part.linear = repn.linear
-        linear_part.nonlinear = None
-        new_obj_expr = linear_part.to_expression(visitor=visitor)
-        if repn.nonlinear is not None:
-            replacement = _replace_expression_with_linear_approx(
+        if repn.nonlinear is None:
+            new_obj_expr = obj.expr
+        else:
+            linear_part = LinearRepn()
+            linear_part.multiplier = 1
+            linear_part.constant = repn.constant
+            linear_part.linear = repn.linear
+            linear_part.nonlinear = None
+            new_obj_expr = linear_part.to_expression(visitor=visitor)
+            new_obj_expr += _generate_linear_approx(
                 repn.nonlinear, num_samples=num_samples, seed=seed_handler.spawn(1)[0]
             )
-            new_obj_expr += replacement
         lp.obj = pyo.Objective(expr=new_obj_expr, sense=obj.sense)
 
     for con in nlp.component_data_objects(
         pyo.Constraint, active=True, descend_into=True
     ):
-        lb, body, ub = con.to_bounded_expression()
+        lb, body, ub = con.to_bounded_expression(evaluate_bounds=True)
+        if (lb is None or lb == -float('inf')) and (ub is None or ub == float('inf')):
+            continue
         repn = visitor.walk_expression(body)
-        assert repn.multiplier == 1
-        linear_part = LinearRepn()
-        linear_part.multiplier = 1
-        linear_part.constant = repn.constant
-        linear_part.linear = repn.linear
-        linear_part.nonlinear = None
-        new_body = linear_part.to_expression(visitor=visitor)
-        if repn.nonlinear is not None:
-            replacement = _replace_expression_with_linear_approx(
+        if repn.nonlinear is None:
+            new_body = body
+        else:
+            linear_part = LinearRepn()
+            linear_part.multiplier = 1
+            linear_part.constant = repn.constant
+            linear_part.linear = repn.linear
+            linear_part.nonlinear = None
+            new_body = linear_part.to_expression(visitor=visitor)
+            new_body += _generate_linear_approx(
                 repn.nonlinear, num_samples=num_samples, seed=seed_handler.spawn(1)[0]
             )
-            new_body += replacement
         if lb == ub:
+            # we checked for unbounded constraints above
             lp.cons.add(new_body == lb)
         else:
             lp.cons.add((lb, new_body, ub))
