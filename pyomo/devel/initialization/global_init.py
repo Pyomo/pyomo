@@ -27,7 +27,9 @@ def _initialize_with_global_solver(
         opts = {'SolutionLimit': 1}
     else:
         raise NotImplementedError(
-            'Currently, the initialization module only works with new solver interfaces, so the global solvers are limited to ScipDirect, ScipPersistent, and GurobiDirectMINLP.'
+            'Currently, the initialization module only works with new solver ' \
+            'interfaces, so the global solvers are limited to ScipDirect, ' \
+            'ScipPersistent, and GurobiDirectMINLP.'
         )
     res = global_solver.solve(
         nlp,
