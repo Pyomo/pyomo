@@ -102,7 +102,7 @@ def _replace_expression_with_linear_approx(expr, num_samples=100, seed=None):
         for v, val in zip(vlist, sample[sample_ndx, :]):
             v.value = val
         b[sample_ndx] = pyo.value(expr)
-    coefs = np.linalg.solve(A.transpose().dot(A), A.transpose().dot(b)).to_list()
+    coefs = np.linalg.solve(A.transpose().dot(A), A.transpose().dot(b)).tolist()
 
     new_expr = 0
     for c, v in zip(coefs[:n_vars], vlist):
