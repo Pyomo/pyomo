@@ -20,24 +20,48 @@ def build_model():
     return m
 
 
-def main(method: ini.InitializationMethod):
+def lp_init_ex():
     m = build_model()
     nlp_solver = SolverFactory('ipopt')
-    global_solver = SolverFactory('scip_direct')
-    mip_solver = SolverFactory('highs')
-    results = ini.initialize_nlp(
+    lp_solver = SolverFactory('highs')
+    results = ini.initialize_with_LP_approximation(
         nlp=m,
         nlp_solver=nlp_solver,
-        mip_solver=mip_solver,
-        global_solver=global_solver,
-        method=method,
+        lp_solver=lp_solver,
         seed=0,
     )
 
     return results.solution_status, m.x.value
 
 
+def pwl_init_ex():
+    m = build_model()
+    nlp_solver = SolverFactory('ipopt')
+    mip_solver = SolverFactory('highs')
+    results = ini.initialize_with_piecewise_linear_approximation(
+        nlp=m,
+        nlp_solver=nlp_solver,
+        mip_solver=mip_solver,
+    )
+
+    return results.solution_status, m.x.value
+
+
+def global_init_ex():
+    m = build_model()
+    nlp_solver = SolverFactory('ipopt')
+    global_solver = SolverFactory('scip_direct')
+    results = ini.initialize_with_global_opt(
+        nlp=m,
+        nlp_solver=nlp_solver,
+        global_solver=global_solver,
+    )
+
+    return results.solution_status, m.x.value
+
+
 if __name__ == '__main__':
-    stat, x = main(ini.InitializationMethod.global_opt)
-    print(stat)
-    print(round(x, 4))
+    # stat, x = lp_init_ex()
+    # stat, x = pwl_init_ex()
+    stat, x = global_init_ex()
+    print(stat, round(x, 4))

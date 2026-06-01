@@ -175,6 +175,8 @@ def _initialize_with_LP_approximation(
     default_bound=1.0e8,
     num_samples=100,
     seed=None,
+    use_univariate_nonlinear_decomposition: bool = True,
+    aggressive_substitution: bool = False,
 ):
     orig_nlp = nlp
     logger.info('Starting initialization using a linear programming approximation')
@@ -183,11 +185,11 @@ def _initialize_with_LP_approximation(
 
     # first introduce auxiliary variables so that we don't try to
     # approximate any functions of more than two variables
-    # actually, this is not necessary for this method
-    # we will just comment this out for now
-    # trans = pyo.TransformationFactory('contrib.piecewise.univariate_nonlinear_decomposition')
-    # trans.apply_to(nlp, aggressive_substitution=False)
-    # logger.info('applied the univariate_nonlinear_decomposition transformation')
+    # this does not matter as much as it does for PWL
+    if use_univariate_nonlinear_decomposition:
+        trans = pyo.TransformationFactory('contrib.piecewise.univariate_nonlinear_decomposition')
+        trans.apply_to(nlp, aggressive_substitution=aggressive_substitution)
+        logger.info('applied the univariate_nonlinear_decomposition transformation')
 
     # bounds on the nonlinear variables
     bound_all_nonlinear_variables(nlp, default_bound=default_bound)

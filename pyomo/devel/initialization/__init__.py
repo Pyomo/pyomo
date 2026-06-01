@@ -7,4 +7,8 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-from pyomo.devel.initialization.initialize import initialize_nlp, InitializationMethod
+from pyomo.devel.initialization.initialize import (
+    initialize_with_LP_approximation,
+    initialize_with_piecewise_linear_approximation,
+    initialize_with_global_opt,
+)

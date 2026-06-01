@@ -280,7 +280,7 @@ def _initialize_with_piecewise_linear_approximation(
     max_iter=100,
     num_cons_to_refine_per_iter=5,
     aggressive_substitution=True,
-):
+) -> Results:
     logger.info('Starting initialization using a piecewise linear approximation')
     pwl = shallow_clone(nlp)
     logger.info('created a shallow clone of the model')

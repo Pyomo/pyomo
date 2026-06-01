@@ -12,7 +12,11 @@ from typing import Tuple
 import pyomo.environ as pyo
 import pyomo.devel.initialization as ini
 from pyomo.devel.initialization.lp_approx_init import qmc_avail
-from pyomo.devel.initialization.examples.init_polynomial_ex import main
+from pyomo.devel.initialization.examples.init_polynomial_ex import (
+    lp_init_ex,
+    pwl_init_ex,
+    global_init_ex,
+)
 from pyomo.common import unittest
 from pyomo.common.dependencies import scipy_available
 from pyomo.contrib.solver.common.factory import SolverFactory
@@ -65,19 +69,19 @@ class MockNLPSolver(SolverBase):
 class TestExamples(unittest.TestCase):
     @unittest.skipUnless(scip.available(), 'scip is not available')
     def test_poly_global(self):
-        stat, x = main(method=ini.InitializationMethod.global_opt)
+        stat, x = global_init_ex()
         self.assertEqual(stat, SolutionStatus.optimal)
         self.assertAlmostEqual(x, -9.920159607881597)
 
     @unittest.skipUnless(highs.available(), 'highs is not available')
     def test_poly_pwl(self):
-        stat, x = main(method=ini.InitializationMethod.pwl_approximation)
+        stat, x = pwl_init_ex()
         self.assertEqual(stat, SolutionStatus.optimal)
         self.assertAlmostEqual(x, -9.920159607881597)
 
     @unittest.skipUnless(highs.available(), 'highs is not available')
     def test_poly_lp(self):
-        stat, x = main(method=ini.InitializationMethod.lp_approximation)
+        stat, x = lp_init_ex()
         self.assertEqual(stat, SolutionStatus.optimal)
         self.assertAlmostEqual(x, -9.920159607881597)
 
@@ -118,11 +122,10 @@ class TestInit(unittest.TestCase):
             sol_map={0: ([None, None], 0, 0), 1: ([1, 3], 1e-6, 1e-6)},
         )
         mip_solver = SolverFactory('highs')
-        results = ini.initialize_nlp(
+        results = ini.initialize_with_LP_approximation(
             nlp=m,
             nlp_solver=nlp_solver,
-            mip_solver=mip_solver,
-            method=ini.InitializationMethod.lp_approximation,
+            lp_solver=mip_solver,
         )
 
     @unittest.skipUnless(scip.available(), 'scip is not available')
@@ -145,11 +148,10 @@ class TestInit(unittest.TestCase):
             sol_map={0: ([None, None], 0, 0), 1: ([1, 3], 1e-6, 1e-6)},
         )
         global_solver = SolverFactory('scip_direct')
-        results = ini.initialize_nlp(
+        results = ini.initialize_with_global_opt(
             nlp=m,
             nlp_solver=nlp_solver,
             global_solver=global_solver,
-            method=ini.InitializationMethod.global_opt,
         )
 
     @unittest.skipUnless(highs.available(), 'highs is not available')
@@ -198,11 +200,10 @@ class TestInit(unittest.TestCase):
             },
         )
         mip_solver = SolverFactory('highs')
-        results = ini.initialize_nlp(
+        results = ini.initialize_with_piecewise_linear_approximation(
             nlp=m,
             nlp_solver=nlp_solver,
             mip_solver=mip_solver,
-            method=ini.InitializationMethod.pwl_approximation,
             max_pwl_refinement_iter=27,
             aggressive_substitution=False,
         )
@@ -218,10 +219,9 @@ class TestInit(unittest.TestCase):
         m.c2 = pyo.Constraint(expr=(-1, (m.x - 1) ** 2 - m.y, 0))
 
         mip_solver = SolverFactory('highs')
-        results = ini.initialize_nlp(
+        results = ini.initialize_with_piecewise_linear_approximation(
             nlp=m,
             mip_solver=mip_solver,
-            method=ini.InitializationMethod.pwl_approximation,
         )
 
         self.assertEqual(results.solution_status, SolutionStatus.optimal)
