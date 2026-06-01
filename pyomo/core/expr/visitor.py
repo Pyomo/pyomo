@@ -17,6 +17,7 @@ from collections import deque
 
 logger = logging.getLogger('pyomo.core')
 
+from pyomo.common.collections import ComponentSet
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.errors import DeveloperError, TemplateExpressionError
 from pyomo.common.numeric_types import (
@@ -1419,12 +1420,11 @@ class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
             expression as well as information for detecting when the
             named expression has changed (for cache invalidation).
 
-        var_cache : dict[int, VarData]
-            Dict mapping the :func:`id()` of variables to
-            :class:`VarData` for all variables that have been "seen" by
-            this walker.  If provided, this dictionary is preserved
-            between calls to :meth:`walk_expression` (so repeated
-            variables are not returned more than once).
+        var_cache : ComponentSet
+            ComponentSet for recording all variables that have been
+            "seen" by this walker.  If provided, this ComponentSet is
+            preserved between calls to :meth:`walk_expression` (so
+            repeated variables are not returned more than once).
 
         """
         super().__init__()
@@ -1436,13 +1436,26 @@ class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
         #   (including any nested named expressions)
         # - exprs is used for automatically invalidating the cache (see below).
         self._cache = named_expression_cache
+
         # Stack of named expressions. This holds the tuple
         #     (eid, _seen, _exprs)
         # where eid is the id() of the subexpression we are currently
         # processing, and _seen and _exprs are from the parent context.
         self._expr_stack = []
+
         # cache of "seen" variables: dict(eid: VarData)
+        #
+        # Pyomo encourages the use of ComponentSet to store (ordered)
+        # sets of Pyomo components (and in particular, Pyomo Vars).
+        # However, to reduce overhead (this is about a 10-12%
+        # improvement), we will operate directly on the underlying dict
+        # data store.  This is slightly evil (and definitely violates
+        # encapsulation), but we accept the risk as identify_variables()
+        # is a potentially expensive operation.
+        if isinstance(var_cache, ComponentSet):
+            var_cache = var_cache._data
         self._seen = var_cache
+
         # The following attribute will be added by initializeWalker:
         # self._exprs: list of (e, e.expr) for any (nested) named expressions
 

@@ -15,6 +15,7 @@ not used in any expressions and it does not care if the Vars it finds are
 actually in the Block subtree or not.
 """
 
+from pyomo.common.collections import ComponentSet
 from pyomo.core import Block, Constraint, Objective
 from pyomo.core.expr.visitor import IdentifyVariableVisitor
 
@@ -28,21 +29,39 @@ def get_vars_from_components(
     descend_into=Block,
     descent_order=None,
 ):
-    """Returns a generator of all the Var objects which are used in
+    """Returns a ComponentSet of all the Var objects that appear in
     expressions on the block. By default, this recurses into sub-blocks.
 
-    Args:
-        ctype: The type of component from which to get Vars, assumed to have
-               an expr attribute.
-        include_fixed: Whether or not to include fixed variables
-        active: Whether to find Vars that appear in Constraints accessible
-                via the active tree
-        sort: sort method for iterating through Constraint objects
-        descend_into: Ctypes to descend into when finding Constraints
-        descent_order: Traversal strategy for finding the objects of type ctype
+    Parameters
+    ----------
+    include_fixed : bool
+        If True, both fixed and free variables will be returned
+
+    ctype : type | tuple[type]
+        The "ctype" of component from which to get Vars.  The components
+        must expose a ``expr`` attribute that will be walked looking for
+        variables.
+
+    active : bool | None
+        If True, only variables accessible through the active component
+        tree will be returned.  If None, all variables accessibile
+        through either active or inactive components will be returned.
+
+    sort: SortComponents | bool | None
+        sort method for iterating through Constraint objects
+
+    descend_into : type | tuple[type] | None
+        "ctypes" to descend into when finding Constraints
+
+    descent_order : TraversalStrategy | None
+        Traversal strategy for walking the block hierarchy
+
+    Returns
+    -------
+    ComponentSet : set of variables
 
     """
-    var_cache = {}
+    var_cache = ComponentSet()
     visitor = IdentifyVariableVisitor(include_fixed, {}, var_cache=var_cache)
     for component in block.component_data_objects(
         ctype,
@@ -52,7 +71,7 @@ def get_vars_from_components(
         descent_order=descent_order,
     ):
         visitor.walk_expression(component.expr)
-    return var_cache.values()
+    return var_cache
 
 
 def get_vars(
@@ -78,16 +97,21 @@ def get_vars(
 
     active : bool | None
         If True, only variables accessible through the active component
-        tree will be returned
+        tree will be returned.  If None, all variables accessibile
+        through either active or inactive components will be returned.
 
-    sort: SortOrder | None
+    sort: SortComponents | bool | None
         sort method for iterating through Constraint objects
 
-    descend_into : None | type | tuple[type]
-        Ctypes to descend into when finding Constraints
+    descend_into : type | tuple[type] | None
+        "ctypes" to descend into when finding Constraints
 
-    descent_order : None | TraversalStrategy
+    descent_order : TraversalStrategy | None
         Traversal strategy for walking the block hierarchy
+
+    Returns
+    -------
+    ComponentSet : set of variables
 
     """
     return get_vars_from_components(
