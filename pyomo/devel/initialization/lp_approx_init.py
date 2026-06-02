@@ -203,14 +203,14 @@ def _initialize_with_LP_approximation(
     fix_vars_with_equal_bounds(nlp)
     logger.info('fixed variables with equal bounds')
 
-    # now we modify the model by introducing slacks to make sure the LP
-    # approximation is feasible
-    _minimize_infeasibility(nlp)
-    logger.info('reformulated model to minimize infeasibility')
-
     # build the LP approximation
     lp = _build_lp_approx(nlp, num_samples=num_samples, seed=seed)
     logger.info('replaced nonlinear expressions with linear approximations')
+
+    # now we modify the model by introducing slacks to make sure the LP
+    # approximation is feasible
+    _minimize_infeasibility(lp)
+    logger.info('reformulated model to minimize infeasibility')
 
     # solve the LP
     lp_res = lp_solver.solve(
