@@ -216,7 +216,7 @@ def _refine_pwl_approx(
             else:
                 val = v.value
                 if val <= v.lb + bounds_tol + bounds_tol * abs(v.lb):
-                    val += 10*bounds_tol
+                    val += 10 * bounds_tol
                 if val >= v.ub - bounds_tol - bounds_tol * abs(v.ub):
                     val -= 10 * bounds_tol
             var_vals.append(val)

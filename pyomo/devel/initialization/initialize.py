@@ -115,7 +115,7 @@ def initialize_with_piecewise_linear_approximation(
     bounds_tol: float
         Bad things can happen with piecewise linear functions if the value of a
         variable ends up outside of the variable's bounds. This bounds_tol is used
-        to ensure that variable values are sufficiently inside of the variable's 
+        to ensure that variable values are sufficiently inside of the variable's
         bounds.
 
     Returns
