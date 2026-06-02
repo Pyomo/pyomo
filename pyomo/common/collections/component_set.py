@@ -78,7 +78,7 @@ class ComponentSet(AutoSlots.Mixin, MutableSet):
 
     def update(self, *iterables):
         """Update a set with the union of itself and others."""
-        for iterable in *iterables:
+        for iterable in iterables:
             if iterable.__class__ is self.__class__:
                 self._data.update(iterable._data)
             else:
