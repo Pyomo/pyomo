@@ -222,6 +222,10 @@ class TestComponentMap(ComponentMapBaseTests, unittest.TestCase):
         self.assertFalse(m.hasher.hashable(str))
         self.assertEqual(m._dict, {HashKey(a): (a, 5)})
 
+        h = HashKey(a)
+        self.assertEqual(repr(h), f"HashKey('str', key={id(a)})")
+        self.assertEqual(str(h), f"str (key={id(a)})")
+
         class TMP:
             pass
 

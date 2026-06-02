@@ -42,6 +42,9 @@ class HashKey:
         return other.__class__ is HashKey and other._hash == self._hash
 
     def __repr__(self):
+        return f"HashKey({self._val!r}, key={self._hash})"
+
+    def __str__(self):
         return f"{self._val} (key={self._hash})"
 
 
