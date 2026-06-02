@@ -64,14 +64,18 @@ logger = logging.getLogger(__name__)
 
 
 def _minimize_infeasibility(m):
-    m.slacks = pyo.VarList()
-    m.extra_cons = pyo.ConstraintList()
+    trans = pyo.TransformationFactory('core.add_slack_variables')
+    trans.apply_to(m, add_slack_objective=False)
 
     obj_expr = 0
 
     found_obj = False
     for obj in m.component_data_objects(pyo.Objective, active=True, descend_into=True):
-        assert not found_obj
+        if found_obj:
+            raise RuntimeError(
+                'initialization module currently only supports models '
+                'with zero or one active objectives'
+            )
         if obj.sense == pyo.minimize:
             obj_expr += 0.1 * obj.expr
         else:
@@ -79,32 +83,9 @@ def _minimize_infeasibility(m):
         obj.deactivate()
         found_obj = True
 
-    for con in m.component_data_objects(pyo.Constraint, active=True, descend_into=True):
-        lb, body, ub = con.to_bounded_expression(evaluate_bounds=True)
-        if lb is not None and lb == ub:
-            ps = m.slacks.add()
-            ns = m.slacks.add()
-            ps.setlb(0)
-            ns.setlb(0)
-            con.set_value(body - lb - ps + ns == 0)
-        elif lb is None:
-            ps = m.slacks.add()
-            ps.setlb(0)
-            con.set_value(body - ub - ps <= 0)
-        elif ub is None:
-            ns = m.slacks.add()
-            ns.setlb(0)
-            con.set_value(body - lb + ns >= 0)
-        else:
-            con.deactivate()
-            ps = m.slacks.add()
-            ns = m.slacks.add()
-            ps.setlb(0)
-            ns.setlb(0)
-            m.extra_cons.add(body - ub - ps <= 0)
-            m.extra_cons.add(body - lb + ns >= 0)
-
-    m.slack_obj = pyo.Objective(expr=10 * sum(m.slacks.values()) + obj_expr)
+    obj_name = unique_component_name(m, 'slack_obj')
+    new_obj = 10 * trans.get_summed_slacks_expr(m) + obj_expr
+    setattr(m, obj_name, pyo.Objective(expr=new_obj))
 
 
 def _get_pwl_constraints(
