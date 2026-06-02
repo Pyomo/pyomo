@@ -67,7 +67,8 @@ from pyomo.devel.initialization.utils import (
 )
 from pyomo.repn.linear import LinearRepn, LinearRepnVisitor
 from pyomo.repn.util import ExitNodeDispatcher
-from pyomo.common.dependencies.scipy import stats, scipy_available
+from pyomo.common.dependencies.scipy import stats
+from pyomo.common.dependencies import scipy_available
 
 logger = logging.getLogger(__name__)
 
