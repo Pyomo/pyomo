@@ -10,42 +10,17 @@
 from collections import defaultdict
 
 
-class HashKey:
+class _HashKey:
     """Utility class to support hashing by object id()
 
-    This class supports hashing unhashable objects using their id().  It
-    can be used as a key in a mixed-class :py:`dict` to prevent key
-    collisions between :py:`int` keys and an unhashable objects whose
-    id() is the same value.
-
-    .. note::
-
-       This class is slotized for efficiency, but does not provide
-       special handling for updating the internal ``_hash`` (`id()`)
-       after deepcopying or pickling.  As such, containers that use this
-       class (e.g., :py:`ComponentMap` and :py:`ComponentSet`) should
-       not pickle these objects and instead regenerate them when
-       restoring the container.
+    This class should never be instantiated, and should never be
+    accessed referenced by user code.  Instead this provides a simple
+    :class:`type` that we can use as an internal flag to differentiate
+    between an :class:`int` key and the result from :func:`id()`.
 
     """
 
-    __slots__ = ('_hash', '_val')
-
-    def __init__(self, val):
-        self._hash = id(val)
-        self._val = val
-
-    def __hash__(self):
-        return self._hash
-
-    def __eq__(self, other):
-        return other.__class__ is HashKey and other._hash == self._hash
-
-    def __repr__(self):
-        return f"HashKey({self._val!r}, key={self._hash})"
-
-    def __str__(self):
-        return f"{self._val} (key={self._hash})"
+    pass
 
 
 class HashDispatcher(defaultdict):
@@ -79,12 +54,16 @@ class HashDispatcher(defaultdict):
             hash(val)
             self[val.__class__] = self._hashable
         except:
-            self[val.__class__] = HashKey
+            self[val.__class__] = self._unhashable
         return self[val.__class__](val)
 
     @staticmethod
     def _hashable(val):
         return val
+
+    @staticmethod
+    def _unhashable(val):
+        return _HashKey, id(val)
 
     def _tuple(self, val):
         try:
@@ -107,7 +86,7 @@ class HashDispatcher(defaultdict):
             if fcn is None:
                 raise KeyError(obj)
             return fcn is self._hashable
-        self[cls] = self._hashable if hashable else HashKey
+        self[cls] = self._hashable if hashable else self._unhashable
 
     def __call__(self, obj):
         # Make the dispatcher callable so that it can be used in place of id()

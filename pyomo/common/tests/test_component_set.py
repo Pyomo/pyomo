@@ -12,7 +12,7 @@
 import pickle
 import pyomo.common.unittest as unittest
 
-from pyomo.common.collections._hasher import HashKey
+from pyomo.common.collections._hasher import _HashKey
 from pyomo.common.collections.component_set import ComponentSet, ObjectIdSet
 from pyomo.environ import ConcreteModel, Var, Constraint
 
@@ -158,13 +158,11 @@ class TestComponentSet(ComponentSetBaseTests, unittest.TestCase):
         self.assertEqual(k, 1)
         self.assertEqual(v, 1)
         k, v = next(_items)
-        self.assertEqual(k, HashKey(i.x))
+        self.assertEqual(k, (_HashKey, id(i.x)))
         self.assertEqual(v, i.x)
-        self.assertEqual(k._hash, id(i.x))
         k, v = next(_items)
-        self.assertEqual(k, (1, (2, HashKey(i.x))))
+        self.assertEqual(k, (1, (2, (_HashKey, id(i.x)))))
         self.assertEqual(v, (1, (2, i.x)))
-        self.assertEqual(k[1][1]._hash, id(i.x))
         k, v = next(_items)
         self.assertEqual(k, i.c)
         self.assertEqual(v, i.c)

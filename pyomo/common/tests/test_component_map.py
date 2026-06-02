@@ -10,7 +10,7 @@
 import pickle
 import pyomo.common.unittest as unittest
 
-from pyomo.common.collections._hasher import HashKey
+from pyomo.common.collections._hasher import _HashKey
 from pyomo.common.collections.component_map import (
     ComponentMap,
     DefaultComponentMap,
@@ -220,11 +220,7 @@ class TestComponentMap(ComponentMapBaseTests, unittest.TestCase):
         m[a] = 5
         self.assertFalse(m.hasher.hashable(a))
         self.assertFalse(m.hasher.hashable(str))
-        self.assertEqual(m._dict, {HashKey(a): (a, 5)})
-
-        h = HashKey(a)
-        self.assertEqual(repr(h), f"HashKey('str', key={id(a)})")
-        self.assertEqual(str(h), f"str (key={id(a)})")
+        self.assertEqual(m._dict, {(_HashKey, id(a)): (a, 5)})
 
         class TMP:
             pass
@@ -322,13 +318,11 @@ class TestComponentMap(ComponentMapBaseTests, unittest.TestCase):
         self.assertEqual(k, 1)
         self.assertEqual(v, (1, 10))
         k, v = next(_items)
-        self.assertEqual(k, HashKey(i.x))
+        self.assertEqual(k, (_HashKey, id(i.x)))
         self.assertEqual(v, (i.x, 20))
-        self.assertEqual(k._hash, id(i.x))
         k, v = next(_items)
-        self.assertEqual(k, (1, (2, HashKey(i.x))))
+        self.assertEqual(k, (1, (2, (_HashKey, id(i.x)))))
         self.assertEqual(v, ((1, (2, i.x)), 30))
-        self.assertEqual(k[1][1]._hash, id(i.x))
         k, v = next(_items)
         self.assertEqual(k, i.c)
         self.assertEqual(v, (i.c, 40))
