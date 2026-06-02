@@ -72,7 +72,7 @@ class ComponentSet(AutoSlots.Mixin, MutableSet):
             self.update(iterable)
 
     def __str__(self):
-        """String representation of the mapping."""
+        """String representation of the set."""
         tmp = (tostr(k) for k in self._data.values())
         return f"{self.__class__.__name__}({', '.join(tmp)})"
 
@@ -135,7 +135,7 @@ class ComponentSet(AutoSlots.Mixin, MutableSet):
         self._data.clear()
 
     def remove(self, val):
-        """Remove an element. If not a member, raise a KeyError."""
+        """Remove an element. If not a member, raise a :class:`KeyError`."""
         try:
             del self._data[hasher[val.__class__](val)]
         except KeyError:
@@ -147,15 +147,24 @@ class ObjectIdSet(ComponentSet):
 
     :py:class:`ObjectIdSet` is a lighter-weight version of
     :py:class:`ComponentSet`.  By unconditionally using :py:`id()` to
-    generate all keys, this class performs approximately 25% faster than
+    hash all members, this class performs approximately 50% faster than
     :py:class:`ComponentSet` at the expense of being slightly more
-    fragile.  In particular, :py:`tuple` keys may unexpectedly generate
-    cache misses or result in multiple entries in the set.
+    fragile.
+
+    It is _strongly_ recommended to only store Pyomo components in
+    :class:`ObjectIdSet` containers.
 
     .. warning::
 
-       Do not store :py:`tuple` objects as keys in this data structure.
-       Doing so may result in failed lookups or duplicate entries.
+       **DO NOT** store objects that do not return persistent
+       :py:func:`id()` values.  In particular, avoid certain immutable
+       data types like :class:`tuple` or other immutable objects,
+       strings, and long integers.  Doing so may result in failed
+       lookups or duplicate entries.
+
+       If you want to mix immutable data types with other unhashable
+       objects (like Pyomo :class:`Var` or :class:`Param` components),
+       please use :class:`ComponentSet`.
 
     """
 

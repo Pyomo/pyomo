@@ -27,6 +27,8 @@ def _rehash_keys(keygen, encode, val):
 
 
 class ComponentMap_keys(Set):
+    """A dictionary keys view object for :class:`ComponentMap`"""
+
     __slots__ = ('_cm',)
 
     def __init__(self, cm):
@@ -43,6 +45,8 @@ class ComponentMap_keys(Set):
 
 
 class ComponentMap_items(Set):
+    """A dictionary items view object for :class:`ComponentMap`"""
+
     __slots__ = ('_cm',)
 
     def __init__(self, cm):
@@ -63,6 +67,8 @@ class ComponentMap_items(Set):
 
 
 class ComponentMap_values(Set):
+    """A dictionary values view object for :class:`ComponentMap`"""
+
     __slots__ = ('_cm',)
 
     def __init__(self, cm):
@@ -74,12 +80,12 @@ class ComponentMap_values(Set):
     def __contains__(self, val):
         """Returns True if `val` appears as a value in this ComponentMap
 
-        .. warining::
+        .. warning::
 
            This method is provided for API compatibility and is NOT
            efficient (it is a linear scan through the underlying
            `dict`).  We *do not* recommend using it in large
-           applications of when performance matters.
+           applications or when performance matters.
 
         """
         return any(self._cm._value_eq(v, val) for v in self.__iter__())
@@ -277,23 +283,24 @@ class ObjectIdMap(ComponentMap):
 
     :py:class:`ObjectIdMap` is a lighter-weight version of
     :py:class:`ComponentMap`.  By unconditionally using :py:`id()` to
-    generate all keys, this class performs approximately 25% faster than
+    generate all keys, this class performs approximately 50% faster than
     :py:class:`ComponentMap` at the expense of being slightly more
     fragile.
 
     It is _strongly_ recommended to only use Pyomo components as
-    :py:class:`ObjectIdMap` keys.
+    :class:`ObjectIdMap` keys.
 
     .. warning::
 
-       Do not store keys that do not return persistent :py:func:`id()`
-       values.  In particular, avoid certain immutable data types like
-       :py:`tuple` objects, strings, and long integers.  Doing so may
-       result in failed lookups or duplicate entries.
+       **DO NOT** store keys that do not return persistent
+       :py:func:`id()` values.  In particular, avoid certain immutable
+       data types like :class:`tuple` or other immutable objects,
+       strings, and long integers.  Doing so may result in failed
+       lookups or duplicate entries.
 
-       If you want to mix these keys with other unhashable objects (like
-       Pyomo :py:class:`Var` or :py:class:`Param` components), please
-       use :py:class:`ComponentMap`.
+       If you want to mix immutable data types with other unhashable
+       objects (like Pyomo :class:`Var` or :class:`Param` components),
+       please use :class:`ComponentMap`.
 
     """
 
