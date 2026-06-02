@@ -67,7 +67,8 @@ from pyomo.devel.initialization.utils import (
 )
 from pyomo.repn.linear import LinearRepn, LinearRepnVisitor
 from pyomo.repn.util import ExitNodeDispatcher
-from pyomo.common.dependencies.scipy import stats
+
+qmc, qmc_avail = attempt_import('scipy.stats.qmc')
 
 logger = logging.getLogger(__name__)
 
@@ -83,11 +84,11 @@ def _generate_linear_approx(expr, num_samples=100, seed=None):
         lb = v.lb
         ub = v.ub
         bnds_list.append((lb, ub))
-    sampler = stats.qmc.LatinHypercube(d=n_vars, seed=seed)
+    sampler = qmc.LatinHypercube(d=n_vars, seed=seed)
     sample = sampler.random(n=num_samples)
     l_bounds = [i[0] for i in bnds_list]
     u_bounds = [i[1] for i in bnds_list]
-    sample = stats.qmc.scale(sample, l_bounds, u_bounds)
+    sample = qmc.scale(sample, l_bounds, u_bounds)
 
     # we have our samples
     # now we want to build the matrix and the right hand side
