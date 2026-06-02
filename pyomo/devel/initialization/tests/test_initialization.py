@@ -26,7 +26,7 @@ from pyomo.contrib.solver.common.results import (
     TerminationCondition,
 )
 from pyomo.contrib.solver.common.base import Availability, SolverBase
-import pytest
+from pyomo.common.unittest import pytest
 
 scip = SolverFactory('scip_direct')
 ipopt = SolverFactory('ipopt')
