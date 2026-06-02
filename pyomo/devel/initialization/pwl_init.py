@@ -197,7 +197,7 @@ class _PWLRefinementVisitor(StreamBasedExpressionVisitor):
 
 
 def _refine_pwl_approx(
-    m,
+    m: BlockData,
     pwl_expr_to_con_map: MutableMapping[
         PiecewiseLinearExpression, Sequence[ConstraintData]
     ],
