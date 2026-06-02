@@ -1500,7 +1500,11 @@ class CardinalitySet(UncertaintySet):
                  \\begin{array}{l}
                     q = q^0 + \\hat{q}^+ \\circ \\xi^+ - \\hat{q}^-\\xi^- \\\\
                     \\displaystyle \\sum_{i=1}^n (\\xi_i^+ + \\xi_i^-)
-                        \\leq \\Gamma
+                        \\leq \\Gamma \\\\
+                    \\xi_i^+ = 0 \\quad\\forall\\,i :
+                        \\hat{q}_i^+ = 0 \\\\
+                    \\xi_i^- = 0 \\quad\\forall\\,i :
+                        \\hat{q}_i^- = 0
                  \\end{array}
              \\right]
         \\right\\}
@@ -1755,6 +1759,12 @@ class CardinalitySet(UncertaintySet):
             # set auxiliary variable bounds
             pos_aux.bounds = (0, 1)
             neg_aux.bounds = (0, 1)
+
+            # fix aux vars by bounds if no deviations allowed
+            if pos_dev == 0:
+                pos_aux.bounds = (0, 0)
+            if neg_dev == 0:
+                neg_aux.bounds = (0, 0)
 
         conlist.add(quicksum(aux_var_list) <= self.gamma)
 

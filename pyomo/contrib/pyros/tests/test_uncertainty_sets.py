@@ -1519,7 +1519,7 @@ class TestIntersectionSet(unittest.TestCase):
         self.assertEqual(aux_vars[2].bounds, (0, 1))
         self.assertEqual(aux_vars[3].bounds, (0, 1))
         self.assertEqual(aux_vars[4].bounds, (0, 1))
-        self.assertEqual(aux_vars[5].bounds, (0, 1))
+        self.assertEqual(aux_vars[5].bounds, (0, 0))
 
         # axis-aligned ellipsoid constraint
         assertExpressionsEqual(
@@ -1772,8 +1772,8 @@ class TestIntersectionSet(unittest.TestCase):
         self.assertEqual(aux_vars[1].bounds, (-1, 1))
         self.assertEqual(aux_vars[2].bounds, (0, 1))
         self.assertEqual(aux_vars[3].bounds, (0, 1))
-        self.assertEqual(aux_vars[4].bounds, (0, 1))
-        self.assertEqual(aux_vars[5].bounds, (0, 1))
+        self.assertEqual(aux_vars[4].bounds, (0, 0))
+        self.assertEqual(aux_vars[5].bounds, (0, 0))
 
     def test_intersection_discrete_set(self):
         """
@@ -1914,10 +1914,10 @@ class TestCardinalitySet(unittest.TestCase):
 
         # check auxiliary variable bounds
         self.assertEqual(auxvars[0].bounds, (0, 1))
-        self.assertEqual(auxvars[3].bounds, (0, 1))
         self.assertEqual(auxvars[1].bounds, (0, 1))
-        self.assertEqual(auxvars[4].bounds, (0, 1))
-        self.assertEqual(auxvars[2].bounds, (0, 1))
+        self.assertEqual(auxvars[2].bounds, (0, 0))
+        self.assertEqual(auxvars[3].bounds, (0, 1))
+        self.assertEqual(auxvars[4].bounds, (0, 0))
         self.assertEqual(auxvars[5].bounds, (0, 1))
 
     def test_set_as_constraint_dim_mismatch(self):
@@ -3350,8 +3350,8 @@ class TestCartesianProductSet(unittest.TestCase):
         )
         self.assertEqual(aux_vars[1].bounds, (0, 1))
         self.assertEqual(aux_vars[2].bounds, (0, 1))
-        self.assertEqual(aux_vars[3].bounds, (0, 1))
-        self.assertEqual(aux_vars[4].bounds, (0, 1))
+        self.assertEqual(aux_vars[3].bounds, (0, 0))
+        self.assertEqual(aux_vars[4].bounds, (0, 0))
 
         # axis-aligned ellipsoid constraint
         assertExpressionsEqual(
