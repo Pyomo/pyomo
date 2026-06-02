@@ -13,6 +13,7 @@ from operator import itemgetter
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.formatting import tostr
+from pyomo.common.numeric_types import native_logical_types
 
 from ._hasher import hasher
 
@@ -88,7 +89,7 @@ class ComponentMap_values(Set):
            applications or when performance matters.
 
         """
-        return any(self._cm._value_eq(v, val) for v in self.__iter__())
+        return any(self._cm._value_eq(v, val) for v in self)
 
     def __len__(self):
         return self._cm.__len__()
@@ -186,7 +187,7 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
         if a is b:
             return True
         diff = a != b
-        return not diff if diff.__class__ is bool else False
+        return (not diff) if diff.__class__ in native_logical_types else False
 
     # We want to avoid generating Pyomo expressions due to comparing the
     # keys, so look up each entry from other in this dict.
