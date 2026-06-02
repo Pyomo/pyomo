@@ -1,22 +1,18 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
-#  Development of this module was conducted as part of the Institute for
-#  the Design of Advanced Energy Systems (IDAES) with support through the
-#  Simulation-Based Engineering, Crosscutting Research Program within the
-#  U.S. Department of Energy’s Office of Fossil Energy and Carbon Management.
-#
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Development of this module was conducted as part of the Institute for
+# the Design of Advanced Energy Systems (IDAES) with support through the
+# Simulation-Based Engineering, Crosscutting Research Program within the
+# U.S. Department of Energy's Office of Fossil Energy and Carbon Management.
+# ____________________________________________________________________________________
 
-
-from io import StringIO
 import sys
 import logging
 
@@ -24,6 +20,7 @@ import pyomo.common.unittest as unittest
 
 from pyomo.contrib.trustregion.util import IterationLogger, minIgnoreNone, maxIgnoreNone
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.tee import capture_output
 
 
 class TestUtil(unittest.TestCase):
@@ -73,12 +70,12 @@ class TestUtil(unittest.TestCase):
         self.iterLogger.newIteration(
             self.iteration, self.thetak, self.objk, self.radius, self.stepNorm
         )
-        OUTPUT = StringIO()
-        with LoggingIntercept(OUTPUT, 'pyomo.contrib.trustregion', logging.INFO):
+        with LoggingIntercept(None, 'pyomo.contrib.trustregion', logging.INFO) as LOG:
             self.iterLogger.logIteration()
-        self.assertIn('Iteration 0', OUTPUT.getvalue())
-        self.assertIn('feasibility =', OUTPUT.getvalue())
-        self.assertIn('stepNorm =', OUTPUT.getvalue())
+        LOG = LOG.getvalue()
+        self.assertIn('Iteration 0', LOG)
+        self.assertIn('feasibility =', LOG)
+        self.assertIn('stepNorm =', LOG)
 
     def test_updateIteration(self):
         self.iterLogger.newIteration(
@@ -120,10 +117,8 @@ class TestUtil(unittest.TestCase):
         self.iterLogger.newIteration(
             self.iteration, self.thetak, self.objk, self.radius, self.stepNorm
         )
-        OUTPUT = StringIO()
-        sys.stdout = OUTPUT
-        self.iterLogger.printIteration()
-        sys.stdout = sys.__stdout__
+        with capture_output() as OUTPUT:
+            self.iterLogger.printIteration()
         self.assertIn(str(self.radius), OUTPUT.getvalue())
         self.assertIn(str(self.iteration), OUTPUT.getvalue())
         self.assertIn(str(self.thetak), OUTPUT.getvalue())

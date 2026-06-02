@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import inspect
 import logging
@@ -462,13 +460,16 @@ class IndexedComponent(Component):
             # of the underlying Set, there should be no warning if the
             # user iterates over the set when the _data dict is empty.
             #
-            if (
-                SortComponents.SORTED_INDICES in sort
-                or SortComponents.ORDERED_INDICES in sort
-            ):
-                return iter(sorted_robust(self._data))
+            # We will leverage SetOf here so we will cleanly pick up the
+            # iter overrides when we are templatizing
+            #
+            tmp_set = BASE.set.FiniteSetOf(self._data, name=self.name + "._data")
+            if SortComponents.SORTED_INDICES in sort:
+                return tmp_set.sorted_iter()
+            elif SortComponents.ORDERED_INDICES in sort:
+                return tmp_set.ordered_iter()
             else:
-                return self._data.__iter__()
+                return iter(tmp_set)
 
         if SortComponents.SORTED_INDICES in sort:
             ans = self._index_set.sorted_iter()
@@ -572,7 +573,9 @@ You can silence this warning by one of three ways:
         def getter(s):
             try:
                 return _getdata(s)
-            except KeyError:
+            except (KeyError, TypeError):
+                # KeyError for missing indices, TypeError for unhashable
+                # keys (e.g., a template)
                 return self[s]
 
         return map(getter, self.keys(sort))

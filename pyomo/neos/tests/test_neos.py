@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
 # Test NEOS solver interface
 #
@@ -225,17 +223,26 @@ class RunAllNEOSSolvers:
     def test_conopt(self):
         self._run('conopt')
 
+    def test_copt(self):
+        self._run('copt')
+
     def test_couenne(self):
         self._run('couenne')
 
     def test_cplex(self):
         self._run('cplex')
 
+    def test_ficoxpress(self):
+        self._run('fico-xpress')
+
     def test_filmint(self):
         self._run('filmint')
 
     def test_filter(self):
         self._run('filter')
+
+    def test_highs(self):
+        self._run('highs')
 
     def test_ipopt(self):
         self._run('ipopt')
@@ -249,6 +256,9 @@ class RunAllNEOSSolvers:
 
     def test_lancelot(self):
         self._run('lancelot')
+
+    def test_lgo(self):
+        self._run('lgo')
 
     def test_loqo(self):
         self._run('loqo')
@@ -270,8 +280,9 @@ class RunAllNEOSSolvers:
     # [20 Sep 24]: and appears to have been removed from NEOS
     # [24 Apr 25]: it appears to be there but causes timeouts
     # [29 Apr 25]: JK, it has been removed again
+    # [21 Apr 26]: it is ALIVE again
+    # [28 Apr 26]: It lasted longer than last time but alas is gone again
     # def test_octeract(self):
-    #     pass
     #     self._run('octeract')
 
     def test_ooqp(self):
@@ -287,14 +298,14 @@ class RunAllNEOSSolvers:
         # The simple tests aren't complementarity problems
         self.skipTest("The simple NEOS test is not a complementarity problem")
 
-    def test_snopt(self):
-        self._run('snopt')
-
     def test_raposa(self):
         self._run('raposa')
 
-    def test_lgo(self):
-        self._run('lgo')
+    def test_scip(self):
+        self._run('scip')
+
+    def test_snopt(self):
+        self._run('snopt')
 
 
 class DirectDriver:

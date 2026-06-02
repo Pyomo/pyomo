@@ -1,12 +1,11 @@
-/* ___________________________________________________________________________
+/**____________________________________________________________________________________
+ *
  * Pyomo: Python Optimization Modeling Objects
- * Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
- * Under the terms of Contract DE-NA0003525 with National Technology and
- * Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
- * rights in this software.
- * This software is distributed under the 3-clause BSD License.
- * ___________________________________________________________________________
+ * Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+ * Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+ * Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+ * software.  This software is distributed under the 3-clause BSD License.
+ * ____________________________________________________________________________________
  *
  * Portions of this module were originally developed as part of the
  * IDAES/idaes-ext package. The Institute for the Design of Advanced
@@ -17,8 +16,8 @@
  * National Laboratory, National Technology & Engineering Solutions of
  * Sandia, LLC, Carnegie Mellon University, West Virginia University
  * Research Corporation, et al.  All rights reserved.
- * ___________________________________________________________________________
- */
+ * ____________________________________________________________________________________
+**/
 
 /* This module provides an example for developing an ASL-compatible
  * external (compiled) function for Pyomo.  For more information, see

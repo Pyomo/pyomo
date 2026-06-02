@@ -1,29 +1,28 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
-#  Pyomo.DoE was produced under the Department of Energy Carbon Capture Simulation
-#  Initiative (CCSI), and is copyright (c) 2022 by the software owners:
-#  TRIAD National Security, LLC., Lawrence Livermore National Security, LLC.,
-#  Lawrence Berkeley National Laboratory, Pacific Northwest National Laboratory,
-#  Battelle Memorial Institute, University of Notre Dame,
-#  The University of Pittsburgh, The University of Texas at Austin,
-#  University of Toledo, West Virginia University, et al. All rights reserved.
+# Pyomo.DoE was produced under the Department of Energy Carbon Capture Simulation
+# Initiative (CCSI), and is copyright (c) 2022 by the software owners:
+# TRIAD National Security, LLC., Lawrence Livermore National Security, LLC.,
+# Lawrence Berkeley National Laboratory, Pacific Northwest National Laboratory,
+# Battelle Memorial Institute, University of Notre Dame,
+# The University of Pittsburgh, The University of Texas at Austin,
+# University of Toledo, West Virginia University, et al. All rights reserved.
 #
-#  NOTICE. This Software was developed under funding from the
-#  U.S. Department of Energy and the U.S. Government consequently retains
-#  certain rights. As such, the U.S. Government has been granted for itself
-#  and others acting on its behalf a paid-up, nonexclusive, irrevocable,
-#  worldwide license in the Software to reproduce, distribute copies to the
-#  public, prepare derivative works, and perform publicly and display
-#  publicly, and to permit other to do so.
-#  ___________________________________________________________________________
+# NOTICE. This Software was developed under funding from the
+# U.S. Department of Energy and the U.S. Government consequently retains
+# certain rights. As such, the U.S. Government has been granted for itself
+# and others acting on its behalf a paid-up, nonexclusive, irrevocable,
+# worldwide license in the Software to reproduce, distribute copies to the
+# public, prepare derivative works, and perform publicly and display
+# publicly, and to permit other to do so.
+# ____________________________________________________________________________________
 
 import pyomo.environ as pyo
 
@@ -90,6 +89,28 @@ def rescale_FIM(FIM, param_vals):
     scaling_mat = (1 / param_vals).transpose().dot((1 / param_vals))
     scaled_FIM = np.multiply(FIM, scaling_mat)
     return scaled_FIM
+
+
+def regularize_fim_for_cholesky(FIM):
+    """
+    Add the smallest diagonal shift needed for a stable Cholesky factorization.
+
+    Parameters
+    ----------
+    FIM: ndarray
+        Fisher information matrix to regularize before Cholesky factorization.
+
+    Returns
+    -------
+    tuple
+        Pair ``(fim_pd, jitter)`` where ``fim_pd`` is the regularized matrix and
+        ``jitter`` is the nonnegative diagonal shift used to make the smallest
+        symmetric eigenvalue at least ``_SMALL_TOLERANCE_DEFINITENESS``.
+    """
+    min_eig = float(np.min(np.linalg.eigvalsh(FIM)))
+    jitter = max(0.0, _SMALL_TOLERANCE_DEFINITENESS - min_eig)
+    fim_pd = FIM + jitter * np.eye(FIM.shape[0])
+    return fim_pd, jitter
 
 
 def check_FIM(FIM):

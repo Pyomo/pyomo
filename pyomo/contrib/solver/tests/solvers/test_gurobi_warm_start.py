@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 from pyomo.common.log import LoggingIntercept
@@ -69,6 +67,7 @@ class TestGurobiWarmStart(unittest.TestCase):
             self.assertEqual(value(m.x[i]), x[i])
 
     @unittest.skipUnless(gurobi_direct.available(), "needs Gurobi Direct interface")
+    @unittest.pytest.mark.solver("gurobi_direct")
     def test_gurobi_direct_warm_start(self):
         m = self.make_model()
 
@@ -84,6 +83,7 @@ class TestGurobiWarmStart(unittest.TestCase):
     @unittest.skipUnless(
         gurobi_direct_minlp.available(), "needs Gurobi Direct MINLP interface"
     )
+    @unittest.pytest.mark.solver("gurobi_direct_minlp")
     def test_gurobi_minlp_warmstart(self):
         m = self.make_model()
 
@@ -99,6 +99,7 @@ class TestGurobiWarmStart(unittest.TestCase):
     @unittest.skipUnless(
         gurobi_persistent.available(), "needs Gurobi persistent interface"
     )
+    @unittest.pytest.mark.solver("gurobi_persistent")
     def test_gurobi_persistent_warmstart(self):
         m = self.make_model()
 

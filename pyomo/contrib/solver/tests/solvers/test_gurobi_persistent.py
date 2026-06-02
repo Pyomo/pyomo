@@ -1,18 +1,21 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import pyomo.common.unittest as unittest
+
 import pyomo.environ as pyo
+
+from pyomo.common.collections import ComponentMap
 from pyomo.contrib.solver.solvers.gurobi.gurobi_persistent import GurobiPersistent
 from pyomo.contrib.solver.common.results import SolutionStatus
+from pyomo.contrib.solver.common.util import NoDualsError, NoReducedCostsError
+
 from pyomo.core.expr.taylor_series import taylor_series_expansion
 
 opt = GurobiPersistent()
@@ -124,6 +127,7 @@ def create_pmedian_model():
     return model
 
 
+@unittest.pytest.mark.solver("gurobi_persistent")
 class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
     def setUp(self):
         self.m = pyo.ConcreteModel()
@@ -185,6 +189,7 @@ class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
         self.assertAlmostEqual(y, self.m.y.value)
 
 
+@unittest.pytest.mark.solver("gurobi_persistent")
 class TestGurobiPersistent(unittest.TestCase):
     def test_nonconvex_qcp_objective_bound_1(self):
         # the goal of this test is to ensure we can get an objective bound
@@ -462,20 +467,107 @@ class TestGurobiPersistent(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, -0.3660254037844423, 2)
         self.assertAlmostEqual(m.y.value, -0.13397459621555508, 2)
 
-    def test_solution_number(self):
+    def test_solution_view(self):
         m = create_pmedian_model()
+        m.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.rc = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+
         opt = GurobiPersistent()
         opt.config.solver_options['PoolSolutions'] = 3
         opt.config.solver_options['PoolSearchMode'] = 2
-        res = opt.solve(m)
+        res = opt.solve(m, load_solutions=False)
         num_solutions = opt.get_model_attr('SolCount')
         self.assertEqual(num_solutions, 3)
-        res.solution_loader.load_vars(solution_id=0)
+        res.solution_loader.solution(0).load_vars()
         self.assertAlmostEqual(pyo.value(m.obj.expr), 6.431184939357673)
-        res.solution_loader.load_vars(solution_id=1)
+        res.solution_loader.solution(1).load_vars()
         self.assertAlmostEqual(pyo.value(m.obj.expr), 6.584793218502477)
-        res.solution_loader.load_vars(solution_id=2)
+        res.solution_loader.solution(2).load_vars()
         self.assertAlmostEqual(pyo.value(m.obj.expr), 6.592304628123309)
+
+        # Test using the View as a context manager
+        with res.solution_loader.solution(1) as soln:
+            self.assertEqual(soln.get_number_of_solutions(), 3)
+            self.assertEqual(soln.get_solution_ids(), [0, 1, 2])
+            v = soln.get_vars()
+            v0 = ComponentMap((_v, _v.value) for _v in v)
+            self.assertNotEqual(v, v0)
+            soln.load_vars()
+            for v, val in v.items():
+                self.assertEqual(v.value, val)
+
+            self.assertEqual(m.dual, {})
+            with self.assertRaisesRegex(
+                NoDualsError, "Can only get duals for solution_id = 0"
+            ):
+                d = soln.get_duals()
+            self.assertEqual(m.dual, {})
+
+            self.assertEqual(m.rc, {})
+            with self.assertRaisesRegex(
+                NoReducedCostsError, "Can only get reduced costs for solution_id = 0"
+            ):
+                rc = soln.get_reduced_costs()
+            self.assertEqual(m.rc, {})
+
+        # Reset the pyomo model...
+        res.solution_loader.solution(2).load_vars()
+
+        # Test using the View as a Loader
+        soln = res.solution_loader.solution(1)
+        self.assertEqual(soln.get_number_of_solutions(), 3)
+        self.assertEqual(soln.get_solution_ids(), [0, 1, 2])
+        v = soln.get_vars()
+        v0 = ComponentMap((_v, _v.value) for _v in v)
+        self.assertNotEqual(v, v0)
+        soln.load_vars()
+        for v, val in v.items():
+            self.assertEqual(v.value, val)
+
+        self.assertEqual(m.dual, {})
+        with self.assertRaisesRegex(
+            NoDualsError, "Can only get duals for solution_id = 0"
+        ):
+            d = soln.get_duals()
+        self.assertEqual(m.dual, {})
+
+        self.assertEqual(m.rc, {})
+        with self.assertRaisesRegex(
+            NoReducedCostsError, "Can only get reduced costs for solution_id = 0"
+        ):
+            rc = soln.get_reduced_costs()
+        self.assertEqual(m.rc, {})
+
+        soln = res.solution_loader.solution(0)
+        with self.assertRaisesRegex(
+            NoDualsError, "Can only get duals for convex problems"
+        ):
+            d = soln.get_duals()
+        self.assertEqual(m.dual, {})
+
+        with self.assertRaisesRegex(
+            NoReducedCostsError, "Can only get reduced costs for convex problems"
+        ):
+            rc = soln.get_reduced_costs()
+        self.assertEqual(m.rc, {})
+
+        # Fix the binaries, relax to reals -> LP should have duals
+        m.y.fix()
+        m.y[...].domain = pyo.Reals
+        res = opt.solve(m, load_solutions=False)
+        self.assertEqual(res.solution_loader.get_number_of_solutions(), 1)
+        soln = res.solution_loader.solution(0)
+        d = soln.get_duals()
+        self.assertNotEqual(d, {})
+        self.assertEqual(m.dual, {})
+
+        rc = soln.get_reduced_costs()
+        self.assertNotEqual(rc, {})
+        self.assertEqual(m.rc, {})
+
+        soln.load_import_suffixes()
+        self.assertEqual(m.dual, d)
+        self.assertEqual(m.rc, rc)
 
     def test_zero_time_limit(self):
         m = create_pmedian_model()
@@ -495,6 +587,7 @@ class TestGurobiPersistent(unittest.TestCase):
             self.assertIsNone(res.incumbent_objective)
 
 
+@unittest.pytest.mark.solver("gurobi_persistent")
 class TestManualMode(unittest.TestCase):
     def setUp(self):
         opt = GurobiPersistent()

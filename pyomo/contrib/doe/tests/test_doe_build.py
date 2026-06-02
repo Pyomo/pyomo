@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 import json
 import os.path
 
@@ -27,8 +25,8 @@ if not (numpy_available and scipy_available):
 
 if scipy_available:
     from pyomo.contrib.doe import DesignOfExperiments
-    from pyomo.contrib.doe.examples.reactor_example import (
-        ReactorExperiment as FullReactorExperiment,
+    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+        RooneyBieglerExperiment,
     )
 
 from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
@@ -45,6 +43,22 @@ with open(file_path) as f:
     data_ex = json.load(f)
 
 data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
+
+
+def get_rooney_biegler_experiment():
+    """Get a fresh RooneyBieglerExperiment instance for testing.
+
+    Creates a new experiment instance to ensure test isolation.
+    Each test gets its own instance to avoid state sharing.
+    """
+    data = pd.DataFrame(data=[[5, 15.6]], columns=['hour', 'y'])
+    data_point = data.iloc[0]
+
+    return RooneyBieglerExperiment(
+        data=data_point,
+        theta={'asymptote': 15, 'rate_constant': 0.5},
+        measure_error=0.1,
+    )
 
 
 def get_FIM_FIMPrior_Q_L(doe_obj=None):
@@ -81,10 +95,6 @@ def get_FIM_FIMPrior_Q_L(doe_obj=None):
         for j in model.parameter_names
     ]
     sigma_inv = [1 / v for k, v in model.scenario_blocks[0].measurement_error.items()]
-    param_vals = np.array(
-        [[v for k, v in model.scenario_blocks[0].unknown_parameters.items()]]
-    )
-
     FIM_vals_np = np.array(FIM_vals).reshape((n_param, n_param))
     FIM_prior_vals_np = np.array(FIM_prior_vals).reshape((n_param, n_param))
 
@@ -133,12 +143,13 @@ def get_standard_args(experiment, fd_method, obj_used):
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 @unittest.skipIf(not scipy_available, "scipy is not available")
-class TestReactorExampleBuild(unittest.TestCase):
-    def test_reactor_fd_central_check_fd_eqns(self):
+@unittest.skipIf(not pandas_available, "pandas is not available")
+class TestDoeBuild(unittest.TestCase):
+    def test_rooney_biegler_fd_central_check_fd_eqns(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -173,11 +184,11 @@ class TestReactorExampleBuild(unittest.TestCase):
 
             self.assertAlmostEqual(param_val, param_val_from_step)
 
-    def test_reactor_fd_backward_check_fd_eqns(self):
+    def test_rooney_biegler_fd_backward_check_fd_eqns(self):
         fd_method = "backward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -211,11 +222,11 @@ class TestReactorExampleBuild(unittest.TestCase):
                 other_param_val = pyo.value(k)
                 self.assertAlmostEqual(other_param_val, v)
 
-    def test_reactor_fd_forward_check_fd_eqns(self):
+    def test_rooney_biegler_fd_forward_check_fd_eqns(self):
         fd_method = "forward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -249,11 +260,11 @@ class TestReactorExampleBuild(unittest.TestCase):
                 other_param_val = pyo.value(k)
                 self.assertAlmostEqual(other_param_val, v)
 
-    def test_reactor_fd_central_design_fixing(self):
+    def test_rooney_biegler_fd_central_design_fixing(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -282,11 +293,11 @@ class TestReactorExampleBuild(unittest.TestCase):
             # length of design_vars - 1 (started with index 0)
         self.assertFalse(hasattr(model, con_name_base + str(len(design_vars))))
 
-    def test_reactor_fd_backward_design_fixing(self):
+    def test_rooney_biegler_fd_backward_design_fixing(self):
         fd_method = "backward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -315,11 +326,11 @@ class TestReactorExampleBuild(unittest.TestCase):
             # length of design_vars - 1 (started with index 0)
         self.assertFalse(hasattr(model, con_name_base + str(len(design_vars))))
 
-    def test_reactor_fd_forward_design_fixing(self):
+    def test_rooney_biegler_fd_forward_design_fixing(self):
         fd_method = "forward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -348,15 +359,15 @@ class TestReactorExampleBuild(unittest.TestCase):
             # length of design_vars - 1 (started with index 0)
         self.assertFalse(hasattr(model, con_name_base + str(len(design_vars))))
 
-    def test_reactor_check_user_initialization(self):
+    def test_rooney_biegler_check_user_initialization(self):
         fd_method = "central"
         obj_used = "determinant"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
-        FIM_prior = np.ones((4, 4))
-        FIM_initial = np.eye(4) + FIM_prior
-        JAC_initial = np.ones((27, 4)) * 2
+        FIM_prior = np.ones((2, 2))
+        FIM_initial = np.eye(2) + FIM_prior
+        JAC_initial = np.ones((1, 2)) * 2
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
         DoE_args['prior_FIM'] = FIM_prior
@@ -379,9 +390,9 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "forward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
-        FIM_update = np.ones((4, 4)) * 10
+        FIM_update = np.ones((2, 2)) * 10
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -401,7 +412,7 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "forward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -420,7 +431,7 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "forward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -439,7 +450,7 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "forward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -458,7 +469,7 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "forward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -478,7 +489,7 @@ class TestReactorExampleBuild(unittest.TestCase):
         fd_method = "forward"
         obj_used = "pseudo_trace"
 
-        experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = get_rooney_biegler_experiment()
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
@@ -491,6 +502,8 @@ class TestReactorExampleBuild(unittest.TestCase):
                 doe_obj.model.find_component("scenario_blocks[" + str(i) + "]")
             )
 
+
+class TestReactorExample(unittest.TestCase):
     def test_reactor_update_suffix_items(self):
         """Test the reactor example with updating suffix items."""
         from pyomo.contrib.doe.examples.update_suffix_doe_example import main
@@ -505,6 +518,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not pandas_available, "pandas is not available")
 class TestDoEObjectiveOptions(unittest.TestCase):
     def test_trace_constraints(self):
         fd_method = "central"

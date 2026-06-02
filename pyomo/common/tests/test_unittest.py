@@ -1,21 +1,20 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import datetime
-import multiprocessing
 import os
 import pickle
 import time
 
 import pyomo.common.unittest as unittest
+import pyomo.common.dependencies as deps
+from pyomo.common.dependencies import multiprocessing
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
 from pyomo.common.tempfiles import TempfileManager
@@ -173,8 +172,28 @@ class TestPyomoUnittest(unittest.TestCase):
 
     def test_timeout_fcn_call(self):
         self.assertEqual(short_sleep(), 42)
-        with self.assertRaisesRegex(TimeoutError, 'test timed out after 0.01 seconds'):
-            long_sleep()
+        with LoggingIntercept() as LOG:
+            with self.assertRaisesRegex(
+                TimeoutError, 'test timed out after 0.01 seconds'
+            ):
+                long_sleep()
+            self.assertEqual(LOG.getvalue(), "")
+            deps.capture_output_lock.acquire()
+            save = unittest._timeout_terminate_timeout
+            unittest._timeout_terminate_timeout = 0.01
+            try:
+                with self.assertRaisesRegex(
+                    TimeoutError, 'test timed out after 0.01 seconds'
+                ):
+                    long_sleep()
+            finally:
+                unittest._timeout_terminate_timeout = save
+                deps.capture_output_lock.release()
+            self.assertEqual(
+                LOG.getvalue(),
+                "Failed to acquire capture_output_lock Lock before "
+                "terminating subprocess on timeout: process deadlock is likely.\n",
+            )
         with self.assertRaisesRegex(
             NameError, r"name 'foo' is not defined\s+Original traceback:"
         ):

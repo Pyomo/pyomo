@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
@@ -24,8 +22,9 @@ except:
     gurobipy_available = False
 
 
+@unittest.skipIf(not gurobipy_available, "gurobipy is not available")
+@unittest.pytest.mark.solver("gurobi_persistent")
 class TestGurobiPersistent(unittest.TestCase):
-    @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
     def test_basics(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var(bounds=(-10, 10))
@@ -109,7 +108,6 @@ class TestGurobiPersistent(unittest.TestCase):
         del m.z
         self.assertEqual(opt.get_model_attr('NumVars'), 2)
 
-    @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
     def test_update1(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
@@ -131,7 +129,6 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.update()
         self.assertEqual(opt._solver_model.getAttr('NumQConstrs'), 1)
 
-    @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
     def test_update2(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
@@ -153,7 +150,6 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.update()
         self.assertEqual(opt._solver_model.getAttr('NumConstrs'), 1)
 
-    @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
     def test_update3(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
@@ -173,7 +169,6 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.update()
         self.assertEqual(opt._solver_model.getAttr('NumQConstrs'), 1)
 
-    @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
     def test_update4(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
@@ -193,7 +188,6 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.update()
         self.assertEqual(opt._solver_model.getAttr('NumConstrs'), 1)
 
-    @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
     def test_update5(self):
         m = pyo.ConcreteModel()
         m.a = pyo.Set(initialize=[1, 2, 3], ordered=True)
@@ -215,7 +209,6 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.update()
         self.assertEqual(opt._solver_model.getAttr('NumSOS'), 1)
 
-    @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
     def test_update6(self):
         m = pyo.ConcreteModel()
         m.a = pyo.Set(initialize=[1, 2, 3], ordered=True)
@@ -235,7 +228,6 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.update()
         self.assertEqual(opt._solver_model.getAttr('NumSOS'), 1)
 
-    @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
     def test_update7(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
@@ -261,7 +253,6 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.update()
         self.assertEqual(opt._solver_model.getAttr('NumVars'), 1)
 
-    @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
     def test_linear_constraint_attr(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
@@ -273,7 +264,6 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.set_linear_constraint_attr(m.c, 'Lazy', 1)
         self.assertEqual(opt.get_linear_constraint_attr(m.c, 'Lazy'), 1)
 
-    @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
     def test_quadratic_constraint_attr(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
@@ -284,7 +274,6 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.set_instance(m)
         self.assertEqual(opt.get_quadratic_constraint_attr(m.c, 'QCRHS'), 0)
 
-    @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
     def test_var_attr(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var(within=pyo.Binary)
@@ -294,7 +283,6 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.set_var_attr(m.x, 'Start', 1)
         self.assertEqual(opt.get_var_attr(m.x, 'Start'), 1)
 
-    @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
     def test_callback(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var(bounds=(0, 4))
@@ -325,7 +313,6 @@ class TestGurobiPersistent(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 1)
         self.assertAlmostEqual(m.y.value, 1)
 
-    @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
     def test_add_column(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var(within=pyo.NonNegativeReals)
@@ -345,7 +332,6 @@ class TestGurobiPersistent(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 0.5)
 
-    @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
     def test_add_column_exceptions(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()

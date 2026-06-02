@@ -208,8 +208,8 @@ Carl D. Laird, Chair, Pyomo Management Committee, claird at andrew dot cmu dot e
 			     Use explicit overrides to disable use of automated
 			     version reporting.
 			-->
-			<stableVersionNumber>6.9.5</stableVersionNumber>
-			<releaseNumber>6.9.5</releaseNumber>
+			<stableVersionNumber>6.10.0</stableVersionNumber>
+			<releaseNumber>6.10.0</releaseNumber>
 
 		</developmentStatus>
 

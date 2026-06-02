@@ -7,7 +7,7 @@ maturity, documentation, and testing.
 
 The **authoritative contribution guidelines** for `pyomo.addons`, including
 testing, documentation, and dependency expectations, are maintained in the
-[Pyomo Contributing Guide](https://pyomo.readthedocs.io/en/latest/contributing.html).
+[Contribution Guide](https://pyomo.readthedocs.io/en/latest/contribution_guide.html).
 
 ## Examples
 

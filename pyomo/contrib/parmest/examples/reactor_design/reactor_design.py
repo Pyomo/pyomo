@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 """
 Continuously stirred tank reactor model, based on
 pyomo/examples/doc/pyomobook/nonlinear-ch/react_design/ReactorDesign.py
@@ -24,15 +22,11 @@ def reactor_design_model():
     # Create the concrete model
     model = pyo.ConcreteModel()
 
-    # Rate constants
-    model.k1 = pyo.Param(
-        initialize=5.0 / 6.0, within=pyo.PositiveReals, mutable=True
-    )  # min^-1
-    model.k2 = pyo.Param(
-        initialize=5.0 / 3.0, within=pyo.PositiveReals, mutable=True
-    )  # min^-1
-    model.k3 = pyo.Param(
-        initialize=1.0 / 6000.0, within=pyo.PositiveReals, mutable=True
+    # Rate constants, make unknown parameters variables
+    model.k1 = pyo.Var(initialize=5.0 / 6.0, within=pyo.PositiveReals)  # min^-1
+    model.k2 = pyo.Var(initialize=5.0 / 3.0, within=pyo.PositiveReals)  # min^-1
+    model.k3 = pyo.Var(
+        initialize=1.0 / 6000.0, within=pyo.PositiveReals
     )  # m^3/(gmol min)
 
     # Inlet concentration of A, gmol/m^3
@@ -119,6 +113,11 @@ class ReactorDesignExperiment(Experiment):
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.unknown_parameters.update(
             (k, pyo.ComponentUID(k)) for k in [m.k1, m.k2, m.k3]
+        )
+
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error.update(
+            [(m.ca, None), (m.cb, None), (m.cc, None), (m.cd, None)]
         )
 
         return m

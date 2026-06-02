@@ -247,16 +247,46 @@ declared to be ``mutable`` (i.e., ``mutable=True``) with an
 index that contains ``idx``, then the value in ``NewVal`` can be assigned to
 it using
 
-   >>> instance.Theta[idx] = NewVal	       
+   >>> instance.Theta[idx] = NewVal
+
+or, more explicitly using the ``set_value()`` method:
+
+   >>> instance.Theta[idx].set_value(NewVal)
 
 For a singleton parameter named ``sigma`` (i.e., if it is not
 indexed), the assignment can be made using
 
    >>> instance.sigma = NewVal
 
+or
+
+   >>> instance.sigma.set_value(NewVal)
+
+Common Pitfalls: Updating Immutable Parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A common mistake is trying to update a parameter that was not declared as 
+mutable. For example:
+
+.. code-block:: python
+
+   model.p = pyo.Param(initialize=10)  # mutable=False by default
+   model.p = 5                         # Raises TypeError
+
+This will raise a ``TypeError`` because Pyomo has already "baked" the value 
+``10`` into the model's expressions. To allow updates, you **must** set 
+``mutable=True`` during declaration:
+
+.. code-block:: python
+
+   model.p = pyo.Param(initialize=10, mutable=True)
+   model.p.set_value(5)                # This works!
+
 .. note::
 
-   If the ``Param`` is not declared to be mutable, an error will occur if an assignment to it is attempted.
+   While direct assignment (e.g., ``model.p = 5``) works for mutable parameters, 
+   using ``set_value()`` is often clearer as it explicitly signals that you 
+   are updating a Pyomo component rather than just a Python attribute.
     
 For more information about access to Pyomo parameters, see the section
 in this document on ``Param`` access :ref:`ParamAccess`. Note that for

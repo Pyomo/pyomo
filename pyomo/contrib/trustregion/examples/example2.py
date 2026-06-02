@@ -1,19 +1,17 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
-#  Development of this module was conducted as part of the Institute for
-#  the Design of Advanced Energy Systems (IDAES) with support through the
-#  Simulation-Based Engineering, Crosscutting Research Program within the
-#  U.S. Department of Energy’s Office of Fossil Energy and Carbon Management.
-#
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Development of this module was conducted as part of the Institute for
+# the Design of Advanced Energy Systems (IDAES) with support through the
+# Simulation-Based Engineering, Crosscutting Research Program within the
+# U.S. Department of Energy's Office of Fossil Energy and Carbon Management.
+# ____________________________________________________________________________________
 
 """
 This model is adapted from Noriyuki Yoshio's model for his and Biegler's
@@ -63,7 +61,9 @@ def basis_rule(component, ef_expr):
 
 # This problem takes more than the default maximum iterations (50) to solve.
 # In testing (Mac 10.15/ipopt version 3.12.12 from conda),
-# it took 70 iterations.
+# it took 70 iterations using default filter globalization strategy.
+# If the user opts for funnel strategy, i.e., globalization_strategy='funnel' in
+# solver's options, it takes 15 iterations to converge to same result
 def main():
     m = create_model()
     optTRF = SolverFactory('trustregion', maximum_iterations=100, verbose=True)

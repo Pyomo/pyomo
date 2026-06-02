@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import collections
 import functools
@@ -97,7 +95,7 @@ class FileDeterminism(enums.IntEnum):
     SORT_SYMBOLS = 30
 
     # We will define __str__ and __format__ so that behavior in python
-    # 3.11 is consistent with 3.7 - 3.10.
+    # 3.11+ is consistent with 3.7 - 3.10.
 
     def __str__(self):
         return enums.Enum.__str__(self)
@@ -131,10 +129,10 @@ def val2str(val):
     raised by :py:meth:`InvalidNumber.__str__`.
 
     """
-    if hasattr(val, '_str'):
-        return val._str()
     if hasattr(val, 'to_string'):
         return val.to_string()
+    if hasattr(val, '_str'):
+        return val._str()
     return repr(val)
 
 
@@ -591,7 +589,7 @@ def complex_number_error(value, visitor, expr, node=""):
 
 
 def categorize_valid_components(
-    model, active=True, sort=None, valid=set(), targets=set()
+    model, active=True, sort=None, valid=None, targets=None
 ):
     """Walk model and check for valid component types
 
@@ -635,6 +633,11 @@ def categorize_valid_components(
         list of component data objects found on the model.
 
     """
+    if valid is None:
+        valid = set()
+    if targets is None:
+        targets = set()
+
     assert active in (True, None)
     # Note: we assume every target component is valid but that we expect
     # there to be far mode valid components than target components.
@@ -816,6 +819,7 @@ class OrderedVarRecorder:
         self.var_map = var_map
         self.var_order = var_order
         self.sorter = sorter
+        assert len(var_map) == len(var_order)
 
     def add(self, var):
         # We always add all indices to the var_map at once so that
@@ -842,6 +846,7 @@ class TemplateVarRecorder:
     def __init__(self, var_map, sorter):
         self.var_map = var_map
         self._var_order = None
+        self._var_list = None
         self.sorter = sorter
         self.env = {None: 0}
         self.symbolmap = EXPR.SymbolMap(NumericLabeler('x'))
@@ -850,7 +855,7 @@ class TemplateVarRecorder:
             # that ordering.  This means we need to both initialize the
             # env dict with all the Vars referenced, PLUS fill in any
             # additional vars that we would have indexed/recorded in
-            # add()
+            # add().
             next_i = len(var_map)
             for i, v in enumerate(list(var_map.values())):
                 var_comp = v.parent_component()
@@ -858,7 +863,11 @@ class TemplateVarRecorder:
                 ve = self.env.get(name, None)
                 if ve is None:
                     ve = self.env[name] = {}
-                    for idx, vdata in var_comp.items():
+                    # Fill-in all var data in this component.  Note that
+                    # we are careful to only add / assign column ids to
+                    # var data that we will not later encounter in the
+                    # var_map.
+                    for idx, vdata in var_comp.items(self.sorter):
                         vid = id(vdata)
                         if vid not in var_map:
                             var_map[vid] = v
@@ -871,6 +880,12 @@ class TemplateVarRecorder:
         if self._var_order is None:
             self._var_order = {vid: i for i, vid in enumerate(self.var_map)}
         return self._var_order
+
+    @property
+    def var_list(self):
+        if self._var_list is None or len(self._var_list) != len(self.var_map):
+            self._var_list = list(self.var_map.values())
+        return self._var_list
 
     def add(self, var):
         # Note: the following is mostly a copy of

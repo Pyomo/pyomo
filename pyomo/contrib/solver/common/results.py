@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import enum
 from typing import Optional, Tuple
@@ -23,6 +21,8 @@ from pyomo.common.config import (
     ADVANCED_OPTION,
     DEVELOPER_OPTION,
 )
+from pyomo.contrib.solver.common.util import NoOptimalSolutionError, NoSolutionError
+from pyomo.contrib.solver.common.solution_loader import NoSolutionSolutionLoader
 from pyomo.opt.results.solution import SolutionStatus as LegacySolutionStatus
 from pyomo.opt.results.solver import (
     TerminationCondition as LegacyTerminationCondition,
@@ -111,6 +111,9 @@ class SolutionStatus(enum.Enum):
     """No (single) solution was found; possible that a population of
     solutions was returned.
     """
+
+    unknown = 5
+    "Solution returned, but feasibility/optimality unknown."
 
     infeasible = 10
     "Solution point does not satisfy some domains and/or constraints."
@@ -239,6 +242,24 @@ class Results(ConfigDict):
         self, content_filter=None, indent_spacing=2, ostream=None, visibility=0
     ):
         return super().display(content_filter, indent_spacing, ostream, visibility)
+
+
+def get_infeasible_results(model, solver, config, err_msg):
+    if config.raise_exception_on_nonoptimal_result:
+        raise NoOptimalSolutionError(err_msg)
+    if config.load_solutions:
+        raise NoSolutionError(err_msg)
+
+    res = Results()
+    res.solution_loader = NoSolutionSolutionLoader(model, err_msg)
+    res.solution_status = SolutionStatus.noSolution
+    res.termination_condition = TerminationCondition.provenInfeasible
+    res.incumbent_objective = None
+    res.objective_bound = None
+    res.solver_config = config
+    res.solver_name = solver.name
+    res.solver_version = solver.version()
+    return res
 
 
 # Everything below here preserves backwards compatibility

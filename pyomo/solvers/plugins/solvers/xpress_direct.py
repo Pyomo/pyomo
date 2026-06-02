@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 import os
@@ -60,24 +58,57 @@ def _print_message(xp_prob, _, msg, *args):
 def _finalize_xpress_import(xpress, avail):
     if not avail:
         return
-    XpressDirect._version = tuple(int(k) for k in xpress.getversion().split('.'))
+    xp = xpress
+    XpressDirect._version = tuple(int(k) for k in xp.getversion().split('.'))
     XpressDirect._name = "Xpress %s.%s.%s" % XpressDirect._version
-    # in versions prior to 34, xpress raised a RuntimeError, but
-    # in more recent versions it raises a
-    # xpress.ModelError. We'll cache the appropriate one here
-    if XpressDirect._version[0] < 34:
-        XpressDirect.XpressException = RuntimeError
-    else:
-        XpressDirect.XpressException = xpress.ModelError
-    # In (pypi) versions prior to 8.13.0, the 'xpress.rng' keyword was
-    # 'xpress.range'
-    if not hasattr(xpress, 'rng'):
-        xpress.rng = xpress.range
+    # In (pypi) versions prior to 8.13.0, the 'xp.rng' keyword was
+    # 'xp.range'
+    if not hasattr(xp, 'rng'):
+        xp.rng = xp.range
 
-    #
+    # Xpress 9.6 (45.1.1) renamed many of its enums, deprecating the old ones
+    if XpressDirect._version < (45,):
+        XpressDirect.LPStatus.UNSTARTED = xp.lp_unstarted
+        XpressDirect.LPStatus.OPTIMAL = xp.lp_optimal
+        XpressDirect.LPStatus.INFEAS = xp.lp_infeas
+        XpressDirect.LPStatus.CUTOFF = xp.lp_cutoff
+        XpressDirect.LPStatus.NONCONVEX = xp.lp_nonconvex
+        XpressDirect.LPStatus.UNFINISHED = xp.lp_unfinished
+        XpressDirect.LPStatus.UNBOUNDED = xp.lp_unbounded
+        XpressDirect.LPStatus.UNSOLVED = xp.lp_unsolved
+        XpressDirect.LPStatus.CUTOFF_IN_DUAL = xp.lp_cutoff_in_dual
+        XpressDirect.MIPStatus.INFEAS = xp.mip_infeas
+        XpressDirect.MIPStatus.LP_NOT_OPTIMAL = xp.mip_lp_not_optimal
+        XpressDirect.MIPStatus.LP_OPTIMAL = xp.mip_lp_optimal
+        XpressDirect.MIPStatus.NO_SOL_FOUND = xp.mip_no_sol_found
+        XpressDirect.MIPStatus.NOT_LOADED = xp.mip_not_loaded
+        XpressDirect.MIPStatus.OPTIMAL = xp.mip_optimal
+        XpressDirect.MIPStatus.SOLUTION = xp.mip_solution
+        XpressDirect.MIPStatus.UNBOUNDED = xp.mip_unbounded
+        XpressDirect.NLPStatus.OPTIMAL = xp.nlp_globally_optimal
+        XpressDirect.NLPStatus.INFEASIBLE = xp.nlp_infeasible
+        XpressDirect.NLPStatus.LOCALLY_INFEASIBLE = xp.nlp_locally_infeasible
+        XpressDirect.NLPStatus.LOCALLY_OPTIMAL = xp.nlp_locally_optimal
+        XpressDirect.NLPStatus.SOLUTION = xp.nlp_solution
+        XpressDirect.NLPStatus.UNBOUNDED = xp.nlp_unbounded
+        XpressDirect.NLPStatus.UNFINISHED = xp.nlp_unfinished
+        XpressDirect.NLPStatus.UNSTARTED = xp.nlp_unstarted
+    else:
+        XpressDirect.LPStatus = xp.LPStatus
+        XpressDirect.MIPStatus = xp.MIPStatus
+        XpressDirect.NLPStatus.OPTIMAL = xp.constants.NLPSTATUS_OPTIMAL
+        XpressDirect.NLPStatus.INFEASIBLE = xp.constants.NLPSTATUS_INFEASIBLE
+        XpressDirect.NLPStatus.LOCALLY_OPTIMAL = xp.constants.NLPSTATUS_LOCALLY_OPTIMAL
+        XpressDirect.NLPStatus.SOLUTION = xp.constants.NLPSTATUS_SOLUTION
+        XpressDirect.NLPStatus.UNBOUNDED = xp.constants.NLPSTATUS_UNBOUNDED
+        XpressDirect.NLPStatus.UNFINISHED = xp.constants.NLPSTATUS_UNFINISHED
+        XpressDirect.NLPStatus.UNSTARTED = xp.constants.NLPSTATUS_UNSTARTED
+        XpressDirect.NLPStatus.LOCALLY_INFEASIBLE = (
+            xp.constants.NLPSTATUS_LOCALLY_INFEASIBLE
+        )
+
     # Xpress 9.5 (44.1.1) changed the Python API fairly significantly.
     # We will map between the two APIs based on the version.
-    #
     if XpressDirect._version < (44,):
 
         def _addConstraint(
@@ -99,17 +130,17 @@ def _finalize_xpress_import(xpress, avail):
             for field in ('constraint', 'body', 'lb', 'ub', 'rhs'):
                 if locals()[field] is not None:
                     args[field] = locals()[field]
-            con = xpress.constraint(**args)
+            con = xp.constraint(**args)
             prob.addConstraint(con)
             return con
 
         def _addVariable(self, prob, name, lb, ub, vartype):
-            var = xpress.var(name=name, lb=lb, ub=ub, vartype=vartype)
+            var = xp.var(name=name, lb=lb, ub=ub, vartype=vartype)
             prob.addVariable(var)
             return var
 
         def _addSOS(self, prob, indices, weights, type, name):
-            con = xpress.sos(indices, weights, type, name)
+            con = xp.sos(indices, weights, type, name)
             prob.addSOS(con)
             return con
 
@@ -134,7 +165,7 @@ def _finalize_xpress_import(xpress, avail):
             rhs=None,
             name='',
         ):
-            con = xpress.constraint(
+            con = xp.constraint(
                 constraint=constraint,
                 body=body,
                 lb=lb,
@@ -161,12 +192,107 @@ def _finalize_xpress_import(xpress, avail):
         XpressDirect._getDuals = lambda self, prob, con: prob.getDuals(con)
         XpressDirect._getRedCosts = lambda self, prob, con: prob.getRedCosts(con)
 
-        # Note that as of 9.5, xpress.var raises an exception when
+        # Note that as of 9.5, xp.var raises an exception when
         # compared using '==' after it has been removed from the model.
         # This can foul up ComponentMaps in the persistent interface,
         # so we will hard-code the `var` as not being hashable (so the
         # ComponentMap will use the id() as the key)
-        ComponentMap.hasher.hashable(xpress.var, False)
+        ComponentMap.hasher.hashable(xp.var, False)
+
+    # Xpress 9.8 (46) adopted camelcase function naming, deprecating the old names
+    if XpressDirect._version < (46,):
+        XpressDirect._setLogFile = lambda self, prob, *args, **kwargs: prob.setlogfile(
+            *args, **kwargs
+        )
+        XpressDirect._lpOptimize = lambda self, prob, *args, **kwargs: prob.lpoptimize(
+            *args, **kwargs
+        )
+        XpressDirect._mipOptimize = (
+            lambda self, prob, *args, **kwargs: prob.mipoptimize(*args, **kwargs)
+        )
+        XpressDirect._nlpOptimize = (
+            lambda self, prob, *args, **kwargs: prob.nlpoptimize(*args, **kwargs)
+        )
+        XpressDirect._postSolve = lambda self, prob, *args, **kwargs: prob.postsolve(
+            *args, **kwargs
+        )
+        XpressDirect._chgBounds = lambda sef, prob, *args, **kwargs: prob.chgbounds(
+            *args, **kwargs
+        )
+        XpressDirect._addMipSol = lambda self, prob, *args, **kwargs: prob.addmipsol(
+            *args, **kwargs
+        )
+        XpressDirect._addCols = lambda self, prob, objx, mstart, mrwind, dmatval, bdl, bdu, names, types: prob.addcols(
+            objx, mstart, mrwind, dmatval, bdl, bdu, names, types
+        )
+        XpressDirect._chgColType = lambda self, prob, *args, **kwargs: prob.chgcoltype(
+            *args, *kwargs
+        )
+        XpressDirect._getIndex = (
+            lambda self, prob, *args, **kwargs: prob.getIndexFromName(*args, **kwargs)
+        )
+        XpressDirect._getObjIndex = lambda self, prob, obj: prob.getIndex(obj)
+
+        def _getLB(self, prob, *args, **kwargs):
+            lb = []
+            prob.getlb(lb, *args, *kwargs)
+            return lb
+
+        def _getUB(self, prob, *args, **kwargs):
+            ub = []
+            prob.getub(ub, *args, *kwargs)
+            return ub
+
+        XpressDirect._getLB = _getLB
+        XpressDirect._getUB = _getUB
+
+    else:
+        XpressDirect._setLogFile = lambda self, prob, *args, **kwargs: prob.setLogFile(
+            *args, **kwargs
+        )
+        XpressDirect._lpOptimize = lambda self, prob, *args, **kwargs: prob.lpOptimize(
+            *args, **kwargs
+        )
+        XpressDirect._mipOptimize = (
+            lambda self, prob, *args, **kwargs: prob.mipOptimize(*args, **kwargs)
+        )
+        XpressDirect._nlpOptimize = (
+            lambda self, prob, *args, **kwargs: prob.nlpOptimize(*args, **kwargs)
+        )
+        XpressDirect._postSolve = lambda self, prob, *args, **kwargs: prob.postSolve(
+            *args, **kwargs
+        )
+        XpressDirect._chgBounds = lambda sef, prob, *args, **kwargs: prob.chgBounds(
+            *args, **kwargs
+        )
+        XpressDirect._addMipSol = lambda self, prob, *args, **kwargs: prob.addMipSol(
+            *args, **kwargs
+        )
+        XpressDirect._chgColType = lambda self, prob, *args, **kwargs: prob.chgColType(
+            *args, *kwargs
+        )
+        XpressDirect._getIndex = lambda self, prob, *args, **kwargs: prob.getIndex(
+            *args, **kwargs
+        )
+        XpressDirect._getObjIndex = lambda self, prob, obj: obj.index
+        XpressDirect._getLB = lambda self, prob, *args, **kwargs: prob.getLB(
+            *args, **kwargs
+        )
+        XpressDirect._getUB = lambda self, prob, *args, **kwargs: prob.getUB(
+            *args, **kwargs
+        )
+
+        def _addCols(self, prob, objx, mstart, mrwind, dmatval, bdl, bdu, names, types):
+            first_col_ind = prob.attributes.cols
+            prob.addCols(objx, mstart, mrwind, dmatval, bdl, bdu)
+            last_col_ind = prob.attributes.cols - 1
+            if names is not None:
+                prob.addNames(xp.Namespaces.COLUMN, names, first_col_ind, last_col_ind)
+            if types is not None:
+                col_indices = list(range(first_col_ind, last_col_ind + 1))
+                prob.chgColType(col_indices, types)
+
+        XpressDirect._addCols = _addCols
 
 
 class _xpress_importer_class:
@@ -201,6 +327,21 @@ class XpressDirect(DirectSolver):
     _name = None
     _version = None
     XpressException = RuntimeError
+
+    class LPStatus:
+        """LP Status constants compatible across Xpress versions."""
+
+        pass
+
+    class MIPStatus:
+        """MIP Status constants compatible across Xpress versions."""
+
+        pass
+
+    class NLPStatus:
+        """NLP Status constants compatible across Xpress versions."""
+
+        pass
 
     def __init__(self, **kwds):
         if 'type' not in kwds:
@@ -274,16 +415,9 @@ class XpressDirect(DirectSolver):
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
 
-        self._solver_model.setlogfile(self._log_file)
+        self._setLogFile(self._solver_model, self._log_file)
         if self._keepfiles:
             print("Solver log file: " + self._log_file)
-
-        # Setting a log file in xpress disables all output
-        # in xpress versions less than 36.
-        # This callback prints all messages to stdout
-        # when using those xpress versions.
-        if self._tee and XpressDirect._version[0] < 36:
-            self._solver_model.addcbmessage(_print_message, None, 0)
 
         # set xpress options
         # if the user specifies a 'mipgap', set it, and
@@ -301,7 +435,7 @@ class XpressDirect(DirectSolver):
                 continue
             try:
                 self._solver_model.setControl(key, option)
-            except XpressDirect.XpressException:
+            except xpress.ModelError:
                 # take another try, converting to its type
                 # we'll wrap this in a function to raise the
                 # xpress error
@@ -317,19 +451,29 @@ class XpressDirect(DirectSolver):
             # In xpress versions greater than or equal 36,
             # it seems difficult to completely suppress console
             # output without disabling logging altogether.
-            # As a work around, we capature all screen output
+            # As a work around, we capture all screen output
             # when tee is False.
             with capture_output() as OUT:
                 self._solve_model()
         self._opt_time = time.time() - start_time
 
-        self._solver_model.setlogfile('')
-        if self._tee and XpressDirect._version[0] < 36:
-            self._solver_model.removecbmessage(_print_message, None)
+        self._setLogFile(self._solver_model, '')
 
         # FIXME: can we get a return code indicating if XPRESS had a
         # significant failure?
         return Bunch(rc=None, log=None)
+
+    def _get_lb(self, var):
+        """Return the upper bound associated to the pyomo variable object"""
+        xp_var = self._pyomo_var_to_solver_var_map[var]
+        var_idx = self._getObjIndex(self._solver_model, xp_var)
+        return self._getLB(self._solver_model, var_idx, var_idx)[0]
+
+    def _get_ub(self, var):
+        """Return the upper bound associated to the pyomo variable object"""
+        xp_var = self._pyomo_var_to_solver_var_map[var]
+        var_idx = self._getObjIndex(self._solver_model, xp_var)
+        return self._getUB(self._solver_model, var_idx, var_idx)[0]
 
     def _get_mip_results(self, results, soln):
         """Sets up `results` and `soln` and returns whether there is a solution
@@ -341,7 +485,7 @@ class XpressDirect(DirectSolver):
         xprob_attrs = xprob.attributes
         status = xprob_attrs.mipstatus
         mip_sols = xprob_attrs.mipsols
-        if status == xp.mip_not_loaded:
+        if status == XpressDirect.MIPStatus.NOT_LOADED:
             results.solver.status = SolverStatus.aborted
             results.solver.termination_message = (
                 "Model is not loaded; no solution information is available."
@@ -351,9 +495,9 @@ class XpressDirect(DirectSolver):
             # no MIP solution, first LP did not solve, second LP did,
             # third search started but incomplete
         elif (
-            status == xp.mip_lp_not_optimal
-            or status == xp.mip_lp_optimal
-            or status == xp.mip_no_sol_found
+            status == XpressDirect.MIPStatus.LP_NOT_OPTIMAL
+            or status == XpressDirect.MIPStatus.LP_OPTIMAL
+            or status == XpressDirect.MIPStatus.NO_SOL_FOUND
         ):
             results.solver.status = SolverStatus.aborted
             results.solver.termination_message = (
@@ -361,7 +505,7 @@ class XpressDirect(DirectSolver):
             )
             results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.unknown
-        elif status == xp.mip_solution:  # some solution available
+        elif status == XpressDirect.MIPStatus.SOLUTION:  # some solution available
             results.solver.status = SolverStatus.warning
             results.solver.termination_message = (
                 "Unable to satisfy optimality tolerances; a sub-optimal "
@@ -369,12 +513,12 @@ class XpressDirect(DirectSolver):
             )
             results.solver.termination_condition = TerminationCondition.other
             soln.status = SolutionStatus.feasible
-        elif status == xp.mip_infeas:  # MIP proven infeasible
+        elif status == XpressDirect.MIPStatus.INFEAS:  # MIP proven infeasible
             results.solver.status = SolverStatus.warning
             results.solver.termination_message = "Model was proven to be infeasible"
             results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
-        elif status == xp.mip_optimal:  # optimal
+        elif status == XpressDirect.MIPStatus.OPTIMAL:  # optimal
             results.solver.status = SolverStatus.ok
             results.solver.termination_message = (
                 "Model was solved to optimality (subject to tolerances), "
@@ -382,7 +526,7 @@ class XpressDirect(DirectSolver):
             )
             results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
-        elif status == xp.mip_unbounded and mip_sols > 0:
+        elif status == XpressDirect.MIPStatus.UNBOUNDED and mip_sols > 0:
             results.solver.status = SolverStatus.warning
             results.solver.termination_message = (
                 "LP relaxation was proven to be unbounded, "
@@ -390,7 +534,7 @@ class XpressDirect(DirectSolver):
             )
             results.solver.termination_condition = TerminationCondition.unbounded
             soln.status = SolutionStatus.unbounded
-        elif status == xp.mip_unbounded and mip_sols <= 0:
+        elif status == XpressDirect.MIPStatus.UNBOUNDED and mip_sols <= 0:
             results.solver.status = SolverStatus.warning
             results.solver.termination_message = (
                 "LP relaxation was proven to be unbounded."
@@ -410,20 +554,20 @@ class XpressDirect(DirectSolver):
         if xprob_attrs.objsense == 1.0:  # minimizing MIP
             try:
                 results.problem.upper_bound = xprob_attrs.mipbestobjval
-            except (XpressDirect.XpressException, AttributeError):
+            except (xpress.ModelError, AttributeError):
                 pass
             try:
                 results.problem.lower_bound = xprob_attrs.bestbound
-            except (XpressDirect.XpressException, AttributeError):
+            except (xpress.ModelError, AttributeError):
                 pass
         elif xprob_attrs.objsense == -1.0:  # maximizing MIP
             try:
                 results.problem.upper_bound = xprob_attrs.bestbound
-            except (XpressDirect.XpressException, AttributeError):
+            except (xpress.ModelError, AttributeError):
                 pass
             try:
                 results.problem.lower_bound = xprob_attrs.mipbestobjval
-            except (XpressDirect.XpressException, AttributeError):
+            except (xpress.ModelError, AttributeError):
                 pass
 
         return mip_sols > 0
@@ -437,14 +581,14 @@ class XpressDirect(DirectSolver):
         xp = xpress
         xprob_attrs = xprob.attributes
         status = xprob_attrs.lpstatus
-        if status == xp.lp_unstarted:
+        if status == XpressDirect.LPStatus.UNSTARTED:
             results.solver.status = SolverStatus.aborted
             results.solver.termination_message = (
                 "Model is not loaded; no solution information is available."
             )
             results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.unknown
-        elif status == xp.lp_optimal:
+        elif status == XpressDirect.LPStatus.OPTIMAL:
             results.solver.status = SolverStatus.ok
             results.solver.termination_message = (
                 "Model was solved to optimality (subject to tolerances), "
@@ -452,12 +596,12 @@ class XpressDirect(DirectSolver):
             )
             results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
-        elif status == xp.lp_infeas:
+        elif status == XpressDirect.LPStatus.INFEAS:
             results.solver.status = SolverStatus.warning
             results.solver.termination_message = "Model was proven to be infeasible"
             results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
-        elif status == xp.lp_cutoff:
+        elif status == XpressDirect.LPStatus.CUTOFF:
             results.solver.status = SolverStatus.ok
             results.solver.termination_message = (
                 "Optimal objective for model was proven to be worse than the "
@@ -465,26 +609,26 @@ class XpressDirect(DirectSolver):
             )
             results.solver.termination_condition = TerminationCondition.minFunctionValue
             soln.status = SolutionStatus.optimal
-        elif status == xp.lp_unfinished:
+        elif status == XpressDirect.LPStatus.UNFINISHED:
             results.solver.status = SolverStatus.aborted
             results.solver.termination_message = (
                 "Optimization was terminated by the user."
             )
             results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
-        elif status == xp.lp_unbounded:
+        elif status == XpressDirect.LPStatus.UNBOUNDED:
             results.solver.status = SolverStatus.warning
             results.solver.termination_message = "Model was proven to be unbounded."
             results.solver.termination_condition = TerminationCondition.unbounded
             soln.status = SolutionStatus.unbounded
-        elif status == xp.lp_cutoff_in_dual:
+        elif status == XpressDirect.LPStatus.CUTOFF_IN_DUAL:
             results.solver.status = SolverStatus.ok
             results.solver.termination_message = (
                 "Xpress reported the LP was cutoff in the dual."
             )
             results.solver.termination_condition = TerminationCondition.minFunctionValue
             soln.status = SolutionStatus.optimal
-        elif status == xp.lp_unsolved:
+        elif status == XpressDirect.LPStatus.UNSOLVED:
             results.solver.status = SolverStatus.error
             results.solver.termination_message = (
                 "Optimization was terminated due to unrecoverable numerical "
@@ -492,7 +636,7 @@ class XpressDirect(DirectSolver):
             )
             results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
-        elif status == xp.lp_nonconvex:
+        elif status == XpressDirect.LPStatus.NONCONVEX:
             results.solver.status = SolverStatus.error
             results.solver.termination_message = (
                 "Optimization was terminated because nonconvex quadratic data "
@@ -513,16 +657,16 @@ class XpressDirect(DirectSolver):
         try:
             results.problem.upper_bound = xprob_attrs.lpobjval
             results.problem.lower_bound = xprob_attrs.lpobjval
-        except (XpressDirect.XpressException, AttributeError):
+        except (xpress.ModelError, AttributeError):
             pass
 
         # Not all solution information will be available in all cases, it is
         # up to the caller/user to check the actual status and figure which
         # of x, slack, duals, reduced costs are valid.
         return xprob_attrs.lpstatus in [
-            xp.lp_optimal,
-            xp.lp_cutoff,
-            xp.lp_cutoff_in_dual,
+            XpressDirect.LPStatus.OPTIMAL,
+            XpressDirect.LPStatus.CUTOFF,
+            XpressDirect.LPStatus.CUTOFF_IN_DUAL,
         ]
 
     def _get_nlp_results(self, results, soln):
@@ -549,15 +693,15 @@ class XpressDirect(DirectSolver):
         solstatus = xprob_attrs.xslp_solstatus
         have_soln = False
         optimal = False  # *globally* optimal?
-        if status == xp.nlp_unstarted:
+        if status == XpressDirect.NLPStatus.UNSTARTED:
             results.solver.status = SolverStatus.unknown
             results.solver.termination_message = (
                 "Non-convex model solve was not started"
             )
             results.solver.termination_condition = TerminationCondition.unknown
             soln.status = SolutionStatus.unknown
-        elif status == xp.nlp_locally_optimal:
-            # This is either xp.nlp_locally_optimal or xp.nlp_solution
+        elif status == XpressDirect.NLPStatus.LOCALLY_OPTIMAL:
+            # This is either XpressDirect.NLPStatus.LOCALLY_OPTIMAL or XpressDirect.NLPStatus.SOLUTION
             # we must look at the solstatus to figure out which
             if solstatus in [2, 3]:
                 results.solver.status = SolverStatus.ok
@@ -576,7 +720,7 @@ class XpressDirect(DirectSolver):
                 results.solver.termination_condition = TerminationCondition.feasible
                 soln.status = SolutionStatus.feasible
             have_soln = True
-        elif status == xp.nlp_globally_optimal:
+        elif status == XpressDirect.NLPStatus.OPTIMAL:
             results.solver.status = SolverStatus.ok
             results.solver.termination_message = (
                 "Non-convex model was solved to global optimality"
@@ -585,26 +729,26 @@ class XpressDirect(DirectSolver):
             soln.status = SolutionStatus.optimal
             have_soln = True
             optimal = True
-        elif status == xp.nlp_locally_infeasible:
+        elif status == XpressDirect.NLPStatus.LOCALLY_INFEASIBLE:
             results.solver.status = SolverStatus.ok
             results.solver.termination_message = (
                 "Non-convex model was proven to be locally infeasible"
             )
             results.solver.termination_condition = TerminationCondition.noSolution
             soln.status = SolutionStatus.unknown
-        elif status == xp.nlp_infeasible:
+        elif status == XpressDirect.NLPStatus.INFEASIBLE:
             results.solver.status = SolverStatus.ok
             results.solver.termination_message = (
                 "Non-convex model was proven to be infeasible"
             )
             results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
-        elif status == xp.nlp_unbounded:  # locally unbounded!
+        elif status == XpressDirect.NLPStatus.UNBOUNDED:  # locally unbounded!
             results.solver.status = SolverStatus.ok
             results.solver.termination_message = "Non-convex model is locally unbounded"
             results.solver.termination_condition = TerminationCondition.unbounded
             soln.status = SolutionStatus.unbounded
-        elif status == xp.nlp_unfinished:
+        elif status == XpressDirect.NLPStatus.UNFINISHED:
             results.solver.status = SolverStatus.ok
             results.solver.termination_message = (
                 "Non-convex solve not finished (numerical issues?)"
@@ -627,7 +771,7 @@ class XpressDirect(DirectSolver):
                 results.problem.upper_bound = xprob_attrs.xslp_objval
             if xprob_attrs.objsense < 0.0 or optimal:  # maximizing
                 results.problem.lower_bound = xprob_attrs.xslp_objval
-        except (XpressDirect.XpressException, AttributeError):
+        except (xpress.ModelError, AttributeError):
             pass
 
         return have_soln
@@ -637,23 +781,23 @@ class XpressDirect(DirectSolver):
             self._warm_start()
 
         xprob = self._solver_model
-
         is_mip = (xprob.attributes.mipents > 0) or (xprob.attributes.sets > 0)
+
         # Check for quadratic objective or quadratic constraints. If there are
         # any then we call nlpoptimize since that can handle non-convex
         # quadratics as well. In case of convex quadratics it will call
         # mipoptimize under the hood.
         if (xprob.attributes.qelems > 0) or (xprob.attributes.qcelems > 0):
-            xprob.nlpoptimize("g" if is_mip else "")
+            self._nlpOptimize(xprob, "g" if is_mip else "")
             self._get_results = self._get_nlp_results
         elif is_mip:
-            xprob.mipoptimize()
+            self._mipOptimize(xprob)
             self._get_results = self._get_mip_results
         else:
-            xprob.lpoptimize()
+            self._lpOptimize(xprob)
             self._get_results = self._get_lp_results
 
-        self._solver_model.postsolve()
+        self._postSolve(xprob)
 
     def _get_expr_from_pyomo_repn(self, repn, max_degree=2):
         referenced_vars = ComponentSet()
@@ -735,10 +879,10 @@ class XpressDirect(DirectSolver):
         ## by the method above
         if vartype == xpress.binary:
             if lb == ub:
-                self._solver_model.chgbounds([xpress_var], ['B'], [lb])
+                self._chgBounds(self._solver_model, [xpress_var], ['B'], [lb])
             else:
-                self._solver_model.chgbounds(
-                    [xpress_var, xpress_var], ['L', 'U'], [lb, ub]
+                self._chgBounds(
+                    self._solver_model, [xpress_var, xpress_var], ['L', 'U'], [lb, ub]
                 )
 
         self._pyomo_var_to_solver_var_map[var] = xpress_var
@@ -1114,7 +1258,8 @@ class XpressDirect(DirectSolver):
             if pyomo_var.value is not None:
                 mipsolval.append(value(pyomo_var))
                 mipsolcol.append(xpress_var)
-        self._solver_model.addmipsol(mipsolval, mipsolcol)
+        if len(mipsolval) > 0:
+            self._addMipSol(self._solver_model, mipsolval, mipsolcol)
 
     def _load_vars(self, vars_to_load=None):
         var_map = self._pyomo_var_to_solver_var_map

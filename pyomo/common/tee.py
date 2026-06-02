@@ -1,21 +1,19 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
-#  This module was originally developed as part of the PyUtilib project
-#  Copyright (c) 2008 Sandia Corporation.
-#  This software is distributed under the BSD License.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  ___________________________________________________________________________
-#
+# This module was originally developed as part of the PyUtilib project
+# Copyright (c) 2008 Sandia Corporation.
+# This software is distributed under the BSD License.
+# Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+# the U.S. Government retains certain rights in this software.
+# ____________________________________________________________________________________
+
 import collections.abc
 import io
 import logging
@@ -24,8 +22,11 @@ import sys
 import threading
 import time
 
+import pyomo.common.dependencies as dependencies
+from pyomo.common.enums import CaptureOutputMode
 from pyomo.common.errors import DeveloperError
 from pyomo.common.log import LoggingIntercept, LogStream
+from pyomo.common.shutdown import python_is_shutting_down
 
 _poll_interval = 0.0001
 _poll_rampup_limit = 0.099
@@ -37,6 +38,7 @@ _poll_rampup = 10
 # ~(13.1 * #threads) seconds
 _poll_timeout = 1  # 14 rounds: 0.0001 * 2**14 == 1.6384
 _poll_timeout_deadlock = 100  # seconds
+_threading_deadlock = 200  # seconds; should be longer than _poll_timeout_deadlock
 _pipe_buffersize = 1 << 16  # 65536
 _noop = lambda: None
 _mswindows = sys.platform.startswith('win')
@@ -55,6 +57,8 @@ except ImportError:
     _peek_available = False
 
 logger = logging.getLogger(__name__)
+
+OVERRIDE_CAPTURE_OUTPUT = CaptureOutputMode.NORMAL
 
 
 class _SignalFlush:
@@ -299,14 +303,14 @@ class capture_output:
 
     """
 
-    startup_shutdown = threading.Lock()
-
     def __init__(self, output=None, capture_fd=False):
         self.output = output
         self.output_stream = None
         self.old = None
         self.tee = None
-        self.capture_fd = capture_fd
+        self.capture_fd = capture_fd and (
+            OVERRIDE_CAPTURE_OUTPUT & CaptureOutputMode.ENABLE_FD_CAPTURE
+        )
         self.context_stack = []
 
     def _enter_context(self, cm, prior_to=None):
@@ -341,13 +345,12 @@ class capture_output:
                 cm.__exit__(et, ev, tb)
             except:
                 _stack = self.context_stack
-                FAIL.append(
-                    f"{sys.exc_info()[0].__name__}: {sys.exc_info()[1]} ({len(_stack)+1}: {cm}@{id(cm):x})"
-                )
+                _et, _e, _tb = sys.exc_info()
+                FAIL.append(f"{_et.__name__}: {_e} ({len(_stack)+1}: {cm}@{id(cm):x})")
         return FAIL
 
     def __enter__(self):
-        if not capture_output.startup_shutdown.acquire(timeout=_poll_timeout_deadlock):
+        if not dependencies.capture_output_lock.acquire(timeout=_threading_deadlock):
             # This situation *shouldn't* happen.  If it does, it is
             # unlikely that the user can fix it (or even debug it).
             # Instead they should report it back to us.
@@ -360,20 +363,22 @@ class capture_output:
             #     was trying to start up / run (so the other solver held
             #     the lock, but the GC interrupted that thread and
             #     wouldn't let go).
-            raise DeveloperError("Deadlock starting capture_output")
+            if not python_is_shutting_down():
+                raise DeveloperError("Deadlock starting capture_output")
         try:
             return self._enter_impl()
         finally:
-            capture_output.startup_shutdown.release()
+            dependencies.capture_output_lock.release()
 
     def __exit__(self, et, ev, tb):
-        if not capture_output.startup_shutdown.acquire(timeout=_poll_timeout_deadlock):
+        if not dependencies.capture_output_lock.acquire(timeout=_threading_deadlock):
             # See comments & breadcrumbs in __enter__() above.
-            raise DeveloperError("Deadlock closing capture_output")
+            if not python_is_shutting_down():
+                raise DeveloperError("Deadlock closing capture_output")
         try:
             return self._exit_impl(et, ev, tb)
         finally:
-            capture_output.startup_shutdown.release()
+            dependencies.capture_output_lock.release()
 
     def _enter_impl(self):
         self.old = (sys.stdout, sys.stderr)
@@ -488,8 +493,11 @@ class capture_output:
             # exception.
             self._exit_context_stack(*sys.exc_info())
             raise
-        sys.stdout = self.tee.STDOUT
-        sys.stderr = self.tee.STDERR
+        if OVERRIDE_CAPTURE_OUTPUT & CaptureOutputMode.ENABLE_STREAM_CAPTURE:
+            sys.stdout = self.tee.STDOUT
+            sys.stderr = self.tee.STDERR
+        else:
+            self.old = None
         buf = self.tee.ostreams
         if len(buf) == 1:
             buf = buf[0]

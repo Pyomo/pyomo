@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import copy
 import itertools
@@ -1714,7 +1712,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         )
 
     def test_dimen(self):
-        self.assertEqual(SetOf([]).dimen, 0)
+        self.assertEqual(SetOf([]).dimen, UnknownSetDimen)
         self.assertEqual(SetOf([1, 2, 3]).dimen, 1)
         self.assertEqual(SetOf([(1, 2), (2, 3), (4, 5)]).dimen, 2)
         self.assertEqual(SetOf([1, (2, 3)]).dimen, None)

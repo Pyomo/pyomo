@@ -20,13 +20,14 @@ Pyomo External Functions.
 This work was conducted as part of the Institute for the Design of Advanced
 Energy Systems (`IDAES <https://idaes.org>`_) with support through the
 Simulation-Based Engineering, Crosscutting Research Program within the U.S.
-Department of Energy’s Office of Fossil Energy and Carbon Management.
+Department of Energy's Office of Fossil Energy and Carbon Management.
 
 .. _Eason & Biegler, 2018: https://doi.org/10.1002/aic.16364
 .. _Yoshio & Biegler, 2021: https://doi.org/10.1002/aic.17054
+.. _Hameed et al., 2026: https://doi.org/10.1002/aic.70258
 
 Methodology Overview
----------------------
+--------------------
 
 The formulation of the original hybrid problem is:
 
@@ -78,10 +79,35 @@ the iteration has moved in a direction towards an optimal solution. If not true,
 the step is rejected. If true, the step is accepted and the surrogate
 model is updated for the next iteration.
 
+Globalization Strategies
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The TRF solver supports two globalization strategies to control step acceptance
+and trust region updates: the **filter** method (default) and the **funnel** method.
+The strategy is selected via the ``globalization_strategy`` keyword argument
+(``'filter'`` for filter, ``'funnel'`` for funnel).
+
+**Filter Method (default)**
+
+The filter method, used in the original Yoshio & Biegler (2021) implementation,
+maintains a filter set of (feasibility, objective) pairs. A new iterate is
+accepted if it is not dominated by any entry in the filter. At each iteration,
+steps are classified as either f-type (objective-improving) or theta-type
+(feasibility-improving), and the trust region radius is updated accordingly.
+
+**Funnel Method**
+
+The funnel globalization strategy is an alternative to the filter method,
+introduced by [`Hameed et al., 2026`_]. Instead of a discrete filter set,
+the funnel maintains a dynamic upper bound on the feasibility measure that
+shrinks as the algorithm converges. For full details of the funnel algorithm,
+step classification, and acceptance conditions, please refer to
+[`Hameed et al., 2026`_].
+
 When using TRF, please consider citing the above papers.
 
 TRF Inputs
------------
+----------
 
 The required inputs to the TRF
 :py:meth:`solve <pyomo.contrib.trustregion.TRF.TrustRegionSolver.solve>`
@@ -98,7 +124,7 @@ method is the following:
 
 
 TRF Solver Interface
----------------------
+--------------------
 
 .. note::
     The keyword arguments can be updated at solver instantiation or later when the ``solve`` method is called.
@@ -108,14 +134,14 @@ TRF Solver Interface
     :members: solve
 
 TRF Usage Example
-------------------
+-----------------
 Two examples can be found in the examples_ subdirectory. One of them is
 implemented below.
 
 .. _examples: https://github.com/Pyomo/pyomo/tree/main/pyomo/contrib/trustregion/examples
 
 Step 0: Import Pyomo
-^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
 
 .. doctest::
 
@@ -123,7 +149,7 @@ Step 0: Import Pyomo
    >>> import pyomo.environ as pyo
 
 Step 1: Define the external function and its gradient
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. doctest::
 
@@ -135,7 +161,7 @@ Step 1: Define the external function and its gradient
    ...     return [ pyo.cos(a - b), -pyo.cos(a - b) ]
 
 Step 2: Create the model
-^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. doctest::
 
@@ -161,8 +187,8 @@ Step 2: Create the model
    ...     return m
    >>> model = create_model()
 
-Step 3: Solve with TRF
-^^^^^^^^^^^^^^^^^^^^^^^
+Step 3: Solve with TRF (Filter, default)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. note::
     Reminder from earlier that the ``solve`` method requires the user pass the model and a list of variables
@@ -175,8 +201,40 @@ Step 3: Solve with TRF
 
    >>> # === Instantiate the TRF solver object ===
    >>> trf_solver = pyo.SolverFactory('trustregion')
-   >>> # === Solve with TRF ===
+   >>> # === Solve with TRF using the default filter globalization strategy ===
    >>> result = trf_solver.solve(model, [model.z[0], model.z[1], model.z[2]])
+   EXIT: Optimal solution found.
+   ...
+
+Step 3 (alternative): Solve with TRF (Funnel)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To use the funnel globalization strategy instead of the filter, set
+``globalization_strategy='funnel'``. The funnel-specific parameters can also be
+customized as needed:
+
+.. doctest::
+   :skipif: not ipopt_available
+
+   >>> # === Instantiate the TRF solver object with funnel strategy ===
+   >>> trf_solver = pyo.SolverFactory('trustregion', globalization_strategy='funnel')
+   >>> # === Solve with TRF using the funnel globalization strategy ===
+   >>> result = trf_solver.solve(model, [model.z[0], model.z[1], model.z[2]])
+   EXIT: Optimal solution found.
+   ...
+
+The funnel parameters can also be customized at solve time:
+
+.. doctest::
+   :skipif: not ipopt_available
+
+   >>> result = trf_solver.solve(
+   ...     model,
+   ...     [model.z[0], model.z[1], model.z[2]],
+   ...     globalization_strategy='funnel',
+   ...     funnel_param_kappa_f=0.3,
+   ...     funnel_param_eta=1e-4,
+   ... )
    EXIT: Optimal solution found.
    ...
 

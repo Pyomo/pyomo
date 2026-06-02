@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.solvers.plugins.solvers.xpress_direct import XpressDirect
@@ -110,8 +108,10 @@ class XpressPersistent(PersistentSolver, XpressDirect):
         qctype = self._xpress_chgcoltype_from_var(var)
         lb, ub = self._xpress_lb_ub_from_var(var)
 
-        self._solver_model.chgcoltype([xpress_var], [qctype])
-        self._solver_model.chgbounds([xpress_var, xpress_var], ['L', 'U'], [lb, ub])
+        XpressDirect._chgColType(self, self._solver_model, [xpress_var], [qctype])
+        XpressDirect._chgBounds(
+            self, self._solver_model, [xpress_var, xpress_var], ['L', 'U'], [lb, ub]
+        )
 
     def _add_column(self, var, obj_coef, constraints, coefficients):
         """Add a column to the solver's model
@@ -135,7 +135,9 @@ class XpressPersistent(PersistentSolver, XpressDirect):
         vartype = self._xpress_chgcoltype_from_var(var)
         lb, ub = self._xpress_lb_ub_from_var(var)
 
-        self._solver_model.addcols(
+        XpressDirect._addCols(
+            self,
+            self._solver_model,
             objx=[obj_coef],
             mstart=[0, len(coefficients)],
             mrwind=constraints,
@@ -147,7 +149,7 @@ class XpressPersistent(PersistentSolver, XpressDirect):
         )
 
         xpress_var = self._solver_model.getVariable(
-            index=self._solver_model.getIndexFromName(type=2, name=varname)
+            index=XpressDirect._getIndex(self, self._solver_model, type=2, name=varname)
         )
 
         self._pyomo_var_to_solver_var_map[var] = xpress_var

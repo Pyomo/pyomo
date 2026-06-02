@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
 from types import MappingProxyType
@@ -311,6 +309,11 @@ class Engine:
     ) -> list[int]:
         idx_map = self.maps[item_type]
         return [idx_map[id(item)] for item in items]
+
+    def set_initial_values(self, variables: Iterable[VarData]) -> None:
+        values = [value(var) for var in variables]
+        idxs = self.get_idxs(VarData, variables)
+        self.execute(knitro.KN_set_var_primal_init_values, idxs, values)
 
     def get_values(
         self,

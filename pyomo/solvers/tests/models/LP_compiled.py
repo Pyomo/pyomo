@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import pyomo.kernel as pmo
 from pyomo.core import (
@@ -18,6 +16,7 @@ from pyomo.core import (
     RangeSet,
     ConstraintList,
 )
+from pyomo.core.expr import EqualityExpression, RangedExpression
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 from pyomo.repn.beta.matrix import compile_block_linear_constraints
 
@@ -84,27 +83,30 @@ class LP_compiled(_BaseTestModel):
         model.c.add((-1.0, model.x[10], -1.0))
         model.c.add((1.0, model.x[11], 1.0))
         model.c.add((1.0, model.x[12], 1.0))
-        cdata = model.c.add((0, 1, 3))
+        cdata = model.c.add(RangedExpression((0, 1, 3), False))
         assert cdata.lower == 0
         assert cdata.upper == 3
         assert cdata.body() == 1
         assert not cdata.equality
-        cdata = model.c.add((0, 2, 3))
+        cdata = model.c.add(RangedExpression((0, 2, 3), False))
         assert cdata.lower == 0
         assert cdata.upper == 3
         assert cdata.body() == 2
         assert not cdata.equality
-        cdata = model.c.add((0, 1, None))
+        # Note this is a redundant test, left in to preserve the
+        # baseline.  RangedExpression does not manipulate the arguments
+        # like the old tuple notation did.
+        cdata = model.c.add(RangedExpression((None, 0, 1), False))
         assert cdata.lower is None
         assert cdata.upper == 1
         assert cdata.body() == 0
         assert not cdata.equality
-        cdata = model.c.add((None, 0, 1))
+        cdata = model.c.add(RangedExpression((None, 0, 1), False))
         assert cdata.lower is None
         assert cdata.upper == 1
         assert cdata.body() == 0
         assert not cdata.equality
-        cdata = model.c.add((1, 1))
+        cdata = model.c.add(EqualityExpression((1, 1)))
         assert cdata.lower == 1
         assert cdata.upper == 1
         assert cdata.body() == 1

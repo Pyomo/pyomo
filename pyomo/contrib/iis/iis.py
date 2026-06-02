@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 """
 This module contains functions for computing an irreducible infeasible set
@@ -106,7 +104,8 @@ class _IISBase(abc.ABC):
 
 class CplexConflict(_IISBase):
     def compute(self):
-        self._solver._solver_model.conflict.refine()
+        _conflict = self._solver._solver_model.conflict
+        _conflict.refine(_conflict.all_constraints())
 
     def write(self, file_name):
         self._solver._solver_model.conflict.write(file_name)

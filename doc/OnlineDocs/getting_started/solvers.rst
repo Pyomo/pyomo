@@ -28,19 +28,24 @@ the license requirements for their desired solver.
      - License |br| Docs
    * - cplex
      - ``pip install cplex``
-     - ``conda install ‑c ibmdecisionoptimization \    cplex``
+     - ``conda install ‑c \ ibmdecisionoptimization cplex``
      - `License <https://www.ibm.com/products/ilog-cplex-optimization-studio/pricing>`__
        `Docs <https://www.ibm.com/docs/en/icos/latest?topic=cplex-installing>`__
    * - CPoptimizer
-     - ``pip install cplex \    docplex``
-     - ``conda install ‑c ibmdecisionoptimization \    cplex docplex``
+     - ``pip install cplex docplex``
+     - ``conda install ‑c \ ibmdecisionoptimization \        cplex docplex``
      - `License <https://github.com/IBMDecisionOptimization/docplex-doc/blob/master/LICENSE.txt>`__
        `Docs <https://ibmdecisionoptimization.github.io/docplex-doc/getting_started_python.html>`__
+   * - cuOpt
+     - CUDA-version dependent; see the official `documentation <https://docs.nvidia.com/cuopt/user-guide/latest/cuopt-python/quick-start.html>`__.
+     - CUDA-version dependent; see the official `documentation <https://docs.nvidia.com/cuopt/user-guide/latest/cuopt-python/quick-start.html>`__.
+     - `License <https://docs.nvidia.com/cuopt/user-guide/latest/license.html>`__
+       `Docs <https://docs.nvidia.com/cuopt/user-guide/latest/cuopt-python/quick-start.html>`__
    * - cyipopt
      - ``pip install cyipopt``
      - ``conda install ‑c conda‑forge cyipopt``
-     - `License <https://cyipopt.readthedocs.io/en/stable/#copyright>`__
-       `Docs <https://cyipopt.readthedocs.io/en/stable/install.html>`__
+     - `License <https://cyipopt.readthedocs.io/stable/#copyright>`__
+       `Docs <https://cyipopt.readthedocs.io/stable/install.html>`__
    * - glpk
      - N/A
      - ``conda install ‑c conda‑forge glpk``
@@ -69,13 +74,16 @@ the license requirements for their desired solver.
    * - PyMUMPS
      - ``pip install pymumps``
      - ``conda install ‑c conda‑forge pymumps``
-     - `License <https://github.com/PyMumps/pymumps/blob/master/COPYING>`__
+     - `License <https://github.com/PyMumps/pymumps/blob/master/LICENSE.txt>`__
        `Docs <https://github.com/pymumps/pymumps>`__
-   * - SCIP
+   * - SCIP (Command-line)
      - N/A
      - ``conda install ‑c conda‑forge scip``
-     - `License <https://www.scipopt.org/scip/doc/html/LICENSE.php>`__
-       `Docs <https://www.scipopt.org/index.php#download>`__
+     - (see `SCIP <https://www.scipopt.org>`__ project)
+   * - SCIP (Python)
+     - ``pip install pyscipopt``
+     - ``conda install ‑c conda‑forge pyscipopt``
+     - (see `SCIP <https://www.scipopt.org>`__ project)
    * - XPRESS
      - ``pip install xpress``
      - ``conda install ‑c fico‑xpress xpress``

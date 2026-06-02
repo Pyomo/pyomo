@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from __future__ import annotations
 import inspect
@@ -2634,15 +2632,17 @@ class SetOf(SetData, Component):
     def dimen(self):
         if isinstance(self._ref, SetData):
             return self._ref.dimen
-        _iter = iter(self)
+        _iter = iter(self._ref)
         try:
             x = next(_iter)
             if type(x) is tuple:
                 ans = len(x)
             else:
                 ans = 1
-        except:
-            return 0
+        except StopIteration:
+            # The referenced object is empty, so we can't infer / verify
+            # the dimensionality.
+            return UnknownSetDimen
         for x in _iter:
             _this = len(x) if type(x) is tuple else 1
             if _this != ans:

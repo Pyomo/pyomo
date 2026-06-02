@@ -45,6 +45,9 @@ with existing interfaces).
    * - Ipopt
      - ``ipopt``
      - ``ipopt_v2``
+   * - GAMS
+     - ``gams``
+     - ``gams_v2``
    * - Gurobi (persistent)
      - ``gurobi_persistent``
      - ``gurobi_persistent_v2``
@@ -57,6 +60,12 @@ with existing interfaces).
    * - KNITRO
      - ``knitro_direct``
      - ``knitro_direct``
+   * - SCIP (direct)
+     - ``scip_direct``
+     - ``scip_direct``
+   * - SCIP (persistent)
+     - ``scip_persistent``
+     - ``scip_persistent``
 
 Using the new interfaces through the legacy interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -261,9 +270,9 @@ solver's ``writer_config`` configuration option (see the
    file_determinism: FileDeterminism.ORDERED
    symbolic_solver_labels: false
    scale_model: true
-   export_nonlinear_variables: None
-   row_order: None
-   column_order: None
+   export_nonlinear_variables: null
+   row_order: null
+   column_order: null
    export_defined_variables: true
    linear_presolve: true
 

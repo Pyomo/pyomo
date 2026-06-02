@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import pyomo.common.unittest as unittest
 from pyomo.common.tee import capture_output
@@ -98,6 +96,7 @@ class TestTiming(unittest.TestCase):
            (0(\.\d+)?) seconds to construct Var x; 2 indices total
            (0(\.\d+)?) seconds to construct Var y; 0 indices total
            (0(\.\d+)?) seconds to construct Suffix Suffix
+           (0(\.\d+)?) seconds to construct SetOf 'y._data'
            (0(\.\d+)?) seconds to apply Transformation RelaxIntegerVars \(in-place\)
            """.strip()
 
@@ -147,6 +146,7 @@ class TestTiming(unittest.TestCase):
            (0(\.\d+)?) seconds to construct Var x; 2 indices total
            (0(\.\d+)?) seconds to construct Var y; 0 indices total
            (0(\.\d+)?) seconds to construct Suffix Suffix
+           (0(\.\d+)?) seconds to construct SetOf 'y._data'
            (0(\.\d+)?) seconds to apply Transformation RelaxIntegerVars \(in-place\)
            """.strip()
 

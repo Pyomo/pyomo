@@ -1,29 +1,28 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
-#  Pyomo.DoE was produced under the Department of Energy Carbon Capture Simulation
-#  Initiative (CCSI), and is copyright (c) 2022 by the software owners:
-#  TRIAD National Security, LLC., Lawrence Livermore National Security, LLC.,
-#  Lawrence Berkeley National Laboratory, Pacific Northwest National Laboratory,
-#  Battelle Memorial Institute, University of Notre Dame,
-#  The University of Pittsburgh, The University of Texas at Austin,
-#  University of Toledo, West Virginia University, et al. All rights reserved.
+# Pyomo.DoE was produced under the Department of Energy Carbon Capture Simulation
+# Initiative (CCSI), and is copyright (c) 2022 by the software owners:
+# TRIAD National Security, LLC., Lawrence Livermore National Security, LLC.,
+# Lawrence Berkeley National Laboratory, Pacific Northwest National Laboratory,
+# Battelle Memorial Institute, University of Notre Dame,
+# The University of Pittsburgh, The University of Texas at Austin,
+# University of Toledo, West Virginia University, et al. All rights reserved.
 #
-#  NOTICE. This Software was developed under funding from the
-#  U.S. Department of Energy and the U.S. Government consequently retains
-#  certain rights. As such, the U.S. Government has been granted for itself
-#  and others acting on its behalf a paid-up, nonexclusive, irrevocable,
-#  worldwide license in the Software to reproduce, distribute copies to the
-#  public, prepare derivative works, and perform publicly and display
-#  publicly, and to permit other to do so.
-#  ___________________________________________________________________________
+# NOTICE. This Software was developed under funding from the
+# U.S. Department of Energy and the U.S. Government consequently retains
+# certain rights. As such, the U.S. Government has been granted for itself
+# and others acting on its behalf a paid-up, nonexclusive, irrevocable,
+# worldwide license in the Software to reproduce, distribute copies to the
+# public, prepare derivative works, and perform publicly and display
+# publicly, and to permit other to do so.
+# ____________________________________________________________________________________
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -109,9 +108,11 @@ class FIMExternalGreyBox(
     def _get_FIM(self):
         # Grabs the current FIM subject
         # to the input values.
-        # This function currently assumes
-        # that we use a lower triangular
-        # FIM.
+        # Inputs store one triangular half
+        # of a symmetric FIM. Reconstruct
+        # the full symmetric matrix here,
+        # consistent with manuscript equation S5.
+        # https://arxiv.org/abs/2604.03354v1
         upt_FIM = self._input_values
 
         # Create FIM in the correct way
@@ -165,6 +166,8 @@ class FIMExternalGreyBox(
 
         if self.objective_option == ObjectiveLib.trace:
             obj_name = "A-opt"
+        elif self.objective_option == ObjectiveLib.pseudo_trace:
+            obj_name = "pseudo-A-opt"
         elif self.objective_option == ObjectiveLib.determinant:
             obj_name = "log-D-opt"
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
@@ -197,6 +200,8 @@ class FIMExternalGreyBox(
 
         if self.objective_option == ObjectiveLib.trace:
             obj_value = np.trace(np.linalg.pinv(M))
+        elif self.objective_option == ObjectiveLib.pseudo_trace:
+            obj_value = np.trace(M)
         elif self.objective_option == ObjectiveLib.determinant:
             sign, logdet = np.linalg.slogdet(M)
             obj_value = logdet
@@ -232,6 +237,8 @@ class FIMExternalGreyBox(
         # objective function.
         if self.objective_option == ObjectiveLib.trace:
             pyomo_block.outputs["A-opt"] = output_value
+        elif self.objective_option == ObjectiveLib.pseudo_trace:
+            pyomo_block.outputs["pseudo-A-opt"] = output_value
         elif self.objective_option == ObjectiveLib.determinant:
             pyomo_block.outputs["log-D-opt"] = output_value
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
@@ -269,6 +276,8 @@ class FIMExternalGreyBox(
             # is -inv(FIM) @ inv(FIM). Add reference to
             # pyomo.DoE 2.0 manuscript S.I.
             jac_M = -Minv @ Minv
+        elif self.objective_option == ObjectiveLib.pseudo_trace:
+            jac_M = np.eye(self._n_params, dtype=np.float64)
         elif self.objective_option == ObjectiveLib.determinant:
             Minv = np.linalg.pinv(M)
             # Derivative formula derived using tensor

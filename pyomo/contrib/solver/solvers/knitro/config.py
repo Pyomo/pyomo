@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.common.config import Bool, ConfigValue
 from pyomo.contrib.solver.common.config import SolverConfig
@@ -28,6 +26,18 @@ class KnitroConfig(SolverConfig):
             implicit=implicit,
             implicit_domain=implicit_domain,
             visibility=visibility,
+        )
+
+        self.knitro_warm_start: bool = self.declare(
+            "knitro_warm_start",
+            ConfigValue(
+                domain=Bool,
+                default=False,
+                doc=(
+                    "If True, KNITRO solver will use the current values "
+                    "of variables as starting points for the optimization."
+                ),
+            ),
         )
 
         self.rebuild_model_on_remove_var: bool = self.declare(

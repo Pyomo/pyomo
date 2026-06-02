@@ -1,3 +1,5 @@
+.. _development_principles:
+
 Development Principles
 ======================
 
@@ -7,6 +9,10 @@ those principles to the best of our ability, for users and potential
 contributors alike. Please also review Pyomo's recent publication
 on the history of its development for a holistic view into the changes
 of these principles over time [MHJ+25]_.
+
+.. contents::
+   :depth: 2
+   :local:
 
 Backwards Compatibility
 -----------------------
@@ -117,9 +123,9 @@ Dependency Management
 Minimal Core Dependencies
 +++++++++++++++++++++++++
 
-The core Pyomo codebase is designed to be a *Pure Python* library with minimal
-dependencies outside the standard Python library (currently, there is only a
-single hard dependency on ``ply``).
+The core Pyomo codebase is designed to be a *Pure Python* library with
+minimal dependencies outside the standard Python library (currently,
+there are no hard external dependencies).
 
 This approach simplifies installation, reduces the burden on derived packages,
 and lessens the likelihood of triggering dependency conflicts.
@@ -156,6 +162,7 @@ import; for example::
    
 
 .. _dependency_groups:
+
 Optional Dependency Groups
 ++++++++++++++++++++++++++
 
