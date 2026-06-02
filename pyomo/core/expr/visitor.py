@@ -16,6 +16,7 @@ from collections import deque
 
 logger = logging.getLogger('pyomo.core')
 
+from pyomo.common.collections import ComponentMap
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.errors import DeveloperError, TemplateExpressionError
 from pyomo.common.numeric_types import (
@@ -996,6 +997,10 @@ class ExpressionReplacementVisitor(StreamBasedExpressionVisitor):
     ):
         if substitute is None:
             substitute = {}
+        elif isinstance(substitute, ComponentMap):
+            substitute = {
+                k if k.__class__ is int else id(k): v for k, v in substitute.items()
+            }
         # Note: preserving the attribute names from the previous
         # implementation of the expression walker.
         self.substitute = substitute
