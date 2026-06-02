@@ -81,6 +81,7 @@ def initialize_with_piecewise_linear_approximation(
     num_pwl_cons_to_refine_per_iter: int = 5,
     aggressive_substitution: bool = True,
     skip_initial_nlp_solve: bool = False,
+    bounds_tol: float = 1e-6,
 ) -> Results:
     """
     Attempt to initialize the problem with a piecewise linear approximation
@@ -111,6 +112,11 @@ def initialize_with_piecewise_linear_approximation(
     skip_initial_nlp_solve: bool
         If True, the initial attempt at solving the NLP without initialization
         will be skipped.
+    bounds_tol: float
+        Bad things can happen with piecewise linear functions if the value of a
+        variable ends up outside of the variable's bounds. This bounds_tol is used
+        to ensure that variable values are sufficiently inside of the variable's 
+        bounds.
 
     Returns
     -------
@@ -139,6 +145,7 @@ def initialize_with_piecewise_linear_approximation(
         max_iter=max_pwl_refinement_iter,
         num_cons_to_refine_per_iter=num_pwl_cons_to_refine_per_iter,
         aggressive_substitution=aggressive_substitution,
+        bounds_tol=bounds_tol,
     )
 
     _cleanup(orig_var_data)

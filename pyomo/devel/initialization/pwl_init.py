@@ -202,22 +202,23 @@ def _refine_pwl_approx(
         PiecewiseLinearExpression, Sequence[ConstraintData]
     ],
     num_to_refine: int = 5,
+    bounds_tol: float = 1e-6,
 ):
     violations = []
     for expr in pwl_expr_to_con_map.keys():
         func = expr.pw_linear_function
         var_vals = []
         for v in expr.args:
-            if math.isclose(v.lb, v.ub, rel_tol=1e-6, abs_tol=1e-6):
+            if math.isclose(v.lb, v.ub, rel_tol=bounds_tol, abs_tol=bounds_tol):
                 val = 0.5 * (v.lb + v.ub)
             elif v.value is None:
                 val = None
             else:
                 val = v.value
-                if val <= v.lb + 1e-6 + 1e-6 * abs(v.lb):
-                    val += 1e-5
-                if val >= v.ub - 1e-6 - 1e-6 * abs(v.ub):
-                    val -= 1e-5
+                if val <= v.lb + bounds_tol + bounds_tol * abs(v.lb):
+                    val += 10*bounds_tol
+                if val >= v.ub - bounds_tol - bounds_tol * abs(v.ub):
+                    val -= 10 * bounds_tol
             var_vals.append(val)
         if any(i is None for i in var_vals):
             logger.info(f'missing variable values for {expr}')
@@ -262,6 +263,7 @@ def _initialize_with_piecewise_linear_approximation(
     max_iter=100,
     num_cons_to_refine_per_iter=5,
     aggressive_substitution=True,
+    bounds_tol: float = 1e-6,
 ) -> Results:
     logger.info('Starting initialization using a piecewise linear approximation')
     pwl = shallow_clone(nlp)
@@ -335,6 +337,7 @@ def _initialize_with_piecewise_linear_approximation(
             pwl,
             pwl_expr_to_con_map=pwl_expr_to_con_map,
             num_to_refine=num_cons_to_refine_per_iter,
+            bounds_tol=bounds_tol,
         )
         logger.info('refined PWL approximation')
 
