@@ -19,10 +19,7 @@ from pyomo.util.vars_from_expressions import get_vars_from_components
 def get_vars(m: BlockData):
     return ComponentSet(
         get_vars_from_components(
-            m, 
-            ctype=(pyo.Constraint, pyo.Objective), 
-            include_fixed=False, 
-            active=True,
+            m, ctype=(pyo.Constraint, pyo.Objective), include_fixed=False, active=True
         )
     )
 
