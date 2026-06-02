@@ -13,15 +13,18 @@ import pyomo.environ as pyo
 from pyomo.common.collections import ComponentSet
 from pyomo.core.base.block import BlockData
 from pyomo.core.expr.visitor import identify_variables
+from pyomo.util.vars_from_expressions import get_vars_from_components
 
 
 def get_vars(m: BlockData):
-    vset = ComponentSet()
-    for c in m.component_data_objects(pyo.Constraint, active=True, descend_into=True):
-        vset.update(identify_variables(c.body, include_fixed=False))
-    for o in m.component_data_objects(pyo.Objective, active=True, descend_into=True):
-        vset.update(identify_variables(o.expr, include_fixed=False))
-    return vset
+    return ComponentSet(
+        get_vars_from_components(
+            m, 
+            ctype=(pyo.Constraint, pyo.Objective), 
+            include_fixed=False, 
+            active=True,
+        )
+    )
 
 
 def shallow_clone(m1):
