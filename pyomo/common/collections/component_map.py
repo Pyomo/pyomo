@@ -169,8 +169,9 @@ class ComponentMap(AutoSlots.Mixin, MutableMapping):
     # We want a specialization of update() to avoid unnecessary calls to
     # the hasher when copying / merging ComponentMaps
     def update(self, *args, **kwargs):
-        if len(args) == 1 and not kwargs and args[0].__class__ is self.__class__:
-            return self._dict.update(args[0]._dict)
+        if len(args) == 1 and args[0].__class__ is self.__class__:
+            self._dict.update(args[0]._dict)
+            args = ()
         return super().update(*args, **kwargs)
 
     def _rekey_items(self, items):

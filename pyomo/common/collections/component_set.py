@@ -76,13 +76,14 @@ class ComponentSet(AutoSlots.Mixin, MutableSet):
         tmp = (tostr(k) for k in self._data.values())
         return f"{self.__class__.__name__}({', '.join(tmp)})"
 
-    def update(self, iterable):
+    def update(self, *iterables):
         """Update a set with the union of itself and others."""
-        if isinstance(iterable, ComponentSet):
-            self._data.update(iterable._data)
-        else:
-            for val in iterable:
-                self.add(val)
+        for iterable in *iterables:
+            if iterable.__class__ is self.__class__:
+                self._data.update(iterable._data)
+            else:
+                for val in iterable:
+                    self.add(val)
 
     #
     # Implement MutableSet abstract methods
