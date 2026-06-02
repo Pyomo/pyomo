@@ -44,13 +44,13 @@ def shallow_clone(m1):
     return m2
 
 
-def fix_vars_with_equal_bounds(m):
+def fix_vars_with_equal_bounds(m, abs_tol=1e-4, rel_tol=1e-4):
     for v in get_vars(m):
         if v.fixed:
             continue
         if (
             v.lb is not None
             and v.ub is not None
-            and math.isclose(v.lb, v.ub, abs_tol=1e-4, rel_tol=1e-4)
+            and math.isclose(v.lb, v.ub, abs_tol=abs_tol, rel_tol=rel_tol)
         ):
             v.fix(0.5 * (v.lb + v.ub))
