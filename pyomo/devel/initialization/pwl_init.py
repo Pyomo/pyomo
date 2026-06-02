@@ -231,7 +231,9 @@ def _refine_pwl_approx(
 
     if len(violations) == 0:
         raise RuntimeError(
-            'Did not find any piecewise linear functions with variable values'
+            'We have not found a feasible solution to the problem yet, but the '
+            'solution to piecewise linear approximation did not have any violations, '
+            'so there is nothing to refine.'
         )
 
     tol = 1e-5
