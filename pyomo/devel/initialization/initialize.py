@@ -43,6 +43,11 @@ def _setup(nlp):
     orig_var_data = [
         (v, (v.lower, v.upper, v.domain, v.fixed, v.value)) for v in orig_vars
     ]
+    for v, vdata in orig_var_data:
+        if vdata[2].isdiscrete():
+            raise RuntimeError(
+                'Initialization module currently only supports continuous models.'
+            )
     return orig_var_data
 
 
@@ -137,18 +142,19 @@ def initialize_with_piecewise_linear_approximation(
 
     orig_var_data = _setup(nlp)
 
-    res = _initialize_with_piecewise_linear_approximation(
-        nlp=nlp,
-        mip_solver=mip_solver,
-        nlp_solver=nlp_solver,
-        default_bound=default_bound,
-        max_iter=max_pwl_refinement_iter,
-        num_cons_to_refine_per_iter=num_pwl_cons_to_refine_per_iter,
-        aggressive_substitution=aggressive_substitution,
-        bounds_tol=bounds_tol,
-    )
-
-    _cleanup(orig_var_data)
+    try:
+        res = _initialize_with_piecewise_linear_approximation(
+            nlp=nlp,
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver,
+            default_bound=default_bound,
+            max_iter=max_pwl_refinement_iter,
+            num_cons_to_refine_per_iter=num_pwl_cons_to_refine_per_iter,
+            aggressive_substitution=aggressive_substitution,
+            bounds_tol=bounds_tol,
+        )
+    finally:
+        _cleanup(orig_var_data)
 
     return res
 
@@ -219,18 +225,19 @@ def initialize_with_LP_approximation(
     if lp_solver is None:
         lp_solver = _get_solver('gurobi_persistent', 'LP solver')
 
-    res = _initialize_with_LP_approximation(
-        nlp=nlp,
-        lp_solver=lp_solver,
-        nlp_solver=nlp_solver,
-        default_bound=default_bound,
-        num_samples=num_samples_per_nonlinear_constraint,
-        seed=seed,
-        use_univariate_nonlinear_decomposition=use_univariate_nonlinear_decomposition,
-        aggressive_substitution=aggressive_substitution,
-    )
-
-    _cleanup(orig_var_data)
+    try:
+        res = _initialize_with_LP_approximation(
+            nlp=nlp,
+            lp_solver=lp_solver,
+            nlp_solver=nlp_solver,
+            default_bound=default_bound,
+            num_samples=num_samples_per_nonlinear_constraint,
+            seed=seed,
+            use_univariate_nonlinear_decomposition=use_univariate_nonlinear_decomposition,
+            aggressive_substitution=aggressive_substitution,
+        )
+    finally:
+        _cleanup(orig_var_data)
 
     return res
 
@@ -279,10 +286,11 @@ def initialize_with_global_opt(
     if global_solver is None:
         global_solver = _get_solver('gurobi_direct_minlp', 'global NLP solver')
 
-    res = _initialize_with_global_solver(
-        nlp=nlp, global_solver=global_solver, nlp_solver=nlp_solver
-    )
-
-    _cleanup(orig_var_data)
+    try:
+        res = _initialize_with_global_solver(
+            nlp=nlp, global_solver=global_solver, nlp_solver=nlp_solver
+        )
+    finally:
+        _cleanup(orig_var_data)
 
     return res
