@@ -37,16 +37,6 @@ from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
     RooneyBieglerExperiment,
 )
 
-if scipy_available:
-    from pyomo.contrib.doe import DesignOfExperiments
-    from pyomo.contrib.doe.doe import InitializationMethod, _DoEResultsJSONEncoder
-    from pyomo.contrib.doe.tests.experiment_class_example_flags import (
-        BadExperiment,
-        RooneyBieglerExperimentFlag,
-        RooneyBieglerMultiExperiment,
-        RooneyBieglerMultiInputExperimentFlag,
-    )
-
 from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
 import pyomo.environ as pyo
 from pyomo.opt import SolverFactory

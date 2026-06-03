@@ -74,11 +74,11 @@ class RooneyBieglerExperimentBad(RooneyBieglerExperiment):
 
 class RooneyBieglerMultiExperiment(RooneyBieglerExperiment):
     """
-    Experiment class based on the multi-experiment Rooney-Biegler prototype.
+    Test-only multi-experiment Rooney-Biegler variant.
 
-    This mirrors the implementation in
-    ``examples/multiexperiment-prototype/rooney_biegler_multiexperiment.py``
-    while allowing test-time control over initial hour and bounds.
+    This keeps the same basic structure as ``RooneyBieglerExperiment`` while
+    allowing test-time control over the initial hour, bounds, and
+    symmetry-breaking metadata.
     """
 
     def __init__(

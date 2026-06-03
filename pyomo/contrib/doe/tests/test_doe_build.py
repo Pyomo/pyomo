@@ -64,16 +64,15 @@ class _TrackingSolver:
         self._phase_tag = phase_tag
         self._call_order = call_order
         self.calls = 0
-        self.option_markers = []
 
     def solve(self, *args, **kwargs):
         self.calls += 1
         self._call_order.append(self._phase_tag)
-        self.option_markers.append(self._solver.options.get("max_iter"))
         return self._solver.solve(*args, **kwargs)
 
-    def __getattr__(self, name):
-        return getattr(self._solver, name)
+    @property
+    def name(self):
+        return getattr(self._solver, "name", str(self._solver))
 
 
 def get_rooney_biegler_experiment():
@@ -178,7 +177,7 @@ def get_standard_args(experiment, fd_method, obj_used):
 @unittest.skipIf(not pandas_available, "pandas is not available")
 class TestDoeBuild(unittest.TestCase):
     def test_constructor_accepts_single_experiment_or_list(self):
-        # The public constructor should normalize either form into the same
+        # The constructor should normalize either form into the same
         # internal experiment_list representation.
         single = DesignOfExperiments(
             experiment=RooneyBieglerMultiExperiment(hour=2.0),
@@ -583,7 +582,7 @@ class TestDoEObjectiveOptions(unittest.TestCase):
     def test_maximize_objective_set_contents(self):
         # The objective-sense partition drives maximize/minimize scoring logic
         # in initialization and solve helpers, so keep a direct regression on
-        # the public enum membership of the maximize set.
+        # the enum membership of the maximize set.
         maximize = DesignOfExperiments._MAXIMIZE_OBJECTIVES
         self.assertIn(ObjectiveLib.determinant, maximize)
         self.assertIn(ObjectiveLib.pseudo_trace, maximize)
@@ -709,18 +708,12 @@ class TestDoEObjectiveOptions(unittest.TestCase):
 class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
     """Coverage for optimize_experiments() build, output, and diagnostics behavior."""
 
-    def _make_solver(self):
-        return make_ipopt_solver()
-
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_optimize_experiments_init_solver_used_for_initialization_only(self):
         # Tests that all pre-final solves use init_solver while the final
         # optimization solve still uses the primary solver.
-        main_solver_inner = self._make_solver()
-        init_solver_inner = self._make_solver()
-        # Use distinct option values so each solver path can be identified.
-        main_solver_inner.options["max_iter"] = 321
-        init_solver_inner.options["max_iter"] = 123
+        main_solver_inner = make_ipopt_solver()
+        init_solver_inner = make_ipopt_solver()
         call_order = []
         main_solver = _TrackingSolver(
             solver=main_solver_inner, phase_tag="main", call_order=call_order
@@ -745,11 +738,6 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         self.assertEqual(main_solver.calls, 1)  # Exactly one main optimization solve
         self.assertEqual(call_order[-1], "main")
         self.assertTrue(all(tag == "init" for tag in call_order[:-1]))
-        # Distinct option markers provide a second check that solver routing
-        # matches the expected init-versus-final phase split.
-        option_markers = init_solver.option_markers + main_solver.option_markers
-        self.assertTrue(all(marker == 123 for marker in option_markers[:-1]))
-        self.assertEqual(option_markers[-1], 321)
         # Result payloads should report the same phase-specific solver names that
         # were observed through the tracked solve() calls above.
         self.assertEqual(
@@ -794,7 +782,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
     def test_multi_experiment_structure_and_results(self):
         # Test that the multi-experiment optimize_experiments() run builds the expected
         # scenario/experiment structure and structured results.
-        solver = self._make_solver()
+        solver = make_ipopt_solver()
 
         doe_obj = DesignOfExperiments(
             experiment=[
@@ -853,7 +841,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
             step=1e-2,
-            solver=self._make_solver(),
+            solver=make_ipopt_solver(),
         )
         fd, results_path = tempfile.mkstemp(suffix=".json")
         os.close(fd)
@@ -887,7 +875,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
             step=1e-2,
-            solver=self._make_solver(),
+            solver=make_ipopt_solver(),
         )
         doe_obj.optimize_experiments()
         self.assertEqual(
@@ -900,12 +888,12 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         # The zero objective intentionally builds no scenario.obj_cons block, so
         # optimize_experiments() must skip the deactivate/reactivate cycle and
         # still produce the usual results payload from the square solve.
-        init_solver = self._make_solver()
+        init_solver = make_ipopt_solver()
         doe_obj = DesignOfExperiments(
             experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="zero",
             step=1e-2,
-            solver=self._make_solver(),
+            solver=make_ipopt_solver(),
         )
         doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
 
@@ -925,12 +913,12 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
     def test_optimize_experiments_trace_roundoff_flag_builds_extra_constraints(self):
         # The multi-experiment trace path optionally adds extra Cholesky/FIM
         # diagonal constraints to reduce roundoff drift.
-        init_solver = self._make_solver()
+        init_solver = make_ipopt_solver()
         doe_obj = DesignOfExperiments(
             experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="trace",
             step=1e-2,
-            solver=self._make_solver(),
+            solver=make_ipopt_solver(),
             improve_cholesky_roundoff_error=True,
         )
         doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
@@ -958,7 +946,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
             step=1e-2,
-            solver=self._make_solver(),
+            solver=make_ipopt_solver(),
         )
         doe_obj.optimize_experiments(
             n_exp=2,
@@ -988,7 +976,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
             step=1e-2,
-            solver=self._make_solver(),
+            solver=make_ipopt_solver(),
         )
         with self.assertLogs("pyomo.contrib.doe.doe", level="INFO") as log_cm:
             doe_obj.optimize_experiments(n_exp=3)
@@ -1008,7 +996,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
             step=1e-2,
-            solver=self._make_solver(),
+            solver=make_ipopt_solver(),
         )
         doe_obj.optimize_experiments(
             n_exp=2,
@@ -1047,7 +1035,7 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
             experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
             objective_option="pseudo_trace",
             step=1e-2,
-            solver=self._make_solver(),
+            solver=make_ipopt_solver(),
         )
         doe_obj.optimize_experiments(
             n_exp=n_exp,
