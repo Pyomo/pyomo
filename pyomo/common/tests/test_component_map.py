@@ -17,6 +17,7 @@ from pyomo.common.collections.component_map import (
     ObjectIdMap,
 )
 from pyomo.common.collections.component_set import ComponentSet
+from pyomo.common.envvar import is_pypy
 from pyomo.environ import ConcreteModel, Block, Var, Constraint, Param
 
 
@@ -401,7 +402,11 @@ class TestObjectIdMap(ComponentMapBaseTests, unittest.TestCase):
         cm[id(m.x)] = 2
         self.assertEqual(len(cm), 2)
         self.assertIn(m.x, cm)
-        self.assertNotIn(id(m.x), cm)  # Note: different from ComponentMap
+        # In pypy, ints from id() hash consistently; in cpython they do not
+        if is_pypy:
+            self.assertIn(id(m.x), cm)  # Note: different from ComponentMap
+        else:
+            self.assertNotIn(id(m.x), cm)  # Note: different from ComponentMap
         self.assertEqual(cm[m.x], 1)
 
         a = (1, (m.x, 3))
