@@ -1537,13 +1537,7 @@ class CardinalitySet(UncertaintySet):
            \\right\\},
 
        the cardinality-constrained set implicitly defined
-       in the popular robust optimization literature [1]_.
-
-    References
-    ----------
-    .. [1] D. Bertsimas and M. Sim. "The price of robustness",
-       *Operations research*, 52(1), 35-53, 2004. DOI
-       `10.1287/opre.1030.0065 <https://doi.org/10.1287/opre.1030.0065>`_.
+       in the popular robust optimization work [BS04]_.
 
     Examples
     --------
