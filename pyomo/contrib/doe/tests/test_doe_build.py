@@ -730,11 +730,10 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
 
         doe_obj.optimize_experiments(n_exp=2, init_solver=init_solver)
 
-        # The exact number of initialization solves is implementation-dependent,
-        # but they must all occur before the one final main-solver call.
-        self.assertGreaterEqual(
-            init_solver.calls, 1
-        )  # At least one initialization solve
+        # This case is deterministic:
+        # 2 experiments * (1 base-model solve + 2 parameters * 2 FD scenarios)
+        # + 1 aggregate square-initialization solve = 11 initialization solves.
+        self.assertEqual(init_solver.calls, 11)
         self.assertEqual(main_solver.calls, 1)  # Exactly one main optimization solve
         self.assertEqual(call_order[-1], "main")
         self.assertTrue(all(tag == "init" for tag in call_order[:-1]))
