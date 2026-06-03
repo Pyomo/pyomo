@@ -1735,18 +1735,15 @@ class CardinalitySet(UncertaintySet):
             )
         )
 
-        card_enum = enumerate(
-            zip(
-                self.origin,
-                self.positive_deviation,
-                self.negative_deviation,
-                param_var_data_list,
-                aux_var_list[: self.dim],
-                aux_var_list[self.dim :],
-            )
+        card_zip = zip(
+            self.origin,
+            self.positive_deviation,
+            self.negative_deviation,
+            param_var_data_list,
+            aux_var_list[: self.dim],
+            aux_var_list[self.dim :],
         )
-        for idx, (orig_val, pos_dev, neg_dev, param_var, *aux_pair) in card_enum:
-            pos_aux, neg_aux = aux_pair
+        for orig_val, pos_dev, neg_dev, param_var, pos_aux, neg_aux in card_zip:
             # deviation constraint for the main parameter
             conlist.add(orig_val + pos_dev * pos_aux - neg_dev * neg_aux == param_var)
 
