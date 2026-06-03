@@ -1633,7 +1633,7 @@ class CardinalitySet(UncertaintySet):
             if val_arr.size != self.dim:
                 raise ValueError(
                     "Attempting to set attribute 'positive_deviation' of "
-                    f"{CardinalitySet.__name__} of dimension {self.dim} "
+                    f"{type(self).__name__} of dimension {self.dim} "
                     f"to value of dimension {val_arr.size}"
                 )
 
@@ -1664,7 +1664,7 @@ class CardinalitySet(UncertaintySet):
             if val_arr.size != self.dim:
                 raise ValueError(
                     "Attempting to set attribute 'negative_deviation' of "
-                    f"{CardinalitySet.__name__} of dimension {self.dim} "
+                    f"{type(self).__name__} of dimension {self.dim} "
                     f"to value of dimension {val_arr.size}"
                 )
 
@@ -1886,7 +1886,7 @@ class CardinalitySet(UncertaintySet):
         # check gamma between 0 and n
         if self.gamma < 0 or self.gamma > self.dim:
             raise ValueError(
-                f"{CardinalitySet.__name__} attribute "
+                f"{type(self).__name__} attribute "
                 f"'gamma' must be a real number between 0 and dimension "
                 f"{self.dim} "
                 f"(provided value {self.gamma})"
