@@ -1983,7 +1983,9 @@ class TestCardinalitySet(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, ".*to match the set dimension.*"):
             cset.point_in_set([1, 2, 3])
 
-    @unittest.skipUnless(baron_available, "BARON is not available.")
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
     def test_compute_exact_parameter_bounds(self):
         """
         Test parameter bounds computations give expected results.
