@@ -957,7 +957,8 @@ class TestDoEFactorialFigure(unittest.TestCase):
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 @unittest.skipIf(not scipy_available, "scipy is not available")
 class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
-    def _make_template_doe(self, objective_option="pseudo_trace"):
+    @staticmethod
+    def _make_template_doe(objective_option="pseudo_trace"):
         exp = RooneyBieglerMultiExperiment(hour=2.0, y=10.0)
         solver = make_ipopt_solver()
         return DesignOfExperiments(
@@ -967,7 +968,8 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             solver=solver,
         )
 
-    def _build_template_model_for_multi_experiment(self, doe_obj, n_exp):
+    @staticmethod
+    def _build_template_model_for_multi_experiment(doe_obj, n_exp):
         doe_obj.model.param_scenario_blocks = pyo.Block(range(1))
         doe_obj.model.param_scenario_blocks[0].exp_blocks = pyo.Block(range(n_exp))
         for k in range(n_exp):
