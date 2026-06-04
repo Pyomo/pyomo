@@ -961,9 +961,6 @@ class TestDoEErrors(unittest.TestCase):
 @unittest.skipIf(not scipy_available, "scipy is not available")
 @unittest.skipIf(not pandas_available, "pandas is not available")
 class TestDoEErrorsRequiringSolver(unittest.TestCase):
-    def _make_solver(self):
-        return make_ipopt_solver()
-
     @unittest.skipIf(
         not parameterized_available, "The 'parameterized' package is not available"
     )
@@ -980,7 +977,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
             experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
             objective_option=objective_option,
             step=1e-2,
-            solver=self._make_solver(),
+            solver=make_ipopt_solver(),
         )
 
         with self.assertRaisesRegex(
@@ -998,7 +995,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
             experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
             objective_option="trace",
             step=1e-2,
-            solver=self._make_solver(),
+            solver=make_ipopt_solver(),
             _Cholesky_option=False,
         )
 
@@ -1023,7 +1020,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
             ],
             objective_option="pseudo_trace",
             step=1e-2,
-            solver=self._make_solver(),
+            solver=make_ipopt_solver(),
         )
 
         with self.assertRaisesRegex(
@@ -1061,7 +1058,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
             ],
             objective_option="pseudo_trace",
             step=1e-2,
-            solver=self._make_solver(),
+            solver=make_ipopt_solver(),
         )
 
         with self.assertRaisesRegex(
@@ -1097,7 +1094,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
             ],
             objective_option="pseudo_trace",
             step=1e-2,
-            solver=self._make_solver(),
+            solver=make_ipopt_solver(),
         )
 
         with self.assertRaisesRegex(
@@ -1122,7 +1119,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
             experiment=[exp],
             objective_option="pseudo_trace",
             step=1e-2,
-            solver=self._make_solver(),
+            solver=make_ipopt_solver(),
         )
 
         with self.assertRaisesRegex(
@@ -1171,7 +1168,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
             ],
             objective_option="pseudo_trace",
             step=1e-2,
-            solver=self._make_solver(),
+            solver=make_ipopt_solver(),
         )
         with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as cm:
             doe_obj.optimize_experiments()
@@ -1191,7 +1188,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
             ],
             objective_option="pseudo_trace",
             step=1e-2,
-            solver=self._make_solver(),
+            solver=make_ipopt_solver(),
         )
         with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as cm:
             doe_obj.optimize_experiments()
@@ -1208,7 +1205,7 @@ class TestDoEErrorsRequiringSolver(unittest.TestCase):
             experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
             objective_option="pseudo_trace",
             step=1e-2,
-            solver=self._make_solver(),
+            solver=make_ipopt_solver(),
         )
         with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
             with warnings.catch_warnings(record=True) as warn_cm:
