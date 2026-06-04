@@ -20,8 +20,8 @@
 major = 6
 minor = 10
 micro = 1
-# releaselevel = 'final'
-serial = 0
+releaselevel = 'final'
+# serial = 0
 
 
 def _estimate_release_level():
