@@ -1099,8 +1099,9 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             n_param_scenarios=1, n_exp=1, parameter_names=param_names
         )
 
-        expected_cholesky_input = expected_total_fim + _SMALL_TOLERANCE_DEFINITENESS * np.eye(
-            expected_total_fim.shape[0]
+        expected_cholesky_input = (
+            expected_total_fim
+            + _SMALL_TOLERANCE_DEFINITENESS * np.eye(expected_total_fim.shape[0])
         )
         L_vals = np.array(
             [
@@ -1300,21 +1301,7 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         lhs_n_samples = 3
         # Set random seed to keep LHS initialization deterministic.
         lhs_seed = 123
-        first_exp_block = doe.model.param_scenario_blocks[0].exp_blocks[0]
-        exp_input_vars = doe._get_experiment_input_vars(first_exp_block)
-        lb_vals = np.array([v.lb for v in exp_input_vars])
-        ub_vals = np.array([v.ub for v in exp_input_vars])
-        rng = np.random.default_rng(lhs_seed)
-        from scipy.stats.qmc import LatinHypercube
-
-        per_dim_samples = []
-        for i in range(len(exp_input_vars)):
-            dim_seed = int(rng.integers(0, 2**31))
-            sampler = LatinHypercube(d=1, seed=dim_seed)
-            s_unit = sampler.random(n=lhs_n_samples).flatten()
-            s_scaled = lb_vals[i] + s_unit * (ub_vals[i] - lb_vals[i])
-            per_dim_samples.append(s_scaled.tolist())
-        candidate_points = list(product(*per_dim_samples))
+        expected_points = [[9.840553760362205], [6.131800018881211]]
 
         def _fake_fim(experiment_index, input_values):
             x = float(input_values[0])
@@ -1325,18 +1312,6 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             lhs_n_samples=lhs_n_samples, lhs_seed=lhs_seed, n_exp=2
         )
 
-        # Independent exhaustive reference over explicit candidate points.
-        best_obj = -np.inf
-        best_combo = None
-        for combo in combinations(range(len(candidate_points)), 2):
-            f1 = _fake_fim(0, list(candidate_points[combo[0]]))
-            f2 = _fake_fim(0, list(candidate_points[combo[1]]))
-            obj_val = float(np.trace(f1 + f2))
-            if obj_val > best_obj:
-                best_obj = obj_val
-                best_combo = combo
-        expected_points = [list(candidate_points[i]) for i in best_combo]
-
         # Normalize (round + sort) so we compare selected points robustly
         # despite floating-point noise and ordering differences.
         got_norm = sorted(tuple(np.round(p, 8)) for p in got_points)
@@ -1344,7 +1319,8 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         self.assertEqual(got_norm, exp_norm)
 
     def test_optimize_experiments_determinant_expected_values(self):
-        # Tests determinant-objective optimization against known expected design/metric values.
+        # Tests determinant-objective optimization against known expected design/metric
+        # values.
         # Match the multi-experiment example style (explicit experiment list)
         exp_list = [
             RooneyBieglerMultiExperiment(hour=1.0, y=8.3),

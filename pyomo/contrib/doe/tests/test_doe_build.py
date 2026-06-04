@@ -739,13 +739,9 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         self.assertTrue(all(tag == "init" for tag in call_order[:-1]))
         # Result payloads should report the same phase-specific solver names that
         # were observed through the tracked solve() calls above.
+        self.assertEqual(doe_obj.results["initialization"]["solver"], init_solver.name)
         self.assertEqual(
-            doe_obj.results["initialization"]["solver"],
-            init_solver.name
-        )
-        self.assertEqual(
-            doe_obj.results["optimization_solve"]["solver"],
-            main_solver.name
+            doe_obj.results["optimization_solve"]["solver"], main_solver.name
         )
 
     def test_get_experiment_input_vars_direct_and_fd_fallback(self):
