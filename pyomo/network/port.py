@@ -31,6 +31,7 @@ from pyomo.core.base.label import alphanum_label_from_name
 
 from pyomo.network.util import create_var, tighten_var_domain
 
+
 logger = logging.getLogger('pyomo.network')
 
 
@@ -335,6 +336,7 @@ class Port(IndexedComponent):
         self._initialize = kwd.pop('initialize', {})
         self._implicit = kwd.pop('implicit', {})
         self._extends = kwd.pop('extends', None)
+        self._auto_created_arcs = []
         kwd.setdefault('ctype', Port)
         IndexedComponent.__init__(self, *args, **kwd)
 
@@ -374,6 +376,62 @@ class Port(IndexedComponent):
         self._extends = None  # especially important as this is another port
 
         timer.report()
+
+    def connect_to(self, port, block=None):
+        """Method for connecting current port to another port via an Arc
+        Args:
+            port: Port
+                The destination port to connect to
+            block: Block, optional
+                The block on which to construct the Arc. If None, the Arc will be constructed on the port parent block
+        """
+        # NOTE import Arc here to avoid circular import issues, this is the only place in the Port class where Arc is needed
+        from pyomo.network.arc import Arc
+
+        if block is None:
+            block = self.parent_block()
+            if block is None:
+                raise ValueError(
+                    "Cannot connect Port '%s' to Port '%s' because neither port has a parent block. Please specify a block to construct the Arc on."
+                    % (self.name, port.name)
+                )
+
+        def get_safe_name(name):
+            return (
+                name.replace(".", "_")
+                .replace("-", "")
+                .replace("[", "_")
+                .replace("]", "")
+            )
+
+        current_port_name = get_safe_name(self.name)
+        dest_port_name = get_safe_name(port.name)
+
+        arc_name = f"{current_port_name}_to_{dest_port_name}"
+        block.add_component(arc_name, Arc(source=self, destination=port))
+        created_arc = block.find_component(arc_name)
+        if created_arc is None:
+            raise RuntimeError(
+                f"Failed to create Arc '{arc_name}' connecting Port '{self.name}' to Port '{port.name}'."
+            )
+        logger.info(
+            f"Created Arc '{arc_name}' connecting Port '{self.name}' to Port '{port.name}'."
+        )
+        self._auto_created_arcs.append(created_arc)
+
+    def get_connections(self):
+        """Returns a single or list of Arcs that were automatically created by the `connect_to` method,
+        this list can be used for simple propagation or management of automatically created arcs,
+        if no Arc is created None is returned."""
+        if len(self._auto_created_arcs) == 0:
+            logger.warning(
+                f"No automatically created arcs found for Port '{self.name}'."
+            )
+            return None
+        elif len(self._auto_created_arcs) == 1:
+            return self._auto_created_arcs[0]
+        else:
+            return self._auto_created_arcs
 
     def _initialize_members(self, initSet):
         for idx in initSet:
