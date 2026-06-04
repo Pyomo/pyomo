@@ -20,7 +20,7 @@
 major = 6
 minor = 10
 micro = 1
-# releaselevel = 'final'
+releaselevel = 'final'
 serial = 0
 
 
