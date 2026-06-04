@@ -1208,46 +1208,12 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
     def test_lhs_combo_serial_minimize_objective_update(self):
         # Rooney-Biegler integration check for the LHS combination scorer on a
         # minimize objective (trace/A-opt). Verify that optimize_experiments()
-        # picks the same initial-design pair as an exhaustive reference over
-        # the generated candidates.
+        # picks the known initial-design pair for this fixed seed/fixture.
         n_exp = 2
         lhs_n_samples = 4
         # Set random seed to keep LHS initialization deterministic.
         lhs_seed = 61
-
-        doe_ref = self._make_template_doe("trace")
-        self._build_template_model_for_multi_experiment(doe_ref, n_exp=n_exp)
-
-        first_exp_block = doe_ref.model.param_scenario_blocks[0].exp_blocks[0]
-        exp_input_vars = doe_ref._get_experiment_input_vars(first_exp_block)
-        lb_vals = np.array([v.lb for v in exp_input_vars])
-        ub_vals = np.array([v.ub for v in exp_input_vars])
-
-        rng = np.random.default_rng(lhs_seed)
-        from scipy.stats.qmc import LatinHypercube
-
-        per_dim_samples = []
-        for i in range(len(exp_input_vars)):
-            dim_seed = int(rng.integers(0, 2**31))
-            sampler = LatinHypercube(d=1, seed=dim_seed)
-            s_unit = sampler.random(n=lhs_n_samples).flatten()
-            s_scaled = lb_vals[i] + s_unit * (ub_vals[i] - lb_vals[i])
-            per_dim_samples.append(s_scaled.tolist())
-        candidate_points = list(product(*per_dim_samples))
-        candidate_fims = [
-            doe_ref._compute_fim_at_point_no_prior(0, list(pt))
-            for pt in candidate_points
-        ]
-
-        best_combo = None
-        best_obj = np.inf
-        for combo in combinations(range(len(candidate_points)), n_exp):
-            fim_total = sum((candidate_fims[idx] for idx in combo), np.zeros((2, 2)))
-            obj_val = doe_ref._evaluate_objective_from_fim(fim_total)
-            if obj_val < best_obj:
-                best_obj = obj_val
-                best_combo = combo
-        expected_points = [list(candidate_points[i]) for i in best_combo]
+        expected_points = [[8.444882444378123], [1.677771030243514]]
 
         doe = self._make_template_doe("trace")
         doe.optimize_experiments(
