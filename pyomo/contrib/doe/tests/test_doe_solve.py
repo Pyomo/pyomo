@@ -28,6 +28,7 @@ if matplotlib_available:
 
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
+from pyomo.contrib.doe.utils import _SMALL_TOLERANCE_DEFINITENESS
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
@@ -1079,32 +1080,28 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         )
 
     def test_optimize_experiments_cholesky_jitter_branch(self):
-        # Force the positive-definiteness check down the jitter path and verify
-        # the matrix passed into Cholesky includes the expected diagonal shift.
+        # Seed a deliberately singular FIM so the Cholesky regularization path
+        # is exercised deterministically with a fixed, known diagonal shift.
         doe = self._make_template_doe("determinant")
-        # Keep the square initialization solve real (path under test), but
-        # stub the final solve. Without this, this test setup can fail
-        # before assertions with solver status=error on the final solve because
-        # rooney-biegler's model will not generate a negative eigval.
-        doe.solver = self._make_square_solve_then_stub_solver(doe.solver)
-
-        from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
-
-        doe.optimize_experiments(n_exp=1)
+        self._build_template_model_for_multi_experiment(doe, n_exp=1)
+        doe.create_multi_experiment_objective_function(doe.model)
 
         scenario = doe.model.param_scenario_blocks[0]
-        total_fim = np.array(
-            _optimize_experiments_param_scenario(doe.results)["total_fim"]
-        )
-        min_eig = np.min(np.real(np.linalg.eigvals(total_fim)))
-        if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
-            jitter = min(
-                -min_eig + _SMALL_TOLERANCE_DEFINITENESS, _SMALL_TOLERANCE_DEFINITENESS
-            )
-        else:
-            jitter = 0.0
-        expected_cholesky_input = total_fim + jitter * np.eye(total_fim.shape[0])
         param_names = list(scenario.exp_blocks[0].parameter_names)
+        expected_total_fim = np.array([[1.0, 1.0], [1.0, 1.0]])
+        for i, p in enumerate(param_names):
+            for j, q in enumerate(param_names):
+                if doe.only_compute_fim_lower and i < j:
+                    continue
+                scenario.exp_blocks[0].fim[p, q].set_value(expected_total_fim[i, j])
+
+        doe._initialize_scenario_quantities_from_square_solve(
+            n_param_scenarios=1, n_exp=1, parameter_names=param_names
+        )
+
+        expected_cholesky_input = expected_total_fim + _SMALL_TOLERANCE_DEFINITENESS * np.eye(
+            expected_total_fim.shape[0]
+        )
         L_vals = np.array(
             [
                 [pyo.value(scenario.obj_cons.L[p, q]) for q in param_names]
@@ -1112,8 +1109,6 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(doe.results["optimization_solve"]["status"], "ok")
-        self.assertGreater(jitter, 0.0)
         self.assertTrue(
             np.allclose(L_vals @ L_vals.T, expected_cholesky_input, atol=1e-8)
         )
