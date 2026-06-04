@@ -72,7 +72,7 @@ class _TrackingSolver:
 
     @property
     def name(self):
-        return getattr(self._solver, "name", str(self._solver))
+        return self._solver.name
 
 
 def get_rooney_biegler_experiment():
@@ -741,11 +741,11 @@ class TestOptimizeExperimentsBuildStructure(unittest.TestCase):
         # were observed through the tracked solve() calls above.
         self.assertEqual(
             doe_obj.results["initialization"]["solver"],
-            getattr(init_solver, "name", str(init_solver)),
+            init_solver.name
         )
         self.assertEqual(
             doe_obj.results["optimization_solve"]["solver"],
-            getattr(main_solver, "name", str(main_solver)),
+            main_solver.name
         )
 
     def test_get_experiment_input_vars_direct_and_fd_fallback(self):
