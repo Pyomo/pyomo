@@ -993,8 +993,8 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         class _SquareSolveThenStubSolver:
             def __init__(self, wrapped_solver):
                 self._wrapped_solver = wrapped_solver
-                self.name = getattr(wrapped_solver, "name", "stub-solver")
-                self.options = getattr(wrapped_solver, "options", {})
+                self.name = wrapped_solver.name
+                self.options = wrapped_solver.options
 
             def solve(self, *args, **kwargs):
                 model = args[0] if args else kwargs.get("model", None)
