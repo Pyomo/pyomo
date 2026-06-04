@@ -13,7 +13,7 @@ from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.core.expr.numvalue import value, is_fixed
 import pyomo.core.expr as EXPR
 from pyomo.opt.base import SolverFactory
-import collections
+import bisect
 
 
 @SolverFactory.register(
@@ -50,12 +50,29 @@ class XpressPersistent(PersistentSolver, XpressDirect):
             self.set_instance(self._pyomo_model, **kwds)
 
     def _remove_constraint(self, solver_con):
-        self._solver_model.delConstraint(solver_con)
+        # solver_con is the constraint name string.  Use the insertion-counter
+        # cache to compute the current Xpress row index in O(log M) — avoiding
+        # an O(N) getIndexFromName scan — then delete the row and record the
+        # deletion so future index lookups stay accurate.
+        counter = self._con_name_to_counter.pop(solver_con)
+        current_idx = counter - bisect.bisect_left(self._deleted_counters, counter)
+        self._solver_model.delConstraint(current_idx)
+        bisect.insort(self._deleted_counters, counter)
 
     def _remove_sos_constraint(self, solver_sos_con):
         self._solver_model.delSOS(solver_sos_con)
 
     def _remove_var(self, solver_var):
+        # Keep _template_var_map in sync: removing a column shifts all
+        # subsequent Xpress column indices down by one.  Deleting the entry
+        # from the ordered dict has exactly the same effect on the remaining
+        # vars' positions (from enumerate), so their indices stay correct
+        # after the visitor is rebuilt.  Reset _template_visitor so
+        # TemplateVarRecorder.var_order is recomputed on next use.
+        pyomo_var = self._solver_var_to_pyomo_var_map.get(solver_var)
+        if pyomo_var is not None:
+            self._template_var_map.pop(id(pyomo_var), None)
+        self._template_visitor = None
         self._solver_model.delVariable(solver_var)
 
     def _warm_start(self):
@@ -155,6 +172,10 @@ class XpressPersistent(PersistentSolver, XpressDirect):
         self._pyomo_var_to_solver_var_map[var] = xpress_var
         self._solver_var_to_pyomo_var_map[xpress_var] = var
         self._referenced_variables[var] = len(coefficients)
+        # Append to _template_var_map in column order (new column is last)
+        # and invalidate any cached template visitor.
+        self._template_var_map[id(var)] = var
+        self._template_visitor = None
 
     def get_xpress_attribute(self, *args):
         """
