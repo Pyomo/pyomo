@@ -7,21 +7,22 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+import logging
+
+from enum import Enum
 from typing import Optional
 from pyomo.core.base.block import BlockData
-from enum import Enum
-from pyomo.devel.initialization.utils import get_vars
 from pyomo.common.collections import ComponentMap
+from pyomo.contrib.solver.common.base import SolverBase
+from pyomo.contrib.solver.common.factory import SolverFactory
+from pyomo.contrib.solver.common.results import Results
+from pyomo.contrib.solver.common.results import SolutionStatus
 from pyomo.devel.initialization.pwl_init import (
     _initialize_with_piecewise_linear_approximation,
 )
-from pyomo.devel.initialization.lp_approx_init import _initialize_with_LP_approximation
-from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.devel.initialization.global_init import _initialize_with_global_solver
-from pyomo.contrib.solver.common.factory import SolverFactory
-from pyomo.contrib.solver.common.results import Results
-import logging
-from pyomo.contrib.solver.common.results import SolutionStatus
+from pyomo.devel.initialization.lp_approx_init import _initialize_with_LP_approximation
+from pyomo.util.vars_from_expressions import get_vars
 
 logger = logging.getLogger(__name__)
 
