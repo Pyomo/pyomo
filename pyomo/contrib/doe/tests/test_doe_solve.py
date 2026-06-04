@@ -1236,22 +1236,11 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
         lhs_n_samples = 3
         # Set random seed to keep LHS initialization deterministic.
         lhs_seed = 13
-        first_exp_block = doe.model.param_scenario_blocks[0].exp_blocks[0]
-        exp_input_vars = doe._get_experiment_input_vars(first_exp_block)
-        lb_vals = np.array([v.lb for v in exp_input_vars])
-        ub_vals = np.array([v.ub for v in exp_input_vars])
-        rng = np.random.default_rng(lhs_seed)
-        from scipy.stats.qmc import LatinHypercube
-
-        per_dim_samples = []
-        for i in range(len(exp_input_vars)):
-            dim_seed = int(rng.integers(0, 2**31))
-            sampler = LatinHypercube(d=1, seed=dim_seed)
-            s_unit = sampler.random(n=lhs_n_samples).flatten()
-            s_scaled = lb_vals[i] + s_unit * (ub_vals[i] - lb_vals[i])
-            per_dim_samples.append(s_scaled.tolist())
-        candidate_points = list(product(*per_dim_samples))
-        expected_points = [list(candidate_points[i]) for i in range(3)]
+        expected_points = [
+            [1.1964805935118192],
+            [7.43601921283148],
+            [5.780792707335482],
+        ]
 
         def _nan_fim(experiment_index, input_values):
             # Any comparison with NaN is False, so best_combo remains None and
