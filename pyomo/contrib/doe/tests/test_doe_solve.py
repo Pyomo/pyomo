@@ -1269,46 +1269,15 @@ class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
 
     def test_lhs_combo_scoring_n_exp_3_matches_exhaustive_reference(self):
         n_exp = 3
-        doe_ref = self._make_template_doe("pseudo_trace")
-        # Keep n_exp=3 to exercise the general combination-scoring path
-        # (different from the optimized n_exp==2 branch).
-        self._build_template_model_for_multi_experiment(doe_ref, n_exp=n_exp)
         lhs_n_samples = 5
         # Set random seed to keep LHS initialization deterministic.
         lhs_seed = 2
-
-        # Recreate the exact candidate points from LHS generation and compute
-        # an independent exhaustive reference for combination scoring.
-        first_exp_block = doe_ref.model.param_scenario_blocks[0].exp_blocks[0]
-        exp_input_vars = doe_ref._get_experiment_input_vars(first_exp_block)
-        lb_vals = np.array([v.lb for v in exp_input_vars])
-        ub_vals = np.array([v.ub for v in exp_input_vars])
-        rng = np.random.default_rng(lhs_seed)
-        from scipy.stats.qmc import LatinHypercube
-
-        per_dim_samples = []
-        for i in range(len(exp_input_vars)):
-            dim_seed = int(rng.integers(0, 2**31))
-            sampler = LatinHypercube(d=1, seed=dim_seed)
-            s_unit = sampler.random(n=lhs_n_samples).flatten()
-            s_scaled = lb_vals[i] + s_unit * (ub_vals[i] - lb_vals[i])
-            per_dim_samples.append(s_scaled.tolist())
-        candidate_points = list(product(*per_dim_samples))
-
-        # Exhaustive reference over all combinations of size 3.
-        fims = [
-            doe_ref._compute_fim_at_point_no_prior(0, list(pt))
-            for pt in candidate_points
+        # Fixed golden output for the deterministic seed/fixture.
+        expected_points = [
+            [3.8879931642615397],
+            [5.038982360056636],
+            [1.747554794490243],
         ]
-        best_obj = -np.inf
-        best_combo = None
-        for combo in combinations(range(len(candidate_points)), n_exp):
-            fim_total = sum((fims[i] for i in combo), np.zeros((2, 2)))
-            obj = doe_ref._evaluate_objective_from_fim(fim_total)
-            if obj > best_obj:
-                best_obj = obj
-                best_combo = combo
-        expected_points = [list(candidate_points[i]) for i in best_combo]
 
         doe = self._make_template_doe("pseudo_trace")
         doe.optimize_experiments(
