@@ -1475,16 +1475,16 @@ class CardinalitySet(UncertaintySet):
     origin : (N,) array_like
         Origin of the set (e.g., nominal uncertain parameter values).
     positive_deviation : (N,) array_like
-        Upper bounds for absolute values of the positive coordinate
-        deviations from the origin.
+        Maximal absolute deviation from the origin in the
+        positive coordinate direction.
     gamma : numeric type
         Upper bound for the number of coordinates that can
         simultaneously realize their maximal deviations from
         the origin. Must be a numerical value ranging from 0
         to the set dimension `N`.
     negative_deviation : (N,) array_like, optional
-        Upper bounds for absolute values of the negative coordinate
-        deviations from the origin.
+        Maximal absolute deviation from the origin in the
+        negative coordinate direction.
         If `None` is passed, then this argument is set to
         an (`N`,) shaped array of zeros.
 
@@ -1538,7 +1538,8 @@ class CardinalitySet(UncertaintySet):
            \\right\\},
 
        the cardinality-constrained set implicitly defined
-       in the popular robust optimization work [BS04]_.
+       in the popular robust optimization work by Bertsimas and Sim
+       [BS04]_.
 
     Examples
     --------
