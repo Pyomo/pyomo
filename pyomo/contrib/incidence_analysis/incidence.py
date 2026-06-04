@@ -18,6 +18,9 @@ from pyomo.contrib.incidence_analysis.config import (
     IncidenceMethod,
     get_config_from_kwds,
 )
+from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
+    ExternalGreyBoxConstraint,
+)
 
 
 #
@@ -187,3 +190,24 @@ def get_incident_variables(expr, **kwds):
             f"Unrecognized value {method} for the method used to identify incident"
             f" variables. See the IncidenceMethod enum for valid methods."
         )
+
+
+def get_variables_incident_to_constraint(constraint, **kwds):
+    """Get variables that participate in a constraint
+
+    Keyword arguments must be valid options for ``IncidenceConfig``
+
+    Parameters
+    ----------
+    constraint: ``ConstraintData``
+
+    Returns
+    -------
+    list of VarData
+        List containing the variables that participate in the expression
+
+    """
+    if constraint.ctype is ExternalGreyBoxConstraint:
+        return constraint.body.identify_variables()
+    else:
+        return get_incident_variables(constraint.body, **kwds)
