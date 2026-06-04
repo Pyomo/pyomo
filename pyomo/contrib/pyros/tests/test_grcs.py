@@ -262,6 +262,63 @@ def build_leyffer_two_cons_two_params():
     return m
 
 
+class TestPyROSSolveCardinalitySet(unittest.TestCase):
+    """
+    Test PyROS successfully solves model with cardinality-constrained
+    uncertainty set.
+    """
+
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
+    def test_cardinality_set_solve(self):
+        m = ConcreteModel()
+        m.q = Param(range(4), initialize=1, mutable=True)
+        m.x = Var(initialize=0, bounds=(0, None))
+        m.obj = Objective(expr=m.x)
+        m.ineq_con = Constraint(expr=m.x >= m.q[0] + m.q[1] - m.q[2] - m.q[3])
+
+        cset = CardinalitySet(
+            origin=[1] * 4, positive_deviation=[1, 0, 2, 0.5], gamma=2
+        )
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=cset,
+            local_solver="ipopt",
+            global_solver="ipopt",
+            objective_focus="worst_case",
+            solve_master_globally=True,
+        )
+        self.assertEqual(res.iterations, 2)
+        # worst-case objective is just maximum sum of uncertain
+        # parameters (per cardinality constraints)
+        self.assertAlmostEqual(res.final_objective_value, 1)
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+
+        cset.negative_deviation = [0, 4.5, 0.5, 3]
+        res2 = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=cset,
+            local_solver="ipopt",
+            global_solver="ipopt",
+            objective_focus="worst_case",
+            solve_master_globally=True,
+        )
+        self.assertEqual(res2.iterations, 2)
+        # worst-case objective changes due to
+        # change of maximum negative deviations
+        self.assertAlmostEqual(res2.final_objective_value, 4)
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+
+
 class TestPyROSSolveFactorModelSet(unittest.TestCase):
     """
     Test PyROS successfully solves model with factor model uncertainty.
