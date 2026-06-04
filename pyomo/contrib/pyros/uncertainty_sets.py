@@ -1498,7 +1498,8 @@ class CardinalitySet(UncertaintySet):
              \\,\\exists\\, \\xi^+, \\xi^- \\in [0, 1]^n \\,:\\,
              \\left[
                  \\begin{array}{l}
-                    q = q^0 + \\hat{q}^+ \\circ \\xi^+ - \\hat{q}^-\\xi^- \\\\
+                    q = q^0 + \\hat{q}^+ \\circ \\xi^+
+                        - \\hat{q}^- \\circ \\xi^- \\\\
                     \\displaystyle \\sum_{i=1}^n (\\xi_i^+ + \\xi_i^-)
                         \\leq \\Gamma \\\\
                     \\xi_i^+ = 0 \\quad\\forall\\,i :
@@ -1871,7 +1872,7 @@ class CardinalitySet(UncertaintySet):
             is_entry_of_arg=False,
         )
 
-        # check deviations are positive
+        # check deviations are nonnegative
         for dev_pair in zip(self.positive_deviation, self.negative_deviation):
             for dev_name, dev in zip(("positive", "negative"), dev_pair):
                 if dev < 0:
