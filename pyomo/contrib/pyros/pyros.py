@@ -199,10 +199,7 @@ class PyROS(object):
             **log_kwargs,
         )
         logger.log(
-            msg=(
-                "and Carbon Capture Simulation for Industry Impact "
-                "(CCSI2) projects."
-            ),
+            msg="and Carbon Capture Simulation for Industry Impact (CCSI2) projects.",
             **log_kwargs,
         )
         logger.log(msg="=" * self._LOG_LINE_LENGTH, **log_kwargs)
