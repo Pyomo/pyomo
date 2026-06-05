@@ -2328,7 +2328,7 @@ class Estimator:
                 "The `initialize_parmest_model` option in `objective_at_theta()` is "
                 "deprecated and will be removed in future releases. Please ensure the "
                 "model is initialized within the Experiment class definition.",
-                version="6.10.1.dev0",
+                version="6.10.1",
             )
 
         if theta_values is None:
