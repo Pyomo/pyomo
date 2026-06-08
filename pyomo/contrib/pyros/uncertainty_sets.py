@@ -3808,20 +3808,19 @@ class IntersectionSet(UncertaintySet):
 
     Examples
     --------
-    Intersection of origin-centered 2D box (square) and 2D
-    hypersphere (circle):
+    Intersection of origin-centered 2D box (square) and 2D ball (disk):
 
     >>> from pyomo.contrib.pyros import (
     ...     BoxSet, AxisAlignedEllipsoidalSet, IntersectionSet,
     ... )
     >>> square = BoxSet(bounds=[[-1.5, 1.5], [-1.5, 1.5]])
-    >>> circle = AxisAlignedEllipsoidalSet(
+    >>> disk = AxisAlignedEllipsoidalSet(
     ...     center=[0, 0],
     ...     half_lengths=[2, 2],
     ... )
     >>> # to construct intersection, pass sets as keyword arguments.
     >>> # keywords are arbitrary
-    >>> intersection = IntersectionSet(set1=square, set2=circle)
+    >>> intersection = IntersectionSet(set1=square, set2=disk)
     >>> intersection.all_sets  # doctest: +ELLIPSIS
     UncertaintySetList([...])
 
@@ -4096,18 +4095,17 @@ class CartesianProductSet(UncertaintySet):
 
     Examples
     --------
-    Cartesian product of 1D box/interval and 2D
-    hypersphere (circle):
+    Cartesian product of 1D box/interval and 2D ball (disk):
 
     >>> from pyomo.contrib.pyros import (
     ...     BoxSet, AxisAlignedEllipsoidalSet, CartesianProductSet,
     ... )
     >>> interval = BoxSet(bounds=[[-1.5, 1.5]])
-    >>> circle = AxisAlignedEllipsoidalSet(
+    >>> disk = AxisAlignedEllipsoidalSet(
     ...     center=[0, 0],
     ...     half_lengths=[2, 2],
     ... )
-    >>> cartesian_product = CartesianProductSet([interval, circle])
+    >>> cartesian_product = CartesianProductSet([interval, disk])
     """
 
     def __init__(self, all_sets):
