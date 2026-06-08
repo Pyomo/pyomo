@@ -4095,7 +4095,7 @@ class CartesianProductSet(UncertaintySet):
 
     Examples
     --------
-    Cartesian product of 1D box/interval and 2D ball (disk):
+    Cartesian product of 1D box (interval) and 2D ball (disk):
 
     >>> from pyomo.contrib.pyros import (
     ...     BoxSet, AxisAlignedEllipsoidalSet, CartesianProductSet,
