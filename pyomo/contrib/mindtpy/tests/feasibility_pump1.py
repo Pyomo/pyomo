@@ -65,7 +65,3 @@ class FeasibilityPump1(ConcreteModel):
         m.optimal_solution[m.x] = 0.0
         m.optimal_solution[m.y1] = 0.5
         m.optimal_solution[m.y2] = 0.0
-
-
-# Backward-compatible alias.
-FeasPump1 = FeasibilityPump1

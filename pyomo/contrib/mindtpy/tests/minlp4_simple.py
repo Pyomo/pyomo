@@ -74,7 +74,3 @@ class Minlp4Simple(ConcreteModel):
         m.optimal_solution = ComponentMap()
         m.optimal_solution[m.x] = 7.663528589138092
         m.optimal_solution[m.y] = 11.0
-
-
-# Backward-compatible alias.
-SimpleMINLP4 = Minlp4Simple

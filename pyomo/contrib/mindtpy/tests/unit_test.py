@@ -100,38 +100,6 @@ class UnitTestMindtPy(unittest.TestCase):
             solver_object.working_model.y.upper, solver_object.config.integer_var_bound
         )
 
-    def test_legacy_test_model_imports(self):
-        """Verify legacy MindtPy test-model import paths remain available."""
-        from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP
-        from pyomo.contrib.mindtpy.tests.MINLP2_simple import (
-            SimpleMINLP as SimpleMINLP2,
-        )
-        from pyomo.contrib.mindtpy.tests.MINLP3_simple import (
-            SimpleMINLP as SimpleMINLP3,
-        )
-        from pyomo.contrib.mindtpy.tests.MINLP4_simple import SimpleMINLP4
-        from pyomo.contrib.mindtpy.tests.MINLP5_simple import SimpleMINLP5
-        from pyomo.contrib.mindtpy.tests.feasibility_pump1 import FeasPump1
-        from pyomo.contrib.mindtpy.tests.feasibility_pump2 import FeasPump2
-        from pyomo.contrib.mindtpy.tests.from_proposal import ProposalModel
-        from pyomo.contrib.mindtpy.tests.minlp_simple import MinlpSimple
-        from pyomo.contrib.mindtpy.tests.minlp2_simple import Minlp2Simple
-        from pyomo.contrib.mindtpy.tests.minlp3_simple import Minlp3Simple
-        from pyomo.contrib.mindtpy.tests.minlp4_simple import Minlp4Simple
-        from pyomo.contrib.mindtpy.tests.minlp5_simple import Minlp5Simple
-        from pyomo.contrib.mindtpy.tests.feasibility_pump1 import FeasibilityPump1
-        from pyomo.contrib.mindtpy.tests.feasibility_pump2 import FeasibilityPump2
-        from pyomo.contrib.mindtpy.tests.from_proposal import FromProposalModel
-
-        self.assertIs(SimpleMINLP, MinlpSimple)
-        self.assertIs(SimpleMINLP2, Minlp2Simple)
-        self.assertIs(SimpleMINLP3, Minlp3Simple)
-        self.assertIs(SimpleMINLP4, Minlp4Simple)
-        self.assertIs(SimpleMINLP5, Minlp5Simple)
-        self.assertIs(FeasPump1, FeasibilityPump1)
-        self.assertIs(FeasPump2, FeasibilityPump2)
-        self.assertIs(ProposalModel, FromProposalModel)
-
 
 if __name__ == '__main__':
     unittest.main()

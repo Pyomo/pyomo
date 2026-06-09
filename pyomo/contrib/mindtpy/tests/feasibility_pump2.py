@@ -63,7 +63,3 @@ class FeasibilityPump2(ConcreteModel):
         m.optimal_solution = ComponentMap()
         m.optimal_solution[m.x] = 0.0
         m.optimal_solution[m.y] = 0.0
-
-
-# Backward-compatible alias.
-FeasPump2 = FeasibilityPump2

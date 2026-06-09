@@ -90,7 +90,3 @@ class Minlp3Simple(ConcreteModel):
         m.optimal_solution[m.X[1]] = 0.20710677582302733
         m.optimal_solution[m.X[2]] = 0.9411320859243828
         m.optimal_solution[m.Y[1]] = 0.0
-
-
-# Backward-compatible alias.
-SimpleMINLP = Minlp3Simple
