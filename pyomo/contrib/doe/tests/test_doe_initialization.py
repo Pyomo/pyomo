@@ -158,6 +158,61 @@ class TestCholeskyInitialization(unittest.TestCase):
             delta=_SMALL_TOLERANCE_DEFINITENESS / 10,
         )
 
+    def test_pseudo_trace_greybox_initialization_uses_current_fim(self):
+        """
+        Verify pseudo-trace grey-box initialization reflects the current FIM.
+
+        This regression targets the shared helper used by ``run_doe()`` and
+        multi-experiment initialization. Once the current FIM is known, the
+        grey-box block should mirror that FIM through its packed triangular
+        inputs and expose ``pseudo-A-opt`` as ``trace(FIM)``.
+        """
+        doe_obj = DesignOfExperiments(
+            experiment=_StructurallyUnidentifiableExperiment(),
+            fd_formula="central",
+            step=1e-3,
+            objective_option="pseudo_trace",
+            use_grey_box_objective=True,
+            solver=SolverFactory("ipopt"),
+            tee=False,
+            grey_box_tee=False,
+        )
+        doe_obj.create_doe_model()
+        doe_obj.create_grey_box_objective_function()
+
+        model = doe_obj.model
+        p0, p1 = list(model.parameter_names)
+        # This experiment's single response depends only on theta1 + theta2,
+        # so both parameter sensitivities are identical and the analytical FIM
+        # is rank-deficient with all entries equal to 1.
+        expected_fim = np.array([[1.0, 1.0], [1.0, 1.0]])
+        model.fim[p0, p0].set_value(1.0)
+        model.fim[p1, p0].set_value(1.0)
+        model.fim[p1, p1].set_value(1.0)
+        if doe_obj.only_compute_fim_lower:
+            model.fim[p0, p1].set_value(0.0)
+        else:
+            model.fim[p0, p1].set_value(1.0)
+
+        fim_np = doe_obj._get_fim_numpy(model)
+        doe_obj._initialize_grey_box_block(
+            model.obj_cons.egb_fim_block, fim_np, model.parameter_names
+        )
+
+        self.assertTrue(np.allclose(fim_np, expected_fim))
+        self.assertEqual(len(list(model.obj_cons.egb_fim_block.inputs.keys())), 3)
+        self.assertTrue(
+            all(
+                np.isclose(pyo.value(input_var), 1.0)
+                for input_var in model.obj_cons.egb_fim_block.inputs.values()
+            )
+        )
+        self.assertAlmostEqual(
+            pyo.value(doe_obj.model.obj_cons.egb_fim_block.outputs["pseudo-A-opt"]),
+            2.0,
+            places=4,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

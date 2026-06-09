@@ -373,6 +373,69 @@ class DesignOfExperiments:
 
         egb_block.outputs[self._grey_box_output_name()].set_value(float(output_value))
 
+    def _initialize_standard_objective_block(self, block, fim_np, parameter_names):
+        """
+        Seed algebraic objective variables from a dense FIM array.
+
+        This helper keeps the single-experiment and multi-experiment algebraic
+        objective paths synchronized. Both paths derive the same Cholesky
+        factors and scalar quality metrics from the current FIM, so we update
+        them in one place to avoid numerical drift between code paths.
+        """
+        param_list = list(parameter_names)
+        L_vals = None
+        fim_inv_vals = None
+
+        if any(hasattr(block, attr) for attr in ("L", "L_inv", "fim_inv", "cov_trace")):
+            fim_pd, _ = regularize_fim_for_cholesky(fim_np)
+
+            if hasattr(block, "L"):
+                L_vals = np.linalg.cholesky(fim_pd)
+                for i, p in enumerate(param_list):
+                    for j, q in enumerate(param_list):
+                        if i >= j:
+                            block.L[p, q].set_value(L_vals[i, j])
+                        else:
+                            block.L[p, q].set_value(0.0)
+
+            if hasattr(block, "L_inv"):
+                if L_vals is None:
+                    L_vals = np.linalg.cholesky(fim_pd)
+                L_inv_vals = np.linalg.inv(L_vals)
+                for i, p in enumerate(param_list):
+                    for j, q in enumerate(param_list):
+                        if i >= j:
+                            block.L_inv[p, q].set_value(L_inv_vals[i, j])
+                        else:
+                            block.L_inv[p, q].set_value(0.0)
+
+            if hasattr(block, "fim_inv") or hasattr(block, "cov_trace"):
+                # Use the pseudo-inverse here rather than the strict inverse.
+                # The regularized matrix should be positive definite, but
+                # ``pinv`` is safer for borderline ill-conditioned cases and
+                # keeps initialization behavior consistent across code paths.
+                fim_inv_vals = np.linalg.pinv(fim_pd)
+
+            if hasattr(block, "fim_inv"):
+                for i, p in enumerate(param_list):
+                    for j, q in enumerate(param_list):
+                        if block.fim_inv[p, q].fixed:
+                            block.fim_inv[p, q].set_value(0.0)
+                        else:
+                            block.fim_inv[p, q].set_value(fim_inv_vals[i, j])
+
+            if hasattr(block, "cov_trace"):
+                block.cov_trace.set_value(float(np.trace(fim_inv_vals)))
+
+        if hasattr(block, "determinant"):
+            block.determinant.set_value(float(np.linalg.det(fim_np)))
+
+        if hasattr(block, "pseudo_trace"):
+            block.pseudo_trace.set_value(float(np.trace(fim_np)))
+
+        if hasattr(block, "fim_trace"):
+            block.fim_trace.set_value(float(np.trace(fim_np)))
+
     # Perform doe
     def run_doe(self, model=None, results_file=None):
         """
@@ -464,93 +527,14 @@ class DesignOfExperiments:
         model.objective.activate()
         model.obj_cons.activate()
 
+        fim_np = self._get_fim_numpy(model)
+
         if self.use_grey_box:
-            # Initialize grey box inputs to be fim values currently
-            for i in model.parameter_names:
-                for j in model.parameter_names:
-                    if list(model.parameter_names).index(i) >= list(
-                        model.parameter_names
-                    ).index(j):
-                        model.obj_cons.egb_fim_block.inputs[(j, i)].set_value(
-                            pyo.value(model.fim[(i, j)])
-                        )
-            # Set objective value
-            if self.objective_option == ObjectiveLib.trace:
-                trace_val = np.trace(np.linalg.pinv(self.get_FIM()))
-                model.obj_cons.egb_fim_block.outputs["A-opt"].set_value(trace_val)
-            elif self.objective_option == ObjectiveLib.determinant:
-                det_val = np.linalg.det(np.array(self.get_FIM()))
-                model.obj_cons.egb_fim_block.outputs["log-D-opt"].set_value(
-                    np.log(det_val)
-                )
-            elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
-                eig, _ = np.linalg.eig(np.array(self.get_FIM()))
-                model.obj_cons.egb_fim_block.outputs["E-opt"].set_value(np.min(eig))
-            elif self.objective_option == ObjectiveLib.condition_number:
-                eig, _ = np.linalg.eig(np.array(self.get_FIM()))
-                cond_number = np.log(np.abs(np.max(eig) / np.min(eig)))
-                model.obj_cons.egb_fim_block.outputs["ME-opt"].set_value(cond_number)
-
-        # If the model has L, initialize it with the solved FIM
-        if hasattr(model, "L"):
-            # Get the FIM values
-            fim_vals = [
-                pyo.value(model.fim[i, j])
-                for i in model.parameter_names
-                for j in model.parameter_names
-            ]
-            fim_np = np.array(fim_vals).reshape(
-                (len(model.parameter_names), len(model.parameter_names))
+            self._initialize_grey_box_block(
+                model.obj_cons.egb_fim_block, fim_np, model.parameter_names
             )
 
-            # Need to compute the full FIM before
-            # initializing the Cholesky factorization
-            if self.only_compute_fim_lower:
-                fim_np = fim_np + fim_np.T - np.diag(np.diag(fim_np))
-
-            # Check if the FIM is positive definite
-            # If not, add jitter to the diagonal
-            # to ensure positive definiteness
-            min_eig = np.min(np.linalg.eigvals(fim_np))
-
-            if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
-                # Raise the minimum eigenvalue to at
-                # least _SMALL_TOLERANCE_DEFINITENESS
-                jitter = np.min(
-                    [
-                        -min_eig + _SMALL_TOLERANCE_DEFINITENESS,
-                        _SMALL_TOLERANCE_DEFINITENESS,
-                    ]
-                )
-            else:
-                # No jitter needed
-                jitter = 0
-
-            # Add jitter to the diagonal to ensure positive definiteness
-            L_vals_sq = np.linalg.cholesky(
-                fim_np + jitter * np.eye(len(model.parameter_names))
-            )
-            for i, c in enumerate(model.parameter_names):
-                for j, d in enumerate(model.parameter_names):
-                    model.L[c, d].value = L_vals_sq[i, j]
-
-            # Initialize the inverse of L if it exists
-            if hasattr(model, "L_inv"):
-                L_inv_vals = np.linalg.inv(L_vals_sq)
-
-                for i, c in enumerate(model.parameter_names):
-                    for j, d in enumerate(model.parameter_names):
-                        if i >= j:
-                            model.L_inv[c, d].value = L_inv_vals[i, j]
-                        else:
-                            model.L_inv[c, d].value = 0.0
-                # Initialize the cov_trace if it exists
-                if hasattr(model, "cov_trace"):
-                    initial_cov_trace = np.sum(L_inv_vals**2)
-                    model.cov_trace.value = initial_cov_trace
-
-        if hasattr(model, "determinant"):
-            model.determinant.value = np.linalg.det(np.array(self.get_FIM()))
+        self._initialize_standard_objective_block(model, fim_np, model.parameter_names)
 
         # Solve the full model, which has now been initialized with the square solve
         if self.use_grey_box:
@@ -682,52 +666,13 @@ class DesignOfExperiments:
         Returns
         -------
         None
-            Updates model values in place for available variables:
-            ``L``, ``L_inv``, ``fim_inv``, and ``cov_trace``.
+            Updates model values in place for available algebraic objective
+            variables derived from the current FIM.
         """
         if model is None:
             model = self.model
-        if not hasattr(model, "L"):
-            # The model doesn't have the Cholesky variables, so we can't initialize them.
-            # This happens if the function is called with a model using GreyBox.
-            return
-
         fim_np = self._get_fim_numpy(model)
-        fim_pd, _ = regularize_fim_for_cholesky(fim_np)
-
-        L_vals = np.linalg.cholesky(fim_pd)
-        for i, c in enumerate(model.parameter_names):
-            for j, d in enumerate(model.parameter_names):
-                if i >= j:
-                    model.L[c, d].value = L_vals[i, j]
-                else:
-                    model.L[c, d].value = 0.0
-
-        if hasattr(model, "L_inv"):
-            L_inv_vals = np.linalg.inv(L_vals)
-            for i, c in enumerate(model.parameter_names):
-                for j, d in enumerate(model.parameter_names):
-                    if i >= j:
-                        model.L_inv[c, d].value = L_inv_vals[i, j]
-                    else:
-                        model.L_inv[c, d].value = 0.0
-
-        if hasattr(model, "fim_inv"):
-            # Use the pseudo-inverse here rather than the strict inverse.
-            # The jittered matrix should be positive definite, but ``pinv``
-            # is safer for borderline ill-conditioned cases and matches the
-            # defensive approach already used when initializing ``fim_inv``
-            # from user-provided starting values.
-            fim_inv_vals = np.linalg.pinv(fim_pd)
-            for i, c in enumerate(model.parameter_names):
-                for j, d in enumerate(model.parameter_names):
-                    if self.only_compute_fim_lower and i < j:
-                        model.fim_inv[c, d].value = 0.0
-                    else:
-                        model.fim_inv[c, d].value = fim_inv_vals[i, j]
-
-        if hasattr(model, "cov_trace"):
-            model.cov_trace.value = np.trace(fim_inv_vals)
+        self._initialize_standard_objective_block(model, fim_np, model.parameter_names)
 
     def optimize_experiments(
         self,
@@ -759,13 +704,15 @@ class DesignOfExperiments:
               values from ``get_labeled_model()``. To provide a custom starting
               point, initialize the ``Experiment`` objects with the desired
               design values before passing them in ``experiment``.
-            - ``"latin_hypercube_sampling"`` (or ``InitializationMethod.latin_hypercube_sampling``): Use Latin Hypercube Sampling (LHS) to find a good
-              initial design. For each experiment-input dimension, ``init_n_samples``
-              points are sampled independently using 1-D LHS, and their Cartesian
-              product forms the set of candidate experiment designs. The FIM is
-              evaluated at every candidate, and the combination of ``n_exp``
-              candidates (without replacement) that best satisfies the chosen
-              objective is selected as the starting point for the optimization.
+            - ``"latin_hypercube_sampling"``
+              (or ``InitializationMethod.latin_hypercube_sampling``): Use Latin
+              Hypercube Sampling (LHS) to find a good initial design. For each
+              experiment-input dimension, ``init_n_samples`` points are sampled
+              independently using 1-D LHS, and their Cartesian product forms the
+              set of candidate experiment designs. The FIM is evaluated at every
+              candidate, and the combination of ``n_exp`` candidates (without
+              replacement) that best satisfies the chosen objective is selected
+              as the starting point for the optimization.
 
         init_n_samples:
             Number of LHS samples per experiment-input dimension when
@@ -881,8 +828,8 @@ class DesignOfExperiments:
             self.create_multi_experiment_objective_function(self.model)
             build_time = sp_timer.toc(msg=None)
             self.logger.info(
-                "Successfully built the multi-experiment DoE model.\nBuild time: %0.1f seconds"
-                % build_time
+                "Successfully built the multi-experiment DoE model.\nBuild time: "
+                "%0.1f seconds" % build_time
             )
 
             best_initial_points, lhs_init_diagnostics, lhs_initialization_time = (
@@ -955,7 +902,8 @@ class DesignOfExperiments:
                 json.dump(self.results, file, indent=2, cls=_DoEResultsJSONEncoder)
 
     def _resolve_n_exp_and_mode(self, n_exp):
-        """Resolve experiment count and whether optimize_experiments() is in template mode."""
+        """Resolve experiment count and whether optimize_experiments() is in
+        template mode."""
         n_list = len(self.experiment_list)
         if n_list > 1:
             if n_exp is not None:
@@ -993,13 +941,14 @@ class DesignOfExperiments:
         if resolved_init_method == InitializationMethod.latin_hypercube_sampling:
             if not template_mode:
                 raise ValueError(
-                    "``init_method='latin_hypercube_sampling'`` is currently supported only in "
+                    "``init_method='latin_hypercube_sampling'`` is currently "
+                    "supported only in "
                     "template mode (``len(experiment) == 1``)."
                 )
             if not scipy_available:
                 raise ImportError(
-                    "LHS initialization requires scipy. "
-                    "Please install scipy to use init_method='latin_hypercube_sampling'."
+                    "LHS initialization requires scipy. Please install scipy to "
+                    "use init_method='latin_hypercube_sampling'."
                 )
             if not isinstance(init_n_samples, int) or init_n_samples < 1:
                 raise ValueError(
@@ -1115,7 +1064,8 @@ class DesignOfExperiments:
             symmetry_breaking_info["variable"] = sym_break_var.local_name
             symmetry_breaking_info["source"] = "user"
             self.logger.info(
-                f"Using user-specified variable '{sym_break_var.local_name}' for symmetry breaking."
+                f"Using user-specified variable '{sym_break_var.local_name}' for "
+                "symmetry breaking."
             )
         else:
             sym_break_var = next(iter(first_exp_block.experiment_inputs))
@@ -1260,47 +1210,10 @@ class DesignOfExperiments:
                 self._initialize_grey_box_block(
                     obj_cons.egb_fim_block, total_fim_np, parameter_names
                 )
-            elif obj_cons is not None and hasattr(obj_cons, "L"):
-                min_eig = np.min(np.real(np.linalg.eigvals(total_fim_np)))
-                if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
-                    jitter = np.min(
-                        [
-                            -min_eig + _SMALL_TOLERANCE_DEFINITENESS,
-                            _SMALL_TOLERANCE_DEFINITENESS,
-                        ]
-                    )
-                else:
-                    jitter = 0
-
-                fim_jittered = total_fim_np + jitter * np.eye(len(parameter_names))
-                L_vals = np.linalg.cholesky(fim_jittered)
-                for i, p in enumerate(parameter_names):
-                    for j, q in enumerate(parameter_names):
-                        obj_cons.L[p, q].set_value(L_vals[i, j])
-
-                if hasattr(obj_cons, "L_inv"):
-                    L_inv_vals = np.linalg.inv(L_vals)
-                    for i, p in enumerate(parameter_names):
-                        for j, q in enumerate(parameter_names):
-                            if i >= j:
-                                obj_cons.L_inv[p, q].set_value(L_inv_vals[i, j])
-                            else:
-                                obj_cons.L_inv[p, q].set_value(0.0)
-
-                    if hasattr(obj_cons, "fim_inv"):
-                        fim_inv_np = np.linalg.inv(fim_jittered)
-                        for i, p in enumerate(parameter_names):
-                            for j, q in enumerate(parameter_names):
-                                obj_cons.fim_inv[p, q].set_value(fim_inv_np[i, j])
-
-                    if hasattr(obj_cons, "cov_trace"):
-                        obj_cons.cov_trace.set_value(np.sum(L_inv_vals**2))
-
-            if obj_cons is not None and hasattr(obj_cons, "determinant"):
-                obj_cons.determinant.set_value(np.linalg.det(total_fim_np))
-
-            if obj_cons is not None and hasattr(obj_cons, "pseudo_trace"):
-                obj_cons.pseudo_trace.set_value(float(np.trace(total_fim_np)))
+            elif obj_cons is not None:
+                self._initialize_standard_objective_block(
+                    obj_cons, total_fim_np, parameter_names
+                )
 
     def _build_optimize_experiments_results(
         self,
