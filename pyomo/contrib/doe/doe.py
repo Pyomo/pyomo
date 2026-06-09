@@ -389,25 +389,24 @@ class DesignOfExperiments:
         if any(hasattr(block, attr) for attr in ("L", "L_inv", "fim_inv", "cov_trace")):
             fim_pd, _ = regularize_fim_for_cholesky(fim_np)
 
-            if hasattr(block, "L"):
+            has_L = hasattr(block, "L")
+            has_L_inv = hasattr(block, "L_inv")
+            if has_L or has_L_inv:
                 L_vals = np.linalg.cholesky(fim_pd)
+                if has_L_inv:
+                    L_inv_vals = np.linalg.inv(L_vals)
                 for i, p in enumerate(param_list):
                     for j, q in enumerate(param_list):
                         if i >= j:
-                            block.L[p, q].set_value(L_vals[i, j])
+                            if has_L:
+                                block.L[p, q].set_value(L_vals[i, j])
+                            if has_L_inv:
+                                block.L_inv[p, q].set_value(L_inv_vals[i, j])
                         else:
-                            block.L[p, q].set_value(0.0)
-
-            if hasattr(block, "L_inv"):
-                if L_vals is None:
-                    L_vals = np.linalg.cholesky(fim_pd)
-                L_inv_vals = np.linalg.inv(L_vals)
-                for i, p in enumerate(param_list):
-                    for j, q in enumerate(param_list):
-                        if i >= j:
-                            block.L_inv[p, q].set_value(L_inv_vals[i, j])
-                        else:
-                            block.L_inv[p, q].set_value(0.0)
+                            if has_L:
+                                block.L[p, q].set_value(0.0)
+                            if has_L_inv:
+                                block.L_inv[p, q].set_value(0.0)
 
             if hasattr(block, "fim_inv") or hasattr(block, "cov_trace"):
                 # Use the pseudo-inverse here rather than the strict inverse.
@@ -653,26 +652,6 @@ class DesignOfExperiments:
         if self.only_compute_fim_lower:
             fim_np = fim_np + fim_np.T - np.diag(np.diag(fim_np))
         return fim_np
-
-    def _initialize_cholesky_from_fim(self, model=None):
-        """
-        Synchronize Cholesky-related variables using the current FIM.
-
-        Parameters
-        ----------
-        model: ConcreteModel, optional
-            DoE model to update. Defaults to ``self.model``.
-
-        Returns
-        -------
-        None
-            Updates model values in place for available algebraic objective
-            variables derived from the current FIM.
-        """
-        if model is None:
-            model = self.model
-        fim_np = self._get_fim_numpy(model)
-        self._initialize_standard_objective_block(model, fim_np, model.parameter_names)
 
     def optimize_experiments(
         self,

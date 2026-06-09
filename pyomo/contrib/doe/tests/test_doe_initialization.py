@@ -121,7 +121,7 @@ class TestCholeskyInitialization(unittest.TestCase):
         variables from those values." Instead, this test uses the real DoE
         model-building machinery, writes the analytically known singular FIM
         for this experiment onto ``model.fim``, and then directly exercises
-        ``_initialize_cholesky_from_fim()``.
+        the shared algebraic objective-state initializer.
         """
         doe_obj = _make_unidentifiable_doe_object(objective_option="trace")
         doe_obj.create_doe_model()
@@ -141,7 +141,10 @@ class TestCholeskyInitialization(unittest.TestCase):
                 else:
                     model.fim[p, q].set_value(expected_fim[i, j])
 
-        doe_obj._initialize_cholesky_from_fim()
+        fim_np = doe_obj._get_fim_numpy(model)
+        doe_obj._initialize_standard_objective_block(
+            model, fim_np, model.parameter_names
+        )
 
         L = np.array([[pyo.value(model.L[i, j]) for j in params] for i in params])
 
