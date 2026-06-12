@@ -27,6 +27,7 @@ from collections.abc import Iterable, MutableSequence, Sequence
 from enum import Enum
 
 from pyomo.common.dependencies import numpy as np, scipy as sp
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.base import (
     Block,
@@ -1474,14 +1475,14 @@ class CardinalitySet(UncertaintySet):
     ----------
     origin : (N,) array_like
         Origin of the set (e.g., nominal uncertain parameter values).
-    positive_deviation : (N,) array_like
-        Maximal absolute deviation from the origin in the
-        positive coordinate direction.
     gamma : numeric type
         Upper bound for the number of coordinates that can
         simultaneously realize their maximal deviations from
         the origin. Must be a numerical value ranging from 0
         to the set dimension `N`.
+    positive_deviation : (N,) array_like
+        Maximal absolute deviation from the origin in the
+        positive coordinate direction.
     negative_deviation : (N,) array_like, optional
         Maximal absolute deviation from the origin in the
         negative coordinate direction.
@@ -1548,27 +1549,47 @@ class CardinalitySet(UncertaintySet):
     >>> from pyomo.contrib.pyros import CardinalitySet
     >>> gamma_set = CardinalitySet(
     ...     origin=[0, 0, 0, 0],
-    ...     positive_deviation=[1.0, 2.0, 1.5, 0.0],
     ...     gamma=1,
+    ...     positive_deviation=[1.0, 2.0, 1.5, 0.0],
     ...     negative_deviation=[0.0, 2.0, 0.0, 5.0],
     ... )
     >>> gamma_set.origin
     array([0, 0, 0, 0])
-    >>> gamma_set.positive_deviation
-    array([1. , 2. , 1.5, 0. ])
     >>> gamma_set.gamma
     1
+    >>> gamma_set.positive_deviation
+    array([1. , 2. , 1.5, 0. ])
     >>> gamma_set.negative_deviation
     array([0., 2., 0., 5.])
     """
 
     _PARAMETER_BOUNDS_EXACT = True
 
-    def __init__(self, origin, positive_deviation, gamma, negative_deviation=None):
+    def __init__(self, origin, gamma, positive_deviation, negative_deviation=None):
         """Initialize self (see class docstring)."""
         self.origin = origin
-        self.positive_deviation = positive_deviation
-        self.gamma = gamma
+
+        if np.isscalar(gamma):
+            self.gamma = gamma
+            self.positive_deviation = positive_deviation
+        else:
+            # for backward compatibility, silently allow user
+            # to swap arguments `gamma` and `positive_deviation`,
+            # if `gamma` is not a scalar
+            deprecation_warning(
+                (
+                    f"Order of {type(self).__name__} arguments `gamma` "
+                    "and `positive_deviation` has been swapped, "
+                    "as `gamma` is not a scalar object. "
+                    "Ensure that `gamma` is a scalar object and "
+                    "(if both arguments are passed positionally) "
+                    "passed before `positive_deviation`."
+                ),
+                version="6.10.2.dev0",
+            )
+            self.gamma = positive_deviation
+            self.positive_deviation = gamma
+
         if negative_deviation is None:
             negative_deviation = np.zeros(self.dim)
         self.negative_deviation = negative_deviation
