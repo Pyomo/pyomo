@@ -1613,8 +1613,8 @@ class CardinalitySet(UncertaintySet):
     @property
     def positive_deviation(self):
         """
-        (N,) numpy.ndarray : Upper bounds for absolute values of
-        the positive coordinate deviations from the origin.
+        (N,) numpy.ndarray : Maximal absolute deviation from
+        the origin in the positive coordinate direction.
         """
         return self._positive_deviation
 
@@ -1644,8 +1644,8 @@ class CardinalitySet(UncertaintySet):
     @property
     def negative_deviation(self):
         """
-        (N,) numpy.ndarray : Upper bounds for absolute values of
-        the negative coordinate deviations from the origin.
+        (N,) numpy.ndarray : Maximal absolute deviation from
+        the origin in the negative coordinate direction.
         """
         return self._negative_deviation
 
