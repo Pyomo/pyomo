@@ -19,8 +19,8 @@
 #
 major = 6
 minor = 10
-micro = 1
-releaselevel = 'final'
+micro = 2
+# releaselevel = 'final'
 serial = 0
 
 
