@@ -27,7 +27,7 @@ your console output will, by default, look like this:
 
    ==============================================================================
    PyROS: The Pyomo Robust Optimization Solver, v1.3.15.
-          Pyomo version: 6.10.2.dev0
+          Pyomo version: 6.10.1
           Commit hash: unknown
           Invoked at UTC 2026-06-05T00:00:00.000000+00:00
    
