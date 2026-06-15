@@ -3195,8 +3195,7 @@ class TestPreprocessModelData(unittest.TestCase):
         preprocess_model_data(model_data, user_var_partitioning)
 
         # expected model stats worked out by hand
-        expected_log_str = textwrap.dedent(
-            f"""
+        expected_log_str = textwrap.dedent(f"""
             Model Statistics (after preprocessing):
               Number of variables : 16
                 Epigraph variable : 1
@@ -3214,8 +3213,7 @@ class TestPreprocessModelData(unittest.TestCase):
                 Inequality constraints : 16
                   First-stage inequalities : {4 if obj_focus == 'nominal' else 3}
                   Second-stage inequalities : {12 if obj_focus == 'nominal' else 13}
-            """
-        )
+            """)
 
         with LoggingIntercept(module=__name__, level=logging.DEBUG) as LOG:
             log_preprocessed_model_statistics(model_data)
@@ -3246,8 +3244,7 @@ class TestPreprocessModelData(unittest.TestCase):
         preprocess_model_data(model_data, user_var_partitioning)
 
         # expected model stats worked out by hand
-        expected_log_str = textwrap.dedent(
-            f"""
+        expected_log_str = textwrap.dedent(f"""
             Model Statistics (after preprocessing):
               Number of variables : 22
                 Epigraph variable : 1
@@ -3265,8 +3262,7 @@ class TestPreprocessModelData(unittest.TestCase):
                 Inequality constraints : 18
                   First-stage inequalities : {4 if obj_focus == 'nominal' else 3}
                   Second-stage inequalities : {14 if obj_focus == 'nominal' else 15}
-            """
-        )
+            """)
 
         with LoggingIntercept(module=__name__, level=logging.DEBUG) as LOG:
             log_preprocessed_model_statistics(model_data)
