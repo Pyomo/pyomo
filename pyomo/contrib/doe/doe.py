@@ -701,7 +701,7 @@ class DesignOfExperiments:
                 try:
                     kaug_no = col.index(name)
                     dsdp_extract.append(dsdp_array[kaug_no])
-                except Exception:
+                except ValueError:
                     dsdp_extract.append(np.zeros(len(params_names)))
 
             jac = [[] for _ in params_names]
