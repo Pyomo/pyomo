@@ -81,6 +81,26 @@ def get_standard_args(experiment, fd_method, obj_used, flag):
     args['_only_compute_fim_lower'] = True
     return args
 
+def get_synthetic_polynomial_factorial_results():
+    """Return synthetic polynomial factorial results for plotting error tests."""
+    # A synthetic table shape that mimics multiple design variables is used so we can
+    # exercise the dimensionality guard without needing a heavier example.
+    return {
+        "x1": [0.0, 2.5],
+        "x2": [0.0, 0.0],
+        "x3": [0.0, 0.0],
+        "log10 D-opt": [1.0, 2.0],
+        "log10 A-opt": [0.1, 0.2],
+        "log10 pseudo A-opt": [0.3, 0.4],
+        "log10 E-opt": [0.5, 0.6],
+        "log10 ME-opt": [0.7, 0.8],
+        "eigval_min": [1.0, 2.0],
+        "eigval_max": [3.0, 4.0],
+        "det_FIM": [5.0, 6.0],
+        "trace_cov": [7.0, 8.0],
+        "trace_FIM": [9.0, 10.0],
+        "solve_time": [0.01, 0.02],
+    }
 
 # Tests require NumPy/SciPy, but availability is checked by the file-level SkipTest.
 @unittest.skipIf(not pandas_available, "pandas is not available")
@@ -516,23 +536,8 @@ class TestDoEErrors(unittest.TestCase):
         DoE_args["scale_nominal_param_value"] = False
 
         doe_obj = DesignOfExperiments(**DoE_args)
-
-        synthetic_results = {
-            "x1": [0.0, 2.5],
-            "x2": [0.0, 0.0],
-            "x3": [0.0, 0.0],
-            "log10 D-opt": [1.0, 2.0],
-            "log10 A-opt": [0.1, 0.2],
-            "log10 pseudo A-opt": [0.3, 0.4],
-            "log10 E-opt": [0.5, 0.6],
-            "log10 ME-opt": [0.7, 0.8],
-            "eigval_min": [1.0, 2.0],
-            "eigval_max": [3.0, 4.0],
-            "det_FIM": [5.0, 6.0],
-            "trace_cov": [7.0, 8.0],
-            "trace_FIM": [9.0, 10.0],
-            "solve_time": [0.01, 0.02],
-        }
+        # Use three design variables to exercise the unsupported 3D plotting path.
+        synthetic_results = get_synthetic_polynomial_factorial_results()
 
         with self.assertRaisesRegex(
             NotImplementedError,
@@ -558,24 +563,8 @@ class TestDoEErrors(unittest.TestCase):
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        # Use a synthetic table shape that mimics multiple design variables so we can
-        # exercise the dimensionality guard without needing a heavier example.
-        synthetic_results = {
-            "x1": [0.0, 2.5],
-            "x2": [0.0, 0.0],
-            "x3": [0.0, 0.0],
-            "log10 D-opt": [1.0, 2.0],
-            "log10 A-opt": [0.1, 0.2],
-            "log10 pseudo A-opt": [0.3, 0.4],
-            "log10 E-opt": [0.5, 0.6],
-            "log10 ME-opt": [0.7, 0.8],
-            "eigval_min": [1.0, 2.0],
-            "eigval_max": [3.0, 4.0],
-            "det_FIM": [5.0, 6.0],
-            "trace_cov": [7.0, 8.0],
-            "trace_FIM": [9.0, 10.0],
-            "solve_time": [0.01, 0.02],
-        }
+        # Leave x3 unfixed to exercise the fixed-design-variable validation.
+        synthetic_results = get_synthetic_polynomial_factorial_results()
 
         with self.assertRaisesRegex(
             ValueError,
