@@ -68,9 +68,7 @@ class KNITROAMPL(ASL):
         executable = None
         knitrodir = os.environ.get('KNITRODIR')
         if knitrodir:
-            knitroampl_path = (
-                pathlib.Path(knitrodir) / 'knitroampl' / 'knitroampl'
-            )
+            knitroampl_path = pathlib.Path(knitrodir) / 'knitroampl' / 'knitroampl'
             executable = Executable(str(knitroampl_path))
         if not executable:
             try:
