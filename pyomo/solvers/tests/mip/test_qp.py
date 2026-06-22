@@ -196,8 +196,7 @@ class TestQuadraticModels(unittest.TestCase):
         self.assertEqual(m.obj(), results['Problem'][0]['Upper bound'])
 
     @unittest.skipUnless(
-        cuopt.available(exception_flag=False),
-        "needs cuOpt direct interface",
+        cuopt.available(exception_flag=False), "needs cuOpt direct interface"
     )
     def test_qp_objective_cuopt_model(self):
         m = self._qp_model()
@@ -210,13 +209,10 @@ class TestQuadraticModels(unittest.TestCase):
         self.assertEqual(list(q_offsets), [0, 1, 3, 4])
 
     @unittest.skipUnless(
-        cuopt.available(exception_flag=False),
-        "needs cuOpt direct interface",
+        cuopt.available(exception_flag=False), "needs cuOpt direct interface"
     )
     def test_qp_objective_cuopt(self):
         m = self._qp_model()
         results = cuopt.solve(m)
         # cuOpt's barrier method may return slightly inexact primals
-        self.assertAlmostEqual(
-            m.obj(), results['Problem'][0]['Upper bound'], places=6
-        )
+        self.assertAlmostEqual(m.obj(), results['Problem'][0]['Upper bound'], places=6)

@@ -102,8 +102,7 @@ class CUOPTDirect(DirectSolver):
 
         if CUOPTDirect._supports_quadratic_constraint:
             visitor = QuadraticRepnVisitor(
-                {},
-                var_recorder=OrderedVarRecorder({}, {}, None),
+                {}, var_recorder=OrderedVarRecorder({}, {}, None)
             )
             var_id_to_ndx = {
                 id(var): ndx for var, ndx in self._pyomo_var_to_ndx_map.items()
@@ -130,9 +129,7 @@ class CUOPTDirect(DirectSolver):
                 )
 
             if getattr(repn, 'quadratic', None):
-                self._add_cuopt_quadratic_constraint(
-                    con, repn, visitor, var_id_to_ndx
-                )
+                self._add_cuopt_quadratic_constraint(con, repn, visitor, var_id_to_ndx)
                 continue
 
             # check for trivial constraints after getting repn (more efficient
@@ -211,9 +208,7 @@ class CUOPTDirect(DirectSolver):
             return None, None
         indices = sorted(linear)
         values = np.array([linear[i] for i in indices], dtype=np.float64)
-        return values, np.array(
-            [var_id_to_ndx[i] for i in indices], dtype=np.int32
-        )
+        return values, np.array([var_id_to_ndx[i] for i in indices], dtype=np.int32)
 
     @staticmethod
     def _quadratic_repn_to_coo(quadratic, var_id_to_ndx):
@@ -227,9 +222,7 @@ class CUOPTDirect(DirectSolver):
             vals[i] = coef
         return vals, rows, cols
 
-    def _add_cuopt_quadratic_constraint(
-        self, con, qrepn, visitor, var_id_to_ndx
-    ):
+    def _add_cuopt_quadratic_constraint(self, con, qrepn, visitor, var_id_to_ndx):
         from pyomo.core.expr.numvalue import is_fixed, value
 
         if con.equality:
@@ -311,8 +304,7 @@ class CUOPTDirect(DirectSolver):
 
     def _set_objective(self, objective):
         visitor = QuadraticRepnVisitor(
-            {},
-            var_recorder=OrderedVarRecorder({}, {}, None),
+            {}, var_recorder=OrderedVarRecorder({}, {}, None)
         )
         repn = visitor.walk_expression(objective.expr)
         if repn.nonlinear is not None:
@@ -617,8 +609,6 @@ class CUOPTDirect(DirectSolver):
         if is_mip:
             logger.warning("Cannot get duals for MIP.")
         elif self._has_quadratic_content:
-            logger.warning(
-                "Cannot get duals for quadratic or conic problems in cuOpt."
-            )
+            logger.warning("Cannot get duals for quadratic or conic problems in cuOpt.")
         else:
             self._load_duals(cons_to_load)

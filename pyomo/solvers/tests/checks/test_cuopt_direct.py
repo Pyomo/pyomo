@@ -242,8 +242,7 @@ class CUOPTTests(unittest.TestCase):
 
         opt = SolverFactory('cuopt')
         with pytest.raises(
-            ValueError,
-            match=r"does not support mixed-integer problems with quadratic",
+            ValueError, match=r"does not support mixed-integer problems with quadratic"
         ):
             opt.solve(m)
 
