@@ -1113,9 +1113,12 @@ class Estimator:
         # get the number of data points
         # this is used to compute the covariance matrix for the case
         # when the measurement errors are not supplied by the user
-        all_unknown_errors = all(
+        get_measurement_error = getattr(model, "measurement_error", None)
+
+        all_unknown_errors = get_measurement_error is None or all(
             model.measurement_error[y_hat] is None for y_hat in model.experiment_outputs
         )
+
         if self.obj_function == ObjectiveType.SSE and all_unknown_errors:
             self.number_exp = _count_total_experiments(self.exp_list)
 
