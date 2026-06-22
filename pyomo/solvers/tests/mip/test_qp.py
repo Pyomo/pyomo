@@ -30,6 +30,8 @@ xpress_direct = SolverFactory('xpress_direct')
 xpress_persistent = SolverFactory('xpress_persistent')
 xpress_appsi = SolverFactory('appsi_xpress')
 
+cuopt = SolverFactory('cuopt')
+
 
 class TestQuadraticModels(unittest.TestCase):
     def _qp_model(self):
@@ -191,4 +193,23 @@ class TestQuadraticModels(unittest.TestCase):
         m = self._qp_model()
         xpress_appsi.set_instance(m)
         results = xpress_appsi.solve(m)
+        self.assertEqual(m.obj(), results['Problem'][0]['Upper bound'])
+
+    @unittest.skipUnless(
+        cuopt.available(exception_flag=False),
+        "needs cuOpt direct interface",
+    )
+    def test_qp_objective_cuopt_model(self):
+        m = self._qp_model()
+        cuopt._set_instance(m)
+        q_values = cuopt._solver_model.get_quadratic_objective_values()
+        self.assertEqual(len(list(q_values)), 3)
+
+    @unittest.skipUnless(
+        cuopt.available(exception_flag=False),
+        "needs cuOpt direct interface",
+    )
+    def test_qp_objective_cuopt(self):
+        m = self._qp_model()
+        results = cuopt.solve(m)
         self.assertEqual(m.obj(), results['Problem'][0]['Upper bound'])
