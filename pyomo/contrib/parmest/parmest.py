@@ -1700,7 +1700,11 @@ class Estimator:
 
                 # fix the value of the unknown parameters to the estimated values
                 for param in model.unknown_parameters:
-                    param.fix(self.estimated_theta[param.name])
+                    if param.is_indexed():
+                        for idx in param:
+                            param[idx].fix(self.estimated_theta[param[idx].name])
+                    else:
+                        param.fix(self.estimated_theta[param.name])
 
                 # re-solve the model with the estimated parameters
                 results = pyo.SolverFactory(solver).solve(model, tee=self.tee)

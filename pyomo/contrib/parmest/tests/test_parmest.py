@@ -2275,6 +2275,8 @@ class TestParmestBlockEF(unittest.TestCase):
     def test_cov_est_counts_expanded_indexed_unknown_parameters(self):
         pest = _build_indexed_theta_estimator([(1.0, 2.0), (2.0, 4.0)])
 
+        obj, theta = pest.theta_est()
+
         with self.assertRaisesRegex(
             AssertionError,
             "The number of datapoints must be greater than the number of parameters to estimate.",
