@@ -2275,7 +2275,7 @@ class TestParmestBlockEF(unittest.TestCase):
     def test_cov_est_counts_expanded_indexed_unknown_parameters(self):
         pest = _build_indexed_theta_estimator([(1.0, 2.0), (2.0, 4.0)])
 
-        obj, theta = pest.theta_est()
+        obj, theta = pest._Q_opt()
 
         with self.assertRaisesRegex(
             AssertionError,
