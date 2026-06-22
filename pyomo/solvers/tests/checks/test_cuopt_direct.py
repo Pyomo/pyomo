@@ -7,7 +7,6 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-import os
 from pyomo.environ import (
     SolverFactory,
     ConcreteModel,
@@ -24,10 +23,7 @@ from pyomo.environ import (
     Binary,
 )
 import pytest
-from pyomo.common.dependencies import attempt_import
 from pyomo.opt import TerminationCondition
-from pyomo.common.tee import capture_output
-from pyomo.common.tempfiles import TempfileManager
 import pyomo.common.unittest as unittest
 from pyomo.solvers.plugins.solvers.cuopt_direct import cuopt_available, CUOPTDirect
 

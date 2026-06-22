@@ -203,7 +203,11 @@ class TestQuadraticModels(unittest.TestCase):
         m = self._qp_model()
         cuopt._set_instance(m)
         q_values = cuopt._solver_model.get_quadratic_objective_values()
-        self.assertEqual(len(list(q_values)), 3)
+        q_indices = cuopt._solver_model.get_quadratic_objective_indices()
+        q_offsets = cuopt._solver_model.get_quadratic_objective_offsets()
+        self.assertEqual(list(q_values), [10000.0, 10000.0, 1000.0, 100000.0])
+        self.assertEqual(list(q_indices), [0, 1, 2, 2])
+        self.assertEqual(list(q_offsets), [0, 1, 3, 4])
 
     @unittest.skipUnless(
         cuopt.available(exception_flag=False),
@@ -212,4 +216,7 @@ class TestQuadraticModels(unittest.TestCase):
     def test_qp_objective_cuopt(self):
         m = self._qp_model()
         results = cuopt.solve(m)
-        self.assertEqual(m.obj(), results['Problem'][0]['Upper bound'])
+        # cuOpt's barrier method may return slightly inexact primals
+        self.assertAlmostEqual(
+            m.obj(), results['Problem'][0]['Upper bound'], places=6
+        )

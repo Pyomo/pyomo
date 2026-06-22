@@ -14,7 +14,7 @@ import time
 from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.dependencies import numpy as np
-from pyomo.core.base import Suffix, Var, Constraint, Objective, SortComponents
+from pyomo.core.base import Suffix, Var, Constraint, Objective
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.linear import LinearRepnVisitor
 from pyomo.repn.quadratic import QuadraticRepnVisitor
@@ -100,10 +100,18 @@ class CUOPTDirect(DirectSolver):
         matrix_indptr = [0]
         matrix_indices = []
 
-        # visitor walks expression trees and extracts linear coefficients
-        visitor = LinearRepnVisitor({})
-        quad_visitor = None
-        var_id_to_ndx = None
+        if CUOPTDirect._supports_quadratic_constraint:
+            visitor = QuadraticRepnVisitor(
+                {},
+                var_recorder=OrderedVarRecorder({}, {}, None),
+            )
+            var_id_to_ndx = {
+                id(var): ndx for var, ndx in self._pyomo_var_to_ndx_map.items()
+            }
+        else:
+            visitor = LinearRepnVisitor({})
+            var_id_to_ndx = None
+
         con_idx = 0
         for con in constraints:
             if not con.active:
@@ -116,24 +124,14 @@ class CUOPTDirect(DirectSolver):
             repn = visitor.walk_expression(body)
 
             if repn.nonlinear is not None:
-                if not CUOPTDirect._supports_quadratic_constraint:
-                    raise ValueError(
-                        f"Constraint '{con.name}' contains nonlinear terms which are "
-                        "not supported by the installed cuOpt solver."
-                    )
-                if quad_visitor is None:
-                    quad_visitor = QuadraticRepnVisitor(
-                        {},
-                        var_recorder=OrderedVarRecorder(
-                            {}, {}, SortComponents.deterministic
-                        ),
-                    )
-                    var_id_to_ndx = {
-                        id(var): ndx
-                        for var, ndx in self._pyomo_var_to_ndx_map.items()
-                    }
+                raise ValueError(
+                    f"Constraint '{con.name}' contains nonlinear terms which are "
+                    "not supported by cuOpt solver."
+                )
+
+            if getattr(repn, 'quadratic', None):
                 self._add_cuopt_quadratic_constraint(
-                    con, body, quad_visitor, var_id_to_ndx
+                    con, repn, visitor, var_id_to_ndx
                 )
                 continue
 
@@ -230,21 +228,9 @@ class CUOPTDirect(DirectSolver):
         return vals, rows, cols
 
     def _add_cuopt_quadratic_constraint(
-        self, con, body, quad_visitor, var_id_to_ndx
+        self, con, qrepn, visitor, var_id_to_ndx
     ):
         from pyomo.core.expr.numvalue import is_fixed, value
-
-        qrepn = quad_visitor.walk_expression(body)
-        if qrepn.nonlinear is not None:
-            raise ValueError(
-                f"Constraint '{con.name}' contains nonlinear terms which are "
-                "not supported by cuOpt solver."
-            )
-        if not qrepn.quadratic:
-            raise ValueError(
-                f"Constraint '{con.name}' contains nonlinear terms which are "
-                "not supported by cuOpt solver."
-            )
 
         if con.equality:
             raise ValueError(
@@ -293,10 +279,10 @@ class CUOPTDirect(DirectSolver):
         self._has_quadratic_content = True
         for var_id, coef in qrepn.linear.items():
             if coef:
-                self.referenced_vars.add(quad_visitor.var_map[var_id])
+                self.referenced_vars.add(visitor.var_map[var_id])
         for var_id1, var_id2 in qrepn.quadratic:
-            self.referenced_vars.add(quad_visitor.var_map[var_id1])
-            self.referenced_vars.add(quad_visitor.var_map[var_id2])
+            self.referenced_vars.add(visitor.var_map[var_id1])
+            self.referenced_vars.add(visitor.var_map[var_id2])
 
     @staticmethod
     def _build_quadratic_objective_csr(quadratic, var_id_to_ndx, num_vars):
@@ -326,9 +312,7 @@ class CUOPTDirect(DirectSolver):
     def _set_objective(self, objective):
         visitor = QuadraticRepnVisitor(
             {},
-            var_recorder=OrderedVarRecorder(
-                {}, {}, SortComponents.deterministic
-            ),
+            var_recorder=OrderedVarRecorder({}, {}, None),
         )
         repn = visitor.walk_expression(objective.expr)
         if repn.nonlinear is not None:
