@@ -16,7 +16,8 @@ MBDoE analysis. This is in line with the convention used in the parameter estima
 
 An example of the subclassed :class:`Experiment` object that builds and labels the model is shown in the next few sections.
 
-This guide illustrates the use of Pyomo.DoE using a reaction kinetics example ([WD22]_).
+This guide illustrates the use of Pyomo.DoE using a reaction kinetics
+example ([PyomoDOE-paper]_).
 
 .. math::
    :nowrap:
