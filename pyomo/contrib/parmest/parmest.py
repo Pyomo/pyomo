@@ -447,7 +447,13 @@ def validate_experiment_outputs(output_vars):
             ), "Experiment outputs must share the same indices or data points"
 
 
-def _count_total_experiments(experiment_list):
+def _all_measurement_errors_known(model):
+    return hasattr(model, "measurement_error") and all(
+        model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
+    )
+
+
+def _count_total_experiments(experiment_list, require_uniform_output_grid=True):
     """
     Counts the number of data points in the list of experiments
 
@@ -474,6 +480,10 @@ def _count_total_experiments(experiment_list):
     experiment_list : list
         List of Experiment class objects containing the Pyomo model
         for the different experimental conditions
+    require_uniform_output_grid : bool, optional
+        If True, validate that all output families within an experiment share
+        the same number of indices and the same indices before counting data
+        points. Default is True.
 
     Returns
     -------
@@ -488,7 +498,8 @@ def _count_total_experiments(experiment_list):
         output_vars = model.experiment_outputs
 
         # check if the experiment outputs are defined correctly
-        validate_experiment_outputs(output_vars)
+        if require_uniform_output_grid:
+            validate_experiment_outputs(output_vars)
 
         # store the indices of the experiment outputs
         indices = []
@@ -1074,9 +1085,6 @@ class Estimator:
         assert isinstance(experiment_list, list)
         self.exp_list = experiment_list
 
-        # get the number of experiments
-        self.number_exp = _count_total_experiments(self.exp_list)
-
         # check if the experiment has a ``get_labeled_model`` function
         model = _get_labeled_model(self.exp_list[0])
 
@@ -1094,6 +1102,20 @@ class Estimator:
                 )
         else:
             self.obj_function = obj_function
+
+        allow_heterogeneous_output_grids = (
+            self.obj_function == ObjectiveType.SSE_weighted
+            and all(
+                _all_measurement_errors_known(_get_labeled_model(experiment))
+                for experiment in self.exp_list
+            )
+        )
+
+        # get the number of experiments
+        self.number_exp = _count_total_experiments(
+            self.exp_list,
+            require_uniform_output_grid=not allow_heterogeneous_output_grids,
+        )
 
         if isinstance(regularization, str):
             try:

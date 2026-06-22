@@ -2173,6 +2173,42 @@ class IndexedOutputExperiment(Experiment):
         return self.model
 
 
+class HeterogeneousOutputExperiment(Experiment):
+    def get_labeled_model(self):
+        m = pyo.ConcreteModel()
+
+        # Two measured output families intentionally use different time grids.
+        m.t1 = pyo.Set(initialize=[0.0, 1.0, 2.0])
+        m.t2 = pyo.Set(initialize=[0.0, 2.0])
+
+        m.y1 = pyo.Var(m.t1, initialize=1.0)
+        m.y2 = pyo.Var(m.t2, initialize=2.0)
+
+        m.theta = pyo.Var(initialize=1.0)
+        m.theta.fix(1.0)
+
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+
+        y1_data = {0.0: 1.1, 1.0: 1.2, 2.0: 1.3}
+        y2_data = {0.0: 2.1, 2.0: 2.3}
+
+        for t in m.t1:
+            m.experiment_outputs[m.y1[t]] = y1_data[t]
+            m.measurement_error[m.y1[t]] = 0.1
+
+        for t in m.t2:
+            m.experiment_outputs[m.y2[t]] = y2_data[t]
+            m.measurement_error[m.y2[t]] = 0.2
+
+        # All measurement errors are supplied, so SSE_weighted should accept
+        # these heterogeneous output grids.
+        m.unknown_parameters[m.theta] = pyo.ComponentUID(m.theta)
+
+        return m
+
+
 def _build_estimator(data, include_second_output=False):
     exp_list = [
         LinearThetaExperiment(x=x, y=y, include_second_output=include_second_output)
@@ -2441,6 +2477,16 @@ class TestCountTotalExperiments(unittest.TestCase):
             "The first index of experiment outputs must be the data point",
         ):
             parmest._count_total_experiments(exp_list)
+
+    def test_estimator_accepts_sse_weighted_heterogeneous_outputs(self):
+        # Regression test for heterogeneous experiment outputs with complete
+        # measurement_error data under the SSE_weighted objective.
+        pest = parmest.Estimator(
+            [HeterogeneousOutputExperiment()], obj_function="SSE_weighted"
+        )
+
+        # Constructor success is the behavior under test.
+        self.assertIsInstance(pest, parmest.Estimator)
 
 
 ###########################
