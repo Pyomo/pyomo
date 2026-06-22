@@ -2272,10 +2272,11 @@ class TestParmestBlockEF(unittest.TestCase):
 
         self.assertEqual(pest._return_theta_names(), ["theta[a]", "theta[b]"])
 
+    @unittest.skipUnless(ipopt_available, "Test requires ipopt")
     def test_cov_est_counts_expanded_indexed_unknown_parameters(self):
         pest = _build_indexed_theta_estimator([(1.0, 2.0), (2.0, 4.0)])
 
-        pest.estimated_theta = {"theta[a]": 1.0, "theta[b]": 2.0}
+        obj, theta = pest.theta_est()
 
         with self.assertRaisesRegex(
             AssertionError,
