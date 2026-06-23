@@ -29,7 +29,7 @@ defaults:
 env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
-  PYPI_ONLY: z3-solver linear-tree
+  PYPI_ONLY: z3-solver linear-tree cplex docplex
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels linear-tree
   CACHE_VER: v260512.3
   NEOS_EMAIL: tests@pyomo.org
@@ -456,9 +456,6 @@ jobs:
             TIMEOUT_MSG="TIMEOUT: killing conda install process"
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
-            #
-            # Disallow cplex 12.9 (caused segfaults in tests)
-            CPLEX='cplex>=12.10'
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
             # on GHA/Windows under Python 3.10 and 3.11.  Exclude that
             # release on that platform.
@@ -471,7 +468,7 @@ jobs:
             else
                 XPRESS='xpress'
             fi
-            for PKG in "$CPLEX" docplex gurobi "$XPRESS" cyipopt pymumps scip pyscipopt; do
+            for PKG in gurobi "$XPRESS" cyipopt pymumps scip pyscipopt; do
                 echo ""
                 echo "*** Install $PKG ***"
                 echo ""
