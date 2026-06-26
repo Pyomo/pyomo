@@ -17,6 +17,8 @@ from pyomo.common.dependencies import numpy as np
 from pyomo.core.base import Suffix, Var, Constraint, Objective
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.linear import LinearRepnVisitor
+from pyomo.repn.quadratic import QuadraticRepnVisitor
+from pyomo.repn.util import OrderedVarRecorder
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import (
     DirectOrPersistentSolver,
@@ -35,6 +37,13 @@ def _get_cuopt_version(cuopt, avail):
         return
     CUOPTDirect._version = tuple(cuopt.__version__.split('.'))
     CUOPTDirect._name = "cuOpt %s.%s%s" % CUOPTDirect._version
+    try:
+        dm = cuopt.linear_programming.DataModel()
+        CUOPTDirect._supports_quadratic_constraint = hasattr(
+            dm, "add_quadratic_constraint"
+        )
+    except Exception:
+        CUOPTDirect._supports_quadratic_constraint = False
 
 
 cuopt, cuopt_available = attempt_import("cuopt", callback=_get_cuopt_version)
@@ -42,6 +51,8 @@ cuopt, cuopt_available = attempt_import("cuopt", callback=_get_cuopt_version)
 
 @SolverFactory.register("cuopt", doc="Direct python interface to CUOPT")
 class CUOPTDirect(DirectSolver):
+    _supports_quadratic_constraint = False
+
     def __init__(self, **kwds):
         kwds["type"] = "cuoptdirect"
         super().__init__(**kwds)
@@ -49,11 +60,19 @@ class CUOPTDirect(DirectSolver):
         # Note: Undefined capabilities default to None
         self._capabilities.linear = True
         self._capabilities.integer = True
+        self._capabilities.quadratic_objective = True
+        self._capabilities.quadratic_constraint = (
+            CUOPTDirect._supports_quadratic_constraint
+        )
         self.referenced_vars = ComponentSet()
         # remove the instance-level definition of the cuopt version:
         # because the version comes from an imported module, only one
         # version of cuopt is supported (and stored as a class attribute)
         del self._version
+
+    def _reset_model_flags(self):
+        self._has_quadratic_content = False
+        self._has_integer = False
 
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
@@ -81,8 +100,17 @@ class CUOPTDirect(DirectSolver):
         matrix_indptr = [0]
         matrix_indices = []
 
-        # visitor walks expression trees and extracts linear coefficients
-        visitor = LinearRepnVisitor({})
+        if CUOPTDirect._supports_quadratic_constraint:
+            visitor = QuadraticRepnVisitor(
+                {}, var_recorder=OrderedVarRecorder({}, {}, None)
+            )
+            var_id_to_ndx = {
+                id(var): ndx for var, ndx in self._pyomo_var_to_ndx_map.items()
+            }
+        else:
+            visitor = LinearRepnVisitor({})
+            var_id_to_ndx = None
+
         con_idx = 0
         for con in constraints:
             if not con.active:
@@ -99,6 +127,10 @@ class CUOPTDirect(DirectSolver):
                     f"Constraint '{con.name}' contains nonlinear terms which are "
                     "not supported by cuOpt solver."
                 )
+
+            if getattr(repn, 'quadratic', None):
+                self._add_cuopt_quadratic_constraint(con, repn, visitor, var_id_to_ndx)
+                continue
 
             # check for trivial constraints after getting repn (more efficient
             # than walking expression twice with is_fixed)
@@ -153,6 +185,7 @@ class CUOPTDirect(DirectSolver):
             lb, ub = v.bounds
             if v.is_integer():
                 v_type.append("I")
+                self._has_integer = True
             elif v.is_continuous():
                 v_type.append("C")
             else:
@@ -169,8 +202,110 @@ class CUOPTDirect(DirectSolver):
         self._solver_model.set_variable_types(np.array(v_type))
         self._solver_model.set_variable_names(np.array(v_names))
 
+    @staticmethod
+    def _linear_repn_to_coo(linear, var_id_to_ndx):
+        if not linear:
+            return None, None
+        indices = sorted(linear)
+        values = np.array([linear[i] for i in indices], dtype=np.float64)
+        return values, np.array([var_id_to_ndx[i] for i in indices], dtype=np.int32)
+
+    @staticmethod
+    def _quadratic_repn_to_coo(quadratic, var_id_to_ndx):
+        nnz = len(quadratic)
+        vals = np.empty(nnz, dtype=np.float64)
+        rows = np.empty(nnz, dtype=np.int32)
+        cols = np.empty(nnz, dtype=np.int32)
+        for i, ((var_id1, var_id2), coef) in enumerate(quadratic.items()):
+            rows[i] = var_id_to_ndx[var_id1]
+            cols[i] = var_id_to_ndx[var_id2]
+            vals[i] = coef
+        return vals, rows, cols
+
+    def _add_cuopt_quadratic_constraint(self, con, qrepn, visitor, var_id_to_ndx):
+        from pyomo.core.expr.numvalue import is_fixed, value
+
+        if con.equality:
+            raise ValueError(
+                f"Equality is not supported for quadratic constraint '{con.name}' "
+                "in cuOpt."
+            )
+        if con.has_lb() and con.has_ub():
+            raise ValueError(
+                f"Ranged quadratic constraints are not supported by cuOpt "
+                f"('{con.name}')."
+            )
+        if con.has_lb():
+            if not is_fixed(con.lower):
+                raise ValueError(
+                    f"Lower bound of constraint '{con.name}' is not constant."
+                )
+            sense = "G"
+            rhs = value(con.lower) - qrepn.constant
+        elif con.has_ub():
+            if not is_fixed(con.upper):
+                raise ValueError(
+                    f"Upper bound of constraint '{con.name}' is not constant."
+                )
+            sense = "L"
+            rhs = value(con.upper) - qrepn.constant
+        else:
+            raise ValueError(
+                f"Constraint '{con.name}' does not have a lower or an upper bound."
+            )
+
+        linear_values, linear_indices = self._linear_repn_to_coo(
+            qrepn.linear, var_id_to_ndx
+        )
+        vals, rows, cols = self._quadratic_repn_to_coo(qrepn.quadratic, var_id_to_ndx)
+        con_name = self._symbol_map.getSymbol(con, self._labeler)
+        self._solver_model.add_quadratic_constraint(
+            constraint_row_name=con_name,
+            linear_values=linear_values,
+            linear_indices=linear_indices,
+            rhs_value=rhs,
+            vals=vals,
+            rows=rows,
+            cols=cols,
+            sense=sense,
+        )
+        self._has_quadratic_content = True
+        for var_id, coef in qrepn.linear.items():
+            if coef:
+                self.referenced_vars.add(visitor.var_map[var_id])
+        for var_id1, var_id2 in qrepn.quadratic:
+            self.referenced_vars.add(visitor.var_map[var_id1])
+            self.referenced_vars.add(visitor.var_map[var_id2])
+
+    @staticmethod
+    def _build_quadratic_objective_csr(quadratic, var_id_to_ndx, num_vars):
+        nnz = len(quadratic)
+        if nnz == 0:
+            return None, None, None
+
+        data = np.empty(nnz, dtype=np.float64)
+        rows = np.empty(nnz, dtype=np.int32)
+        cols = np.empty(nnz, dtype=np.int32)
+        for i, ((var_id1, var_id2), coef) in enumerate(quadratic.items()):
+            rows[i] = var_id_to_ndx[var_id1]
+            cols[i] = var_id_to_ndx[var_id2]
+            data[i] = coef
+
+        order = np.lexsort((cols, rows))
+        rows = rows[order]
+        cols = cols[order]
+        data = data[order]
+
+        indptr = np.empty(num_vars + 1, dtype=np.int32)
+        indptr[0] = 0
+        np.cumsum(np.bincount(rows, minlength=num_vars), out=indptr[1:])
+
+        return data, cols, indptr
+
     def _set_objective(self, objective):
-        visitor = LinearRepnVisitor({})
+        visitor = QuadraticRepnVisitor(
+            {}, var_recorder=OrderedVarRecorder({}, {}, None)
+        )
         repn = visitor.walk_expression(objective.expr)
         if repn.nonlinear is not None:
             raise ValueError(
@@ -178,19 +313,38 @@ class CUOPTDirect(DirectSolver):
                 "not supported by cuOpt solver."
             )
 
-        obj_coeffs = [0] * len(self._pyomo_var_to_ndx_map)
-        # repn.linear is keyed by id(var), use var_map to get actual vars
+        num_vars = len(self._pyomo_var_to_ndx_map)
+        obj_coeffs = [0] * num_vars
         for var_id, coef in repn.linear.items():
             var = visitor.var_map[var_id]
             obj_coeffs[self._pyomo_var_to_ndx_map[var]] = coef
             self.referenced_vars.add(var)
+
         self._solver_model.set_objective_coefficients(np.array(obj_coeffs))
+        if repn.constant:
+            self._solver_model.set_objective_offset(repn.constant)
         self._solver_model.set_maximize(objective.sense == maximize)
+
+        if repn.quadratic:
+            var_id_to_ndx = {
+                id(var): ndx for var, ndx in self._pyomo_var_to_ndx_map.items()
+            }
+            q_data, q_indices, q_indptr = self._build_quadratic_objective_csr(
+                repn.quadratic, var_id_to_ndx, num_vars
+            )
+            self._solver_model.set_quadratic_objective_matrix(
+                q_data, q_indices, q_indptr
+            )
+            self._has_quadratic_content = True
+            for var_id1, var_id2 in repn.quadratic:
+                self.referenced_vars.add(visitor.var_map[var_id1])
+                self.referenced_vars.add(visitor.var_map[var_id2])
 
     def _set_instance(self, model, kwds={}):
         DirectOrPersistentSolver._set_instance(self, model, kwds)
         self._pyomo_var_to_ndx_map = ComponentMap()
         self._ndx_count = 0
+        self._reset_model_flags()
 
         try:
             self._solver_model = cuopt.linear_programming.DataModel()
@@ -220,6 +374,11 @@ class CUOPTDirect(DirectSolver):
             raise ValueError("Solver interface does not support multiple objectives.")
         elif objectives:
             self._set_objective(objectives[0])
+        if self._has_quadratic_content and self._has_integer:
+            raise ValueError(
+                "cuOpt does not support mixed-integer problems with quadratic "
+                "or second-order cone constraints."
+            )
 
     def _postsolve(self):
         extract_duals = False
@@ -337,10 +496,21 @@ class CUOPTDirect(DirectSolver):
             if extract_duals:
                 logger.warning("Cannot get duals for MIP.")
         else:
-            if extract_reduced_costs:
-                reduced_costs = solution.get_reduced_cost()
-            if extract_duals:
-                dual_solution = solution.get_dual_solution()
+            if self._has_quadratic_content:
+                if extract_reduced_costs:
+                    logger.warning(
+                        "Cannot get reduced costs for quadratic or conic "
+                        "problems in cuOpt."
+                    )
+                if extract_duals:
+                    logger.warning(
+                        "Cannot get duals for quadratic or conic problems in cuOpt."
+                    )
+            else:
+                if extract_reduced_costs:
+                    reduced_costs = solution.get_reduced_cost()
+                if extract_duals:
+                    dual_solution = solution.get_dual_solution()
 
         if self._save_results:
             soln_variables = soln.variable
@@ -409,6 +579,10 @@ class CUOPTDirect(DirectSolver):
         is_mip = self.solution.get_problem_category()
         if is_mip:
             logger.warning("Cannot get reduced costs for MIP.")
+        elif self._has_quadratic_content:
+            logger.warning(
+                "Cannot get reduced costs for quadratic or conic problems in cuOpt."
+            )
         else:
             self._load_rc(vars_to_load)
 
@@ -434,5 +608,7 @@ class CUOPTDirect(DirectSolver):
         is_mip = self.solution.get_problem_category()
         if is_mip:
             logger.warning("Cannot get duals for MIP.")
+        elif self._has_quadratic_content:
+            logger.warning("Cannot get duals for quadratic or conic problems in cuOpt.")
         else:
             self._load_duals(cons_to_load)
