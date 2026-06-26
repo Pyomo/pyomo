@@ -1986,6 +1986,73 @@ class TestArc(unittest.TestCase):
         m2.y.value = 1.25
         self.assertAlmostEqual(value(c.body), 0)
 
+    def test_clone(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.p1 = Port()
+        m.p2 = Port()
+        m.p1.add(m.x, 'v')
+        m.p2.add(m.y, 'v')
+        m.arc = Arc(source=m.p1, destination=m.p2)
+
+        m2 = m.clone()
+        self.assertEqual(len(m2.p1.arcs()), 1)
+        self.assertEqual(len(m2.p2.arcs()), 1)
+        self.assertIs(m2.p1.arcs()[0], m2.arc)
+        self.assertIs(m2.p2.arcs()[0], m2.arc)
+
+        self.assertIsNot(m2.p1.arcs()[0], m.arc)
+        self.assertIsNot(m2.p2.arcs()[0], m.arc)
+
+        TransformationFactory('network.expand_arcs').apply_to(m2)
+        all_cons = list(m2.component_data_objects(Constraint))
+        self.assertEqual(len(all_cons), 1)
+        c = all_cons[0]
+        self.assertAlmostEqual(value(c.lower), 0)
+        self.assertAlmostEqual(value(c.upper), 0)
+        c_vars = ComponentSet(identify_variables(c.body))
+        self.assertIn(m2.x, c_vars)
+        self.assertIn(m2.y, c_vars)
+        self.assertNotIn(m.x, c_vars)
+        self.assertNotIn(m.y, c_vars)
+        m2.x.value = 1.25
+        m2.y.value = 1.25
+        self.assertAlmostEqual(value(c.body), 0)
+
+    def test_expand_auto_connect(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.prt = Port()
+        m.prt.add(m.x, "a")
+        m.prt.connect_to(m.prt)
+        created_arc = m.find_component("prt_to_prt")
+        self.assertEqual(len(list(m.component_objects(Constraint))), 0)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
+
+        TransformationFactory('network.expand_arcs').apply_to(m)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 1)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
+        self.assertFalse(created_arc.active)
+        blk = m.component('prt_to_prt_expanded')
+        self.assertTrue(blk.active)
+        self.assertTrue(blk.component('a_equality').active)
+
+        os = StringIO()
+        blk.pprint(ostream=os)
+        self.assertEqual(
+            os.getvalue(),
+            """prt_to_prt_expanded : Size=1, Index=None, Active=True
+    1 Constraint Declarations
+        a_equality : Size=1, Index=None, Active=True
+            Key  : Lower : Body  : Upper : Active
+            None :   0.0 : x - x :   0.0 :   True
+
+    1 Declarations: a_equality
+""",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
