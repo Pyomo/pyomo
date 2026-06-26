@@ -101,7 +101,7 @@ class TestComponentSet(unittest.TestCase):
 
     def test_str(self):
         cset = ComponentSet()
-        self.assertEqual(str(cset), "ComponentSet([])")
+        self.assertEqual(str(cset), "ComponentSet()")
         cset.update(self._components)
         str(cset)
 
