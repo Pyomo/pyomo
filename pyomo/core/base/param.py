@@ -434,13 +434,22 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
 
     def sparse_keys(self, sort=SortComponents.UNSORTED):
         """Return a list of keys in the defined parameters"""
+        sort = SortComponents(sort)
+        if sort is SortComponents.UNSORTED:
+            # Fast path: bypass keys() entirely when no ordering is
+            # requested to avoid unnecessary refiltering of entire
+            # index cross product. Return in dict insertion order.
+            return list(self._data.keys())
         try:
             # Temporarily remove the default value so that len(self) ==
-            # len(self._dict).  This will cause the base class
-            # implementation of keys() to only return values from
+            # len(self._data).  This will cause the base class
+            # implementation of keys() to only return sparse values from
             # self._data:
             tmp = self._default_val
             self._default_val = Param.NoValue
+            # For SORTED_INDICES, keys() sorts sparse _data keys directly.
+            # For ORDERED_INDICES, keys() walks the full index set and
+            # filters, returning sparse indices in index-set order (slow).
             return self.keys(sort)
         finally:
             self._default_val = tmp
