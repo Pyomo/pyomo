@@ -31,7 +31,7 @@ from pyomo.contrib.pyros.util import (
     ModelData,
 )
 
-__version__ = "1.3.14"
+__version__ = "1.3.15"
 
 
 default_pyros_solver_logger = setup_pyros_logger()
@@ -194,15 +194,19 @@ class PyROS(object):
         logger.log(
             msg=(
                 "of Energy's "
-                "Institute for the Design of Advanced Energy Systems (IDAES)."
+                "Institute for the Design of Advanced Energy Systems (IDAES)"
             ),
+            **log_kwargs,
+        )
+        logger.log(
+            msg="and Carbon Capture Simulation for Industry Impact (CCSI2) projects.",
             **log_kwargs,
         )
         logger.log(msg="=" * self._LOG_LINE_LENGTH, **log_kwargs)
 
-    def _log_disclaimer(self, logger, **log_kwargs):
+    def _log_feedback_guidance(self, logger, **log_kwargs):
         """
-        Log PyROS solver disclaimer messages.
+        Log PyROS solver guidance on providing user feedback.
 
         Parameters
         ----------
@@ -212,10 +216,6 @@ class PyROS(object):
             Keyword arguments to ``logger.log()`` callable.
             Should not include `msg`.
         """
-        disclaimer_header = " DISCLAIMER ".center(self._LOG_LINE_LENGTH, "=")
-
-        logger.log(msg=disclaimer_header, **log_kwargs)
-        logger.log(msg="PyROS is currently under active development. ", **log_kwargs)
         logger.log(
             msg=(
                 "Please provide feedback and/or report any issues by creating "
@@ -419,7 +419,7 @@ class PyROS(object):
                 )
             )
             self._log_intro(logger=progress_logger, level=logging.INFO)
-            self._log_disclaimer(logger=progress_logger, level=logging.INFO)
+            self._log_feedback_guidance(logger=progress_logger, level=logging.INFO)
 
             config, user_var_partitioning = self._resolve_and_validate_pyros_args(
                 model, **kwds

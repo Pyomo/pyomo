@@ -28,12 +28,12 @@ the license requirements for their desired solver.
      - License |br| Docs
    * - cplex
      - ``pip install cplex``
-     - ``conda install ‑c \ ibmdecisionoptimization cplex``
+     - N/A
      - `License <https://www.ibm.com/products/ilog-cplex-optimization-studio/pricing>`__
        `Docs <https://www.ibm.com/docs/en/icos/latest?topic=cplex-installing>`__
    * - CPoptimizer
      - ``pip install cplex docplex``
-     - ``conda install ‑c \ ibmdecisionoptimization \        cplex docplex``
+     - N/A
      - `License <https://github.com/IBMDecisionOptimization/docplex-doc/blob/master/LICENSE.txt>`__
        `Docs <https://ibmdecisionoptimization.github.io/docplex-doc/getting_started_python.html>`__
    * - cuOpt

@@ -27,6 +27,7 @@ from collections.abc import Iterable, MutableSequence, Sequence
 from enum import Enum
 
 from pyomo.common.dependencies import numpy as np, scipy as sp
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.base import (
     Block,
@@ -1474,62 +1475,124 @@ class CardinalitySet(UncertaintySet):
     ----------
     origin : (N,) array_like
         Origin of the set (e.g., nominal uncertain parameter values).
-    positive_deviation : (N,) array_like
-        Maximal non-negative coordinate deviation from the origin
-        in each dimension.
     gamma : numeric type
-        Upper bound for the number of uncertain parameters which
-        may realize their maximal deviations from the origin
-        simultaneously.
+        Upper bound for the number of coordinates that can
+        simultaneously realize their maximal deviations from
+        the origin. Must be a numerical value ranging from 0
+        to the set dimension `N`.
+    positive_deviation : (N,) array_like
+        Maximal absolute deviation from the origin in the
+        positive coordinate direction.
+    negative_deviation : (N,) array_like, optional
+        Maximal absolute deviation from the origin in the
+        negative coordinate direction.
+        If `None` is passed, then this argument is set to
+        an (`N`,) shaped array of zeros.
 
     Notes
     -----
-    The :math:`n`-dimensional cardinality set is defined by
+    The :math:`n`-dimensional cardinality-constrained set is defined by
 
     .. math::
 
         \\left\\{ q \\in \\mathbb{R}^n\\,\\middle|
-             \\,\\exists\\, \\xi \\in [0, 1]^n \\,:\\,
+             \\,\\exists\\, \\xi^+, \\xi^- \\in [0, 1]^n \\,:\\,
              \\left[
                  \\begin{array}{l}
-                    q = q^0 + \\hat{q} \\circ \\xi \\\\
-                    \\displaystyle \\sum_{i=1}^n \\xi_i \\leq \\Gamma
+                    q = q^0 + \\hat{q}^+ \\circ \\xi^+
+                        - \\hat{q}^- \\circ \\xi^- \\\\
+                    \\displaystyle \\sum_{i=1}^n (\\xi_i^+ + \\xi_i^-)
+                        \\leq \\Gamma \\\\
+                    \\xi_i^+ = 0 \\quad\\forall\\,i :
+                        \\hat{q}_i^+ = 0 \\\\
+                    \\xi_i^- = 0 \\quad\\forall\\,i :
+                        \\hat{q}_i^- = 0
                  \\end{array}
              \\right]
         \\right\\}
 
     in which
     :math:`q^\\text{0} \\in \\mathbb{R}^n` refers to ``origin``,
-    the quantity :math:`\\hat{q} \\in \\mathbb{R}_{+}^n`
+    the quantity :math:`\\hat{q}^+ \\in \\mathbb{R}_{+}^n`
     refers to ``positive_deviation``,
-    and :math:`\\Gamma \\in [0, n]` refers to ``gamma``.
-    The operator ":math:`\\circ`" denotes the element-wise product.
+    the quantity :math:`\\hat{q}^- \\in \\mathbb{R}_{+}^n`
+    refers to ``negative_deviation``,
+    and
+    :math:`\\Gamma \\in [0, n]` refers to ``gamma``.
+
+    .. note::
+
+       If :math:`\\hat{q}^+ = \\hat{q}^-`,
+       then this set is mathematically equal to
+
+       .. math::
+
+           \\left\\{ q \\in \\mathbb{R}^n\\,\\middle|
+                \\,\\exists\\, \\delta \\in [-1, 1]^n \\,:\\,
+                \\left[
+                    \\begin{array}{l}
+                       q = q^0 + \\hat{q}^+ \\circ \\delta \\\\
+                       \\displaystyle \\sum_{i=1}^n |\\delta_i|
+                           \\leq \\Gamma
+                    \\end{array}
+                \\right]
+           \\right\\},
+
+       the cardinality-constrained set implicitly defined
+       in the popular robust optimization work by Bertsimas and Sim
+       [BS04]_.
 
     Examples
     --------
-    A 3D cardinality set:
+    A 4D cardinality-constrained set:
 
     >>> from pyomo.contrib.pyros import CardinalitySet
     >>> gamma_set = CardinalitySet(
-    ...     origin=[0, 0, 0],
-    ...     positive_deviation=[1.0, 2.0, 1.5],
+    ...     origin=[0, 0, 0, 0],
     ...     gamma=1,
+    ...     positive_deviation=[1.0, 2.0, 1.5, 0.0],
+    ...     negative_deviation=[0.0, 2.0, 0.0, 5.0],
     ... )
     >>> gamma_set.origin
-    array([0, 0, 0])
-    >>> gamma_set.positive_deviation
-    array([1. , 2. , 1.5])
+    array([0, 0, 0, 0])
     >>> gamma_set.gamma
     1
+    >>> gamma_set.positive_deviation
+    array([1. , 2. , 1.5, 0. ])
+    >>> gamma_set.negative_deviation
+    array([0., 2., 0., 5.])
     """
 
     _PARAMETER_BOUNDS_EXACT = True
 
-    def __init__(self, origin, positive_deviation, gamma):
+    def __init__(self, origin, gamma, positive_deviation, negative_deviation=None):
         """Initialize self (see class docstring)."""
         self.origin = origin
-        self.positive_deviation = positive_deviation
-        self.gamma = gamma
+
+        if np.isscalar(gamma):
+            self.gamma = gamma
+            self.positive_deviation = positive_deviation
+        else:
+            # for backward compatibility, silently allow user
+            # to swap arguments `gamma` and `positive_deviation`,
+            # if `gamma` is not a scalar
+            deprecation_warning(
+                (
+                    f"Order of {type(self).__name__} arguments `gamma` "
+                    "and `positive_deviation` has been swapped, "
+                    "as `gamma` is not a scalar object. "
+                    "Ensure that `gamma` is a scalar object and "
+                    "(if both arguments are passed positionally) "
+                    "passed before `positive_deviation`."
+                ),
+                version="6.10.2.dev0",
+            )
+            self.gamma = positive_deviation
+            self.positive_deviation = gamma
+
+        if negative_deviation is None:
+            negative_deviation = np.zeros(self.dim)
+        self.negative_deviation = negative_deviation
 
     @property
     def type(self):
@@ -1541,8 +1604,8 @@ class CardinalitySet(UncertaintySet):
     @property
     def origin(self):
         """
-        (N,) numpy.ndarray : Origin of the cardinality set
-        (e.g. nominal parameter values).
+        (N,) numpy.ndarray : Origin of the cardinality-constrained set
+        (e.g., nominal parameter values).
         """
         return self._origin
 
@@ -1571,8 +1634,8 @@ class CardinalitySet(UncertaintySet):
     @property
     def positive_deviation(self):
         """
-        (N,) numpy.ndarray : Maximal coordinate deviations from the
-        origin in each dimension. All entries should be nonnegative.
+        (N,) numpy.ndarray : Maximal absolute deviation from
+        the origin in the positive coordinate direction.
         """
         return self._positive_deviation
 
@@ -1593,26 +1656,56 @@ class CardinalitySet(UncertaintySet):
             if val_arr.size != self.dim:
                 raise ValueError(
                     "Attempting to set attribute 'positive_deviation' of "
-                    f"cardinality set of dimension {self.dim} "
+                    f"{type(self).__name__} of dimension {self.dim} "
                     f"to value of dimension {val_arr.size}"
                 )
 
         self._positive_deviation = val_arr
 
     @property
+    def negative_deviation(self):
+        """
+        (N,) numpy.ndarray : Maximal absolute deviation from
+        the origin in the negative coordinate direction.
+        """
+        return self._negative_deviation
+
+    @negative_deviation.setter
+    def negative_deviation(self, val):
+        validate_array(
+            arr=val,
+            arr_name="negative_deviation",
+            dim=1,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+        )
+
+        val_arr = np.array(val)
+
+        # dimension of the set is immutable
+        if hasattr(self, "_origin"):
+            if val_arr.size != self.dim:
+                raise ValueError(
+                    "Attempting to set attribute 'negative_deviation' of "
+                    f"{type(self).__name__} of dimension {self.dim} "
+                    f"to value of dimension {val_arr.size}"
+                )
+
+        self._negative_deviation = val_arr
+
+    @property
     def gamma(self):
         """
-        numeric type : Upper bound for the number of uncertain
-        parameters that may maximally deviate from their respective
-        origin values simultaneously. Must be a numerical value ranging
-        from 0 to the set dimension `N`.
+        numeric type : Upper bound for the number of coordinates that
+        can simultaneously realize their maximal deviations from
+        the origin. Must be a numerical value ranging from 0
+        to the set dimension `N`.
 
         Note that, mathematically, setting `gamma` to 0 reduces the set
         to a singleton containing the point represented by
         ``self.origin``, while setting `gamma` to
         the set dimension `N` makes the set mathematically equivalent
-        to a `BoxSet` with bounds
-        ``numpy.array([self.origin, self.origin + self.positive_deviation]).T``.
+        to a box set.
         """
         return self._gamma
 
@@ -1627,21 +1720,21 @@ class CardinalitySet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension `N` of the cardinality set.
+        int : Dimension `N` of the cardinality-constrained set.
         """
         return len(self.origin)
 
     @property
     def geometry(self):
         """
-        Geometry : Geometry of the cardinality set.
+        Geometry : Geometry of the cardinality-constrained set.
         """
         return Geometry.LINEAR
 
     @property
     def parameter_bounds(self):
         """
-        Bounds in each dimension of the cardinality set.
+        Bounds in each dimension of the cardinality-constrained set.
 
         Returns
         -------
@@ -1649,14 +1742,9 @@ class CardinalitySet(UncertaintySet):
             List, length `N`, of coordinate value
             (lower, upper) bound pairs.
         """
-        nom_val = self.origin
-        deviation = self.positive_deviation
-        gamma = self.gamma
-        parameter_bounds = [
-            (nom_val[i], nom_val[i] + min(gamma, 1) * deviation[i])
-            for i in range(len(nom_val))
-        ]
-        return parameter_bounds
+        lower_bounds = self.origin - min(self.gamma, 1) * self.negative_deviation
+        upper_bounds = self.origin + min(self.gamma, 1) * self.positive_deviation
+        return [(lb, ub) for lb, ub in zip(lower_bounds, upper_bounds)]
 
     @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, uncertain_params=None, block=None):
@@ -1666,21 +1754,33 @@ class CardinalitySet(UncertaintySet):
                 block=block,
                 uncertain_param_vars=uncertain_params,
                 dim=self.dim,
-                num_auxiliary_vars=self.dim,
+                num_auxiliary_vars=2 * self.dim,
             )
         )
 
-        cardinality_zip = zip(
-            self.origin, self.positive_deviation, aux_var_list, param_var_data_list
+        card_zip = zip(
+            self.origin,
+            self.positive_deviation,
+            self.negative_deviation,
+            param_var_data_list,
+            aux_var_list[: self.dim],
+            aux_var_list[self.dim :],
         )
-        for orig_val, pos_dev, auxvar, param_var in cardinality_zip:
-            conlist.add(orig_val + pos_dev * auxvar == param_var)
+        for orig_val, pos_dev, neg_dev, param_var, pos_aux, neg_aux in card_zip:
+            # deviation constraint for the main parameter
+            conlist.add(orig_val + pos_dev * pos_aux - neg_dev * neg_aux == param_var)
+
+            # set auxiliary variable bounds
+            pos_aux.bounds = (0, 1)
+            neg_aux.bounds = (0, 1)
+
+            # fix aux vars by bounds if no deviations allowed
+            if pos_dev == 0:
+                pos_aux.bounds = (0, 0)
+            if neg_dev == 0:
+                neg_aux.bounds = (0, 0)
 
         conlist.add(quicksum(aux_var_list) <= self.gamma)
-
-        for aux_var in aux_var_list:
-            aux_var.setlb(0)
-            aux_var.setub(1)
 
         return UncertaintyQuantification(
             block=block,
@@ -1701,19 +1801,32 @@ class CardinalitySet(UncertaintySet):
             required_shape_qual="to match the set dimension",
         )
         point_arr = np.array(point)
+        aux_vals = np.zeros(2 * self.dim)
+        pos_aux_vals, neg_aux_vals = aux_vals[: self.dim], aux_vals[self.dim :]
+        point_in_set_tol = POINT_IN_UNCERTAINTY_SET_TOL
 
-        is_dev_nonzero = self.positive_deviation != 0
-        aux_space_pt = np.empty(self.dim)
-        aux_space_pt[is_dev_nonzero] = (
-            point_arr[is_dev_nonzero] - self.origin[is_dev_nonzero]
-        ) / self.positive_deviation[is_dev_nonzero]
-        aux_space_pt[self.positive_deviation == 0] = 0
+        for idx, orig_val in enumerate(self.origin):
+            net_deviation = point_arr[idx] - orig_val
 
-        return aux_space_pt
+            # only the positive or the negative auxiliary variable
+            # is set to a nonzero value; the variable that gets set
+            # depends on the sign of the net deviation
+            max_abs_dev, aux_arr = (
+                (self.positive_deviation[idx], pos_aux_vals)
+                if net_deviation >= 0
+                else (self.negative_deviation[idx], neg_aux_vals)
+            )
+            if max_abs_dev == 0:
+                aux_arr[idx] = 0 if abs(net_deviation) <= point_in_set_tol else np.nan
+            else:
+                aux_arr[idx] = abs(net_deviation) / max_abs_dev
+
+        return aux_vals
 
     def point_in_set(self, point):
         """
-        Determine whether a given point lies in the cardinality set.
+        Determine whether a given point lies in the
+        cardinality-constrained set.
 
         Parameters
         ----------
@@ -1722,15 +1835,20 @@ class CardinalitySet(UncertaintySet):
 
         Returns
         -------
-        : bool
+        bool
             True if the point lies in the set, False otherwise.
         """
+        tol = POINT_IN_UNCERTAINTY_SET_TOL
         aux_space_pt = self.compute_auxiliary_uncertain_param_vals(point)
+        deviations = (
+            self.positive_deviation * aux_space_pt[: self.dim]
+            - self.negative_deviation * aux_space_pt[self.dim :]
+        )
         return (
-            np.all(point == self.origin + self.positive_deviation * aux_space_pt)
-            and aux_space_pt.sum() <= self.gamma
-            and np.all(0 <= aux_space_pt)
-            and np.all(aux_space_pt <= 1)
+            np.all(np.abs(point - (self.origin + deviations))) <= tol
+            and aux_space_pt.sum() <= self.gamma + tol
+            and np.all(-tol <= aux_space_pt)
+            and np.all(aux_space_pt <= 1 + tol)
         )
 
     def validate(self, config):
@@ -1745,45 +1863,53 @@ class CardinalitySet(UncertaintySet):
             ``self.positive_deviation`` has negative values,
             or ``self.gamma`` is out of range).
         """
-        orig_val = self.origin
-        pos_dev = self.positive_deviation
-        gamma = self.gamma
-
         # check origin, positive deviation, and gamma are valid
         # this includes a finiteness check
         validate_array(
-            arr=orig_val,
+            arr=self.origin,
             arr_name="origin",
             dim=1,
             valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
         )
         validate_array(
-            arr=pos_dev,
+            arr=self.positive_deviation,
+            arr_name="positive_deviation",
+            dim=1,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+        )
+        validate_array(
+            arr=self.negative_deviation,
             arr_name="positive_deviation",
             dim=1,
             valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
         )
         validate_arg_type(
-            "gamma", gamma, native_numeric_types, "a valid numeric type", False
+            arg_name="gamma",
+            arg_val=self.gamma,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+            is_entry_of_arg=False,
         )
 
-        # check deviation is positive
-        for dev_val in pos_dev:
-            if dev_val < 0:
-                raise ValueError(
-                    f"Entry {dev_val} of attribute 'positive_deviation' "
-                    f"is negative value"
-                )
+        # check deviations are nonnegative
+        for dev_pair in zip(self.positive_deviation, self.negative_deviation):
+            for dev_name, dev in zip(("positive", "negative"), dev_pair):
+                if dev < 0:
+                    raise ValueError(
+                        f"Entry {dev} of attribute '{dev_name}_deviation' "
+                        f"is negative value"
+                    )
 
         # check gamma between 0 and n
-        if gamma < 0 or gamma > self.dim:
+        if self.gamma < 0 or self.gamma > self.dim:
             raise ValueError(
-                "Cardinality set attribute "
+                f"{type(self).__name__} attribute "
                 f"'gamma' must be a real number between 0 and dimension "
                 f"{self.dim} "
-                f"(provided value {gamma})"
+                f"(provided value {self.gamma})"
             )
 
 
@@ -3703,20 +3829,19 @@ class IntersectionSet(UncertaintySet):
 
     Examples
     --------
-    Intersection of origin-centered 2D box (square) and 2D
-    hypersphere (circle):
+    Intersection of origin-centered 2D box (square) and 2D ball (disk):
 
     >>> from pyomo.contrib.pyros import (
     ...     BoxSet, AxisAlignedEllipsoidalSet, IntersectionSet,
     ... )
     >>> square = BoxSet(bounds=[[-1.5, 1.5], [-1.5, 1.5]])
-    >>> circle = AxisAlignedEllipsoidalSet(
+    >>> disk = AxisAlignedEllipsoidalSet(
     ...     center=[0, 0],
     ...     half_lengths=[2, 2],
     ... )
     >>> # to construct intersection, pass sets as keyword arguments.
     >>> # keywords are arbitrary
-    >>> intersection = IntersectionSet(set1=square, set2=circle)
+    >>> intersection = IntersectionSet(set1=square, set2=disk)
     >>> intersection.all_sets  # doctest: +ELLIPSIS
     UncertaintySetList([...])
 
@@ -3991,18 +4116,17 @@ class CartesianProductSet(UncertaintySet):
 
     Examples
     --------
-    Cartesian product of 1D box/interval and 2D
-    hypersphere (circle):
+    Cartesian product of 1D box (interval) and 2D ball (disk):
 
     >>> from pyomo.contrib.pyros import (
     ...     BoxSet, AxisAlignedEllipsoidalSet, CartesianProductSet,
     ... )
     >>> interval = BoxSet(bounds=[[-1.5, 1.5]])
-    >>> circle = AxisAlignedEllipsoidalSet(
+    >>> disk = AxisAlignedEllipsoidalSet(
     ...     center=[0, 0],
     ...     half_lengths=[2, 2],
     ... )
-    >>> cartesian_product = CartesianProductSet([interval, circle])
+    >>> cartesian_product = CartesianProductSet([interval, disk])
     """
 
     def __init__(self, all_sets):
