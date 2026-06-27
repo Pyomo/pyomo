@@ -8,7 +8,7 @@
 # ____________________________________________________________________________________
 
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from pyomo.opt import TerminationCondition as tc, SolverStatus
 import pyomo.common.unittest as unittest
@@ -47,6 +47,32 @@ short_circuit_subsolvers_available = all(
     'Required subsolvers %s are not available' % (short_circuit_required_solvers,),
 )
 class TestMindtPyShortCircuitNoDiscrete(unittest.TestCase):
+    def test_short_circuit_model_with_no_objective_uses_temporary_dummy_objective(self):
+        """No-objective models should short-circuit and leave the user model unchanged."""
+        m = ConcreteModel()
+        m.x = Var(domain=NonNegativeReals)
+        m.y = Var(domain=Binary)
+        m.y.fix(0)
+
+        m.c1 = Constraint(expr=m.x >= 1)
+        m.c2 = Constraint(expr=m.x <= 1)
+
+        with SolverFactory('mindtpy') as opt:
+            results = opt.solve(
+                m,
+                strategy='OA',
+                mip_solver=short_circuit_required_solvers[1],
+                nlp_solver=short_circuit_required_solvers[0],
+            )
+
+        self.assertIsNotNone(results)
+        self.assertEqual(results.solver.termination_condition, tc.optimal)
+        self.assertEqual(results.problem.number_of_objectives, 0)
+        self.assertAlmostEqual(m.x.value, 1.0, places=4)
+        self.assertEqual(
+            len(list(m.component_data_objects(ctype=Objective, active=True))), 0
+        )
+
     def test_no_discrete_decisions_short_circuit_loads_values(self):
         """Regression test for MindtPy short-circuit with no discrete decisions.
 
@@ -206,6 +232,28 @@ class TestMindtPyShortCircuitNoDiscrete(unittest.TestCase):
         self.assertIsNotNone(results)
         self.assertEqual(results.solver.termination_condition, tc.optimal)
         self.assertAlmostEqual(m.x.value, 5.0, places=4)
+
+    def test_short_circuit_multiobjective_model_raises(self):
+        """Multiple active objectives should be rejected before short-circuit solve."""
+        m = ConcreteModel()
+        m.x = Var(domain=NonNegativeReals)
+        m.y = Var(domain=Binary)
+        m.y.fix(0)
+
+        m.c = Constraint(expr=m.x >= 1)
+        m.obj1 = Objective(expr=m.x, sense=minimize)
+        m.obj2 = Objective(expr=2 * m.x, sense=minimize)
+
+        with SolverFactory('mindtpy') as opt:
+            with self.assertRaisesRegex(
+                ValueError, 'Model has multiple active objectives.'
+            ):
+                opt.solve(
+                    m,
+                    strategy='OA',
+                    mip_solver=short_circuit_required_solvers[1],
+                    nlp_solver=short_circuit_required_solvers[0],
+                )
 
 
 class _SimpleNamespace:
@@ -405,3 +453,316 @@ class TestMirrorDirectSolveResults(unittest.TestCase):
         self.assertEqual(algo.results.solver.status, SolverStatus.ok)
         self.assertEqual(algo.results.solver.termination_condition, tc.optimal)
         self.assertEqual(algo.results.solver.message, "All good")
+
+
+class _FakeLegacyMIPSolver:
+    def __init__(
+        self,
+        *,
+        quadratic_objective=False,
+        quadratic_constraint=False,
+        termination_condition=tc.optimal,
+    ):
+        self.options = {}
+        self._capabilities = {
+            'quadratic_objective': quadratic_objective,
+            'quadratic_constraint': quadratic_constraint,
+        }
+        self.solve = MagicMock(
+            return_value=_make_direct_solve_results(termination_condition)
+        )
+
+    def has_capability(self, capability):
+        return self._capabilities[capability]
+
+
+class _FakeSolver:
+    def __init__(self, termination_condition=tc.optimal):
+        self.options = {}
+        self.solve = MagicMock(
+            return_value=_make_direct_solve_results(termination_condition)
+        )
+
+
+def _make_direct_solve_results(termination_condition):
+    return _SimpleNamespace(
+        solution=[],
+        solver=_SimpleNamespace(
+            termination_condition=termination_condition,
+            status=SolverStatus.ok,
+            message=None,
+        ),
+        problem=_SimpleNamespace(lower_bound=None, upper_bound=None),
+    )
+
+
+class TestMindtPyShortCircuitRouting(unittest.TestCase):
+    def _make_algorithm(
+        self,
+        model,
+        mip_solver_name,
+        mip_opt,
+        nlp_opt=None,
+        mip_constraint_polynomial_degree=None,
+        mip_objective_polynomial_degree=None,
+    ):
+        from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
+
+        algo = _MindtPyAlgorithm()
+        algo.config = _SimpleNamespace(
+            logger=MagicMock(),
+            mip_solver=mip_solver_name,
+            nlp_solver='ipopt',
+            mip_solver_tee=False,
+            nlp_solver_tee=False,
+            mip_solver_args={},
+            nlp_solver_args={},
+            feasibility_norm='L1',
+            add_slack=False,
+            max_slack=0,
+        )
+        algo.mip_constraint_polynomial_degree = (
+            {0, 1}
+            if mip_constraint_polynomial_degree is None
+            else mip_constraint_polynomial_degree
+        )
+        algo.mip_objective_polynomial_degree = (
+            {0, 1}
+            if mip_objective_polynomial_degree is None
+            else mip_objective_polynomial_degree
+        )
+        algo.original_model = model
+        algo.working_model = model.clone()
+        algo.create_utility_block(algo.working_model, 'MindtPy_utils')
+        algo.mip_opt = mip_opt
+        algo.nlp_opt = nlp_opt if nlp_opt is not None else _FakeSolver()
+        algo.mip_load_solutions = False
+        algo.nlp_load_solutions = False
+        algo._mirror_direct_solve_results = MagicMock()
+        algo.timing = _SimpleNamespace(main_timer_start_time=0.0)
+        return algo
+
+    def _make_lp_model(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, None))
+        m.c = Constraint(expr=m.x >= 1)
+        m.obj = Objective(expr=m.x, sense=minimize)
+        return m
+
+    def _make_qp_model(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, None))
+        m.c = Constraint(expr=m.x >= 1)
+        m.obj = Objective(expr=(m.x - 2) ** 2, sense=minimize)
+        return m
+
+    def _make_qcp_model(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 10))
+        m.c = Constraint(expr=m.x**2 <= 4)
+        m.obj = Objective(expr=m.x, sense=maximize)
+        return m
+
+    def _make_qcp_with_quadratic_objective_model(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 10))
+        m.c = Constraint(expr=m.x**2 <= 9)
+        m.obj = Objective(expr=(m.x - 1) ** 2, sense=minimize)
+        return m
+
+    def _make_nlp_model(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 10))
+        m.c = Constraint(expr=m.x >= 1)
+        m.obj = Objective(expr=m.x**3, sense=minimize)
+        return m
+
+    def test_short_circuit_lp_routes_to_mip(self):
+        algo = self._make_algorithm(
+            self._make_lp_model(),
+            mip_solver_name='glpk',
+            mip_opt=_FakeLegacyMIPSolver(),
+        )
+
+        with patch(
+            'pyomo.contrib.mindtpy.algorithm_base_class.update_solver_timelimit'
+        ):
+            self.assertFalse(algo.model_is_valid())
+
+        algo.mip_opt.solve.assert_called_once()
+        algo.nlp_opt.solve.assert_not_called()
+
+    def test_short_circuit_qp_uses_legacy_mip_solver_when_supported(self):
+        algo = self._make_algorithm(
+            self._make_qp_model(),
+            mip_solver_name='gurobi',
+            mip_opt=_FakeLegacyMIPSolver(quadratic_objective=True),
+        )
+
+        with patch(
+            'pyomo.contrib.mindtpy.algorithm_base_class.update_solver_timelimit'
+        ):
+            self.assertFalse(algo.model_is_valid())
+
+        algo.mip_opt.solve.assert_called_once()
+        algo.nlp_opt.solve.assert_not_called()
+        self.assertIs(
+            algo._mirror_direct_solve_results.call_args.kwargs['obj'],
+            algo.original_model.obj,
+        )
+
+    def test_short_circuit_qp_uses_nlp_when_appsi_highs_lacks_quadratic_support(self):
+        algo = self._make_algorithm(
+            self._make_qp_model(), mip_solver_name='appsi_highs', mip_opt=_FakeSolver()
+        )
+
+        with patch(
+            'pyomo.contrib.mindtpy.algorithm_base_class.update_solver_timelimit'
+        ):
+            self.assertFalse(algo.model_is_valid())
+
+        algo.mip_opt.solve.assert_not_called()
+        algo.nlp_opt.solve.assert_called_once()
+
+    def test_short_circuit_qcp_uses_appsi_cplex_when_supported(self):
+        algo = self._make_algorithm(
+            self._make_qcp_model(), mip_solver_name='appsi_cplex', mip_opt=_FakeSolver()
+        )
+
+        with patch(
+            'pyomo.contrib.mindtpy.algorithm_base_class.update_solver_timelimit'
+        ):
+            self.assertFalse(algo.model_is_valid())
+
+        algo.mip_opt.solve.assert_called_once()
+        algo.nlp_opt.solve.assert_not_called()
+
+    def test_short_circuit_qcp_uses_nlp_when_legacy_mip_solver_lacks_qcp_support(self):
+        algo = self._make_algorithm(
+            self._make_qcp_model(),
+            mip_solver_name='cbc',
+            mip_opt=_FakeLegacyMIPSolver(
+                quadratic_objective=False, quadratic_constraint=False
+            ),
+        )
+
+        with patch(
+            'pyomo.contrib.mindtpy.algorithm_base_class.update_solver_timelimit'
+        ):
+            self.assertFalse(algo.model_is_valid())
+
+        algo.mip_opt.solve.assert_not_called()
+        algo.nlp_opt.solve.assert_called_once()
+
+    def test_short_circuit_qcp_uses_nlp_when_solver_lacks_quadratic_objective(self):
+        algo = self._make_algorithm(
+            self._make_qcp_with_quadratic_objective_model(),
+            mip_solver_name='cbc',
+            mip_opt=_FakeLegacyMIPSolver(
+                quadratic_objective=False, quadratic_constraint=True
+            ),
+        )
+
+        with patch(
+            'pyomo.contrib.mindtpy.algorithm_base_class.update_solver_timelimit'
+        ):
+            self.assertFalse(algo.model_is_valid())
+
+        algo.mip_opt.solve.assert_not_called()
+        algo.nlp_opt.solve.assert_called_once()
+
+    def test_short_circuit_nlp_uses_nlp_even_with_quadratic_capable_mip_solver(self):
+        algo = self._make_algorithm(
+            self._make_nlp_model(),
+            mip_solver_name='gurobi',
+            mip_opt=_FakeLegacyMIPSolver(
+                quadratic_objective=True, quadratic_constraint=True
+            ),
+        )
+
+        with patch(
+            'pyomo.contrib.mindtpy.algorithm_base_class.update_solver_timelimit'
+        ):
+            self.assertFalse(algo.model_is_valid())
+
+        algo.mip_opt.solve.assert_not_called()
+        algo.nlp_opt.solve.assert_called_once()
+
+    def test_short_circuit_mip_failure_does_not_fallback_to_nlp(self):
+        algo = self._make_algorithm(
+            self._make_qp_model(),
+            mip_solver_name='gurobi',
+            mip_opt=_FakeLegacyMIPSolver(
+                quadratic_objective=True, termination_condition=tc.error
+            ),
+        )
+
+        with patch(
+            'pyomo.contrib.mindtpy.algorithm_base_class.update_solver_timelimit'
+        ):
+            self.assertFalse(algo.model_is_valid())
+
+        algo.mip_opt.solve.assert_called_once()
+        algo.nlp_opt.solve.assert_not_called()
+
+    def test_short_circuit_qcp_detection_ignores_quadratic_strategy(self):
+        algo = self._make_algorithm(
+            self._make_qcp_model(),
+            mip_solver_name='cbc',
+            mip_opt=_FakeLegacyMIPSolver(
+                quadratic_objective=False, quadratic_constraint=False
+            ),
+            mip_constraint_polynomial_degree={0, 1, 2},
+            mip_objective_polynomial_degree={0, 1, 2},
+        )
+
+        util = algo.working_model.MindtPy_utils
+        self.assertEqual(len(util.linear_constraint_list), 1)
+        self.assertEqual(len(util.nonlinear_constraint_list), 0)
+        self.assertTrue(util.has_quadratic_constraints)
+        self.assertFalse(util.has_nonquadratic_constraints)
+
+        with patch(
+            'pyomo.contrib.mindtpy.algorithm_base_class.update_solver_timelimit'
+        ):
+            self.assertFalse(algo.model_is_valid())
+
+        algo.mip_opt.solve.assert_not_called()
+        algo.nlp_opt.solve.assert_called_once()
+
+    def _make_mixed_degree_model(self):
+        """Model with one quadratic and one cubic constraint (mixed degree)."""
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 10))
+        m.c_quad = Constraint(expr=m.x**2 <= 9)
+        m.c_cubic = Constraint(expr=m.x**3 <= 27)
+        m.obj = Objective(expr=m.x, sense=minimize)
+        return m
+
+    def test_short_circuit_mixed_degree_model_routes_to_nlp(self):
+        """A model with both quadratic and cubic constraints must route to NLP.
+
+        has_quadratic_constraints and has_nonquadratic_constraints are both
+        True.  The NLP short-circuit path should be taken regardless of whether
+        the configured MIP solver claims quadratic support, because the cubic
+        constraint makes this an NLP.
+        """
+        algo = self._make_algorithm(
+            self._make_mixed_degree_model(),
+            mip_solver_name='gurobi',
+            mip_opt=_FakeLegacyMIPSolver(
+                quadratic_objective=True, quadratic_constraint=True
+            ),
+        )
+
+        util = algo.working_model.MindtPy_utils
+        self.assertTrue(util.has_quadratic_constraints)
+        self.assertTrue(util.has_nonquadratic_constraints)
+
+        with patch(
+            'pyomo.contrib.mindtpy.algorithm_base_class.update_solver_timelimit'
+        ):
+            self.assertFalse(algo.model_is_valid())
+
+        algo.mip_opt.solve.assert_not_called()
+        algo.nlp_opt.solve.assert_called_once()

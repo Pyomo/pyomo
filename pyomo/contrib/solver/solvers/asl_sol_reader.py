@@ -8,11 +8,12 @@
 # ____________________________________________________________________________________
 
 import io
-from typing import Sequence, Optional, Mapping
+from typing import Sequence, Mapping, Any
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import MouseTrap
 from pyomo.core.base.constraint import ConstraintData
+from pyomo.core.base.suffix import Suffix
 from pyomo.core.base.var import VarData
 from pyomo.core.expr import value
 from pyomo.core.staleflag import StaleFlagManager
@@ -25,7 +26,10 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
     TerminationCondition,
 )
-from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
+from pyomo.contrib.solver.common.solution_loader import SolutionLoader
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ASLSolFileData:
@@ -48,21 +52,87 @@ class ASLSolFileData:
         self.unparsed: str = None
 
 
-class ASLSolFileSolutionLoader(SolutionLoaderBase):
+class ASLSolFileSolutionLoader(SolutionLoader):
     """
     Loader for solvers that create ASL .sol files (e.g., ipopt)
     """
 
-    def __init__(self, sol_data: ASLSolFileData, nl_info: NLWriterInfo) -> None:
+    def __init__(
+        self, sol_data: ASLSolFileData, nl_info: NLWriterInfo, pyomo_model
+    ) -> None:
         self._sol_data = sol_data
         self._nl_info = nl_info
+        self._pyomo_model = pyomo_model
 
-    def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> None:
+    def get_number_of_solutions(self) -> int:
+        # We have a solution if either we were able to read variable
+        # values from the SOL file or all the variables were presolved
+        # out of the model in the writer
+        if self._sol_data.primals or (
+            self._nl_info.eliminated_vars and not self._nl_info.variables
+        ):
+            return 1
+        return 0
+
+    def load_import_suffixes(self):
+        suffixes_to_load = self._collect_and_clear_import_suffixes()
+        # We want to handle duals and reduced costs specially so that we
+        # can unscale the results
+        duals = suffixes_to_load.pop('dual', None)
+        if duals is not None:
+            duals.update(self.get_duals())
+        rc = suffixes_to_load.pop('rc', None)
+        if rc is not None:
+            rc.update(self.get_reduced_costs())
+
+        warn_eliminated = []
+        warn_scaling = []
+
+        data = [
+            (self._sol_data.var_suffixes, self._nl_info.variables),
+            (self._sol_data.con_suffixes, self._nl_info.constraints),
+            (self._sol_data.obj_suffixes, self._nl_info.objectives),
+        ]
+        for suffix_dict, comp_list in data:
+            for suffix_name, suffix_vals in suffix_dict.items():
+                if suffix_name not in suffixes_to_load:
+                    continue
+                if self._nl_info.eliminated_vars:
+                    # Eliminated variable should not impact objective suffixes
+                    if comp_list is not self._nl_info.objectives:
+                        warn_eliminated.append(suffix_name)
+                if self._nl_info.scaling:
+                    warn_scaling.append(suffix_name)
+                suffix = suffixes_to_load[suffix_name]
+                for comp_ndx, val in suffix_vals.items():
+                    suffix[comp_list[comp_ndx]] = val
+
+        if warn_eliminated:
+            logger.warning(
+                f'Suffixes {tuple(warn_eliminated)} may not be correct when '
+                'variables have been presolved from the model.  '
+                'Turn presolve off in the NL writer '
+                '(solver.config.writer_config.linear_presolve=False) to be safe.'
+            )
+        if warn_scaling:
+            logger.warning(
+                f'Suffixes {tuple(warn_scaling)} may not be correct when the '
+                'model has been scaled.  Turn scaling off in the NL writer '
+                '(solver.config.writer_config.scale_model=False) to be safe.'
+            )
+
+        for suffix_name, val in self._sol_data.problem_suffixes.items():
+            if suffix_name not in suffixes_to_load:
+                continue
+            suffix = suffixes_to_load[suffix_name]
+            suffix[None] = val
+
+    def load_vars(self, vars_to_load: Sequence[VarData] | None = None) -> None:
         if vars_to_load is not None:
             # If we are given a list of variables to load, it is easiest
-            # to use the filtering in get_primals and then just set
+            # to use the filtering in get_vars and then just set
             # those values.
-            for var, val in self.get_primals(vars_to_load).items():
+            for var, val in self.get_vars(vars_to_load).items():
                 var.set_value(val, skip_validation=True)
             StaleFlagManager.mark_all_as_stale(delayed=True)
             return
@@ -90,8 +160,8 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
 
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
-    def get_primals(
-        self, vars_to_load: Optional[Sequence[VarData]] = None
+    def get_vars(
+        self, vars_to_load: Sequence[VarData] | None = None
     ) -> Mapping[VarData, float]:
         result = ComponentMap()
         if not self._sol_data.primals:
@@ -137,15 +207,18 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
         return result
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+        self, cons_to_load: Sequence[ConstraintData] | None = None
     ) -> dict[ConstraintData, float]:
         if len(self._nl_info.eliminated_vars) > 0:
-            raise MouseTrap(
-                'Complete duals are not available when variables have '
+            logger.warning(
+                'Duals may not be correct when variables have '
                 'been presolved from the model.  Turn presolve off '
-                '(solver.config.writer_config.linear_presolve=False) to get '
-                'dual variable values.'
+                '(solver.config.writer_config.linear_presolve=False) to '
+                'be safe.'
             )
+
+        if not self._nl_info.constraints:
+            return {}
 
         scaling = self._nl_info.scaling
         if scaling:
@@ -164,6 +237,38 @@ class ASLSolFileSolutionLoader(SolutionLoaderBase):
             return {con: val * scale * inv_obj_scale for con, val, scale in _iter}
         else:
             return {con: val for con, val in _iter}
+
+    def get_reduced_costs(
+        self, vars_to_load: Sequence[VarData] | None = None
+    ) -> ComponentMap[VarData, float]:
+        if len(self._nl_info.eliminated_vars) > 0:
+            logger.warning(
+                'Reduced costs may not be correct when variables have '
+                'been presolved from the model.  Turn presolve off '
+                '(solver.config.writer_config.linear_presolve=False) to '
+                'be safe.'
+            )
+
+        rc = self._sol_data.var_suffixes.get('rc', None)
+        if not rc:
+            return ComponentMap()
+
+        variables = self._nl_info.variables
+        _iter = rc.items()
+        if vars_to_load is not None:
+            vars_to_load = set(id(v) for v in vars_to_load)
+            _iter = filter(lambda x: id(variables[x[0]]) in vars_to_load, _iter)
+        if self._nl_info.scaling:
+            inv_obj_scale = 1.0
+            if self._nl_info.scaling.objectives:
+                inv_obj_scale /= self._nl_info.scaling.objectives[self._sol_data.objno]
+            vscale = self._nl_info.scaling.variables
+            return ComponentMap(
+                (variables[v_idx], val * vscale[v_idx] * inv_obj_scale)
+                for v_idx, val in _iter
+            )
+        else:
+            return ComponentMap((variables[v_idx], val) for v_idx, val in _iter)
 
 
 def asl_solve_code_to_solution_status(

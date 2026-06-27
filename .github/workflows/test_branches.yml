@@ -23,7 +23,7 @@ env:
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver linear-tree
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels linear-tree
-  CACHE_VER: v260304.0
+  CACHE_VER: v260512.3
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
   PYOMO_WORKFLOW: branch
@@ -31,9 +31,8 @@ env:
 jobs:
   lint:
     name: lint/style-and-typos
-    if: |
-      ${{ ! ( contains(github.event.pull_request.title, '[WIP]') ||
-            github.event.pull_request.draft ) }}
+    # Note: 'env' is not available in GHA jobs.<job_id>.if context.
+    if: ${{ ! contains(github.event.pull_request.title, '[WIP]') }}
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Pyomo source
@@ -62,7 +61,7 @@ jobs:
         sudo resolvectl query github.com
         sudo resolvectl status
     - name: URL Checker
-      if: env.PYOMO_WORKFLOW == 'branch'
+      if: ${{ env.PYOMO_WORKFLOW == 'branch' }}
       uses: urlstechie/urlchecker-action@0.0.34
       with:
         # A comma-separated list of file types to cover in the URL checks
@@ -78,7 +77,8 @@ jobs:
         # Exclude:
         #  - Jenkins because it's behind a firewall
         #  - RTD because a magically-generated string triggers failures
-        exclude_urls: https://pyomo-jenkins.sandia.gov/,https://pyomo.readthedocs.io/en/%s/errors.html
+        #  - scipopt.org as they perform "validation" on the webclient (which fails)
+        exclude_urls: https://pyomo-jenkins.sandia.gov/,https://pyomo.readthedocs.io/en/%s/errors.html,https://www.scipopt.org
         # Exclude:
         #  - All gnu.org links because they consistently fail the checker
         #  - All lpsolve.sourceforge.net links because SF appears to reject from GHA
@@ -148,6 +148,14 @@ jobs:
           TARGET: win
           PYENV: pip
 
+        - os: ubuntu-latest
+          python: '3.10'
+          other: /slim
+          slim: 2
+          TARGET: linux
+          PYENV: pip
+
+
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v6
@@ -162,7 +170,7 @@ jobs:
             echo "GHA_JOBGROUP=other" >> $GITHUB_ENV
         fi
         EXTRAS=tests
-        if test -z "${{matrix.slim}}"; then
+        if test -z "${{matrix.slim}}" -o "${{matrix.slim}}" = 1; then
             EXTRAS="$EXTRAS,docs,optional"
         fi
         echo "EXTRAS=$EXTRAS" >> $GITHUB_ENV
@@ -253,12 +261,12 @@ jobs:
 
     - name: Set up Miniconda Python ${{ matrix.python }}
       if: matrix.PYENV == 'conda'
-      uses: conda-incubator/setup-miniconda@v3
+      uses: conda-incubator/setup-miniconda@v4
       with:
         conda-remove-defaults: true
         auto-update-conda: false
         python-version: ${{ matrix.python }}
-        channels: conda-forge, gurobi, ibmdecisionoptimization, fico-xpress
+        channels: conda-forge, gurobi, fico-xpress
         use-mamba: true
 
     # This is necessary for qt (UI) tests; the package utilized here does not
@@ -313,14 +321,7 @@ jobs:
         python -m pip install --cache-dir cache/pip pymysql || \
             python -m pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
-            # Disallow cplex 22.1.2.1 because it errors fatally when
-            #  computing IIS on python 3.13 and 3.14
-            if [[ ${{matrix.python}} =~ 3.1[34] ]]; then
-                CPLEX='cplex!=22.1.2.1'
-            else
-                CPLEX='cplex'
-            fi
-            python -m pip install --cache-dir cache/pip "$CPLEX" docplex \
+            python -m pip install --cache-dir cache/pip cplex docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
             python -m pip install --cache-dir cache/pip gurobipy \
                 || echo "WARNING: Gurobi is not available"
@@ -328,6 +329,12 @@ jobs:
                 || echo "WARNING: Xpress Community Edition is not available"
             python -m pip install --cache-dir cache/pip maingopy \
                 || echo "WARNING: MAiNGO is not available"
+            if [[ ${{matrix.python}} == pypy* ]]; then
+                echo "skipping SCIP for pypy"
+            else
+                python -m pip install --cache-dir cache/pip pyscipopt \
+                    || echo "WARNING: SCIP is not available"
+            fi
             if [[ ${{matrix.python}} == pypy* ]]; then
                 echo "skipping wntr for pypy"
             else
@@ -357,6 +364,8 @@ jobs:
         python --version
         # We need setuptools so we can run Pyomo's setup.py
         conda install setuptools
+        # Make sure pip is installed for dependencies not available through conda
+        conda install pip
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
@@ -394,15 +403,6 @@ jobs:
             TIMEOUT_MSG="TIMEOUT: killing conda install process"
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
-            #
-            # Disallow cplex 22.1.2 and 22.1.2.1, as they error fatally when
-            #   computing IIS on Python 3.13 and 3.14
-            # Disallow cplex 12.9 (caused segfaults in tests)
-            if [[ ${{matrix.python}} =~ 3.1[34] ]]; then
-                CPLEX='cplex>=12.10,<22.1.2|>22.1.2.1'
-            else
-                CPLEX='cplex>=12.10'
-            fi
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
             # on GHA/Windows under Python 3.10 and 3.11.  Exclude that
             # release on that platform.
@@ -415,7 +415,7 @@ jobs:
             else
                 XPRESS='xpress'
             fi
-            for PKG in "$CPLEX" docplex gurobi "$XPRESS" cyipopt pymumps scip; do
+            for PKG in gurobi "$XPRESS" cyipopt pymumps scip pyscipopt; do
                 echo ""
                 echo "*** Install $PKG ***"
                 echo ""
@@ -464,6 +464,12 @@ jobs:
                     echo "WARNING: $PKG is not available"
                 fi
             done
+            # As of June 2026, cplex/docplex want their users to move towards
+            # pypi and away from conda. Particularly:
+            # The CPLEX and CP Optimizer Python interfaces are no longer
+            # delivered inside CPLEX Optimization Studio, but can be
+            # installed directly from PyPI.
+            PYPI_DEPENDENCIES="$PYPI_DEPENDENCIES cplex docplex"
         fi
         # Re-try Pyomo (optional) dependencies with pip
         echo ""
@@ -567,7 +573,7 @@ jobs:
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $INSTALLER = "${env:DOWNLOAD_DIR}/gams_install.exe"
         # Demo licenses are included for 5mo from the newest release
-        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/52.5.0"
+        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/latest"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $URL = "$URL/windows/windows_x64_64.exe"
         } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
@@ -681,9 +687,9 @@ jobs:
             cd gjh_asl_json-master/Thirdparty
             # Patch get.ASL to use curl
             URL="http://www.ampl.com/netlib/ampl/solvers.tgz"
-            sed -i "s|wget |curl -o solvers.tgz |" get.ASL
-            cat get.ASL
-            ./get.ASL
+            sed "s|wget |curl -o solvers.tgz |" get.ASL > get.ASL.patched
+            cat get.ASL.patched
+            bash ./get.ASL.patched
             cd ..
             make
             mv bin "$INSTALL_DIR/bin"
@@ -866,8 +872,8 @@ jobs:
   cover:
     name: process-coverage-${{ matrix.TARGET }}
     needs: build
-    # run even if a build job fails, but not if canceled (except for branches)
-    if: ${{ false }}
+    # run even if a build job fails, but not if canceled
+    if: ${{ success() || failure() }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
@@ -976,7 +982,9 @@ jobs:
         fi
 
     - name: Upload codecov reports
-      if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
+      if: |
+        env.PYOMO_WORKFLOW != 'branch' &&
+        (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
       uses: codecov/codecov-action@v6
       with:
         files: coverage.xml
@@ -987,6 +995,7 @@ jobs:
 
     - name: Upload other coverage reports
       if: |
+        env.PYOMO_WORKFLOW != 'branch' &&
         hashFiles('coverage-other.xml') != '' &&
         (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
       uses: codecov/codecov-action@v6

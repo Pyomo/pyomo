@@ -44,6 +44,7 @@ subclasses are enumerated below:
    ~pyomo.contrib.pyros.uncertainty_sets.BoxSet
    ~pyomo.contrib.pyros.uncertainty_sets.BudgetSet
    ~pyomo.contrib.pyros.uncertainty_sets.CardinalitySet
+   ~pyomo.contrib.pyros.uncertainty_sets.CartesianProductSet
    ~pyomo.contrib.pyros.uncertainty_sets.DiscreteScenarioSet
    ~pyomo.contrib.pyros.uncertainty_sets.EllipsoidalSet
    ~pyomo.contrib.pyros.uncertainty_sets.FactorModelSet
@@ -74,8 +75,11 @@ subclasses are provided below.
      - :math:`\begin{array}{l} q^{0} \in \mathbb{R}^{n}, \\ b \in \mathbb{R}_{+}^{L}, \\ B \in \{0, 1\}^{L \times n} \end{array}`
      - :math:`\left\{ q \in \mathbb{R}^{n} \middle| \begin{array}{l} \begin{pmatrix} B \\ -I \end{pmatrix} q \leq \begin{pmatrix}  b + Bq^{0} \\ -q^{0} \end{pmatrix}  \end{array} \right\}`
    * - :class:`~pyomo.contrib.pyros.uncertainty_sets.CardinalitySet`
-     - :math:`\begin{array}{l} q^{0} \in \mathbb{R}^{n}, \\ \hat{q} \in \mathbb{R}_{+}^{n}, \\ \Gamma \in [0, n] \end{array}`
-     - :math:`\left\{ q \in \mathbb{R}^{n} \middle| \begin{array}{l} \exists\,\xi \in [0, 1]^n\,:\\ \quad \,q = q^{0} + \hat{q} \circ \xi \\ \quad \displaystyle \sum_{i=1}^{n} \xi_{i} \leq \Gamma \end{array} \right\}`
+     - :math:`\begin{array}{l} q^{0} \in \mathbb{R}^{n}, \\ \hat{q}^+ \in \mathbb{R}_{+}^{n}, \\ \hat{q}^- \in \mathbb{R}_{+}^{n}, \\ \Gamma \in [0, n] \end{array}`
+     - :math:`\left\{ q \in \mathbb{R}^{n} \middle| \begin{array}{l} \exists\,\xi^+, \xi^- \in [0, 1]^n\,:\\ \quad \,q = q^{0} + \hat{q}^+ \circ \xi^+ - \hat{q}^- \circ \xi^- \\ \quad \displaystyle \sum_{i=1}^{n} (\xi_{i}^+ + \xi_{i}^-) \leq \Gamma \\ \quad \xi_i^+ = 0 \quad\forall\, i : \hat{q}_i^+ = 0 \\ \quad \xi_i^- = 0 \quad\forall\, i : \hat{q}_i^- = 0 \end{array} \right\}`
+   * - :class:`~pyomo.contrib.pyros.uncertainty_sets.CartesianProductSet`
+     - :math:`\begin{array}{l} \mathcal{Q}_{1} \subset \mathbb{R}^{n_1}, \\ \mathcal{Q}_{2} \subset \mathbb{R}^{n_2}, \\ \vdots \\ \mathcal{Q}_{m} \subset \mathbb{R}^{n_m} \end{array}`
+     - :math:`\displaystyle \mathcal{Q}_{1} \times \mathcal{Q}_{2} \times \cdots \times \mathcal{Q}_{m}`
    * - :class:`~pyomo.contrib.pyros.uncertainty_sets.DiscreteScenarioSet`
      - :math:`q^{1}, q^{2},\dots , q^{S} \in \mathbb{R}^{n}`
      - :math:`\{q^{1}, q^{2}, \dots , q^{S}\}`

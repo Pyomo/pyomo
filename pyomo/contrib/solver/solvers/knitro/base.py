@@ -35,7 +35,7 @@ from pyomo.contrib.solver.solvers.knitro.config import KnitroConfig
 from pyomo.contrib.solver.solvers.knitro.engine import Engine
 from pyomo.contrib.solver.solvers.knitro.package import PackageChecker
 from pyomo.contrib.solver.solvers.knitro.solution import (
-    SolutionLoader,
+    KnitroSolutionLoader,
     SolutionProvider,
 )
 from pyomo.contrib.solver.solvers.knitro.typing import ItemData, ItemType, ValueType
@@ -119,6 +119,13 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
             var.set_value(self._saved_var_values[id(var)])
         StaleFlagManager.mark_all_as_stale()
 
+    def _warm_start(self) -> None:
+        variables = []
+        for var in self._get_vars():
+            if var.value is not None:
+                variables.append(var)
+        self._engine.set_initial_values(variables)
+
     @abstractmethod
     def _presolve(
         self, model: BlockData, config: KnitroConfig, timer: HierarchicalTimer
@@ -159,7 +166,7 @@ class KnitroSolverBase(SolutionProvider, PackageChecker, SolverBase):
         ):
             raise NoOptimalSolutionError()
 
-        results.solution_loader = SolutionLoader(
+        results.solution_loader = KnitroSolutionLoader(
             self,
             has_primals=results.solution_status
             not in {SolutionStatus.infeasible, SolutionStatus.noSolution},
