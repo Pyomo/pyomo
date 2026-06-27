@@ -40,6 +40,7 @@ from pyomo.environ import (
     Integers,
     LogicalConstraint,
     maximize,
+    minimize,
     Objective,
     RangeSet,
     TransformationFactory,
@@ -321,6 +322,48 @@ class TestGDPoptUnit(unittest.TestCase):
             "algorithm-specific solver.",
         ):
             SolverFactory('gdpopt').solve(m)
+
+    def test_loa_augmented_penalty_objective_preserves_objective_sense(self):
+        for sense in (minimize, maximize):
+            m = ConcreteModel()
+            m.GDPopt_utils = Block()
+            m.x = Var(bounds=(0, 1))
+            m.obj = Objective(expr=m.x, sense=sense)
+
+            solver = SolverFactory('gdpopt.loa')
+            original_obj = solver._setup_augmented_penalty_objective(m.GDPopt_utils)
+
+            self.assertIs(original_obj, m.obj)
+            self.assertFalse(m.obj.active)
+            self.assertEqual(m.GDPopt_utils.oa_obj.sense, sense)
+
+    @unittest.skipUnless(
+        SolverFactory(mip_solver).available(), "MIP solver not available"
+    )
+    def test_LOA_maximize_matches_minimize_negated_objective(self):
+        def build_model(maximize_objective):
+            m = ConcreteModel()
+            m.x = Var(bounds=(0, 10))
+            m.disjunction = Disjunction(expr=[[m.x == 1], [m.x == 9]])
+            if maximize_objective:
+                m.obj = Objective(expr=m.x, sense=maximize)
+            else:
+                m.obj = Objective(expr=-m.x)
+            return m
+
+        for maximize_objective in (False, True):
+            m = build_model(maximize_objective)
+            results = SolverFactory('gdpopt.loa').solve(
+                m,
+                mip_solver=mip_solver,
+                nlp_solver=nlp_solver,
+                init_algorithm='no_init',
+            )
+
+            self.assertEqual(
+                results.solver.termination_condition, TerminationCondition.optimal
+            )
+            self.assertAlmostEqual(value(m.x), 9)
 
     @unittest.skipIf(
         not LOA_solvers_available,
