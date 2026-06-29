@@ -27,6 +27,7 @@ from collections.abc import Iterable, MutableSequence, Sequence
 from enum import Enum
 
 from pyomo.common.dependencies import numpy as np, scipy as sp
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.base import (
     Block,
@@ -1474,17 +1475,17 @@ class CardinalitySet(UncertaintySet):
     ----------
     origin : (N,) array_like
         Origin of the set (e.g., nominal uncertain parameter values).
-    positive_deviation : (N,) array_like
-        Upper bounds for absolute values of the positive coordinate
-        deviations from the origin.
     gamma : numeric type
         Upper bound for the number of coordinates that can
         simultaneously realize their maximal deviations from
         the origin. Must be a numerical value ranging from 0
         to the set dimension `N`.
+    positive_deviation : (N,) array_like
+        Maximal absolute deviation from the origin in the
+        positive coordinate direction.
     negative_deviation : (N,) array_like, optional
-        Upper bounds for absolute values of the negative coordinate
-        deviations from the origin.
+        Maximal absolute deviation from the origin in the
+        negative coordinate direction.
         If `None` is passed, then this argument is set to
         an (`N`,) shaped array of zeros.
 
@@ -1538,7 +1539,8 @@ class CardinalitySet(UncertaintySet):
            \\right\\},
 
        the cardinality-constrained set implicitly defined
-       in the popular robust optimization work [BS04]_.
+       in the popular robust optimization work by Bertsimas and Sim
+       [BS04]_.
 
     Examples
     --------
@@ -1547,27 +1549,47 @@ class CardinalitySet(UncertaintySet):
     >>> from pyomo.contrib.pyros import CardinalitySet
     >>> gamma_set = CardinalitySet(
     ...     origin=[0, 0, 0, 0],
-    ...     positive_deviation=[1.0, 2.0, 1.5, 0.0],
     ...     gamma=1,
+    ...     positive_deviation=[1.0, 2.0, 1.5, 0.0],
     ...     negative_deviation=[0.0, 2.0, 0.0, 5.0],
     ... )
     >>> gamma_set.origin
     array([0, 0, 0, 0])
-    >>> gamma_set.positive_deviation
-    array([1. , 2. , 1.5, 0. ])
     >>> gamma_set.gamma
     1
+    >>> gamma_set.positive_deviation
+    array([1. , 2. , 1.5, 0. ])
     >>> gamma_set.negative_deviation
     array([0., 2., 0., 5.])
     """
 
     _PARAMETER_BOUNDS_EXACT = True
 
-    def __init__(self, origin, positive_deviation, gamma, negative_deviation=None):
+    def __init__(self, origin, gamma, positive_deviation, negative_deviation=None):
         """Initialize self (see class docstring)."""
         self.origin = origin
-        self.positive_deviation = positive_deviation
-        self.gamma = gamma
+
+        if np.isscalar(gamma):
+            self.gamma = gamma
+            self.positive_deviation = positive_deviation
+        else:
+            # for backward compatibility, silently allow user
+            # to swap arguments `gamma` and `positive_deviation`,
+            # if `gamma` is not a scalar
+            deprecation_warning(
+                (
+                    f"Order of {type(self).__name__} arguments `gamma` "
+                    "and `positive_deviation` has been swapped, "
+                    "as `gamma` is not a scalar object. "
+                    "Ensure that `gamma` is a scalar object and "
+                    "(if both arguments are passed positionally) "
+                    "passed before `positive_deviation`."
+                ),
+                version="6.10.2.dev0",
+            )
+            self.gamma = positive_deviation
+            self.positive_deviation = gamma
+
         if negative_deviation is None:
             negative_deviation = np.zeros(self.dim)
         self.negative_deviation = negative_deviation
@@ -1612,8 +1634,8 @@ class CardinalitySet(UncertaintySet):
     @property
     def positive_deviation(self):
         """
-        (N,) numpy.ndarray : Upper bounds for absolute values of
-        the positive coordinate deviations from the origin.
+        (N,) numpy.ndarray : Maximal absolute deviation from
+        the origin in the positive coordinate direction.
         """
         return self._positive_deviation
 
@@ -1643,8 +1665,8 @@ class CardinalitySet(UncertaintySet):
     @property
     def negative_deviation(self):
         """
-        (N,) numpy.ndarray : Upper bounds for absolute values of
-        the negative coordinate deviations from the origin.
+        (N,) numpy.ndarray : Maximal absolute deviation from
+        the origin in the negative coordinate direction.
         """
         return self._negative_deviation
 
@@ -3807,20 +3829,19 @@ class IntersectionSet(UncertaintySet):
 
     Examples
     --------
-    Intersection of origin-centered 2D box (square) and 2D
-    hypersphere (circle):
+    Intersection of origin-centered 2D box (square) and 2D ball (disk):
 
     >>> from pyomo.contrib.pyros import (
     ...     BoxSet, AxisAlignedEllipsoidalSet, IntersectionSet,
     ... )
     >>> square = BoxSet(bounds=[[-1.5, 1.5], [-1.5, 1.5]])
-    >>> circle = AxisAlignedEllipsoidalSet(
+    >>> disk = AxisAlignedEllipsoidalSet(
     ...     center=[0, 0],
     ...     half_lengths=[2, 2],
     ... )
     >>> # to construct intersection, pass sets as keyword arguments.
     >>> # keywords are arbitrary
-    >>> intersection = IntersectionSet(set1=square, set2=circle)
+    >>> intersection = IntersectionSet(set1=square, set2=disk)
     >>> intersection.all_sets  # doctest: +ELLIPSIS
     UncertaintySetList([...])
 
@@ -4095,18 +4116,17 @@ class CartesianProductSet(UncertaintySet):
 
     Examples
     --------
-    Cartesian product of 1D box/interval and 2D
-    hypersphere (circle):
+    Cartesian product of 1D box (interval) and 2D ball (disk):
 
     >>> from pyomo.contrib.pyros import (
     ...     BoxSet, AxisAlignedEllipsoidalSet, CartesianProductSet,
     ... )
     >>> interval = BoxSet(bounds=[[-1.5, 1.5]])
-    >>> circle = AxisAlignedEllipsoidalSet(
+    >>> disk = AxisAlignedEllipsoidalSet(
     ...     center=[0, 0],
     ...     half_lengths=[2, 2],
     ... )
-    >>> cartesian_product = CartesianProductSet([interval, circle])
+    >>> cartesian_product = CartesianProductSet([interval, disk])
     """
 
     def __init__(self, all_sets):
