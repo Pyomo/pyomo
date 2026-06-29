@@ -10,6 +10,8 @@ import logging
 import os, os.path
 from glob import glob
 
+from parameterized import parameterized
+
 from pyomo.common.dependencies import (
     numpy as np,
     numpy_available,
@@ -28,7 +30,6 @@ import pyomo.common.unittest as unittest
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
-
 
 from pyomo.contrib.doe import DesignOfExperiments
 from pyomo.contrib.doe.examples.polynomial import (
@@ -518,33 +519,33 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
             doe_obj.results["log10 A-opt"], -2.5554049159721415, places=4
         )
 
-    def test_rooney_biegler_run_doe_pynumero_objective_matrix(self):
+    @parameterized.expand(
+        [
+            ("trace",),
+            ("determinant",),
+            ("zero",),
+        ]
+    )
+    def test_rooney_biegler_run_doe_pynumero_objective_matrix(self, objective_option):
         """Exercise the symbolic Rooney-Biegler run_doe path across objective options."""
-        test_cases = ["trace", "determinant", "zero"]
-
-        for objective_option in test_cases:
-            with self.subTest(objective_option=objective_option):
-                experiment = get_rooney_biegler_experiment()
-                DoE_args = get_standard_args(experiment, "central", objective_option)
-                DoE_args["gradient_method"] = "pynumero"
-
-                doe_obj = DesignOfExperiments(**DoE_args)
-                # Rooney-Biegler run_doe() cases are more stable with the
-                # nominal-design FIM supplied as a prior, so each objective is
-                # exercised under the symbolic backend without starting from a
-                # nearly singular information matrix.
-                prior_FIM = doe_obj.compute_FIM()
-                doe_obj.prior_FIM = prior_FIM
-                doe_obj.run_doe()
-
-                self.assertEqual(doe_obj.results["Solver Status"], "ok")
-
-                FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
-                if objective_option == "determinant":
-                    self.assertTrue(np.all(np.isclose(FIM, L @ L.T)))
-                self.assertTrue(
-                    np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q + prior_FIM))
-                )
+        experiment = get_rooney_biegler_experiment()
+        DoE_args = get_standard_args(experiment, "central", objective_option)
+        DoE_args["gradient_method"] = "pynumero"
+        doe_obj = DesignOfExperiments(**DoE_args)
+        # Rooney-Biegler run_doe() cases are more stable with the
+        # nominal-design FIM supplied as a prior, so each objective is
+        # exercised under the symbolic backend without starting from a
+        # nearly singular information matrix.
+        prior_FIM = doe_obj.compute_FIM()
+        doe_obj.prior_FIM = prior_FIM
+        doe_obj.run_doe()
+        self.assertEqual(doe_obj.results["Solver Status"], "ok")
+        FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
+        if objective_option == "determinant":
+            self.assertTrue(np.all(np.isclose(FIM, L @ L.T)))
+        self.assertTrue(
+            np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q + prior_FIM))
+        )
 
     def test_polynomial_example_compute_fim_pynumero(self):
         """Check that the transplanted polynomial example computes the expected FIM."""
