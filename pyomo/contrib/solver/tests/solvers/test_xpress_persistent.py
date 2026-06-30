@@ -1305,6 +1305,7 @@ class TestXpressPersistentNLP(unittest.TestCase):
         #   p    : mutable param, no variable -> becomes repn.constant -> _constant
         #   sin(z): NL part -> nl_expr, mut_terms is empty
         import math
+
         m = pyo.ConcreteModel()
         m.p = pyo.Param(mutable=True, initialize=1.0)
         m.x = pyo.Var(bounds=(0, 1))
@@ -1313,8 +1314,7 @@ class TestXpressPersistentNLP(unittest.TestCase):
         # obj_value = 2*0 + p + sin(0) = p
         m.obj = pyo.Objective(expr=2 * m.x + m.p + pyo.sin(m.z))
         _solve_and_check(
-            self, self.opt, m,
-            {'objective': 1.0, 'vars': [(m.x, 0.0), (m.z, 0.0)]},
+            self, self.opt, m, {'objective': 1.0, 'vars': [(m.x, 0.0), (m.z, 0.0)]}
         )
 
         # After the first update p=3: obj = 2*0 + 3 + sin(0) = 3.
@@ -1322,16 +1322,14 @@ class TestXpressPersistentNLP(unittest.TestCase):
         # update would produce (2*x + 1 + 3 + sin(z)) = 4 instead of 3.
         m.p.set_value(3.0)
         _solve_and_check(
-            self, self.opt, m,
-            {'objective': 3.0, 'vars': [(m.x, 0.0), (m.z, 0.0)]},
+            self, self.opt, m, {'objective': 3.0, 'vars': [(m.x, 0.0), (m.z, 0.0)]}
         )
 
         # A third solve with p=5 would give 7 with the bug (accumulated 1+3+5-2 offset)
         # but should give 5.
         m.p.set_value(5.0)
         _solve_and_check(
-            self, self.opt, m,
-            {'objective': 5.0, 'vars': [(m.x, 0.0), (m.z, 0.0)]},
+            self, self.opt, m, {'objective': 5.0, 'vars': [(m.x, 0.0), (m.z, 0.0)]}
         )
 
     def test_nl_constraint_stable_quadratic_term(self):

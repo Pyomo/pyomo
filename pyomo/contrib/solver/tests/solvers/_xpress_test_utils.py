@@ -41,11 +41,11 @@ def _simple_mip():
 
 class _SolveExpected(TypedDict, total=False):
     termination: TerminationCondition  # default: convergenceCriteriaSatisfied
-    status: SolutionStatus             # default: optimal
-    objective: float                   # required when status is optimal
-    vars: list                         # required when status is optimal; [(pyo_var, float), ...]
-    obj_places: int                    # default: 6
-    var_places: int                    # default: 6
+    status: SolutionStatus  # default: optimal
+    objective: float  # required when status is optimal
+    vars: list  # required when status is optimal; [(pyo_var, float), ...]
+    obj_places: int  # default: 6
+    var_places: int  # default: 6
 
 
 def _solve_and_check(test_case, opt, model, expected: _SolveExpected, **solve_kwargs):
@@ -135,7 +135,9 @@ def _solve_check_mutate_check(
     Only use when there are no assertions that compare values across the two
     solves (e.g. assertLess(x2, x1)). Those tests must keep explicit solve calls.
     """
-    res_before = _solve_and_check(test_case, opt, model, expected_before, **solve_kwargs)
+    res_before = _solve_and_check(
+        test_case, opt, model, expected_before, **solve_kwargs
+    )
     param.set_value(new_value)
     res_after = _solve_and_check(test_case, opt, model, expected_after, **solve_kwargs)
     return res_before, res_after

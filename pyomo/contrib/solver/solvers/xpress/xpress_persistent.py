@@ -711,7 +711,9 @@ class XpressPersistent(XpressSolverMixin, PersistentSolverBase, Observer):
 
     def _add_sos_constraints(self, cons: list[SOSConstraintData]) -> None:
         assert self._maps is not None
-        xp_sos = self._add_sos_impl(self._xp_prob, cons, self._maps.vars, self._use_names)
+        xp_sos = self._add_sos_impl(
+            self._xp_prob, cons, self._maps.vars, self._use_names
+        )
         self._maps.sos.update(zip(cons, xp_sos))
 
     def _remove_sos_constraints(self, cons: list[SOSConstraintData]) -> None:
