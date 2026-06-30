@@ -10,6 +10,8 @@
 
 from .common.factory import SolverFactory
 from .solvers.ipopt import Ipopt, LegacyIpoptSolver
+from .solvers.xpress.xpress_direct import XpressDirect
+from .solvers.xpress.xpress_persistent import XpressPersistent
 from .solvers.gurobi.gurobi_direct import GurobiDirect
 from .solvers.gurobi.gurobi_persistent import GurobiPersistent
 from .solvers.gurobi.gurobi_direct_minlp import GurobiDirectMINLP
@@ -48,3 +50,13 @@ def load():
         legacy_name="knitro_direct",
         doc="Direct interface to KNITRO solver",
     )(KnitroDirectSolver)
+    SolverFactory.register(
+        name="xpress_direct",
+        legacy_name="xpress_direct_v2",
+        doc="Direct (scipy-based) interface to Xpress",
+    )(XpressDirect)
+    SolverFactory.register(
+        name="xpress_persistent",
+        legacy_name="xpress_persistent_v2",
+        doc="Persistent interface to Xpress",
+    )(XpressPersistent)

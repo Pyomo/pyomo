@@ -8,4 +8,5 @@ Solver Interfaces
    cplex_persistent.rst
    gurobi_direct.rst
    gurobi_persistent.rst
+   xpress.rst
    xpress_persistent.rst
