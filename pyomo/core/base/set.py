@@ -714,7 +714,7 @@ class SetData(ComponentData):
         # randomly removing elements from the list; however, since we
         # do it by enumerating over ranges, using set() would make this
         # routine nondeterministic.  Not a huge issue for the result,
-        # but problemmatic for code coverage.
+        # but problematic for code coverage.
         ranges = list(self.ranges())
         if len(ranges) == 1:
             try:
