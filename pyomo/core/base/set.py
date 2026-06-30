@@ -808,7 +808,7 @@ class SetData(ComponentData):
         # randomly removing elements from the list; however, since we
         # do it by enumerating over ranges, using set() would make this
         # routine nondeterministic.  Not a hoge issue for the result,
-        # but problemmatic for code coverage.
+        # but problematic for code coverage.
         #
         # Note: We do not need to trap non-NumericRange objects:
         # RangeProduct and AnyRange will be caught by the dimen test in
