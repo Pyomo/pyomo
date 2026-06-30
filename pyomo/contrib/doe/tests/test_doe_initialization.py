@@ -161,6 +161,7 @@ class TestCholeskyInitialization(unittest.TestCase):
             delta=_SMALL_TOLERANCE_DEFINITENESS / 10,
         )
 
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_pseudo_trace_greybox_initialization_uses_current_fim(self):
         """
         Verify pseudo-trace grey-box initialization reflects the current FIM.
