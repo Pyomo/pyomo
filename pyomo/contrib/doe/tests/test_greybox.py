@@ -99,10 +99,10 @@ def get_numerical_derivative(grey_box_object=None):
     elif grey_box_object.objective_option == ObjectiveLib.determinant:
         unperturbed_value = np.log(np.linalg.det(current_FIM))
     elif grey_box_object.objective_option == ObjectiveLib.minimum_eigenvalue:
-        vals_init = np.linalg.eigvalsh(current_FIM)
+        vals_init, vecs_init = np.linalg.eig(current_FIM)
         unperturbed_value = np.min(vals_init)
     elif grey_box_object.objective_option == ObjectiveLib.condition_number:
-        vals_init = np.linalg.eigvalsh(current_FIM)
+        vals_init, vecs_init = np.linalg.eig(current_FIM)
         unperturbed_value = np.log(np.abs(np.max(vals_init) / np.min(vals_init)))
 
     # Calculate the numerical derivative, using forward difference
@@ -121,10 +121,10 @@ def get_numerical_derivative(grey_box_object=None):
             elif grey_box_object.objective_option == ObjectiveLib.determinant:
                 new_value_ij = np.log(np.linalg.det(FIM_perturbed))
             elif grey_box_object.objective_option == ObjectiveLib.minimum_eigenvalue:
-                vals = np.linalg.eigvalsh(FIM_perturbed)
+                vals, vecs = np.linalg.eig(FIM_perturbed)
                 new_value_ij = np.min(vals)
             elif grey_box_object.objective_option == ObjectiveLib.condition_number:
-                vals = np.linalg.eigvalsh(FIM_perturbed)
+                vals, vecs = np.linalg.eig(FIM_perturbed)
                 new_value_ij = np.log(np.abs(np.max(vals) / np.min(vals)))
 
             # Calculate the derivative value from forward difference
@@ -203,25 +203,25 @@ def get_numerical_second_derivative(grey_box_object=None, return_reduced=True):
                         grey_box_object.objective_option
                         == ObjectiveLib.minimum_eigenvalue
                     ):
-                        vals = np.linalg.eigvalsh(FIM_perturbed_1)
+                        vals, vecs = np.linalg.eig(FIM_perturbed_1)
                         new_values[0] = np.min(vals)
-                        vals = np.linalg.eigvalsh(FIM_perturbed_2)
+                        vals, vecs = np.linalg.eig(FIM_perturbed_2)
                         new_values[1] = np.min(vals)
-                        vals = np.linalg.eigvalsh(FIM_perturbed_3)
+                        vals, vecs = np.linalg.eig(FIM_perturbed_3)
                         new_values[2] = np.min(vals)
-                        vals = np.linalg.eigvalsh(FIM_perturbed_4)
+                        vals, vecs = np.linalg.eig(FIM_perturbed_4)
                         new_values[3] = np.min(vals)
                     elif (
                         grey_box_object.objective_option
                         == ObjectiveLib.condition_number
                     ):
-                        vals = np.linalg.eigvalsh(FIM_perturbed_1)
+                        vals, vecs = np.linalg.eig(FIM_perturbed_1)
                         new_values[0] = np.log(np.abs(np.max(vals) / np.min(vals)))
-                        vals = np.linalg.eigvalsh(FIM_perturbed_2)
+                        vals, vecs = np.linalg.eig(FIM_perturbed_2)
                         new_values[1] = np.log(np.abs(np.max(vals) / np.min(vals)))
-                        vals = np.linalg.eigvalsh(FIM_perturbed_3)
+                        vals, vecs = np.linalg.eig(FIM_perturbed_3)
                         new_values[2] = np.log(np.abs(np.max(vals) / np.min(vals)))
-                        vals = np.linalg.eigvalsh(FIM_perturbed_4)
+                        vals, vecs = np.linalg.eig(FIM_perturbed_4)
                         new_values[3] = np.log(np.abs(np.max(vals) / np.min(vals)))
 
                     # Calculate the derivative value from second order difference formula
@@ -715,7 +715,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         grey_box_E_opt = grey_box_object.evaluate_outputs()
 
-        vals = np.linalg.eigvalsh(testing_matrix)
+        vals, vecs = np.linalg.eig(testing_matrix)
         E_opt = np.min(vals)
 
         self.assertTrue(np.isclose(grey_box_E_opt, E_opt))
@@ -732,7 +732,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         grey_box_ME_opt = grey_box_object.evaluate_outputs()
 
-        vals = np.linalg.eigvalsh(testing_matrix)
+        vals, vecs = np.linalg.eig(testing_matrix)
         ME_opt = np.log(np.abs(np.max(vals) / np.min(vals)))
 
         self.assertTrue(np.isclose(grey_box_ME_opt, ME_opt))
@@ -1138,7 +1138,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Check output and value
         # FIM Initial will be the prior FIM
         # added with the identity matrix.
-        vals = np.linalg.eigvalsh(testing_matrix + np.eye(4))
+        vals, vecs = np.linalg.eig(testing_matrix + np.eye(4))
         E_opt_val = np.min(vals)
         E_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["E-opt"].value
         self.assertAlmostEqual(E_opt_val, E_opt_val_gb)
@@ -1169,7 +1169,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Check output and value
         # FIM Initial will be the prior FIM
         # added with the identity matrix.
-        vals = np.linalg.eigvalsh(testing_matrix + np.eye(4))
+        vals, vecs = np.linalg.eig(testing_matrix + np.eye(4))
         ME_opt_val = np.log(np.abs(np.max(vals) / np.min(vals)))
         ME_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["ME-opt"].value
         self.assertAlmostEqual(ME_opt_val, ME_opt_val_gb)

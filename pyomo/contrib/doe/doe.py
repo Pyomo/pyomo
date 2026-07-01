@@ -604,7 +604,7 @@ class DesignOfExperiments:
         self.results["log10 A-opt"] = np.log10(np.trace(np.linalg.inv(fim_local)))
         self.results["log10 pseudo A-opt"] = np.log10(np.trace(fim_local))
         self.results["log10 D-opt"] = np.log10(np.linalg.det(fim_local))
-        self.results["log10 E-opt"] = np.log10(min(np.linalg.eigvalsh(fim_local)))
+        self.results["log10 E-opt"] = np.log10(min(np.linalg.eig(fim_local)[0]))
         self.results["FIM Condition Number"] = np.linalg.cond(fim_local)
 
         # Solve timing stats
