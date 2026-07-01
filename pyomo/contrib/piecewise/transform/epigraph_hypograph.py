@@ -46,8 +46,8 @@ class PWLToEpigraphOrHypograph(PiecewiseLinearTransformationBase):
             epigraph = True
         # Else this is the hypograph (the function is concave)
 
-        linear_func_expr = linear_func(*pw_expr.args)
         for idx, linear_func in enumerate(pw_linear_func._linear_functions):
+            linear_func_expr = linear_func(*pw_expr.args)
             if epigraph:
                 transBlock.epigraphical_constraints[idx] = (
                     linear_func_expr <= substitute_var
