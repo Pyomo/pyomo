@@ -237,10 +237,13 @@ class FIMExternalGreyBox(
             sign, logdet = np.linalg.slogdet(M)
             obj_value = logdet
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
-            eig, _ = np.linalg.eig(M)
+            # M is symmetric by construction (see _get_FIM), so use
+            # eigvalsh to guarantee a real dtype (eig can return complex
+            # eigenvalues due to floating-point asymmetry noise).
+            eig = np.linalg.eigvalsh(M)
             obj_value = np.min(eig)
         elif self.objective_option == ObjectiveLib.condition_number:
-            eig, _ = np.linalg.eig(M)
+            eig = np.linalg.eigvalsh(M)
             obj_value = np.log(np.abs(np.max(eig) / np.min(eig)))
         else:
             ObjectiveLib(self.objective_option)
@@ -295,7 +298,10 @@ class FIMExternalGreyBox(
 
         # TODO: Add inertia correction for
         #       negative/small eigenvalues
-        eig_vals, eig_vecs = np.linalg.eig(M)
+        # M is symmetric by construction (see _get_FIM), so use
+        # eigh to guarantee a real dtype (eig can return complex
+        # eigenvalues/eigenvectors due to floating-point asymmetry noise).
+        eig_vals, eig_vecs = np.linalg.eigh(M)
         if min(eig_vals) <= 1e-3:
             pass
 
@@ -586,7 +592,7 @@ class FIMExternalGreyBox(
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
             # Grab eigenvalues and eigenvectors
             # Also need the min location
-            all_eig_vals, all_eig_vecs = np.linalg.eig(M)
+            all_eig_vals, all_eig_vecs = np.linalg.eigh(M)
             min_eig_loc = np.argmin(all_eig_vals)
 
             # Grabbing min eigenvalue and corresponding
@@ -688,7 +694,7 @@ class FIMExternalGreyBox(
             #
             # Grab eigenvalues and eigenvectors
             # Also need the max and min locations
-            all_eig_vals, all_eig_vecs = np.linalg.eig(M)
+            all_eig_vals, all_eig_vecs = np.linalg.eigh(M)
             min_eig_loc = np.argmin(all_eig_vals)
             max_eig_loc = np.argmax(all_eig_vals)
 
