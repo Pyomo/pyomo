@@ -8,6 +8,7 @@
 # ____________________________________________________________________________________
 
 from pyomo.common.config import ConfigDict, ConfigValue
+from pyomo.core.base import TransformationFactory
 from pyomo.contrib.piecewise.transform.piecewise_linear_transformation_base import (
     PiecewiseLinearTransformationBase
 )
@@ -20,6 +21,11 @@ from pyomo.environ import (
     Var
 )
 
+@TransformationFactory.register(
+    'contrib.piecewise.epigraph_hypograph',
+    doc="Transforms convex/concave piecewise linear functions to their epigraphical/"
+    "hypographical LP formulations"
+)
 class PWLToEpigraphOrHypograph(PiecewiseLinearTransformationBase):
     CONFIG = PiecewiseLinearTransformationBase.CONFIG()
     _transformation_name = 'pw_linear_epigraph'
