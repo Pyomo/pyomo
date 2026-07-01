@@ -7,7 +7,7 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.dependencies import numpy as np, numpy_available, scipy_available
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 
@@ -20,6 +20,7 @@ from pyomo.contrib.doe.utils import (
 from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
+cyipopt_available = SolverFactory("cyipopt").available()
 
 
 class _StructurallyUnidentifiableExperiment(Experiment):
@@ -162,6 +163,8 @@ class TestCholeskyInitialization(unittest.TestCase):
         )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    @unittest.skipIf(not cyipopt_available, "The 'cyipopt' command is not available")
+    @unittest.skipIf(not scipy_available, "Pyomo.DoE needs scipy to run tests")
     def test_pseudo_trace_greybox_initialization_uses_current_fim(self):
         """
         Verify pseudo-trace grey-box initialization reflects the current FIM.
