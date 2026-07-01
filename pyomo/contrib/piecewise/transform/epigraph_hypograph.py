@@ -10,21 +10,18 @@
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.core.base import TransformationFactory
 from pyomo.contrib.piecewise.transform.piecewise_linear_transformation_base import (
-    PiecewiseLinearTransformationBase
+    PiecewiseLinearTransformationBase,
 )
 from pyomo.contrib.piecewise.transform.piecewise_to_mip_visitor import (
     PiecewiseLinearToMIP,
 )
-from pyomo.environ import (
-    Constraint,
-    NonNegativeIntegers,
-    Var
-)
+from pyomo.environ import Constraint, NonNegativeIntegers, Var
+
 
 @TransformationFactory.register(
     'contrib.piecewise.epigraph_hypograph',
     doc="Transforms convex/concave piecewise linear functions to their epigraphical/"
-    "hypographical LP formulations"
+    "hypographical LP formulations",
 )
 class PWLToEpigraphOrHypograph(PiecewiseLinearTransformationBase):
     CONFIG = PiecewiseLinearTransformationBase.CONFIG()
@@ -42,7 +39,7 @@ class PWLToEpigraphOrHypograph(PiecewiseLinearTransformationBase):
         pw_linear_func.map_transformation_var(pw_expr, substitute_var)
 
         transBlock.epigraphical_constraints = Constraint(NonNegativeIntegers)
-        
+
         epigraph = False
         if pw_linear_func.convex is None:
             # we should autodetect if the dimension isn't insane, yell otherwise

@@ -435,9 +435,7 @@ class TestConvexOption(unittest.TestCase):
         self.assertFalse(m.pw_concave.convex)
 
         # Test convex=None (default)
-        m.pw_none = PiecewiseLinearFunction(
-            points=[1, 3, 6, 10], function=log
-        )
+        m.pw_none = PiecewiseLinearFunction(points=[1, 3, 6, 10], function=log)
         self.assertIsNone(m.pw_none.convex)
 
     def test_indexed_pw_convex_option_points(self):
@@ -459,7 +457,7 @@ class TestConvexOption(unittest.TestCase):
             [1, 2],
             points=[1, 3, 6, 10],
             function_rule=m.funcs,
-            convex={1: True, 2: False}
+            convex={1: True, 2: False},
         )
         self.assertTrue(m.pw_convex[1].convex)
         self.assertFalse(m.pw_convex[2].convex)
@@ -468,22 +466,17 @@ class TestConvexOption(unittest.TestCase):
             if i == 1:
                 return True
             return None
-        
+
         # Test convex=False for both indices
         m.pw_concave = PiecewiseLinearFunction(
-            [1, 2],
-            points=[1, 3, 6, 10],
-            function_rule=m.funcs,
-            convex=convex_rule
+            [1, 2], points=[1, 3, 6, 10], function_rule=m.funcs, convex=convex_rule
         )
         self.assertTrue(m.pw_concave[1].convex)
         self.assertIsNone(m.pw_concave[2].convex)
 
         # Test convex=None (default) for both indices
         m.pw_none = PiecewiseLinearFunction(
-            [1, 2],
-            points=[1, 3, 6, 10],
-            function_rule=lambda m, i: m.funcs[i]
+            [1, 2], points=[1, 3, 6, 10], function_rule=lambda m, i: m.funcs[i]
         )
         self.assertIsNone(m.pw_none[1].convex)
         self.assertIsNone(m.pw_none[2].convex)

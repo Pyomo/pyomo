@@ -618,7 +618,7 @@ class PiecewiseLinearFunction(Block):
         obj.convex = None
         if self._convex_rule is not None:
             obj.convex = self._convex_rule(parent, index)
-        
+
         return obj
 
 
