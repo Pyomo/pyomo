@@ -416,6 +416,79 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         self.assertAlmostEqual(m.pw(0.2, 4.3), g2(0.2, 4.3))
 
 
+class TestConvexOption(unittest.TestCase):
+    def test_scalar_pw_convex_option(self):
+        """Test that convex option is correctly set for ScalarPiecewiseLinearFunction"""
+        m = ConcreteModel()
+        m.x = Var(bounds=(1, 10))
+
+        # Test convex=True
+        m.pw_convex = PiecewiseLinearFunction(
+            points=[1, 3, 6, 10], function=log, convex=True
+        )
+        self.assertTrue(m.pw_convex.convex)
+
+        # Test convex=False
+        m.pw_concave = PiecewiseLinearFunction(
+            points=[1, 3, 6, 10], function=log, convex=False
+        )
+        self.assertFalse(m.pw_concave.convex)
+
+        # Test convex=None (default)
+        m.pw_none = PiecewiseLinearFunction(
+            points=[1, 3, 6, 10], function=log
+        )
+        self.assertIsNone(m.pw_none.convex)
+
+    def test_indexed_pw_convex_option_points(self):
+        """Test that convex option is correctly set for
+        IndexedPiecewiseLinearFunction"""
+        m = ConcreteModel()
+        m.x = Var([1, 2], bounds=(1, 10))
+
+        def g1(x):
+            return x**2
+
+        def g2(x):
+            return log(x)
+
+        m.funcs = {1: g1, 2: g2}
+
+        # True and False
+        m.pw_convex = PiecewiseLinearFunction(
+            [1, 2],
+            points=[1, 3, 6, 10],
+            function_rule=m.funcs,
+            convex={1: True, 2: False}
+        )
+        self.assertTrue(m.pw_convex[1].convex)
+        self.assertFalse(m.pw_convex[2].convex)
+
+        def convex_rule(m, i):
+            if i == 1:
+                return True
+            return None
+        
+        # Test convex=False for both indices
+        m.pw_concave = PiecewiseLinearFunction(
+            [1, 2],
+            points=[1, 3, 6, 10],
+            function_rule=m.funcs,
+            convex=convex_rule
+        )
+        self.assertTrue(m.pw_concave[1].convex)
+        self.assertIsNone(m.pw_concave[2].convex)
+
+        # Test convex=None (default) for both indices
+        m.pw_none = PiecewiseLinearFunction(
+            [1, 2],
+            points=[1, 3, 6, 10],
+            function_rule=lambda m, i: m.funcs[i]
+        )
+        self.assertIsNone(m.pw_none[1].convex)
+        self.assertIsNone(m.pw_none[2].convex)
+
+
 class TestTriangulationProducesDegenerateSimplices(unittest.TestCase):
     cube_extreme_pt_indices = [
         {10, 11, 13, 14, 19, 20, 22, 23},  # right bottom back

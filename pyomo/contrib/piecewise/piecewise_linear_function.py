@@ -256,6 +256,10 @@ class PiecewiseLinearFunction(Block):
             as specified, trusting the user in the case of AssumeValid.
             When no argument or None is passed, the default is
             Triangulation.Unknown
+        convex (optional): If True, serves as a user-provided guarantee that the
+            piecewise-linear function is convex. If False, serves as a user-provided
+            guarantee tht the piecewise-linear function is concave. If None (the
+            default), the function may be concave or convex.
     """
 
     _ComponentDataClass = PiecewiseLinearFunctionData
@@ -283,6 +287,7 @@ class PiecewiseLinearFunction(Block):
         _tabular_data_arg = kwargs.pop('tabular_data', None)
         _tabular_data_rule_arg = kwargs.pop('tabular_data_rule', None)
         _triangulation_rule_arg = kwargs.pop('triangulation', None)
+        _convex_rule_arg = kwargs.pop('convex', None)
 
         kwargs.setdefault('ctype', PiecewiseLinearFunction)
         Block.__init__(self, *args, **kwargs)
@@ -303,6 +308,9 @@ class PiecewiseLinearFunction(Block):
         )
         self._triangulation_rule = Initializer(
             _triangulation_rule_arg, treat_sequences_as_mappings=False
+        )
+        self._convex_rule = Initializer(
+            _convex_rule_arg, treat_sequences_as_mappings=False
         )
 
     def _get_dimension_from_points(self, points):
@@ -606,6 +614,11 @@ class PiecewiseLinearFunction(Block):
             )
         obj = handler(self, obj, parent, nonlinear_function)
 
+        # Update convexity info
+        obj.convex = None
+        if self._convex_rule is not None:
+            obj.convex = self._convex_rule(parent, index)
+        
         return obj
 
 
