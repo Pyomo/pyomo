@@ -6,15 +6,16 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
+#
+#  Additional contributions Copyright (c) 2026 OLI Systems, Inc.
+#  ___________________________________________________________________________________
 """Utility functions and a utility class for interfacing Pyomo components with
 useful graph algorithms.
 
 """
 
-import enum
 import textwrap
 from pyomo.core.base.block import BlockData
-from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.expr import EqualityExpression
@@ -29,24 +30,29 @@ from pyomo.common.dependencies import (
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.contrib.incidence_analysis.config import get_config_from_kwds
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
-from pyomo.contrib.incidence_analysis.connected import get_independent_submatrices
-from pyomo.contrib.incidence_analysis.triangularize import (
-    get_scc_of_projection,
-    block_triangularize,
-    get_diagonal_blocks,
-    get_blocks_from_maps,
-)
+from pyomo.contrib.incidence_analysis.triangularize import get_scc_of_projection
 from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
     dulmage_mendelsohn,
     RowPartition,
     ColPartition,
 )
-from pyomo.contrib.incidence_analysis.incidence import get_incident_variables
+from pyomo.contrib.incidence_analysis.incidence import (
+    get_variables_incident_to_constraint,
+)
 from pyomo.contrib.pynumero.asl import AmplInterface
+from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
+from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
+    ExternalGreyBoxConstraint,
+)
 
 pyomo_nlp, pyomo_nlp_available = attempt_import(
     "pyomo.contrib.pynumero.interfaces.pyomo_nlp"
 )
+if pyomo_nlp_available:
+    from pyomo.contrib.pynumero.interfaces.pyomo_grey_box_nlp import (
+        PyomoNLPWithGreyBoxBlocks,
+    )
+# Note that this flag is only used in test_interface.py
 asl_available = pyomo_nlp_available & AmplInterface.available()
 
 
@@ -100,7 +106,7 @@ def get_bipartite_incidence_graph(variables, constraints, **kwds):
     graph.add_nodes_from(range(M, M + N), bipartite=1)
     var_node_map = ComponentMap((v, M + i) for i, v in enumerate(variables))
     for i, con in enumerate(constraints):
-        for var in get_incident_variables(con.body, **config):
+        for var in get_variables_incident_to_constraint(con, **config):
             if var in var_node_map:
                 graph.add_edge(i, var_node_map[var])
     return graph
@@ -164,7 +170,7 @@ def _generate_variables_in_constraints(constraints, **kwds):
     config = get_config_from_kwds(**kwds)
     known_vars = ComponentSet()
     for con in constraints:
-        for var in get_incident_variables(con.body, **config):
+        for var in get_variables_incident_to_constraint(con, **config):
             if var not in known_vars:
                 known_vars.add(var)
                 yield var
@@ -198,7 +204,7 @@ def get_structural_incidence_matrix(variables, constraints, **kwds):
     for i, con in enumerate(constraints):
         cols.extend(
             var_idx_map[v]
-            for v in get_incident_variables(con.body, **config)
+            for v in get_variables_incident_to_constraint(con, **config)
             if v in var_idx_map
         )
         rows.extend([i] * (len(cols) - len(rows)))
@@ -283,6 +289,15 @@ class IncidenceGraphInterface:
                 for con in model.component_data_objects(Constraint, active=active)
                 if include_inequality or isinstance(con.expr, EqualityExpression)
             ]
+
+            for egb in model.component_data_objects(
+                ExternalGreyBoxBlock, active=active
+            ):
+                for ic in egb.component_data_objects(
+                    ExternalGreyBoxConstraint, active=active
+                ):
+                    self._constraints.append(ic)
+
             self._variables = list(
                 _generate_variables_in_constraints(self._constraints, **self._config)
             )
@@ -295,7 +310,9 @@ class IncidenceGraphInterface:
             self._incidence_graph = get_bipartite_incidence_graph(
                 self._variables, self._constraints, **self._config
             )
-        elif pyomo_nlp_available and isinstance(model, pyomo_nlp.PyomoNLP):
+        elif pyomo_nlp_available and isinstance(
+            model, (pyomo_nlp.PyomoNLP, PyomoNLPWithGreyBoxBlocks)
+        ):
             if not active:
                 raise ValueError(
                     "Cannot get the Jacobian of inactive constraints from the "

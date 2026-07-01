@@ -6,6 +6,9 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
+#
+#  Additional contributions Copyright (c) 2026 OLI Systems, Inc.
+#  ___________________________________________________________________________________
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
@@ -14,10 +17,8 @@ from pyomo.common.tempfiles import TempfileManager
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np,
     numpy_available,
-    scipy,
     scipy_available,
 )
-from pyomo.common.dependencies.scipy import sparse as spa
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
@@ -904,17 +905,13 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         )
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout'] - 20) ** 2)
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
-        # m.scaling_factor[m.obj] = 0.1 # scale the objective
         m.scaling_factor[m.egb.inputs['Pin']] = 1.1  # scale the variable
         m.scaling_factor[m.egb.inputs['c']] = 1.2  # scale the variable
         m.scaling_factor[m.egb.inputs['F']] = 1.3  # scale the variable
-        # m.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
         m.scaling_factor[m.egb.inputs['P3']] = 1.5  # scale the variable
         m.scaling_factor[m.egb.outputs['P2']] = 1.6  # scale the variable
         m.scaling_factor[m.egb.outputs['Pout']] = 1.7  # scale the variable
-        # m.scaling_factor[m.hin] = 1.8
         m.scaling_factor[m.hout] = 1.9
-        # m.scaling_factor[m.incon] = 2.1
         m.scaling_factor[m.outcon] = 2.2
         egb_nlp = _ExternalGreyBoxAsNLP(m.egb)
 
@@ -1025,7 +1022,6 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         m.egb.outputs['Pout'].value = 50
         m.egb.outputs['Pout'].setlb(0)
         m.egb.outputs['Pout'].setub(100)
-        # m.dummy = pyo.Constraint(expr=sum(m.egb.inputs[i] for i in m.egb.inputs) + sum(m.egb.outputs[i] for i in m.egb.outputs) <= 1e6)
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout'] - 20) ** 2)
 
         pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m)
@@ -2215,17 +2211,13 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         )
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout'] - 20) ** 2)
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
-        # m.scaling_factor[m.obj] = 0.1 # scale the objective
         m.scaling_factor[m.egb.inputs['Pin']] = 1.1  # scale the variable
         m.scaling_factor[m.egb.inputs['c']] = 1.2  # scale the variable
         m.scaling_factor[m.egb.inputs['F']] = 1.3  # scale the variable
-        # m.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
         m.scaling_factor[m.egb.inputs['P3']] = 1.5  # scale the variable
         m.scaling_factor[m.egb.outputs['P2']] = 1.6  # scale the variable
         m.scaling_factor[m.egb.outputs['Pout']] = 1.7  # scale the variable
-        # m.scaling_factor[m.hin] = 1.8
         m.scaling_factor[m.hout] = 1.9
-        # m.scaling_factor[m.incon] = 2.1
         m.scaling_factor[m.outcon] = 2.2
         pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m)
 
@@ -2340,17 +2332,13 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         )
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout'] - 20) ** 2)
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
-        # m.scaling_factor[m.obj] = 0.1 # scale the objective
         m.scaling_factor[m.egb.inputs['Pin']] = 1.1  # scale the variable
         m.scaling_factor[m.egb.inputs['c']] = 1.2  # scale the variable
         m.scaling_factor[m.egb.inputs['F']] = 1.3  # scale the variable
-        # m.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
         m.scaling_factor[m.egb.inputs['P3']] = 1.5  # scale the variable
         m.scaling_factor[m.egb.outputs['P2']] = 1.6  # scale the variable
         m.scaling_factor[m.egb.outputs['Pout']] = 1.7  # scale the variable
-        # m.scaling_factor[m.hin] = 1.8
         m.scaling_factor[m.hout] = 1.9
-        # m.scaling_factor[m.incon] = 2.1
         m.scaling_factor[m.outcon] = 2.2
         pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m)
 
@@ -2436,7 +2424,6 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         m.scaling_factor[m.egb.inputs['Pin']] = 1.1  # scale the variable
         m.scaling_factor[m.egb.inputs['c']] = 1.2  # scale the variable
         m.scaling_factor[m.egb.inputs['F']] = 1.3  # scale the variable
-        # m.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
         m.scaling_factor[m.egb.inputs['P3']] = 1.5  # scale the variable
         m.scaling_factor[m.egb.outputs['P2']] = 1.6  # scale the variable
         m.scaling_factor[m.egb.outputs['Pout']] = 1.7  # scale the variable
@@ -2465,7 +2452,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertIn('c scaling provided', solver_trace)
         self.assertIn('d scaling provided', solver_trace)
         # x_order: ['egb.inputs[F]', 'egb.inputs[P1]', 'egb.inputs[P3]', 'egb.inputs[Pin]', 'egb.inputs[c]', 'egb.outputs[P2]', 'egb.outputs[Pout]', 'mu']
-        # c_order: ['ccon', 'pcon', 'pincon', 'egb.eq_constraints[pdrop1]', 'egb.eq_constraints[pdrop3]', 'egb.output_constraints[P2]', 'egb.output_constraints[Pout]']
+        # c_order: ['ccon', 'pcon', 'pincon', 'egb.pdrop1', 'egb.pdrop3', 'egb.output_constraints[P2]', 'egb.output_constraints[Pout]']
         self.assertIn('DenseVector "x scaling vector" with 8 elements:', solver_trace)
         self.assertIn(
             'x scaling vector[    1]= 1.3000000000000000e+00', solver_trace
@@ -2576,7 +2563,6 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
 
         solver = pyo.SolverFactory('cyipopt')
         status = solver.solve(m, tee=False)
-
         self.assertAlmostEqual(pyo.value(m.p), 2.5, places=3)
         self.assertAlmostEqual(pyo.value(m.egb.inputs['u']), 1.0, places=3)
         self.assertAlmostEqual(pyo.value(m.egb.outputs['o']), 5.0, places=3)
@@ -2586,41 +2572,154 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         )
         self.assertAlmostEqual(m.dual[m.egb]['egb.u2_con'], 62.5, places=3)
 
-    def test_has_hessian_support_false(self):
-        external_model = ex_models.PressureDropSingleOutput()
-        m = pyo.ConcreteModel()
-        m.x = pyo.Var(range(external_model.n_inputs()))
-        m.gb = ExternalGreyBoxBlock()
-        m.gb.set_external_model(external_model, inputs=list(m.x.values()))
-        # Some random constraint to let us construct the NLP...
-        m.eq = pyo.Constraint(expr=sum(m.x.values()) == 1)
-        nlp = PyomoNLPWithGreyBoxBlocks(m)
-        self.assertFalse(nlp.has_hessian_support())
 
-    def test_has_hessian_support_true(self):
-        external_model = ex_models.PressureDropSingleOutputWithHessian()
-        m = pyo.ConcreteModel()
-        m.x = pyo.Var(range(external_model.n_inputs()))
-        m.gb = ExternalGreyBoxBlock()
-        m.gb.set_external_model(external_model, inputs=list(m.x.values()))
-        # Some random constraint to let us construct the NLP...
-        m.eq = pyo.Constraint(expr=sum(m.x.values()) == 1)
-        nlp = PyomoNLPWithGreyBoxBlocks(m)
-        self.assertTrue(nlp.has_hessian_support())
-
-
+@unittest.skipIf(not cyipopt_available, "CyIpopt needed to run tests with solve")
 class TestGreyBoxObjectives(unittest.TestCase):
-    @unittest.skipIf(not cyipopt_available, "CyIpopt needed to run tests with solve")
     def test_unconstrained(self):
         solve_unconstrained()
 
-    @unittest.skipIf(not cyipopt_available, "CyIpopt needed to run tests with solve")
     def test_constrained(self):
         solve_constrained()
 
-    @unittest.skipIf(not cyipopt_available, "CyIpopt needed to run tests with solve")
     def test_constrained_with_hessian(self):
         solve_constrained_with_hessian()
+
+
+# Regression tests to make sure PyomoNLPWithGreyBoxBlocks correctly handles variables that
+# are external to the block when creating the NLP, but references in the constraints.
+class TestPyomoNLPWithGreyBoxModelsExternalVars(unittest.TestCase):
+    def test_no_greybox_block(self):
+        m = pyo.ConcreteModel()
+        # Variable on the main model
+        m.x = pyo.Var(initialize=1)
+
+        # One block contains constraints that reference the variable on the main model
+        m.b = pyo.Block()
+        m.b.y = pyo.Var(initialize=2)
+
+        m.b.cons1 = pyo.Constraint(expr=m.x + 2 * m.b.y == 5)
+        m.b.cons2 = pyo.Constraint(expr=3 * m.x - 4 * m.b.y == -5)
+
+        # Create  NLP from m.b - should contain m.v even though it is external to the block
+        pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m.b)
+
+        self.assertEqual(
+            pyomo_nlp._pyomo_model_var_names_to_datas, {'x': m.x, 'b.y': m.b.y}
+        )
+
+        jac = pyomo_nlp.evaluate_jacobian().tocsr()
+
+        # Due to external variable, the order is m.b.y, m.x
+        self.assertEqual(jac.shape, (2, 2))
+        self.assertEqual(jac[0, 0], 2.0)
+        self.assertEqual(jac[0, 1], 1.0)
+        self.assertEqual(jac[1, 0], -4.0)
+        self.assertEqual(jac[1, 1], 3.0)
+
+    def test_greybox_block_w_external_var(self):
+        m = pyo.ConcreteModel()
+        m.v = pyo.Var()
+
+        m.b = pyo.Block()
+        m.b.egb = ExternalGreyBoxBlock()
+        m.b.egb.set_external_model(ex_models.PressureDropSingleOutput())
+
+        # Set egb variable values
+        m.b.egb.inputs['Pin'].value = 100
+        m.b.egb.inputs['c'].value = 2
+        m.b.egb.inputs['F'].value = 3
+        m.b.egb.outputs['Pout'].value = 80
+
+        m.b.cons = pyo.Constraint(expr=m.v == m.b.egb.inputs['F'])
+
+        # Create  NLP from m.b - should contain m.v even though it is external to the block
+        pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m.b)
+
+        self.assertEqual(
+            pyomo_nlp._pyomo_model_var_names_to_datas,
+            {
+                'v': m.v,
+                'b.egb.inputs[Pin]': m.b.egb.inputs['Pin'],
+                'b.egb.inputs[c]': m.b.egb.inputs['c'],
+                'b.egb.inputs[F]': m.b.egb.inputs['F'],
+                'b.egb.outputs[Pout]': m.b.egb.outputs['Pout'],
+            },
+        )
+
+        jac = pyomo_nlp.evaluate_jacobian().tocsr()
+
+        self.assertEqual(jac.shape, (2, 5))
+        primals = pyomo_nlp.primals_names()
+        constraints = pyomo_nlp.constraint_names()
+
+        expected = {
+            ('b.cons', 'v'): 1.0,
+            ('b.cons', 'b.egb.inputs[F]'): -1.0,
+            ('b.cons', 'b.egb.inputs[Pin]'): 0.0,
+            ('b.cons', 'b.egb.inputs[c]'): 0.0,
+            ('b.cons', 'b.egb.outputs[Pout]'): 0.0,
+            ('b.egb.output_constraints[Pout]', 'v'): 0.0,
+            ('b.egb.output_constraints[Pout]', 'b.egb.inputs[F]'): -48.0,  # -4*c*2*F
+            ('b.egb.output_constraints[Pout]', 'b.egb.inputs[Pin]'): 1.0,
+            ('b.egb.output_constraints[Pout]', 'b.egb.inputs[c]'): -36.0,  # -4*F**2
+            ('b.egb.output_constraints[Pout]', 'b.egb.outputs[Pout]'): -1.0,
+        }
+
+        for (c, v), val in expected.items():
+            print(c, v)
+            self.assertAlmostEqual(jac[constraints.index(c), primals.index(v)], val)
+
+    def test_greybox_block_w_constraints_w_external_var(self):
+        m = pyo.ConcreteModel()
+        m.v = pyo.Var()
+
+        m.b = pyo.Block()
+        m.b.egb = ExternalGreyBoxBlock()
+        m.b.egb.set_external_model(ex_models.PressureDropSingleOutput())
+
+        # Set egb variable values
+        m.b.egb.inputs['Pin'].value = 100
+        m.b.egb.inputs['c'].value = 2
+        m.b.egb.inputs['F'].value = 3
+        m.b.egb.outputs['Pout'].value = 80
+
+        m.b.cons = pyo.Constraint(expr=m.v == m.b.egb.inputs['F'])
+
+        # Create  NLP from m.b - should contain m.v even though it is external to the block
+        pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m.b)
+
+        self.assertEqual(
+            pyomo_nlp._pyomo_model_var_names_to_datas,
+            {
+                'v': m.v,
+                'b.egb.inputs[Pin]': m.b.egb.inputs['Pin'],
+                'b.egb.inputs[c]': m.b.egb.inputs['c'],
+                'b.egb.inputs[F]': m.b.egb.inputs['F'],
+                'b.egb.outputs[Pout]': m.b.egb.outputs['Pout'],
+            },
+        )
+
+        jac = pyomo_nlp.evaluate_jacobian().tocsr()
+
+        self.assertEqual(jac.shape, (2, 5))
+        primals = pyomo_nlp.primals_names()
+        constraints = pyomo_nlp.constraint_names()
+
+        expected = {
+            ('b.cons', 'v'): 1.0,
+            ('b.cons', 'b.egb.inputs[F]'): -1.0,
+            ('b.cons', 'b.egb.inputs[Pin]'): 0.0,
+            ('b.cons', 'b.egb.inputs[c]'): 0.0,
+            ('b.cons', 'b.egb.outputs[Pout]'): 0.0,
+            ('b.egb.output_constraints[Pout]', 'v'): 0.0,
+            ('b.egb.output_constraints[Pout]', 'b.egb.inputs[F]'): -48.0,  # -4*c*2*F
+            ('b.egb.output_constraints[Pout]', 'b.egb.inputs[Pin]'): 1.0,
+            ('b.egb.output_constraints[Pout]', 'b.egb.inputs[c]'): -36.0,  # -4*F**2
+            ('b.egb.output_constraints[Pout]', 'b.egb.outputs[Pout]'): -1.0,
+        }
+
+        for (c, v), val in expected.items():
+            self.assertAlmostEqual(jac[constraints.index(c), primals.index(v)], val)
 
 
 if __name__ == '__main__':
