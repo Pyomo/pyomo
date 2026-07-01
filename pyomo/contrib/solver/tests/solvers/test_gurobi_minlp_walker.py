@@ -91,13 +91,13 @@ class TestGurobiMINLPWalker(CommonTest):
         # we need to update here in order to be able to test expr.
         visitor.grb_model.update()
 
-        x1 = visitor.var_map[id(m.x1)]
-        x2 = visitor.var_map[id(m.x2)]
-        x3 = visitor.var_map[id(m.x3)]
-        y1 = visitor.var_map[id(m.y1)]
-        y2 = visitor.var_map[id(m.y2)]
-        y3 = visitor.var_map[id(m.y3)]
-        z1 = visitor.var_map[id(m.z1)]
+        x1 = visitor.var_map[m.x1]
+        x2 = visitor.var_map[m.x2]
+        x3 = visitor.var_map[m.x3]
+        y1 = visitor.var_map[m.y1]
+        y2 = visitor.var_map[m.y2]
+        y3 = visitor.var_map[m.y3]
+        z1 = visitor.var_map[m.z1]
 
         self.assertEqual(x1.lb, 0)
         self.assertEqual(x1.ub, float('inf'))
@@ -144,11 +144,11 @@ class TestGurobiMINLPWalker(CommonTest):
         # we need to update here in order to be able to test expr.
         visitor.grb_model.update()
 
-        x2 = visitor.var_map[id(m.x2)]
-        x3 = visitor.var_map[id(m.x3)]
-        y1 = visitor.var_map[id(m.y1)]
-        y2 = visitor.var_map[id(m.y2)]
-        z1 = visitor.var_map[id(m.z1)]
+        x2 = visitor.var_map[m.x2]
+        x3 = visitor.var_map[m.x3]
+        y1 = visitor.var_map[m.y1]
+        y2 = visitor.var_map[m.y2]
+        z1 = visitor.var_map[m.z1]
 
         self.assertEqual(x2.lb, -34)
         self.assertEqual(x2.ub, 45)
@@ -174,8 +174,8 @@ class TestGurobiMINLPWalker(CommonTest):
         visitor = self.get_visitor()
         _, expr = visitor.walk_expression(m.c.body)
 
-        x1 = visitor.var_map[id(m.x1)]
-        x2 = visitor.var_map[id(m.x2)]
+        x1 = visitor.var_map[m.x1]
+        x2 = visitor.var_map[m.x2]
 
         # This is a linear expression
         self.assertEqual(expr.size(), 2)
@@ -191,8 +191,8 @@ class TestGurobiMINLPWalker(CommonTest):
         visitor = self.get_visitor()
         _, expr = visitor.walk_expression(m.c.body)
 
-        x1 = visitor.var_map[id(m.x1)]
-        x2 = visitor.var_map[id(m.x2)]
+        x1 = visitor.var_map[m.x1]
+        x2 = visitor.var_map[m.x2]
 
         # Also linear, whoot!
         self.assertEqual(expr.size(), 2)
@@ -208,8 +208,8 @@ class TestGurobiMINLPWalker(CommonTest):
         visitor = self.get_visitor()
         _, expr = visitor.walk_expression(m.c.body)
 
-        x1 = visitor.var_map[id(m.x1)]
-        x2 = visitor.var_map[id(m.x2)]
+        x1 = visitor.var_map[m.x1]
+        x2 = visitor.var_map[m.x2]
 
         # This is quadratic
         self.assertEqual(expr.size(), 1)
@@ -227,7 +227,7 @@ class TestGurobiMINLPWalker(CommonTest):
         visitor = self.get_visitor()
         _, expr = visitor.walk_expression(m.c.body)
 
-        x1 = visitor.var_map[id(m.x1)]
+        x1 = visitor.var_map[m.x1]
 
         # this is linear
         self.assertEqual(expr.size(), 1)
@@ -279,8 +279,8 @@ class TestGurobiMINLPWalker(CommonTest):
         visitor = self.get_visitor()
         _, expr = visitor.walk_expression(m.c.body)
 
-        x1 = visitor.var_map[id(m.x1)]
-        x2 = visitor.var_map[id(m.x2)]
+        x1 = visitor.var_map[m.x1]
+        x2 = visitor.var_map[m.x2]
 
         # linear
         self.assertEqual(expr.size(), 2)
@@ -297,7 +297,7 @@ class TestGurobiMINLPWalker(CommonTest):
         visitor = self.get_visitor()
         _, expr = visitor.walk_expression(m.c.body)
 
-        x1 = visitor.var_map[id(m.x1)]
+        x1 = visitor.var_map[m.x1]
 
         # It's just a single var
         self.assertIs(expr, x1)
@@ -335,7 +335,7 @@ class TestGurobiMINLPWalker(CommonTest):
         _, expr = visitor.walk_expression(m.c.body)
 
         # This is quadratic
-        x1 = visitor.var_map[id(m.x1)]
+        x1 = visitor.var_map[m.x1]
 
         self.assertEqual(expr.size(), 1)
         lin_expr = expr.getLinExpr()
@@ -386,8 +386,8 @@ class TestGurobiMINLPWalker(CommonTest):
         # You can't actually use this in a model in Gurobi 12, but you can build the
         # expression... (It fails during the solve.)
 
-        x1 = visitor.var_map[id(m.x1)]
-        x2 = visitor.var_map[id(m.x2)]
+        x1 = visitor.var_map[m.x1]
+        x2 = visitor.var_map[m.x2]
 
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
@@ -402,7 +402,7 @@ class TestGurobiMINLPWalker(CommonTest):
         visitor = self.get_visitor()
         _, expr = visitor.walk_expression(m.c.body)
 
-        x2 = visitor.var_map[id(m.x2)]
+        x2 = visitor.var_map[m.x2]
 
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
@@ -438,7 +438,7 @@ class TestGurobiMINLPWalker(CommonTest):
         # expr is actually an auxiliary variable. We should
         # get a constraint:
         # expr == abs(x1)
-        x1 = visitor.var_map[id(m.x1)]
+        x1 = visitor.var_map[m.x1]
 
         self.assertIsInstance(expr, gurobipy.Var)
         grb_model = visitor.grb_model
@@ -507,7 +507,7 @@ class TestGurobiMINLPWalker(CommonTest):
         _, expr = visitor.walk_expression(m.c.body)
 
         # expr is nonlinear
-        x2 = visitor.var_map[id(m.x2)]
+        x2 = visitor.var_map[m.x2]
 
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
@@ -526,7 +526,7 @@ class TestGurobiMINLPWalker(CommonTest):
 
         visitor = self.get_visitor()
         _, expr = visitor.walk_expression(const_expr)
-        x1 = visitor.var_map[id(m.x1)]
+        x1 = visitor.var_map[m.x1]
         self.assertEqual(expr.size(), 1)
         self.assertEqual(expr.getConstant(), 0.0)
         self.assertIs(expr.getVar(0), x1)
@@ -552,7 +552,7 @@ class TestGurobiMINLPWalker(CommonTest):
         _, expr = visitor.walk_expression(m.c.body)
 
         # expr is nonlinear
-        x1 = visitor.var_map[id(m.x1)]
+        x1 = visitor.var_map[m.x1]
 
         opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
