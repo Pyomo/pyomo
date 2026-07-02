@@ -43,7 +43,14 @@ class PWLToEpigraphOrHypograph(PiecewiseLinearTransformationBase):
         epigraph = False
         if pw_linear_func.convex is None:
             # we should autodetect if the dimension isn't insane, yell otherwise
-            raise NotImplementedError("Convexity not specified")
+            raise NotImplementedError(
+                "It is (quadratically, in the number of pieces) possible to "
+                "auto-detect if a piecewise-linear "
+                "function is convex or concave, but we don't currently have an "
+                "implementation. PRs are welcome, or manually specify in the "
+                "PiecewiseLinearFunction constructor the convexity/concavity "
+                "using the 'convex' argument."
+            )
         if pw_linear_func.convex:
             # This will be epigraph
             epigraph = True
