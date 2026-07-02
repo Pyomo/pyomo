@@ -2067,9 +2067,6 @@ class TestSingleExperimentSolve(unittest.TestCase):
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 @unittest.skipIf(not scipy_available, "scipy is not available")
 @unittest.skipIf(not pandas_available, "pandas is not available")
-@unittest.skipIf(
-    not parameterized_available, "The 'parameterized' package is not available"
-)
 class TestMultiexperimentError(unittest.TestCase):
     def test_optimize_experiments_greybox_unsupported_objectives_are_rejected(self):
         # These unsupported objectives share the same early-validation path, so
