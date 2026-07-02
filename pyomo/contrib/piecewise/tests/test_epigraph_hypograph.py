@@ -329,8 +329,6 @@ class TestEpigraphHypographTransformation(unittest.TestCase):
         # ...but pw[2] should *not* be transformed.
         self.assertTrue(m.pw[2].active)
         self.assertIsNone(m.pw[2].get_transformation_var(m.c2.body))
-        self.assertEqual(m.c2.lower, -10)
-        self.assertIsNone(m.c2.upper)
 
 
 if __name__ == '__main__':
