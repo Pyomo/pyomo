@@ -258,7 +258,7 @@ class PiecewiseLinearFunction(Block):
             Triangulation.Unknown
         convex (optional): If True, serves as a user-provided guarantee that the
             piecewise-linear function is convex. If False, serves as a user-provided
-            guarantee tht the piecewise-linear function is concave. If None (the
+            guarantee that the piecewise-linear function is concave. If None (the
             default), the function may be concave or convex.
     """
 

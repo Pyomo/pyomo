@@ -34,7 +34,7 @@ class PWLToEpigraphOrHypograph(PiecewiseLinearTransformationBase):
         # get the PiecewiseLinearFunctionExpression
         dimension = pw_expr.nargs()
 
-        # Create variable to substitue
+        # Create variable to substitute
         substitute_var = transBlock.substitute_var = Var()
         pw_linear_func.map_transformation_var(pw_expr, substitute_var)
 
