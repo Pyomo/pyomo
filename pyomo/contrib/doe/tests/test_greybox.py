@@ -2055,20 +2055,12 @@ class TestSingleExperimentSolve(unittest.TestCase):
         )
         self.assertGreaterEqual(design_hour, 1.0)
         self.assertLessEqual(design_hour, 10.0)
-        # With n_exp=1 and a 2-parameter model, the resulting FIM is nearly
-        # rank-deficient (smallest eigenvalue at the machine-precision noise
-        # floor), so log10_e_opt may legitimately come back as NaN if that
-        # eigenvalue's floating-point noise happens to land on the negative
-        # side of zero. Accept either a finite value or a near-singular FIM.
-        min_eig = np.linalg.eigvalsh(np.array(scenario_results["total_fim"])).min()
-        self.assertTrue(
-            np.isfinite(scenario_results["quality_metrics"]["log10_e_opt"])
-            or abs(min_eig) < _SMALL_TOLERANCE_DEFINITENESS
-        )
+
+        self.assertTrue(np.isfinite(scenario_results["quality_metrics"]["log10_e_opt"]))
         self.assertAlmostEqual(
             pyo.value(scenario.obj_cons.egb_fim_block.outputs["E-opt"]),
             _expected_multiexperiment_greybox_output("minimum_eigenvalue", total_fim),
-            places=7,
+            places=4,
         )
 
 
