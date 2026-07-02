@@ -40,7 +40,6 @@ if scipy_available:
         RooneyBieglerExperiment,
     )
 from pyomo.contrib.doe.tests.utils_for_doe_tests import make_ipopt_solver
-from pyomo.contrib.doe.utils import _SMALL_TOLERANCE_DEFINITENESS
 import pyomo.environ as pyo
 
 from pyomo.opt import SolverFactory
