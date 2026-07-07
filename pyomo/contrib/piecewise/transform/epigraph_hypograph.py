@@ -47,7 +47,7 @@ class PWLToEpigraphOrHypograph(PiecewiseLinearTransformationBase):
         # this is the hypograph (the function is concave)
         elif pw_linear_func.function_type == FunctionType.CONCAVE:
             epigraph = False
-        elif pw_linear_func.funtion_type == FunctionType.UNSPECIFIED:
+        elif pw_linear_func.function_type == FunctionType.UNSPECIFIED:
             # we should autodetect if the dimension isn't insane, yell otherwise
             raise NotImplementedError(
                 "It is (quadratically, in the number of pieces) possible to "
