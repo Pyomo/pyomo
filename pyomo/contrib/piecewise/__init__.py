@@ -12,7 +12,7 @@ from pyomo.contrib.piecewise.piecewise_linear_expression import (
 )
 from pyomo.contrib.piecewise.piecewise_linear_function import (
     PiecewiseLinearFunction,
-    FunctionType
+    FunctionType,
 )
 
 ## register transformations

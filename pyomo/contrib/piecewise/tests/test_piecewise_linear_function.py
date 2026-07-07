@@ -14,9 +14,7 @@ import pickle
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
-from pyomo.contrib.piecewise import (
-    PiecewiseLinearFunction, Triangulation, FunctionType
-)
+from pyomo.contrib.piecewise import PiecewiseLinearFunction, Triangulation, FunctionType
 from pyomo.core.expr.compare import (
     assertExpressionsEqual,
     assertExpressionsStructurallyEqual,
@@ -471,8 +469,10 @@ class TestConvexOption(unittest.TestCase):
 
         # convex and unspecified
         m.pw_concave = PiecewiseLinearFunction(
-            [1, 2], points=[1, 3, 6, 10], function_rule=m.funcs,
-            function_type=convex_rule
+            [1, 2],
+            points=[1, 3, 6, 10],
+            function_rule=m.funcs,
+            function_type=convex_rule,
         )
         self.assertIs(m.pw_concave[1].function_type, FunctionType.CONVEX)
         self.assertIs(m.pw_concave[2].function_type, FunctionType.UNSPECIFIED)

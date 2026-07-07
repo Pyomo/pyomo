@@ -233,8 +233,10 @@ class TestEpigraphHypographTransformation(unittest.TestCase):
             return FunctionType.CONVEX if i == 1 else FunctionType.CONCAVE
 
         m.pw = PiecewiseLinearFunction(
-            m.idx, points=breakpoints, function_rule=func_rule,
-            function_type=convex_rule
+            m.idx,
+            points=breakpoints,
+            function_rule=func_rule,
+            function_type=convex_rule,
         )
 
         m.c1 = Constraint(expr=m.pw[1](m.x[1]) <= 10)
