@@ -8,7 +8,7 @@
 # ____________________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.contrib.piecewise import PiecewiseLinearFunction
+from pyomo.contrib.piecewise import PiecewiseLinearFunction, FunctionType
 from pyomo.contrib.piecewise.transform.epigraph_hypograph import (
     PWLToEpigraphOrHypograph,
 )
@@ -58,7 +58,7 @@ class TestEpigraphHypographTransformation(unittest.TestCase):
         m.pw = PiecewiseLinearFunction(
             points=breakpoints,
             function=x_squared,
-            convex=True,  # Specify that this is convex
+            function_type=FunctionType.CONVEX,  # Specify that this is convex
         )
 
         m.c = Constraint(expr=m.x >= 1.5)
@@ -155,7 +155,7 @@ class TestEpigraphHypographTransformation(unittest.TestCase):
         m.pw = PiecewiseLinearFunction(
             points=breakpoints,
             function=neg_x_squared,
-            convex=False,  # Specify that this is concave
+            function_type=FunctionType.CONCAVE,  # Specify that this is concave
         )
 
         m.c = Constraint(expr=m.x <= 2.5)
@@ -230,10 +230,11 @@ class TestEpigraphHypographTransformation(unittest.TestCase):
             return x_squared if i == 1 else neg_x_squared
 
         def convex_rule(m, i):
-            return True if i == 1 else False
+            return FunctionType.CONVEX if i == 1 else FunctionType.CONCAVE
 
         m.pw = PiecewiseLinearFunction(
-            m.idx, points=breakpoints, function_rule=func_rule, convex=convex_rule
+            m.idx, points=breakpoints, function_rule=func_rule,
+            function_type=convex_rule
         )
 
         m.c1 = Constraint(expr=m.pw[1](m.x[1]) <= 10)

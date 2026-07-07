@@ -9,6 +9,7 @@
 
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.core.base import TransformationFactory
+from pyomo.contrib.piecewise import FunctionType
 from pyomo.contrib.piecewise.transform.piecewise_linear_transformation_base import (
     PiecewiseLinearTransformationBase,
 )
@@ -40,8 +41,13 @@ class PWLToEpigraphOrHypograph(PiecewiseLinearTransformationBase):
 
         transBlock.epigraphical_constraints = Constraint(NonNegativeIntegers)
 
-        epigraph = False
-        if pw_linear_func.convex is None:
+        if pw_linear_func.function_type == FunctionType.CONVEX:
+            # This will be epigraph
+            epigraph = True
+        # this is the hypograph (the function is concave)
+        elif pw_linear_func.function_type == FunctionType.CONCAVE:
+            epigraph = False
+        elif pw_linear_func.funtion_type == FunctionType.UNSPECIFIED:
             # we should autodetect if the dimension isn't insane, yell otherwise
             raise NotImplementedError(
                 "It is (quadratically, in the number of pieces) possible to "
@@ -51,10 +57,11 @@ class PWLToEpigraphOrHypograph(PiecewiseLinearTransformationBase):
                 "PiecewiseLinearFunction constructor the convexity/concavity "
                 "using the 'convex' argument."
             )
-        if pw_linear_func.convex:
-            # This will be epigraph
-            epigraph = True
-        # Else this is the hypograph (the function is concave)
+        else:
+            raise ValueError(
+                f"Unrecognized value for function_type of piecewise-linear function "
+                f"'{pw_linear_func.name}': {pw_linear_func.function_type}"
+            )
 
         for idx, linear_func in enumerate(pw_linear_func._linear_functions):
             linear_func_expr = linear_func(*pw_expr.args)
