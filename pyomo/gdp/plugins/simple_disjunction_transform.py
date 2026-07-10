@@ -9,8 +9,8 @@
 
 import enum
 import logging
-from weakref import ref as weakref_ref
 
+from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue, InEnum
 from pyomo.common.modeling import unique_component_name
@@ -20,9 +20,27 @@ from pyomo.core.base.component import ComponentBase
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import _parent_disjunct, is_child_of
+from pyomo.gdp.util import _parent_disjunct, get_gdp_tree
 
 logger = logging.getLogger(__name__)
+
+
+class _SimpleDisjunctionTransformationData(AutoSlots.Mixin):
+    """Private data stored on each transformation Block.
+
+    Holds the mapping from a generated (simple) Disjunction back to the
+    original Disjunction it was built from. The map holds the components
+    directly (a hard reference), so callers can always recover the source
+    Disjunction from a simple one via ``get_src_disjunction``.
+    """
+
+    __slots__ = ('src_disjunction',)
+
+    def __init__(self):
+        self.src_disjunction = ComponentMap()
+
+
+Block.register_private_data_initializer(_SimpleDisjunctionTransformationData)
 
 
 class ConstraintSelectionMethod(str, enum.Enum):
@@ -92,27 +110,27 @@ def _selected_constraints_map(arg):
 
 @TransformationFactory.register(
     'gdp.simple_disjunction',
-    doc="Relax selected Disjunctions by building, for each one, a 'simple' "
-    "Disjunction whose Disjuncts each retain a single Constraint derived from "
-    "the corresponding original Disjunct.",
+    doc="Reformulate selected Disjunctions by building, for each one, a "
+    "'simple' Disjunction whose Disjuncts each retain a single Constraint "
+    "derived from the corresponding original Disjunct.",
 )
 class SimpleDisjunctionTransformation(Transformation):
-    """Create a relaxation of one or more Disjunctions as *simple* Disjunctions.
+    """Reformulate one or more Disjunctions as *simple* Disjunctions.
 
     A *simple* Disjunction is one in which every Disjunct holds exactly one
     Constraint. For each Disjunction that is transformed, this transformation
     derives a single Constraint for each of its Disjuncts and assembles those
-    Constraints into a brand new Disjunction. Because each new Disjunct keeps a
-    relaxed (single-Constraint) view of the Disjunct it was generated from, the
-    resulting Disjunction is a relaxation of the original in the space of the
-    model (problem) variables.
+    Constraints into a brand new Disjunction. Each new Disjunct keeps a single
+    Constraint derived from the Disjunct it was generated from, and reuses the
+    original model (problem) variables.
 
     The original Disjunction is never modified: the generated simple Disjunction
-    (together with its Disjuncts) is placed inside a new Block that is added to
-    the parent Block of the Disjunction it was generated from. The new Disjuncts
-    get their own indicator variables, so the simple Disjunction is an
-    independent component that the caller may transform or otherwise use however
-    they see fit.
+    (together with its Disjuncts) is placed on a transformation Block added to
+    the parent Block of the Disjunction it was generated from. A single such
+    transformation Block is shared by every simple Disjunction built on the same
+    parent Block. The new Disjuncts get their own indicator variables, so the
+    simple Disjunction is an independent component that the caller may transform
+    or otherwise use however they see fit.
 
     There is more than one reasonable way to reduce a Disjunct to a single
     Constraint, so the strategy is selectable through the
@@ -144,9 +162,9 @@ class SimpleDisjunctionTransformation(Transformation):
     skipped automatically but raise a GDP_Error when supplied as an explicit
     target.
 
-    After transformation, ``get_simple_disjunction`` and ``get_src_disjunction``
-    map between an original Disjunction and the simple Disjunction generated from
-    it.
+    After the reformulation, ``get_simple_disjunction`` and
+    ``get_src_disjunction`` map between an original Disjunction and the simple
+    Disjunction generated from it.
     """
 
     CONFIG = ConfigDict('gdp.simple_disjunction')
@@ -156,12 +174,13 @@ class SimpleDisjunctionTransformation(Transformation):
             default=None,
             domain=target_list,
             description="target or list of targets (Disjunctions or Blocks) to "
-            "relax",
+            "reformulate",
             doc="""
-            This specifies the list of Disjunctions to relax, or the Blocks
-            whose (active, non-nested) Disjunctions should be relaxed. If None
-            (default), every active, non-nested Disjunction on the instance is
-            relaxed. Note that if the transformation is done out of place, the
+            This specifies the list of Disjunctions to reformulate, or the
+            Blocks whose (active, non-nested) Disjunctions should be
+            reformulated. If None (default), every active, non-nested Disjunction
+            on the instance is reformulated. Note that if the transformation is
+            done out of place, the
             list of targets should be attached to the model before it is cloned,
             and the list will specify the targets on the cloned instance.
             """,
@@ -250,118 +269,90 @@ class SimpleDisjunctionTransformation(Transformation):
             )
 
         build_expression = getattr(self, self._EXPRESSION_BUILDERS[method])
-        for disjunction in self._get_disjunctions_to_transform(
-            instance, config.targets
-        ):
-            self._transform_disjunction(
-                disjunction, build_expression, selected_constraints
-            )
 
-    def _get_disjunctions_to_transform(self, instance, targets):
-        """Return the ordered list of Disjunctions that should be relaxed."""
+        targets = config.targets
+        # Track the Disjunctions the user named explicitly (as opposed to ones
+        # we merely came across while descending into a Block or the instance).
+        # An explicit, ineligible target is an error; one we only discovered is
+        # skipped quietly.
+        explicit = ComponentSet()
         if targets is None:
-            return list(self._gather_disjunctions(instance))
+            targets = (instance,)
+        else:
+            for t in targets:
+                if t.ctype is Disjunction:
+                    explicit.update(t.values() if t.is_indexed() else (t,))
 
-        disjunctions = []
-        knownBlocks = {}
-        for t in targets:
-            if not is_child_of(parent=instance, child=t, knownBlocks=knownBlocks):
-                raise GDP_Error(
-                    "Target '%s' is not a component on instance '%s'!"
-                    % (t.name, instance.name)
+        # We reuse a single transformation Block per parent Block, so all the
+        # simple Disjunctions built on a given parent Block share one Block.
+        transformation_blocks = {}
+
+        # The GDP tree captures the whole nesting structure for us, so we can
+        # ask it directly which Disjunctions are nested (or contain nesting)
+        # rather than walking the model ourselves. (get_gdp_tree also validates
+        # that every target lives on the instance.)
+        gdp_tree = get_gdp_tree(targets, instance)
+        for disjunction in gdp_tree.topological_sort():
+            if disjunction.ctype is not Disjunction:
+                continue
+            if not disjunction.active:
+                # Discovery only turns up active Disjunctions, so an inactive one
+                # here was named explicitly.
+                if disjunction in explicit:
+                    raise GDP_Error(
+                        "Disjunction '%s' is deactivated, so a simple "
+                        "disjunction cannot be created from it. (Deactivated "
+                        "Disjunctions are skipped automatically when no targets "
+                        "are specified.)" % disjunction.name
+                    )
+                continue
+            if _parent_disjunct(disjunction) is not None:
+                # This Disjunction is itself nested inside a Disjunct.
+                if disjunction in explicit:
+                    raise GDP_Error(
+                        "Disjunction '%s' is nested in another Disjunct. This "
+                        "transformation does not create simple disjunctions from "
+                        "nested Disjunctions." % disjunction.name
+                    )
+                logger.debug(
+                    "Skipping Disjunction '%s' because it is nested in another "
+                    "Disjunct." % disjunction.name
                 )
-            if t.ctype is Disjunction:
-                # The user explicitly asked for this Disjunction, so we validate
-                # it (rather than silently skipping) and report why if we cannot
-                # build a simple Disjunction from it.
-                for disjunction in t.values() if t.is_indexed() else (t,):
-                    self._validate_explicit_disjunction(disjunction)
-                    disjunctions.append(disjunction)
-            elif t.ctype is Block:
-                for block in t.values() if t.is_indexed() else (t,):
-                    if not block.active:
-                        continue
-                    disjunctions.extend(self._gather_disjunctions(block))
-            else:
-                raise GDP_Error(
-                    "Target '%s' was not a Block or Disjunction. It was of type "
-                    "%s and can't be transformed." % (t.name, type(t))
-                )
-        return disjunctions
-
-    def _gather_disjunctions(self, block):
-        """Yield the active, top-level Disjunctions reachable from block.
-
-        Only Blocks are descended into, so nested Disjunctions (which live
-        inside Disjuncts) are never discovered. A top-level Disjunction that
-        *contains* a nested Disjunction is skipped with a debug message, since
-        this transformation does not build simple Disjunctions from nested
-        Disjunctions.
-        """
-        for disjunction in block.component_data_objects(
-            Disjunction,
-            active=True,
-            descend_into=Block,
-            sort=SortComponents.deterministic,
-        ):
-            if self._contains_nested_disjunction(disjunction):
+                continue
+            nested_owner = self._nested_disjunction_owner(disjunction, gdp_tree)
+            if nested_owner is not None:
+                # One of this Disjunction's Disjuncts owns a Disjunction.
+                if disjunction in explicit:
+                    raise GDP_Error(
+                        "Disjunction '%s' contains a nested Disjunction (on "
+                        "Disjunct '%s'). This transformation does not create "
+                        "simple disjunctions from nested Disjunctions."
+                        % (disjunction.name, nested_owner.name)
+                    )
                 logger.debug(
                     "Skipping Disjunction '%s' because it contains a nested "
                     "Disjunction." % disjunction.name
                 )
                 continue
-            yield disjunction
-
-    def _validate_explicit_disjunction(self, disjunction):
-        """Raise a GDP_Error if an explicitly-targeted Disjunction is ineligible."""
-        if not disjunction.active:
-            raise GDP_Error(
-                "Disjunction '%s' is deactivated, so a simple disjunction "
-                "cannot be created from it. (Deactivated Disjunctions are "
-                "skipped automatically when no targets are specified.)"
-                % disjunction.name
+            self._transform_disjunction(
+                disjunction,
+                build_expression,
+                selected_constraints,
+                transformation_blocks,
             )
-        if _parent_disjunct(disjunction) is not None:
-            raise GDP_Error(
-                "Disjunction '%s' is nested in another Disjunct. This "
-                "transformation does not create simple disjunctions from nested "
-                "Disjunctions." % disjunction.name
-            )
-        nested = self._nested_disjunction_owner(disjunction)
-        if nested is not None:
-            raise GDP_Error(
-                "Disjunction '%s' contains a nested Disjunction (on Disjunct "
-                "'%s'). This transformation does not create simple disjunctions "
-                "from nested Disjunctions." % (disjunction.name, nested.name)
-            )
-
-    def _contains_nested_disjunction(self, disjunction):
-        """Return True if any Disjunct of the Disjunction owns a Disjunction."""
-        return self._nested_disjunction_owner(disjunction) is not None
 
     @staticmethod
-    def _nested_disjunction_owner(disjunction):
-        # Return the first active Disjunct that declares a Disjunction of its
-        # own, or None. We do not descend into nested Disjuncts: we only look
-        # for a Disjunction declared directly on a Disjunct (or one of its
-        # Blocks), which is exactly what makes the parent Disjunction nested.
+    def _nested_disjunction_owner(disjunction, gdp_tree):
+        # Return the first Disjunct of `disjunction` that owns a nested
+        # Disjunction, or None. In the GDP tree, a Disjunct with a nested
+        # Disjunction has that Disjunction as a child, so it is not a leaf.
         for disjunct in disjunction.disjuncts:
-            if not disjunct.active:
-                continue
-            if (
-                next(
-                    disjunct.component_data_objects(
-                        Disjunction, active=True, descend_into=Block
-                    ),
-                    None,
-                )
-                is not None
-            ):
+            if disjunct in gdp_tree.vertices and not gdp_tree.is_leaf(disjunct):
                 return disjunct
         return None
 
     def _transform_disjunction(
-        self, disjunction, build_expression, selected_constraints
+        self, disjunction, build_expression, selected_constraints, transformation_blocks
     ):
         # Build the single Constraint expression for each (active) Disjunct,
         # skipping Disjuncts that have nothing to contribute.
@@ -386,32 +377,51 @@ class SimpleDisjunctionTransformation(Transformation):
                 "disjunction." % disjunction.name
             )
 
-        parent_block = disjunction.parent_block()
-        trans_block = Block()
-        parent_block.add_component(
-            unique_component_name(
-                parent_block, '_pyomo_gdp_simple_disjunction_reformulation'
-            ),
-            trans_block,
+        trans_block = self._add_transformation_block(
+            disjunction.parent_block(), transformation_blocks
         )
-        trans_block.simple_disjuncts = Disjunct(Any)
 
+        # The simple Disjuncts for every Disjunction on this parent Block live in
+        # one shared indexed container, so index the new ones off its current
+        # length rather than restarting at 0.
         new_disjuncts = []
-        for i, (orig_disjunct, expression) in enumerate(chosen):
-            new_disjunct = trans_block.simple_disjuncts[i]
+        for orig_disjunct, expression in chosen:
+            idx = len(trans_block.simple_disjuncts)
+            new_disjunct = trans_block.simple_disjuncts[idx]
             new_disjunct.constraint = Constraint(expr=expression)
             new_disjuncts.append(new_disjunct)
 
-        trans_block.simple_disjunction = Disjunction(expr=new_disjuncts)
-
-        # Record the mapping in both directions so callers can move between an
-        # original Disjunction and the simple Disjunction generated from it.
-        disjunction._transformation_map[self.transformation_name] = (
-            trans_block.simple_disjunction
+        simple_disjunction = Disjunction(expr=new_disjuncts)
+        trans_block.add_component(
+            unique_component_name(trans_block, 'simple_disjunction'), simple_disjunction
         )
-        trans_block._src_disjunction = weakref_ref(disjunction)
 
-        return trans_block.simple_disjunction
+        # Record the mapping in both directions (with hard references) so callers
+        # can move between an original Disjunction and the simple Disjunction
+        # generated from it. The forward map lives on the original Disjunction;
+        # the reverse map lives in the transformation Block's private data.
+        disjunction._transformation_map[self.transformation_name] = simple_disjunction
+        trans_block.private_data().src_disjunction[simple_disjunction] = disjunction
+
+        return simple_disjunction
+
+    def _add_transformation_block(self, to_block, transformation_blocks):
+        """Return the transformation Block on ``to_block``, creating it once.
+
+        There is a single transformation Block per parent Block; all the simple
+        Disjunctions built on that parent Block are placed on it.
+        """
+        if to_block in transformation_blocks:
+            return transformation_blocks[to_block]
+
+        trans_block_name = unique_component_name(
+            to_block, '_pyomo_gdp_%s_reformulation' % self.transformation_name
+        )
+        transformation_blocks[to_block] = trans_block = Block()
+        to_block.add_component(trans_block_name, trans_block)
+        trans_block.simple_disjuncts = Disjunct(Any)
+
+        return trans_block
 
     # ---------------------------------------------------------------------- #
     # Constraint selection methods                                           #
@@ -468,13 +478,8 @@ class SimpleDisjunctionTransformation(Transformation):
     def _validate_selected_sources(self, disjunction, disjunct, sources):
         own = ComponentSet(self._own_active_constraints(disjunct))
         for constraint in sources:
-            if not isinstance(constraint, ConstraintData):
-                raise GDP_Error(
-                    "An object selected for Disjunct '%s' in "
-                    "'selected_constraints' is not a Constraint. Expected a "
-                    "ConstraintData, but got an object of type %s."
-                    % (disjunct.name, type(constraint).__name__)
-                )
+            # In the spirit of duck-typing, we assume each selected object is a
+            # Constraint and let it fail naturally below if it is not one.
             if not constraint.active:
                 raise GDP_Error(
                     "The constraint '%s' selected for Disjunct '%s' is not "
@@ -520,20 +525,20 @@ class SimpleDisjunctionTransformation(Transformation):
         return simple
 
     def get_src_disjunction(self, simple_disjunction):
-        """Return the original Disjunction that ``simple_disjunction`` relaxes.
+        """Return the original Disjunction that ``simple_disjunction`` was built from.
 
         Parameters
         ----------
         simple_disjunction: Disjunction generated by this transformation (i.e.,
-            the ``simple_disjunction`` component on one of the reformulation
+            a ``simple_disjunction`` component on one of the reformulation
             Blocks created by this transformation).
         """
         trans_block = simple_disjunction.parent_block()
-        src = getattr(trans_block, '_src_disjunction', None)
-        if type(src) is not weakref_ref:
+        src_map = trans_block.private_data().src_disjunction
+        if simple_disjunction not in src_map:
             raise GDP_Error(
-                "It appears that '%s' is not a simple disjunction generated by "
-                "the 'gdp.%s' transformation. No source disjunction found."
+                "It does not appear that '%s' is a simple disjunction generated "
+                "by the 'gdp.%s' transformation."
                 % (simple_disjunction.name, self.transformation_name)
             )
-        return src()
+        return src_map[simple_disjunction]
