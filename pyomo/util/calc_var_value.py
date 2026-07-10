@@ -11,6 +11,7 @@ from pyomo.common.errors import IterationLimitError
 from pyomo.common.numeric_types import native_numeric_types, native_complex_types, value
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.base.constraint import Constraint
+from pyomo.core.base.suffix import SuffixFinder
 
 import logging
 
@@ -24,6 +25,53 @@ _symbolic_modes = {
 }
 
 
+def _clip_variable_to_bounds(variable, expr, eps):
+    """
+    Function to try to clip a variable back within its bounds.
+    If the expression residual is less than eps, then the new
+    value of the variable is retained. If the value is greater
+    than eps, then the original, bound-violating value of
+    variable is retained.
+
+    Parameters:
+    -----------
+    variable: :py:class:`VarData`
+        The variable to clip to within its bounds
+    expr: :py:class:`NumericExpression`
+        The expression to evaluate the constraint residual
+    eps: `float`
+        The tolerance to use to determine constraint feasibility.
+
+    Returns:
+    --------
+    None
+
+    """
+    # Should we check against variable domain here as well?
+    variable_value = value(variable)
+    if (
+        variable.lb is not None
+        and variable.ub is not None
+        and variable.lb > variable.ub
+    ):
+        raise ValueError(
+            f"Variable {variable} has inconsistent bounds. "
+            f"It has a lower bound of {variable.lb} and an "
+            f"upper bound of {variable.ub}."
+        )
+    elif variable.lb is not None and variable_value < variable.lb:
+        variable.set_value(variable.lb)
+        if abs(value(expr)) < eps:
+            return
+        # Else proceed to set the variable to its old value
+    elif variable.ub is not None and variable_value > variable.ub:
+        variable.set_value(variable.ub)
+        if abs(value(expr)) < eps:
+            return
+        # Else proceed to set the variable to its old value
+    variable.set_value(variable_value)
+
+
 def calculate_variable_from_constraint(
     variable,
     constraint,
@@ -32,6 +80,8 @@ def calculate_variable_from_constraint(
     linesearch=True,
     alpha_min=1e-8,
     diff_mode=None,
+    scale_problem=False,
+    clip_to_bounds=False,
 ):
     """Calculate the variable value given a specified equality constraint
 
@@ -72,6 +122,16 @@ def calculate_variable_from_constraint(
     diff_mode: :py:enum:`pyomo.core.expr.calculus.derivatives.Modes`
         The mode to use to differentiate the expression.  If
         unspecified, defaults to `Modes.sympy`
+    scale_problem: `bool`
+        Whether to take variable and constraint scaling into account
+        when calculating if the constraint residual tolerance is
+        satisfied or if the initial derivative is zero.
+    clip_to_bounds: `bool`
+        If terminating at a point outside a variable's bounds, set the
+        variable to its closest bound and see whether the constraint
+        residual termination condition is satisfied. This method is
+        applied only to constraints that are not solved by the shortcut
+        methods used to quickly solve linear constraints.
 
     Returns:
     --------
@@ -96,6 +156,16 @@ def calculate_variable_from_constraint(
 
     if lower != upper:
         raise ValueError(f"Constraint '{constraint}' must be an equality constraint")
+
+    if scale_problem:
+        finder = SuffixFinder('scaling_factor', 1.0, constraint.model())
+
+        sf_variable = finder.find(variable)
+        sf_constraint = finder.find(constraint)
+        eps /= sf_constraint
+    else:
+        sf_variable = 1
+        sf_constraint = 1
 
     _invalid_types = set(native_complex_types)
     _invalid_types.add(type(None))
@@ -219,7 +289,7 @@ def calculate_variable_from_constraint(
     else:
         fp0 = value(expr_deriv)
 
-    if abs(value(fp0)) < 1e-12:
+    if abs(value(fp0) * sf_constraint / sf_variable) < 1e-12:
         raise ValueError(
             f"Initial value for variable '{variable}' results in a derivative "
             f"value for constraint '{constraint}' that is very close to zero.\n"
@@ -258,7 +328,7 @@ def calculate_variable_from_constraint(
         else:
             fpk = value(expr_deriv)
 
-        if abs(fpk) < 1e-12:
+        if abs(fpk * sf_constraint / sf_variable) < 1e-12:
             # TODO: should this raise a ValueError or a new
             # DerivativeError (subclassing ArithmeticError)?
             raise RuntimeError(
@@ -310,7 +380,9 @@ def calculate_variable_from_constraint(
                     f"variable '{variable}' using constraint '{constraint}'; "
                     f"remaining residual = {residual}."
                 )
-    #
-    # Re-set the variable value to trigger any warnings WRT the final
-    # variable state
-    variable.set_value(variable.value)
+    if clip_to_bounds:
+        _clip_variable_to_bounds(variable, expr, eps)
+    else:
+        # Re-set the variable value to trigger any warnings WRT the final
+        # variable state
+        variable.set_value(variable.value)
