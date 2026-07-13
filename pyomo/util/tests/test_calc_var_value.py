@@ -37,6 +37,10 @@ all_diff_modes = [
     differentiate.Modes.reverse_numeric,
 ]
 
+# This regex was written with Google Gemini 3.5 to match an arbitrary
+# floating point number in scientific notation
+SCIENTIFIC_NOTATION_REGEX = r"[+-]?(?:\d+(?:\.\d*)?)[eE][+-]?\d+"
+
 
 def sum_sq(args, fixed, fgh):
     f = sum(arg**2 for arg in args)
@@ -260,6 +264,60 @@ class Test_calc_var(unittest.TestCase):
             # With scaling, we should stop at x = 3 + 5.288-11
             self.assertAlmostEqual(value(m.x), 3, places=9)
 
+        # Check whether scaling factors are being used when calculating
+        # problem derivatives
+        # Here, the variable scaling causes a failure because the scaled
+        # derivative is near-zero
+        m.rhs = Param(initialize=3, mutable=True)
+        m.g = Constraint(expr=m.x**2 + m.x == m.rhs)
+        m.scaling_factor[m.x] = 1e16
+        for mode in all_diff_modes:
+            m.x.set_value(1)
+            with self.assertRaisesRegex(
+                ValueError,
+                "Initial value for variable 'x' results in a "
+                "derivative value for constraint 'g' that is very close to zero.",
+            ):
+                calculate_variable_from_constraint(
+                    m.x, m.g, diff_mode=mode, scale_problem=True
+                )
+
+        # Here, the constraint scaling factor causes a failure because the
+        # scaled derivative is near-zero
+        del m.scaling_factor[m.x]
+        # Set rhs to large value to make sure we don't terminate due to a small
+        # constraint residual in any of the shortcut steps
+        m.rhs.set_value(1e16)
+        m.scaling_factor[m.g] = 1e-16
+        for mode in all_diff_modes:
+            m.x.set_value(1)
+            with self.assertRaisesRegex(
+                ValueError,
+                "Initial value for variable 'x' results in a "
+                "derivative value for constraint 'g' that is very close to zero.",
+            ):
+                calculate_variable_from_constraint(
+                    m.x, m.g, diff_mode=mode, scale_problem=True
+                )
+        # Here, because both the variable and constraint are scaled, we don't terminate due to
+        # a zero derivative. It still raises an error, however, because we're asking for an
+        # unreasonable amount of precision
+        m.scaling_factor[m.x] = 1e16
+        m.scaling_factor[m.g] = 1e16
+        m.rhs.set_value(3)
+        for mode in all_diff_modes:
+            m.x.set_value(1)
+            with self.assertRaisesRegex(
+                IterationLimitError,
+                "Linesearch iteration limit reached solving for variable 'x' using "
+                "constraint 'g'; remaining residual = "
+                + SCIENTIFIC_NOTATION_REGEX
+                + r"\.",
+            ):
+                calculate_variable_from_constraint(
+                    m.x, m.g, diff_mode=mode, scale_problem=True
+                )
+
         # Calculate the bubble point of Benzene.  The first step
         # computed by calculate_variable_from_constraint will make the
         # second term become complex, and the evaluation will fail.
@@ -435,8 +493,7 @@ class Test_calc_var(unittest.TestCase):
 
     @unittest.skipUnless(differentiate_available, "this test requires sympy")
     def test_clip_bounds_nonlinear(self):
-        # This test was written with the assistance of Google Gemini 3.5 Flash
-        # (in order to generate the regex to match the value in the log).
+
         m = ConcreteModel()
         # The first step of Newton's method will overshoot the root
         # and subsequent steps will be negative.
@@ -447,7 +504,9 @@ class Test_calc_var(unittest.TestCase):
             calculate_variable_from_constraint(m.x, m.c, eps=1e-6, linesearch=False)
         self.assertRegex(
             LOG.getvalue().strip(),
-            r"Setting Var 'x' to a numeric value `-?(?:\d+(?:\.\d*)?|\.\d+)[eE][+-]?\d+` outside the "
+            r"Setting Var 'x' to a numeric value `"
+            + SCIENTIFIC_NOTATION_REGEX
+            + "` outside the "
             r"bounds \(0, None\).",
         )
         self.assertAlmostEqual(value(m.x), 0)

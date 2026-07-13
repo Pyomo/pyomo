@@ -301,11 +301,18 @@ def calculate_variable_from_constraint(
     while abs(fk) > eps and iter_left:
         iter_left -= 1
         if not iter_left:
-            raise IterationLimitError(
-                f"Iteration limit (%s) reached solving for variable '{variable}' "
-                f"using constraint '{constraint}'; remaining residual = %s"
-                % (iterlim, value(expr))
-            )
+            if scale_problem:
+                raise IterationLimitError(
+                    f"Iteration limit (%s) reached solving for variable '{variable}' "
+                    f"using constraint '{constraint}'; remaining (scaled) residual = %s"
+                    % (iterlim, sf_constraint * value(expr))
+                )
+            else:
+                raise IterationLimitError(
+                    f"Iteration limit (%s) reached solving for variable '{variable}' "
+                    f"using constraint '{constraint}'; remaining residual = %s"
+                    % (iterlim, value(expr))
+                )
 
         # compute step
         xk = value(variable)
@@ -356,7 +363,11 @@ def calculate_variable_from_constraint(
                     if fkp1.__class__ in _invalid_types:
                         # We cannot perform computations on complex numbers
                         fkp1 = None
-                    if fkp1 is not None and fkp1**2 < c1 * fk**2:
+                    if (
+                        fkp1 is not None
+                        and (fkp1 * sf_constraint / sf_variable) ** 2
+                        < c1 * (fk * sf_constraint / sf_variable) ** 2
+                    ):
                         # found an alpha value with sufficient reduction
                         # continue to the next step
                         fk = fkp1
