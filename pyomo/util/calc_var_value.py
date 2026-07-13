@@ -363,10 +363,10 @@ def calculate_variable_from_constraint(
                     if fkp1.__class__ in _invalid_types:
                         # We cannot perform computations on complex numbers
                         fkp1 = None
+                    # Why isn't this the Armijo condition?
                     if (
                         fkp1 is not None
-                        and (fkp1 * sf_constraint / sf_variable) ** 2
-                        < c1 * (fk * sf_constraint / sf_variable) ** 2
+                        and (fkp1 * sf_constraint) ** 2 < c1 * (fk * sf_constraint) ** 2
                     ):
                         # found an alpha value with sufficient reduction
                         # continue to the next step

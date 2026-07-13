@@ -573,7 +573,3 @@ class Test_calc_var(unittest.TestCase):
 
         calculate_variable_from_constraint(m.x, m.con)
         self.assertAlmostEqual(value(m.x), 0)
-
-
-if __name__ == "__main__":
-    unittest.main()
