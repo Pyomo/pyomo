@@ -202,7 +202,7 @@ def _build_meas_error_covariance(model, estimated_var=None):
 
         # fill the off-diagonal elements from covariance entries
         for key, entry in model.measurement_error.items():
-            if isinstance(key, tuple) and len(key) == 2:
+            if len(key) == 2 and isinstance(key, tuple):
                 yi, yj = key
                 if yi.name not in output_index or yj.name not in output_index:
                     raise ValueError(
@@ -217,6 +217,12 @@ def _build_meas_error_covariance(model, estimated_var=None):
                 # update the covariance entries
                 Sigma_y[i, j] = entry
                 Sigma_y[j, i] = entry
+            elif len(key) == 2 and not isinstance(key, tuple):
+                raise TypeError(
+                    "Expected a tuple of two measured variables when specifying a "
+                    "measurement-error covariance, e.g., "
+                    "measurement_error[(y1, y2)] = covariance."
+                )
 
     return Sigma_y
 

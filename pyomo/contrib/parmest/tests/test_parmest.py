@@ -146,10 +146,7 @@ class TestParmestCovEst(unittest.TestCase):
         ][0]
 
         if measurement_error is None and obj_function == "SSE":
-            if (
-                cov_method == "finite_difference"
-                or cov_method == "automatic_differentiation_kaug"
-            ):
+            if cov_method in ("finite_difference", "automatic_differentiation_kaug"):
                 self.assertAlmostEqual(
                     cov.iloc[asymptote_index, asymptote_index], 6.229612, places=2
                 )  # 6.22864 from paper
@@ -180,10 +177,7 @@ class TestParmestCovEst(unittest.TestCase):
                     places=2,
                 )  # 0.04124 from paper
         elif measurement_error is not None and obj_function in ("SSE", "SSE_weighted"):
-            if (
-                cov_method == "finite_difference"
-                or cov_method == "automatic_differentiation_kaug"
-            ):
+            if cov_method in ("finite_difference", "automatic_differentiation_kaug"):
                 self.assertAlmostEqual(
                     cov.iloc[asymptote_index, asymptote_index], 0.009588, places=4
                 )
@@ -845,9 +839,9 @@ class TestModelVariants(unittest.TestCase):
                 m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.measurement_error.update([(m.y, None)])
 
-        rooney_biegler_indexed_vars_exp_list = []
+        self.rooney_biegler_indexed_vars_exp_list = []
         for i in range(self.data.shape[0]):
-            rooney_biegler_indexed_vars_exp_list.append(
+            self.rooney_biegler_indexed_vars_exp_list.append(
                 RooneyBieglerExperimentIndexedVars(self.data.loc[i, :])
             )
 
@@ -875,24 +869,24 @@ class TestModelVariants(unittest.TestCase):
                 "theta_vals": theta_vals,
             },
             "vars_index": {
-                "exp_list": rooney_biegler_indexed_vars_exp_list,
+                "exp_list": self.rooney_biegler_indexed_vars_exp_list,
                 "theta_names": ["theta"],
                 "theta_vals": theta_vals_index,
             },
             "vars_quoted_index": {
-                "exp_list": rooney_biegler_indexed_vars_exp_list,
+                "exp_list": self.rooney_biegler_indexed_vars_exp_list,
                 "theta_names": ["theta['asymptote']", "theta['rate_constant']"],
                 "theta_vals": theta_vals_index,
             },
             "vars_str_index": {
-                "exp_list": rooney_biegler_indexed_vars_exp_list,
+                "exp_list": self.rooney_biegler_indexed_vars_exp_list,
                 "theta_names": ["theta[asymptote]", "theta[rate_constant]"],
                 "theta_vals": theta_vals_index,
             },
         }
 
     @unittest.skipIf(not pynumero_ASL_available, "pynumero_ASL is not available")
-    def check_rooney_biegler_results(self, objval, cov):
+    def check_rooney_biegler_results(self, objval, cov, cov_method="reduced_hessian"):
 
         # get indices in covariance matrix
         cov_cols = cov.columns.to_list()
@@ -902,18 +896,35 @@ class TestModelVariants(unittest.TestCase):
         ][0]
 
         self.assertAlmostEqual(objval, 4.3317112, places=2)
-        self.assertAlmostEqual(
-            cov.iloc[asymptote_index, asymptote_index], 6.155892, places=2
-        )  # 6.22864 from paper
-        self.assertAlmostEqual(
-            cov.iloc[asymptote_index, rate_constant_index], -0.425232, places=2
-        )  # -0.4322 from paper
-        self.assertAlmostEqual(
-            cov.iloc[rate_constant_index, asymptote_index], -0.425232, places=2
-        )  # -0.4322 from paper
-        self.assertAlmostEqual(
-            cov.iloc[rate_constant_index, rate_constant_index], 0.040571, places=2
-        )  # 0.04124 from paper
+
+        if cov_method in ("finite_difference", "automatic_differentiation_kaug"):
+            self.assertAlmostEqual(
+                cov.iloc[asymptote_index, asymptote_index], 6.229612, places=2
+            )  # 6.22864 from paper
+            self.assertAlmostEqual(
+                cov.iloc[asymptote_index, rate_constant_index], -0.432265, places=2
+            )  # -0.4322 from paper
+            self.assertAlmostEqual(
+                cov.iloc[rate_constant_index, asymptote_index], -0.432265, places=2
+            )  # -0.4322 from paper
+            self.assertAlmostEqual(
+                cov.iloc[rate_constant_index, rate_constant_index],
+                0.041242,
+                places=2,
+            )  # 0.04124 from paper
+        else:
+            self.assertAlmostEqual(
+                cov.iloc[asymptote_index, asymptote_index], 6.155892, places=2
+            )  # 6.22864 from paper
+            self.assertAlmostEqual(
+                cov.iloc[asymptote_index, rate_constant_index], -0.425232, places=2
+            )  # -0.4322 from paper
+            self.assertAlmostEqual(
+                cov.iloc[rate_constant_index, asymptote_index], -0.425232, places=2
+            )  # -0.4322 from paper
+            self.assertAlmostEqual(
+                cov.iloc[rate_constant_index, rate_constant_index], 0.040571, places=2
+            )  # 0.04124 from paper
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics(self):
@@ -984,6 +995,32 @@ class TestModelVariants(unittest.TestCase):
             objval, thetavals = pest.theta_est()
             cov = pest.cov_est(method="reduced_hessian")
             self.check_rooney_biegler_results(objval, cov)
+
+    @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
+    def test_parmest_indexed_vars_finite_difference_cov(self):
+
+        pest = parmest.Estimator(
+            self.rooney_biegler_indexed_vars_exp_list,
+            obj_function=self.objective_function
+        )
+
+        objval, thetavals = pest.theta_est()
+        cov_method = "finite_difference"
+        cov = pest.cov_est(method=cov_method)
+        self.check_rooney_biegler_results(objval, cov, cov_method)
+
+    @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
+    def test_parmest_indexed_vars_auto_differentiation_cov(self):
+
+        pest = parmest.Estimator(
+            self.rooney_biegler_indexed_vars_exp_list,
+            obj_function=self.objective_function
+        )
+
+        objval, thetavals = pest.theta_est()
+        cov_method = "automatic_differentiation_kaug"
+        cov = pest.cov_est(method=cov_method)
+        self.check_rooney_biegler_results(objval, cov, cov_method)
 
 
 @unittest.skipIf(
