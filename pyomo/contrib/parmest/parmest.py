@@ -148,6 +148,77 @@ def SSE_weighted(model):
             'the measurement errors are required for the "SSE_weighted" objective.'
         )
 
+def _build_meas_error_covariance(model, estimated_var=None):
+    """
+    Builds the full measurement-error covariance matrix
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Annotated Pyomo model
+    estimated_var: float, optional
+        Value of the estimated variance of the measurement error
+
+    Returns
+    -------
+    Sigma_y: numpy.ndarray
+        Full measurement-error covariance matrix
+    """
+    # get the output variables
+    outputs = list(model.experiment_outputs.keys())
+    output_index = {y: i for i, y in enumerate(outputs)}
+
+    # get the number of output variables
+    number_outputs = len(outputs)
+
+    # define the measurement-error covariance matrix
+    Sigma_y = np.zeros((number_outputs, number_outputs))
+
+    if hasattr(model, "measurement_error"):
+        # check if all the measurement-error standard deviation
+        # has been supplied
+        all_known_errors = all(
+            model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
+        )
+
+        # get the measurement errors
+        meas_error = list(model.measurement_error.keys())
+
+        # check if the dimension of meas_error is the same with that of outputs
+        if len(meas_error) != len(outputs):
+            raise ValueError(
+                "Experiment outputs and measurement errors are not the same length."
+            )
+
+        # fill the diagonal elements from the standard deviation of
+        # the measurement errors
+        for y, i in output_index.items():
+            if y in meas_error and all_known_errors:
+                standard_dev = model.measurement_error[y]
+                Sigma_y[i, i] = standard_dev ** 2
+            elif y in meas_error and not all_known_errors:
+                Sigma_y[i, i] = estimated_var
+
+        # fill the off-diagonal elements from covariance entries
+        for key, entry in model.measurement_error.items():
+            if isinstance(key, tuple) and len(key) == 2:
+                yi, yj = key
+                if yi not in output_index or yj not in output_index:
+                    raise ValueError(
+                        "One of the variables defined in the covariance of the "
+                        "measurement errors is not an experiment output variable."
+                    )
+
+                # get the indices of yi and yj
+                i = output_index[yi]
+                j = output_index[yj]
+
+                # update the covariance entries
+                Sigma_y[i, j] = entry
+                Sigma_y[j, i] = entry
+
+    return Sigma_y
+
 
 def _validate_prior_FIM(prior_FIM, require_psd=True):
     """
@@ -813,36 +884,20 @@ def _finite_difference_FIM(
     # grab the model
     model = _get_labeled_model(experiment)
 
-    # extract the measured variables and measurement errors
-    y_hat_list = [y_hat for y_hat, y in model.experiment_outputs.items()]
+    # compute the measurement-error covariance matrix
+    Sigma_y = _build_meas_error_covariance(model, estimated_var)
 
-    # check if the model has a 'measurement_error' attribute and
-    # the measurement error standard deviation has been supplied
-    all_known_errors = all(
-        model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
-    )
+    # compute the inverse of the measurement-error covariance matrix
+    try:
+        Sigma_y_inv = np.linalg.inv(Sigma_y)
+    except np.linalg.LinAlgError:
+        Sigma_y_inv = np.linalg.pinv(Sigma_y)
+        logger.warning("The measurement-error covariance matrix is singular. "
+                       "Using pseudo-inverse instead.")
 
-    if hasattr(model, "measurement_error") and all_known_errors:
-        error_list = [
-            model.measurement_error[y_hat] for y_hat in model.experiment_outputs
-        ]
-
-        # check if the dimension of error_list is the same with that of y_hat_list
-        if len(error_list) != len(y_hat_list):
-            raise ValueError(
-                "Experiment outputs and measurement errors are not the same length."
-            )
-
-        # compute the matrix of the inverse of the measurement error variance
-        # the following assumes independent and identically distributed
-        # measurement errors
-        W = np.diag([1 / (err**2) for err in error_list])
-
-        # calculate the FIM using the formula in our future paper
-        # Lilonfe et al. (2025)
-        FIM = J.T @ W @ J
-    else:
-        FIM = (1 / estimated_var) * (J.T @ J)
+    # calculate the FIM using the formula in our future paper
+    # Lilonfe and Dowling. (2026)
+    FIM = J.T @ Sigma_y @ J
 
     return FIM
 
@@ -954,24 +1009,19 @@ def _kaug_FIM(
     # record kaug jacobian
     kaug_jac = np.array(jac).T
 
-    # compute FIM
-    # compute the matrix of the inverse of the measurement error variance
-    # the following assumes independent and identically distributed
-    # measurement errors
-    W = np.zeros((len(model.measurement_error), len(model.measurement_error)))
-    all_known_errors = all(
-        model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
-    )
+    # compute the measurement-error covariance matrix
+    Sigma_y = _build_meas_error_covariance(model, estimated_var)
 
-    count = 0
-    for k, v in model.measurement_error.items():
-        if all_known_errors:
-            W[count, count] = 1 / (v**2)
-        else:
-            W[count, count] = 1 / estimated_var
-        count += 1
+    # compute the inverse of the measurement-error covariance matrix
+    try:
+        Sigma_y_inv = np.linalg.inv(Sigma_y)
+    except np.linalg.LinAlgError:
+        Sigma_y_inv = np.linalg.pinv(Sigma_y)
+        logger.warning("The measurement-error covariance matrix is singular. "
+                       "Using pseudo-inverse instead.")
 
-    FIM = kaug_jac.T @ W @ kaug_jac
+    # compute the FIM
+    FIM = kaug_jac.T @ Sigma_y_inv @ kaug_jac
 
     return FIM
 
