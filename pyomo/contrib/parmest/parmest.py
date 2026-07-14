@@ -450,8 +450,7 @@ def _get_labeled_model(experiment):
 
 def _get_param_data_objects(model):
     """
-    Creates a list of the data objects for indexed parameters
-    or scalar parameters
+    Creates a list of the data objects for indexed or scalar parameters
 
     Parameters
     ----------
