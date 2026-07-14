@@ -192,11 +192,11 @@ def _build_meas_error_covariance(model, estimated_var=None):
 
         # fill the diagonal elements from the standard deviation of
         # the measurement errors
-        for y, i in output_index.items():
-            if y in meas_error_outputs and all_known_errors:
-                standard_dev = model.measurement_error[y]
+        for y_name, i in output_index.items():
+            if y_name in meas_error_outputs and all_known_errors:
+                standard_dev = model.measurement_error[model.find_component(y_name)]
                 Sigma_y[i, i] = standard_dev ** 2
-            elif y in meas_error_outputs and not all_known_errors:
+            elif y_name in meas_error_outputs and not all_known_errors:
                 Sigma_y[i, i] = estimated_var
 
         # fill the off-diagonal elements from covariance entries
@@ -216,11 +216,6 @@ def _build_meas_error_covariance(model, estimated_var=None):
                 # update the covariance entries
                 Sigma_y[i, j] = entry
                 Sigma_y[j, i] = entry
-            else:
-                raise TypeError(
-                    "The covariance between two measured variables must be defined "
-                    "using a tuple."
-                )
 
     return Sigma_y
 
@@ -902,7 +897,7 @@ def _finite_difference_FIM(
 
     # calculate the FIM using the formula in our future paper
     # Lilonfe and Dowling. (2026)
-    FIM = J.T @ Sigma_y @ J
+    FIM = J.T @ Sigma_y_inv @ J
 
     return FIM
 
