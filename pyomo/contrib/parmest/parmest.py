@@ -1781,13 +1781,12 @@ class Estimator:
             for experiment in self.exp_list:
                 model = _get_labeled_model(experiment)
 
+                # get the parameter data objects
+                param_data_objects = _get_param_data_objects(model)
+
                 # fix the value of the unknown parameters to the estimated values
-                for param in model.unknown_parameters:
-                    if param.is_indexed():
-                        for idx in param:
-                            param[idx].fix(self.estimated_theta[param[idx].name])
-                    else:
-                        param.fix(self.estimated_theta[param.name])
+                for param in param_data_objects:
+                    param.fix(self.estimated_theta[param.name])
 
                 # re-solve the model with the estimated parameters
                 results = pyo.SolverFactory(solver).solve(model, tee=self.tee)
