@@ -179,7 +179,8 @@ def _build_meas_error_covariance(model, estimated_var=None):
         # check if all the measurement-error standard deviation
         # has been supplied
         all_known_errors = all(
-            model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
+            model.measurement_error[y_hat] is not None
+            for y_hat in model.experiment_outputs
         )
 
         # get the variables defined in the "measurement_error" attribute
@@ -196,7 +197,7 @@ def _build_meas_error_covariance(model, estimated_var=None):
         for y_name, i in output_index.items():
             if y_name in meas_error_outputs and all_known_errors:
                 standard_dev = model.measurement_error[model.find_component(y_name)]
-                Sigma_y[i, i] = standard_dev ** 2
+                Sigma_y[i, i] = standard_dev**2
             elif y_name in meas_error_outputs and not all_known_errors:
                 Sigma_y[i, i] = estimated_var
 
@@ -928,8 +929,10 @@ def _finite_difference_FIM(
         Sigma_y_inv = np.linalg.inv(Sigma_y)
     except np.linalg.LinAlgError:
         Sigma_y_inv = np.linalg.pinv(Sigma_y)
-        logger.warning("The measurement-error covariance matrix is singular. "
-                       "Using pseudo-inverse instead.")
+        logger.warning(
+            "The measurement-error covariance matrix is singular. "
+            "Using pseudo-inverse instead."
+        )
 
     # calculate the FIM using the formula in our future paper
     # Lilonfe and Dowling. (2026)
@@ -1056,8 +1059,10 @@ def _kaug_FIM(
         Sigma_y_inv = np.linalg.inv(Sigma_y)
     except np.linalg.LinAlgError:
         Sigma_y_inv = np.linalg.pinv(Sigma_y)
-        logger.warning("The measurement-error covariance matrix is singular. "
-                       "Using pseudo-inverse instead.")
+        logger.warning(
+            "The measurement-error covariance matrix is singular. "
+            "Using pseudo-inverse instead."
+        )
 
     # compute the FIM
     FIM = kaug_jac.T @ Sigma_y_inv @ kaug_jac

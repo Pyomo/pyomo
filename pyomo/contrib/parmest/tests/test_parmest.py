@@ -908,9 +908,7 @@ class TestModelVariants(unittest.TestCase):
                 cov.iloc[rate_constant_index, asymptote_index], -0.432265, places=2
             )  # -0.4322 from paper
             self.assertAlmostEqual(
-                cov.iloc[rate_constant_index, rate_constant_index],
-                0.041242,
-                places=2,
+                cov.iloc[rate_constant_index, rate_constant_index], 0.041242, places=2
             )  # 0.04124 from paper
         else:
             self.assertAlmostEqual(
@@ -1001,7 +999,7 @@ class TestModelVariants(unittest.TestCase):
 
         pest = parmest.Estimator(
             self.rooney_biegler_indexed_vars_exp_list,
-            obj_function=self.objective_function
+            obj_function=self.objective_function,
         )
 
         objval, thetavals = pest.theta_est()
@@ -1014,7 +1012,7 @@ class TestModelVariants(unittest.TestCase):
 
         pest = parmest.Estimator(
             self.rooney_biegler_indexed_vars_exp_list,
-            obj_function=self.objective_function
+            obj_function=self.objective_function,
         )
 
         objval, thetavals = pest.theta_est()
