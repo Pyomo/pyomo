@@ -166,7 +166,7 @@ def _build_meas_error_covariance(model, estimated_var=None):
     """
     # get the output variables
     outputs = list(model.experiment_outputs.keys())
-    output_index = {y: i for i, y in enumerate(outputs)}
+    output_index = {y.name: i for i, y in enumerate(outputs)}
 
     # get the number of output variables
     number_outputs = len(outputs)
@@ -181,11 +181,11 @@ def _build_meas_error_covariance(model, estimated_var=None):
             model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
         )
 
-        # get the measurement errors
-        meas_error = list(model.measurement_error.keys())
+        # get the measurement-error variables
+        meas_error_outputs = [y_hat.name for y_hat in model.measurement_error]
 
         # check if the dimension of meas_error is the same with that of outputs
-        if len(meas_error) != len(outputs):
+        if len(meas_error_outputs) != len(outputs):
             raise ValueError(
                 "Experiment outputs and measurement errors are not the same length."
             )
@@ -193,29 +193,34 @@ def _build_meas_error_covariance(model, estimated_var=None):
         # fill the diagonal elements from the standard deviation of
         # the measurement errors
         for y, i in output_index.items():
-            if y in meas_error and all_known_errors:
+            if y in meas_error_outputs and all_known_errors:
                 standard_dev = model.measurement_error[y]
                 Sigma_y[i, i] = standard_dev ** 2
-            elif y in meas_error and not all_known_errors:
+            elif y in meas_error_outputs and not all_known_errors:
                 Sigma_y[i, i] = estimated_var
 
         # fill the off-diagonal elements from covariance entries
         for key, entry in model.measurement_error.items():
             if isinstance(key, tuple) and len(key) == 2:
                 yi, yj = key
-                if yi not in output_index or yj not in output_index:
+                if yi.name not in output_index or yj.name not in output_index:
                     raise ValueError(
                         "One of the variables defined in the covariance of the "
                         "measurement errors is not an experiment output variable."
                     )
 
                 # get the indices of yi and yj
-                i = output_index[yi]
-                j = output_index[yj]
+                i = output_index[yi.name]
+                j = output_index[yj.name]
 
                 # update the covariance entries
                 Sigma_y[i, j] = entry
                 Sigma_y[j, i] = entry
+            else:
+                raise TypeError(
+                    "The covariance between two measured variables must be defined "
+                    "using a tuple."
+                )
 
     return Sigma_y
 
