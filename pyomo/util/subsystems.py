@@ -7,16 +7,18 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-from pyomo.core.base.block import Block
+from pyomo.core.base.block import Block, BlockData
 from pyomo.core.base.reference import Reference
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.modeling import unique_component_name
 from pyomo.util.vars_from_expressions import get_vars_from_components
+from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.expression import Expression
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.external import ExternalFunction
+from pyomo.core.base.suffix import Suffix, SuffixFinder
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 from pyomo.core.expr.numvalue import native_types, NumericValue
@@ -392,3 +394,55 @@ class ParamSweeper(TemporarySubsystemManager):
             )
 
             return inputs, outputs
+
+
+# Based on code that John Eslick originally wrote for IDAES.
+#################################################################################
+# The Institute for the Design of Advanced Energy Systems Integrated Platform
+# Framework (IDAES IP) was produced under the DOE Institute for the
+# Design of Advanced Energy Systems (IDAES).
+#
+# Copyright (c) 2018-2026 by the software owners: The Regents of the
+# University of California, through Lawrence Berkeley National Laboratory,
+# National Technology & Engineering Solutions of Sandia, LLC, Carnegie Mellon
+# University, West Virginia University Research Corporation, et al.
+# All rights reserved.  Please see the files COPYRIGHT.md and LICENSE.md
+# for full copyright and license information.
+#################################################################################
+
+
+def copy_scaling_factors_to_block(
+    source_block: BlockData, destination_block: BlockData, overwrite=True
+):
+    """
+    Copies variable and constraint scaling factors from one block heirarchy to
+    another. Copying scaling factors is useful when creating a temporary block
+    to solve a subproblem because the .nl writer will not use any scaling factors
+    on the original model (see Pyomo #3800).
+
+    Arguments
+    ---------
+        source_block: BlockData
+            Scaling factors will be copied from this BlockData. Any scaling factors
+            from any child blocks will also be copied, but *not* from any parent block(s)
+        destination_block: BlockData
+            Scaling factors will be copied to the scaling_factor Suffix on this BlockData.
+            If no such suffix exists, it will be created.
+        overwrite: Bool
+            Whether to overwrite any scaling factors that may already exist on destination_block.
+
+    Returns
+    -------
+        None
+
+    """
+    if not hasattr(destination_block, "scaling_factor"):
+        destination_block.scaling_factor = Suffix(direction=Suffix.EXPORT)
+    finder = SuffixFinder('scaling_factor', None, source_block)
+    for comp in destination_block.component_data_objects((Var, Constraint)):
+        sf = finder.find(comp)
+        if sf is not None:
+            if not overwrite and comp in destination_block.scaling_factor:
+                # Component already has a scaling factor, so don't overwrite it.
+                continue
+            destination_block.scaling_factor[comp] = sf
