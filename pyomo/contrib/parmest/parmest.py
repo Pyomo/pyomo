@@ -181,7 +181,7 @@ def _build_meas_error_covariance(model, estimated_var=None):
             model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
         )
 
-        # get the measurement-error variables
+        # get the variables defined in the "measurement_error" attribute
         meas_error_outputs = [y_hat.name for y_hat in model.measurement_error]
 
         # check if the dimension of meas_error is the same with that of outputs
