@@ -161,6 +161,13 @@ def _build_meas_error_covariance(model, estimated_var=None):
     """
     Builds the full measurement-error covariance matrix
 
+    Note: The code does not automatically build the full covariance matrix
+    It only places whatever covariances the user explicitly supplies
+    The leading-diagonal elements can be constructed automatically or
+    from user-supplied values
+    Therefore, for correlation in time, shared timepoints, or other types of
+    correlation, the user must provide all the desired covariance terms
+
     Parameters
     ----------
     model : ConcreteModel

@@ -1464,11 +1464,11 @@ class TestReactorDesign_DAE(unittest.TestCase):
 
         obj3, theta3 = pest3.theta_est()
         with pytest.raises(
-                KeyError,
-                match='One or more experiment outputs are not defined in the '
-                '"measurement_error" attribute. All the variables defined '
-                'in "experiment_outputs" must be defined as keys in '
-                '"measurement_error".',
+            KeyError,
+            match='One or more experiment outputs are not defined in the '
+            '"measurement_error" attribute. All the variables defined '
+            'in "experiment_outputs" must be defined as keys in '
+            '"measurement_error".',
         ):
             pest3.cov_est()
 
@@ -1478,9 +1478,9 @@ class TestReactorDesign_DAE(unittest.TestCase):
         with pytest.raises(
             KeyError,
             match='One or more experiment outputs are not defined in the '
-                  '"measurement_error" attribute. All the variables defined '
-                  'in "experiment_outputs" must be defined as keys in '
-                  '"measurement_error".',
+            '"measurement_error" attribute. All the variables defined '
+            'in "experiment_outputs" must be defined as keys in '
+            '"measurement_error".',
         ):
             obj4, theta4 = pest4.theta_est()
 
