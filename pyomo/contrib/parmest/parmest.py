@@ -103,8 +103,8 @@ def SSE(model):
 def SSE_weighted(model):
     """
     Returns an expression that is used to compute the 'SSE_weighted' objective,
-    assuming Gaussian i.i.d. errors, with measurement error standard deviation
-    defined in the annotated Pyomo model
+    assuming Gaussian correlated or i.i.d. errors, with the standard deviation
+    or covariance of the measurement errors defined in the annotated Pyomo model
 
     Parameters
     ----------
@@ -137,19 +137,30 @@ def SSE_weighted(model):
         )
 
     if all_known_errors:
+        # calculate the difference between the model predictions and data
+        prediction_diff = np.array(
+            [
+                y - y_hat for y_hat, y in model.experiment_outputs.items()
+            ]
+        ).reshape(1, -1)
+
+        # build the measurement-error covariance matrix
+        Sigma_y = _build_meas_error_covariance(model)
+
+        # compute the inverse of the measurement-error covariance matrix
+        try:
+            Sigma_y_inv = np.linalg.inv(Sigma_y)
+        except np.linalg.LinAlgError:
+            Sigma_y_inv = np.linalg.pinv(Sigma_y)
+            logger.warning(
+                "The measurement-error covariance matrix is singular. "
+                "Using pseudo-inverse instead."
+            )
+
         # calculate the weighted SSE between the prediction
         # and observation of the measured variables
-        try:
-            expr = (1 / 2) * sum(
-                ((y - y_hat) / model.measurement_error[y_hat]) ** 2
-                for y_hat, y in model.experiment_outputs.items()
-            )
-            return expr
-        except ZeroDivisionError:
-            raise ValueError(
-                'Division by zero encountered in the "SSE_weighted" objective. '
-                'One or more values of the measurement error are zero.'
-            )
+        expr = (1 / 2) * prediction_diff @ Sigma_y_inv @ prediction_diff.T
+        return expr[0, 0]
     else:
         raise ValueError(
             'One or more values are missing from "measurement_error". All values of '
