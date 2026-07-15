@@ -1286,7 +1286,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
 
         # create an instance of the ReactorDesignExperimentDAE class
         # without the "unknown_parameters" attribute
-        class ReactorDesignExperimentException(ReactorDesignExperimentDAE):
+        class ReactorDesignParameterException(ReactorDesignExperimentDAE):
             def label_model(self):
 
                 m = self.model
@@ -1308,11 +1308,114 @@ class TestReactorDesign_DAE(unittest.TestCase):
                 )
 
         # create an experiment list without the "unknown_parameters" attribute
-        exp_list_df_no_params = [ReactorDesignExperimentException(data_df)]
-        exp_list_dict_no_params = [ReactorDesignExperimentException(data_dict)]
+        self.exp_list_df_no_params = [ReactorDesignParameterException(data_df)]
+        self.exp_list_dict_no_params = [ReactorDesignParameterException(data_dict)]
 
-        self.exp_list_df_no_params = exp_list_df_no_params
-        self.exp_list_dict_no_params = exp_list_dict_no_params
+        # create instances of the ReactorDesignExperimentDAE class
+        # with incorrect definition of the measurement-error covariance
+        class ReactorErrorCovarianceException1(ReactorDesignExperimentDAE):
+            def label_model(self):
+
+                m = self.model
+
+                if isinstance(self.data, pd.DataFrame):
+                    meas_time_points = self.data.index
+                else:
+                    meas_time_points = list(self.data["ca"].keys())
+
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update(
+                    (m.ca[t], self.data["ca"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cb[t], self.data["cb"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cc[t], self.data["cc"][t]) for t in meas_time_points
+                )
+
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    (k, pyo.ComponentUID(k)) for k in [m.k1, m.k2]
+                )
+
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update((m.ca[t], 0.01) for t in meas_time_points)
+                m.measurement_error.update((m.cb[t], 0.01) for t in meas_time_points)
+                m.measurement_error.update((m.cc[t], 0.01) for t in meas_time_points)
+                m.measurement_error.update(
+                    ([m.ca[t], m.cb[t]], 0.1) for t in meas_time_points
+                )
+
+        class ReactorErrorCovarianceException2(ReactorDesignExperimentDAE):
+            def label_model(self):
+
+                m = self.model
+
+                if isinstance(self.data, pd.DataFrame):
+                    meas_time_points = self.data.index
+                else:
+                    meas_time_points = list(self.data["ca"].keys())
+
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update(
+                    (m.ca[t], self.data["ca"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cb[t], self.data["cb"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cc[t], self.data["cc"][t]) for t in meas_time_points
+                )
+
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    (k, pyo.ComponentUID(k)) for k in [m.k1, m.k2]
+                )
+
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update((m.ca[t], 0.01) for t in meas_time_points)
+                m.measurement_error.update((m.cb[t], 0.01) for t in meas_time_points)
+                m.measurement_error.update((m.cc[t], 0.01) for t in meas_time_points)
+                m.measurement_error.update(
+                    ((m.ca[t], m.k1), 0.1) for t in meas_time_points
+                )
+
+        class ReactorIncompleteErrorException(ReactorDesignExperimentDAE):
+            def label_model(self):
+
+                m = self.model
+
+                if isinstance(self.data, pd.DataFrame):
+                    meas_time_points = self.data.index
+                else:
+                    meas_time_points = list(self.data["ca"].keys())
+
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update(
+                    (m.ca[t], self.data["ca"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cb[t], self.data["cb"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cc[t], self.data["cc"][t]) for t in meas_time_points
+                )
+
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    (k, pyo.ComponentUID(k)) for k in [m.k1, m.k2]
+                )
+
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update((m.ca[t], 0.01) for t in meas_time_points)
+                m.measurement_error.update((m.cb[t], 0.01) for t in meas_time_points)
+
+        # create an experiment list with the incorrect definition of the
+        # measurement-error covariance
+        self.exp_list_df_incorrect_err_cov1 = [ReactorErrorCovarianceException1(data_df)]
+        self.exp_list_df_incorrect_err_cov2 = [ReactorErrorCovarianceException2(data_df)]
+        self.exp_list_df_incomplete_err = [ReactorIncompleteErrorException(data_df)]
 
     def test_unknown_parameters_exception(self):
         """
@@ -1328,6 +1431,58 @@ class TestReactorDesign_DAE(unittest.TestCase):
             parmest.Estimator(self.exp_list_dict_no_params, obj_function="SSE")
 
         self.assertIn("unknown_parameters", str(context.exception))
+
+    def test_incorrect_error_covariance_exception(self):
+        """
+        Test the exception raised by parmest when the measurement-error
+        covariance is defined incorrectly
+        """
+        pest1 = parmest.Estimator(self.exp_list_df_incorrect_err_cov1,
+                                  obj_function="SSE")
+
+        obj1, theta1 = pest1.theta_est()
+        with pytest.raises(
+            TypeError,
+            match=r"Expected a tuple of two measured variables when specifying a "
+            r"measurement-error covariance, e\.g\., "
+            r"measurement_error\[\(y1, y2\)\] = covariance\.",
+        ):
+            pest1.cov_est()
+
+        pest2 = parmest.Estimator(self.exp_list_df_incorrect_err_cov2,
+                                  obj_function="SSE")
+
+        obj2, theta2 = pest2.theta_est()
+        with pytest.raises(
+            ValueError,
+            match=r"Measurement-error covariance must be defined only between "
+            r"experiment output variables\.",
+        ):
+            pest2.cov_est()
+
+        pest3 = parmest.Estimator(self.exp_list_df_incomplete_err, obj_function="SSE")
+
+        obj3, theta3 = pest3.theta_est()
+        with pytest.raises(
+                KeyError,
+                match='One or more experiment outputs are not defined in the '
+                '"measurement_error" attribute. All the variables defined '
+                'in "experiment_outputs" must be defined as keys in '
+                '"measurement_error".',
+        ):
+            pest3.cov_est()
+
+        pest4 = parmest.Estimator(self.exp_list_df_incomplete_err,
+                                  obj_function="SSE_weighted")
+
+        with pytest.raises(
+            KeyError,
+            match='One or more experiment outputs are not defined in the '
+                  '"measurement_error" attribute. All the variables defined '
+                  'in "experiment_outputs" must be defined as keys in '
+                  '"measurement_error".',
+        ):
+            obj4, theta4 = pest4.theta_est()
 
     def test_dataformats(self):
         obj1, theta1 = self.pest_df.theta_est()

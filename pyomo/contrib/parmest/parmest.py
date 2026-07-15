@@ -124,9 +124,17 @@ def SSE_weighted(model):
 
     # check if all the values of the measurement error standard deviation
     # have been supplied
-    all_known_errors = all(
-        model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
-    )
+    try:
+        all_known_errors = all(
+            model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
+        )
+    except KeyError:
+        raise KeyError(
+            'One or more experiment outputs are not defined in the '
+            '"measurement_error" attribute. All the variables defined '
+            'in "experiment_outputs" must be defined as keys in '
+            '"measurement_error".'
+        )
 
     if all_known_errors:
         # calculate the weighted SSE between the prediction
@@ -166,59 +174,51 @@ def _build_meas_error_covariance(model, estimated_var=None):
         Full measurement-error covariance matrix
     """
     # get the output variables
-    outputs = list(model.experiment_outputs.keys())
-    output_index = {y.name: i for i, y in enumerate(outputs)}
+    outputs_name = [y.name for y in model.experiment_outputs]
+    output_index = {y: i for i, y in enumerate(outputs_name)}
 
     # get the number of output variables
-    number_outputs = len(outputs)
+    number_outputs = len(outputs_name)
 
     # define the measurement-error covariance matrix
     Sigma_y = np.zeros((number_outputs, number_outputs))
 
     if hasattr(model, "measurement_error"):
-        # check if all the measurement-error standard deviation
-        # has been supplied
+        # check if all the measurement-error standard deviations
+        # have been supplied
         all_known_errors = all(
             model.measurement_error[y_hat] is not None
             for y_hat in model.experiment_outputs
         )
 
-        # get the variables defined in the "measurement_error" attribute
-        meas_error_outputs = [y_hat.name for y_hat in model.measurement_error]
-
-        # check if the dimension of meas_error is the same with that of outputs
-        if len(meas_error_outputs) != len(outputs):
-            raise ValueError(
-                "Experiment outputs and measurement errors are not the same length."
-            )
-
-        # fill the diagonal elements from the standard deviation of
+        # fill the leading-diagonal elements from the standard deviation of
         # the measurement errors
         for y_name, i in output_index.items():
-            if y_name in meas_error_outputs and all_known_errors:
+            if all_known_errors:
                 standard_dev = model.measurement_error[model.find_component(y_name)]
                 Sigma_y[i, i] = standard_dev**2
-            elif y_name in meas_error_outputs and not all_known_errors:
+            else:
                 Sigma_y[i, i] = estimated_var
 
         # fill the off-diagonal elements from covariance entries
+        # supplied by the user
         for key, entry in model.measurement_error.items():
-            if len(key) == 2 and isinstance(key, tuple):
+            if isinstance(key, tuple) and len(key) == 2:
                 yi, yj = key
-                if yi.name not in output_index or yj.name not in output_index:
+                if yi.name not in outputs_name or yj.name not in outputs_name:
                     raise ValueError(
-                        "One of the variables defined in the covariance of the "
-                        "measurement errors is not an experiment output variable."
+                        "Measurement-error covariance must be defined only between "
+                        "experiment output variables."
                     )
 
                 # get the indices of yi and yj
                 i = output_index[yi.name]
                 j = output_index[yj.name]
 
-                # update the covariance entries
+                # update the measurement-error covariance matrix
                 Sigma_y[i, j] = entry
                 Sigma_y[j, i] = entry
-            elif len(key) == 2 and not isinstance(key, tuple):
+            elif not isinstance(key, tuple) and not hasattr(key, "name"):
                 raise TypeError(
                     "Expected a tuple of two measured variables when specifying a "
                     "measurement-error covariance, e.g., "
@@ -1856,10 +1856,18 @@ class Estimator:
             # check if the user defined the 'measurement_error' attribute
             if hasattr(ref_model, "measurement_error"):
                 # get the measurement errors
-                meas_error = [
-                    ref_model.measurement_error[y_hat]
-                    for y_hat, y in ref_model.experiment_outputs.items()
-                ]
+                try:
+                    meas_error = [
+                        ref_model.measurement_error[y_hat]
+                        for y_hat, y in ref_model.experiment_outputs.items()
+                    ]
+                except KeyError:
+                    raise KeyError(
+                        'One or more experiment outputs are not defined in the '
+                        '"measurement_error" attribute. All the variables defined '
+                        'in "experiment_outputs" must be defined as keys in '
+                        '"measurement_error".'
+                    )
 
                 # check if the user supplied the values of the measurement errors
                 if all(item is None for item in meas_error):
