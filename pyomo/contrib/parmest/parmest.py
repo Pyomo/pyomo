@@ -106,6 +106,10 @@ def SSE_weighted(model):
     assuming Gaussian correlated or i.i.d. errors, with the standard deviation
     or covariance of the measurement errors defined in the annotated Pyomo model
 
+    This objective function is applicable to both homoscedastic
+    (constant-variance) and heteroskedastic (non-constant-variance, e.g.,
+    proportional-error) measurement-error models
+
     Parameters
     ----------
     model : ConcreteModel
@@ -173,10 +177,11 @@ def _build_meas_error_covariance(model, estimated_var=None):
 
     Note: The code does not automatically build the full covariance matrix
     It only places whatever covariances the user explicitly supplies
-    The leading-diagonal elements can be constructed automatically or
-    from user-supplied values
     Therefore, for correlation in time, shared timepoints, or other types of
     correlation, the user must provide all the desired covariance terms
+    The diagonal elements can be constructed automatically or specified by
+    the user. They may be constant or depend on the experiment outputs (e.g.,
+    be proportional to them)
 
     Parameters
     ----------
