@@ -148,7 +148,7 @@ def SSE_weighted(model):
         ).reshape(1, -1)
 
         # build the measurement-error covariance matrix
-        Sigma_y = _build_meas_error_covariance(model)
+        Sigma_y = _build_meas_error_covariance_matrix(model)
 
         # compute the inverse of the measurement-error covariance matrix
         try:
@@ -171,7 +171,7 @@ def SSE_weighted(model):
         )
 
 
-def _build_meas_error_covariance(model, estimated_var=None):
+def _build_meas_error_covariance_matrix(model, estimated_var=None):
     """
     Builds the full measurement-error covariance matrix
 
@@ -945,7 +945,7 @@ def _finite_difference_FIM(
     model = _get_labeled_model(experiment)
 
     # compute the measurement-error covariance matrix
-    Sigma_y = _build_meas_error_covariance(model, estimated_var)
+    Sigma_y = _build_meas_error_covariance_matrix(model, estimated_var)
 
     # compute the inverse of the measurement-error covariance matrix
     try:
@@ -1075,7 +1075,7 @@ def _kaug_FIM(
     kaug_jac = np.array(jac).T
 
     # compute the measurement-error covariance matrix
-    Sigma_y = _build_meas_error_covariance(model, estimated_var)
+    Sigma_y = _build_meas_error_covariance_matrix(model, estimated_var)
 
     # compute the inverse of the measurement-error covariance matrix
     try:
