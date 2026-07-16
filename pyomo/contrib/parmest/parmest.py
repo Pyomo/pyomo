@@ -237,7 +237,8 @@ def _build_meas_error_covariance(model, estimated_var=None):
                 i = output_index[yi.name]
                 j = output_index[yj.name]
 
-                # update the measurement-error covariance matrix
+                # update the measurement-error covariance matrix which
+                # is a symmetric matrix
                 Sigma_y[i, j] = entry
                 Sigma_y[j, i] = entry
             elif not isinstance(key, tuple) and not hasattr(key, "name"):

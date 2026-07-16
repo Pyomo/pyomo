@@ -1069,6 +1069,54 @@ class TestReactorDesign(unittest.TestCase):
             exp_list, obj_function="SSE", solver_options=solver_options
         )
 
+        # create an inherited class to test the results when a
+        # full measurement-error covariance matrix is used
+        class ReactorFullErrorCov(ReactorDesignExperiment):
+            def label_model(self):
+                m = self.model
+
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update(
+                    [
+                        (m.ca, self.data_i['ca']),
+                        (m.cb, self.data_i['cb']),
+                        (m.cc, self.data_i['cc']),
+                        (m.cd, self.data_i['cd']),
+                    ]
+                )
+
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    (k, pyo.ComponentUID(k)) for k in [m.k1, m.k2, m.k3]
+                )
+
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update(
+                    [(m.ca, 1), (m.cb, 0.1), (m.cc, 0.1), (m.cd, 0.1)]
+                )
+                m.measurement_error.update(
+                    [
+                        ((m.ca, m.cb), 0),
+                        ((m.ca, m.cc), 0),
+                        ((m.ca, m.cd), 0),
+                        ((m.cb, m.cc), 0),
+                        ((m.cb, m.cd), 0),
+                        ((m.cc, m.cd), 0),
+                    ]
+                )
+
+                return m
+
+        exp_list_full_error = []
+        for i in range(data.shape[0]):
+            exp_list_full_error.append(ReactorFullErrorCov(data, i))
+
+        self.pest_full_error = parmest.Estimator(
+            exp_list_full_error,
+            obj_function="SSE_weighted",
+            solver_options=solver_options,
+        )
+
     def test_theta_est(self):
         # used in data reconciliation
         objval, thetavals = self.pest.theta_est()
@@ -1076,6 +1124,12 @@ class TestReactorDesign(unittest.TestCase):
         self.assertAlmostEqual(thetavals["k1"], 5.0 / 6.0, places=4)
         self.assertAlmostEqual(thetavals["k2"], 5.0 / 3.0, places=4)
         self.assertAlmostEqual(thetavals["k3"], 1.0 / 6000.0, places=7)
+
+        objval2, thetavals2 = self.pest_full_error.theta_est()
+
+        self.assertAlmostEqual(thetavals2["k1"], 5.0 / 6.0, places=4)
+        self.assertAlmostEqual(thetavals2["k2"], 5.0 / 3.0, places=4)
+        self.assertAlmostEqual(thetavals2["k3"], 1.0 / 6000.0, places=7)
 
     def test_return_values(self):
         objval, thetavals, data_rec = self.pest.theta_est(
