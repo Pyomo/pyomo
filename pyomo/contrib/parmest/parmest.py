@@ -126,7 +126,7 @@ def SSE_weighted(model):
             'objective.'
         )
 
-    # check if all the values of the measurement error standard deviation
+    # check if all the values of the measurement-error standard deviation
     # have been supplied
     try:
         all_known_errors = all(
@@ -147,18 +147,8 @@ def SSE_weighted(model):
             [y - y_hat for y_hat, y in model.experiment_outputs.items()]
         ).reshape(1, -1)
 
-        # build the measurement-error covariance matrix
-        Sigma_y = _build_meas_error_covariance_matrix(model)
-
-        # compute the inverse of the measurement-error covariance matrix
-        try:
-            Sigma_y_inv = np.linalg.inv(Sigma_y)
-        except np.linalg.LinAlgError:
-            Sigma_y_inv = np.linalg.pinv(Sigma_y)
-            logger.warning(
-                "The measurement-error covariance matrix is singular. "
-                "Using pseudo-inverse instead."
-            )
+        # get the inverse of the measurement-error covariance matrix
+        Sigma_y_inv = get_meas_error_covariance_matrix_inv(model)
 
         # calculate the weighted SSE between the prediction
         # and observation of the measured variables
@@ -179,9 +169,10 @@ def _build_meas_error_covariance_matrix(model, estimated_var=None):
     It only places whatever covariances the user explicitly supplies
     Therefore, for correlation in time, shared timepoints, or other types of
     correlation, the user must provide all the desired covariance terms
-    The diagonal elements can be constructed automatically or specified by
-    the user. They may be constant or depend on the experiment outputs (e.g.,
-    be proportional to them)
+    The diagonal elements can be constructed automatically or the standard
+    deviations can be specified by the user. They standard deviations may be
+    constant or depend on the value (i.e., data) of the measured or input
+    variables (e.g., be proportional to them)
 
     Parameters
     ----------
@@ -249,6 +240,38 @@ def _build_meas_error_covariance_matrix(model, estimated_var=None):
                 )
 
     return Sigma_y
+
+
+def get_meas_error_covariance_matrix_inv(model, estimated_var=None):
+    """
+    Computes the inverse of the measurement-error covariance matrix
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Annotated Pyomo model
+    estimated_var: float, optional
+        Value of the estimated variance of the measurement error
+
+    Returns
+    -------
+    Sigma_y_inv: numpy.ndarray
+        Inverse of the measurement-error covariance matrix
+    """
+    # get the measurement-error covariance matrix
+    Sigma_y = _build_meas_error_covariance_matrix(model, estimated_var)
+
+    # compute the inverse of the measurement-error covariance matrix
+    try:
+        Sigma_y_inv = np.linalg.inv(Sigma_y)
+    except np.linalg.LinAlgError:
+        Sigma_y_inv = np.linalg.pinv(Sigma_y)
+        logger.warning(
+            "The measurement-error covariance matrix is singular. "
+            "Using pseudo-inverse instead."
+        )
+
+    return Sigma_y_inv
 
 
 def _validate_prior_FIM(prior_FIM, require_psd=True):
@@ -944,18 +967,8 @@ def _finite_difference_FIM(
     # grab the model
     model = _get_labeled_model(experiment)
 
-    # compute the measurement-error covariance matrix
-    Sigma_y = _build_meas_error_covariance_matrix(model, estimated_var)
-
-    # compute the inverse of the measurement-error covariance matrix
-    try:
-        Sigma_y_inv = np.linalg.inv(Sigma_y)
-    except np.linalg.LinAlgError:
-        Sigma_y_inv = np.linalg.pinv(Sigma_y)
-        logger.warning(
-            "The measurement-error covariance matrix is singular. "
-            "Using pseudo-inverse instead."
-        )
+    # get the inverse of the measurement-error covariance matrix
+    Sigma_y_inv = get_meas_error_covariance_matrix_inv(model, estimated_var)
 
     # calculate the FIM using the formula in our future paper
     # Lilonfe and Dowling. (2026)
@@ -1074,18 +1087,8 @@ def _kaug_FIM(
     # record kaug jacobian
     kaug_jac = np.array(jac).T
 
-    # compute the measurement-error covariance matrix
-    Sigma_y = _build_meas_error_covariance_matrix(model, estimated_var)
-
-    # compute the inverse of the measurement-error covariance matrix
-    try:
-        Sigma_y_inv = np.linalg.inv(Sigma_y)
-    except np.linalg.LinAlgError:
-        Sigma_y_inv = np.linalg.pinv(Sigma_y)
-        logger.warning(
-            "The measurement-error covariance matrix is singular. "
-            "Using pseudo-inverse instead."
-        )
+    # get the inverse of the measurement-error covariance matrix
+    Sigma_y_inv = get_meas_error_covariance_matrix_inv(model, estimated_var)
 
     # compute the FIM
     FIM = kaug_jac.T @ Sigma_y_inv @ kaug_jac
