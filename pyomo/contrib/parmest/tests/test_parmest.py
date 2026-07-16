@@ -1413,8 +1413,12 @@ class TestReactorDesign_DAE(unittest.TestCase):
 
         # create an experiment list with the incorrect definition of the
         # measurement-error covariance
-        self.exp_list_df_incorrect_err_cov1 = [ReactorErrorCovarianceException1(data_df)]
-        self.exp_list_df_incorrect_err_cov2 = [ReactorErrorCovarianceException2(data_df)]
+        self.exp_list_df_incorrect_err_cov1 = [
+            ReactorErrorCovarianceException1(data_df)
+        ]
+        self.exp_list_df_incorrect_err_cov2 = [
+            ReactorErrorCovarianceException2(data_df)
+        ]
         self.exp_list_df_incomplete_err = [ReactorIncompleteErrorException(data_df)]
 
     def test_unknown_parameters_exception(self):
@@ -1437,8 +1441,9 @@ class TestReactorDesign_DAE(unittest.TestCase):
         Test the exception raised by parmest when the measurement-error
         covariance is defined incorrectly
         """
-        pest1 = parmest.Estimator(self.exp_list_df_incorrect_err_cov1,
-                                  obj_function="SSE")
+        pest1 = parmest.Estimator(
+            self.exp_list_df_incorrect_err_cov1, obj_function="SSE"
+        )
 
         obj1, theta1 = pest1.theta_est()
         with pytest.raises(
@@ -1449,8 +1454,9 @@ class TestReactorDesign_DAE(unittest.TestCase):
         ):
             pest1.cov_est()
 
-        pest2 = parmest.Estimator(self.exp_list_df_incorrect_err_cov2,
-                                  obj_function="SSE")
+        pest2 = parmest.Estimator(
+            self.exp_list_df_incorrect_err_cov2, obj_function="SSE"
+        )
 
         obj2, theta2 = pest2.theta_est()
         with pytest.raises(
@@ -1472,8 +1478,9 @@ class TestReactorDesign_DAE(unittest.TestCase):
         ):
             pest3.cov_est()
 
-        pest4 = parmest.Estimator(self.exp_list_df_incomplete_err,
-                                  obj_function="SSE_weighted")
+        pest4 = parmest.Estimator(
+            self.exp_list_df_incomplete_err, obj_function="SSE_weighted"
+        )
 
         with pytest.raises(
             KeyError,

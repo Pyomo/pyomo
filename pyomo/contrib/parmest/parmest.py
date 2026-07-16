@@ -126,7 +126,8 @@ def SSE_weighted(model):
     # have been supplied
     try:
         all_known_errors = all(
-            model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
+            model.measurement_error[y_hat] is not None
+            for y_hat in model.experiment_outputs
         )
     except KeyError:
         raise KeyError(
@@ -137,11 +138,9 @@ def SSE_weighted(model):
         )
 
     if all_known_errors:
-        # calculate the difference between the model predictions and data
-        prediction_diff = np.array(
-            [
-                y - y_hat for y_hat, y in model.experiment_outputs.items()
-            ]
+        # calculate the residuals between the model predictions and data
+        prediction_resid = np.array(
+            [y - y_hat for y_hat, y in model.experiment_outputs.items()]
         ).reshape(1, -1)
 
         # build the measurement-error covariance matrix
@@ -159,7 +158,7 @@ def SSE_weighted(model):
 
         # calculate the weighted SSE between the prediction
         # and observation of the measured variables
-        expr = (1 / 2) * prediction_diff @ Sigma_y_inv @ prediction_diff.T
+        expr = (1 / 2) * prediction_resid @ Sigma_y_inv @ prediction_resid.T
         return expr[0, 0]
     else:
         raise ValueError(
