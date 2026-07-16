@@ -479,7 +479,7 @@ def _get_labeled_model(experiment):
 
 def _get_param_data_objects(model):
     """
-    Creates a list of the data objects for indexed or scalar parameters
+    Creates a list for the data objects of indexed or scalar parameters
 
     Parameters
     ----------
@@ -489,7 +489,7 @@ def _get_param_data_objects(model):
     Returns
     -------
     params: list
-        List of indexed or scalar parameters
+        List of indexed or scalar parameters data object
     """
     params = []
     for param in model.unknown_parameters:
