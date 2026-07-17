@@ -450,7 +450,7 @@ class DesignOfExperiments:
         self.results["Unknown Parameters"] = self.get_unknown_parameter_values()
         self.results["Unknown Parameter Names"] = [
             str(pyo.ComponentUID(k, context=model.scenario_blocks[0]))
-            for k in self._get_param_data_objects(model.scenario_blocks[0])
+            for k in self._expanded_unknown_parameters(model.scenario_blocks[0])
         ]
         self.results["Measurement Error"] = self.get_measurement_error_values()
         self.results["Measurement Error Names"] = [
@@ -703,10 +703,13 @@ class DesignOfExperiments:
 
         return Sigma_y_inv
 
-    def _get_param_data_objects(self, model):
+    def _expanded_unknown_parameters(self, model):
         """
-        Creates a list of scalar parameter data objects
-        for indexed or scalar parameters
+        Creates a list of scalar unknown parameter components
+
+        The unknown_parameters suffix may contain either scalar ComponentData
+        objects or indexed components. Indexed components are expanded to
+        their scalar data objects.
 
         Parameters
         ----------
@@ -715,19 +718,19 @@ class DesignOfExperiments:
 
         Returns
         -------
-        params: list
+        params_data_object: list
             List of scalar parameter data objects
         """
-        params = []
-        for param in model.unknown_parameters:
-            # check if the parameter is indexed
-            if param.is_indexed():
+        params_data_object = []
+        for component in model.unknown_parameters:
+            # check if it is indexed
+            if component.is_indexed():
                 # get the parameter data objects
-                params.extend(param.values())
+                params_data_object.extend(component.values())
             else:
-                params.append(param)
+                params_data_object.append(component)
 
-        return params
+        return params_data_object
 
     # Compute FIM for the DoE object
     def compute_FIM(self, model=None, method="sequential"):
@@ -763,7 +766,7 @@ class DesignOfExperiments:
         self.check_model_labels(model=model)
 
         # Set length values for the model features
-        self.n_parameters = len(self._get_param_data_objects(model))
+        self.n_parameters = len(self._expanded_unknown_parameters(model))
         self.n_measurement_error = len(
             [k for k in model.measurement_error if hasattr(k, "name")]
         )
@@ -817,7 +820,7 @@ class DesignOfExperiments:
         model.parameter_scenarios = pyo.Suffix(direction=pyo.Suffix.LOCAL)
 
         # get the parameter data objects
-        unknown_params = self._get_param_data_objects(model)
+        unknown_params = self._expanded_unknown_parameters(model)
         unknown_params_val = {p.name: p.value for p in unknown_params}
 
         # Populate parameter scenarios, and scenario
@@ -975,7 +978,7 @@ class DesignOfExperiments:
         self.solver.solve(model, tee=self.tee)
 
         # get the parameter data objects
-        unknown_params = self._get_param_data_objects(model)
+        unknown_params = self._expanded_unknown_parameters(model)
 
         # Probe the solved model for dsdp results (sensitivities s.t. parameters)
         params_dict = {p.name: p.value for p in unknown_params}
@@ -1082,13 +1085,13 @@ class DesignOfExperiments:
         scen_block_ind = min(
             [
                 k.name.split(".").index("scenario_blocks[0]")
-                for k in self._get_param_data_objects(model.scenario_blocks[0])
+                for k in self._expanded_unknown_parameters(model.scenario_blocks[0])
             ]
         )
         model.parameter_names = pyo.Set(
             initialize=[
                 ".".join(k.name.split(".")[(scen_block_ind + 1) :])
-                for k in self._get_param_data_objects(model.scenario_blocks[0])
+                for k in self._expanded_unknown_parameters(model.scenario_blocks[0])
             ]
         )
         model.output_names = pyo.Set(
@@ -1352,7 +1355,7 @@ class DesignOfExperiments:
         self.check_model_labels(model=model.base_model)
 
         # Gather lengths of label structures for later use in the model build process
-        self.n_parameters = len(self._get_param_data_objects(model.base_model))
+        self.n_parameters = len(self._expanded_unknown_parameters(model.base_model))
         self.n_measurement_error = len(
             [k for k in model.base_model.measurement_error if hasattr(k, "name")]
         )
@@ -1388,7 +1391,7 @@ class DesignOfExperiments:
         model.parameter_scenarios = pyo.Suffix(direction=pyo.Suffix.LOCAL)
 
         # get the parameter data objects
-        unknown_params = self._get_param_data_objects(model.base_model)
+        unknown_params = self._expanded_unknown_parameters(model.base_model)
         unknown_params_val = {p.name: p.value for p in unknown_params}
 
         # Populate parameter scenarios, and scenario
@@ -1875,7 +1878,7 @@ class DesignOfExperiments:
 
         # Check that unknown parameters exist
         try:
-            unknown_params = self._get_param_data_objects(model)
+            unknown_params = self._expanded_unknown_parameters(model)
         except:
             raise RuntimeError(
                 "Experiment model does not have suffix " + '"unknown_parameters".'
@@ -2853,10 +2856,10 @@ class DesignOfExperiments:
                     "`get_unknown_parameter_values`"
                 )
 
-            unknown_params = self._get_param_data_objects(model.scenario_blocks[0])
+            unknown_params = self._expanded_unknown_parameters(model.scenario_blocks[0])
             theta_vals = [pyo.value(k) for k in unknown_params]
         else:
-            unknown_params = self._get_param_data_objects(model)
+            unknown_params = self._expanded_unknown_parameters(model)
             theta_vals = [pyo.value(k) for k in unknown_params]
 
         return theta_vals
