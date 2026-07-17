@@ -178,8 +178,10 @@ def _build_meas_error_covariance_matrix(model, estimated_var=None):
     ----------
     model : ConcreteModel
         Annotated Pyomo model
-    estimated_var: float, optional
+    estimated_var: float or int, optional
         Value of the estimated variance of the measurement error
+        in cases where the user does not supply the
+        measurement-error standard deviation
 
     Returns
     -------
@@ -187,11 +189,12 @@ def _build_meas_error_covariance_matrix(model, estimated_var=None):
         Full measurement-error covariance matrix
     """
     # get the output variables
-    outputs_name = [y.name for y in model.experiment_outputs]
-    output_index = {y: i for i, y in enumerate(outputs_name)}
+    outputs = list(model.experiment_outputs.keys())
+    outputs_name = [y_hat.name for y_hat in outputs]
+    outputs_index = {y_hat_name: i for i, y_hat_name in enumerate(outputs_name)}
 
     # get the number of output variables
-    number_outputs = len(outputs_name)
+    number_outputs = len(outputs)
 
     # define the measurement-error covariance matrix
     Sigma_y = np.zeros((number_outputs, number_outputs))
@@ -206,9 +209,12 @@ def _build_meas_error_covariance_matrix(model, estimated_var=None):
 
         # fill the leading-diagonal elements from the standard deviation of
         # the measurement errors
-        for y_name, i in output_index.items():
+        for y_hat in outputs:
+            # get the index of y_hat
+            i = outputs_index[y_hat.name]
+
             if all_known_errors:
-                standard_dev = model.measurement_error[model.find_component(y_name)]
+                standard_dev = model.measurement_error[y_hat]
                 Sigma_y[i, i] = standard_dev**2
             else:
                 Sigma_y[i, i] = estimated_var
@@ -225,8 +231,8 @@ def _build_meas_error_covariance_matrix(model, estimated_var=None):
                     )
 
                 # get the indices of yi and yj
-                i = output_index[yi.name]
-                j = output_index[yj.name]
+                i = outputs_index[yi.name]
+                j = outputs_index[yj.name]
 
                 # update the measurement-error covariance matrix which
                 # is a symmetric matrix
@@ -250,8 +256,10 @@ def get_meas_error_covariance_matrix_inv(model, estimated_var=None):
     ----------
     model : ConcreteModel
         Annotated Pyomo model
-    estimated_var: float, optional
+    estimated_var: float or int, optional
         Value of the estimated variance of the measurement error
+        in cases where the user does not supply the
+        measurement-error standard deviation
 
     Returns
     -------
@@ -501,32 +509,6 @@ def _get_labeled_model(experiment):
         raise RuntimeError(f"Failed to clone labeled model: {exc}")
 
 
-def _get_param_data_objects(model):
-    """
-    Creates a list for the data objects of indexed or scalar parameters
-
-    Parameters
-    ----------
-    model : ConcreteModel
-        Annotated Pyomo model
-
-    Returns
-    -------
-    params: list
-        List of indexed or scalar parameters data object
-    """
-    params = []
-    for param in model.unknown_parameters:
-        # check if the parameter is indexed
-        if param.is_indexed():
-            for idx in param:
-                # get the parameter data object
-                params.append(param[idx])
-        else:
-            params.append(param)
-    return params
-
-
 def _format_outputs_index_as_tuple(index):
     """
     Formats the indices of indexed experiment outputs
@@ -722,7 +704,7 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee, solver_options)
     model = _get_labeled_model(experiment)
 
     # get the parameter data objects
-    param_data_objects = _get_param_data_objects(model)
+    param_data_objects, _, _ = _expanded_unknown_parameter_info(model)
 
     # fix the value of the unknown parameters to the estimated values
     for param in param_data_objects:
@@ -1031,7 +1013,7 @@ def _kaug_FIM(
     model.objective = pyo.Objective(expr=obj_function, sense=pyo.minimize)
 
     # get the parameter data objects
-    param_data_objects = _get_param_data_objects(model)
+    param_data_objects, _, _ = _expanded_unknown_parameter_info(model)
 
     # fix the parameter values to the estimated values
     for param in param_data_objects:
@@ -1819,7 +1801,7 @@ class Estimator:
                 model = _get_labeled_model(experiment)
 
                 # get the parameter data objects
-                param_data_objects = _get_param_data_objects(model)
+                param_data_objects, _, _ = _expanded_unknown_parameter_info(model)
 
                 # fix the value of the unknown parameters to the estimated values
                 for param in param_data_objects:
