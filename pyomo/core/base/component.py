@@ -516,7 +516,7 @@ class Component(ComponentBase):
 
         Re-constructing model components was fragile and did not
         correctly update instances of the component used in other
-        components or contexts (this was particularly problemmatic for
+        components or contexts (this was particularly problematic for
         Var, Param, and Set).  Users who wish to reproduce the old
         behavior of reconstruct(), are comfortable manipulating
         non-public interfaces, and who take the time to verify that the
