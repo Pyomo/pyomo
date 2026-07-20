@@ -415,7 +415,7 @@ def copy_scaling_factors_to_block(
     source_block: BlockData, destination_block: BlockData, overwrite=True
 ):
     """
-    Copies variable and constraint scaling factors from one block heirarchy to
+    Copies variable and constraint scaling factors from one block hierarchy to
     another. Copying scaling factors is useful when creating a temporary block
     to solve a subproblem because the .nl writer will not use any scaling factors
     on the original model (see Pyomo #3800).
