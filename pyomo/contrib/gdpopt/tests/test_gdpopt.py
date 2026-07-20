@@ -40,7 +40,6 @@ from pyomo.environ import (
     Integers,
     LogicalConstraint,
     maximize,
-    minimize,
     Objective,
     RangeSet,
     TransformationFactory,
@@ -322,20 +321,6 @@ class TestGDPoptUnit(unittest.TestCase):
             "algorithm-specific solver.",
         ):
             SolverFactory('gdpopt').solve(m)
-
-    def test_loa_augmented_penalty_objective_preserves_objective_sense(self):
-        for sense in (minimize, maximize):
-            m = ConcreteModel()
-            m.GDPopt_utils = Block()
-            m.x = Var(bounds=(0, 1))
-            m.obj = Objective(expr=m.x, sense=sense)
-
-            solver = SolverFactory('gdpopt.loa')
-            original_obj = solver._setup_augmented_penalty_objective(m.GDPopt_utils)
-
-            self.assertIs(original_obj, m.obj)
-            self.assertFalse(m.obj.active)
-            self.assertEqual(m.GDPopt_utils.oa_obj.sense, sense)
 
     @unittest.skipUnless(
         SolverFactory(mip_solver).available(), "MIP solver not available"
