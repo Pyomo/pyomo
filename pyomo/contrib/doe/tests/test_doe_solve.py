@@ -224,36 +224,32 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
 
         # Use RooneyBiegler for algorithm validation (faster)
         experiment = get_rooney_biegler_experiment()
-        indx_param_experiment = get_rooney_biegler_experiment(index_vars=True)
+        ind_param_experiment = get_rooney_biegler_experiment(index_vars=True)
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
-        indx_param_DoE_args = get_standard_args(
-            indx_param_experiment, fd_method, obj_used
+        ind_param_DoE_args = get_standard_args(
+            ind_param_experiment, fd_method, obj_used
         )
 
         doe_obj = DesignOfExperiments(**DoE_args)
-        indx_param_doe_obj = DesignOfExperiments(**indx_param_DoE_args)
+        ind_param_doe_obj = DesignOfExperiments(**ind_param_DoE_args)
 
         doe_obj.run_doe()
-        indx_param_doe_obj.run_doe()
+        ind_param_doe_obj.run_doe()
 
         # assert model solves
         self.assertEqual(doe_obj.results["Solver Status"], "ok")
-        self.assertEqual(indx_param_doe_obj.results["Solver Status"], "ok")
+        self.assertEqual(ind_param_doe_obj.results["Solver Status"], "ok")
 
         # assert that Q, F, and L are the same.
         FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
-        FIM_indx, Q_indx, L_indx, sigma_inv_indx = get_FIM_Q_L(
-            doe_obj=indx_param_doe_obj
-        )
+        FIM_ind, Q_ind, L_ind, sigma_inv_ind = get_FIM_Q_L(doe_obj=ind_param_doe_obj)
 
         # Since Trace is used, no comparison for FIM and L.T @ L
 
         # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
-        self.assertTrue(
-            np.all(np.isclose(FIM_indx, Q_indx.T @ sigma_inv_indx @ Q_indx))
-        )
+        self.assertTrue(np.all(np.isclose(FIM_ind, Q_ind.T @ sigma_inv_ind @ Q_ind)))
 
     @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_rooney_biegler_fd_forward_solve(self):
@@ -299,35 +295,31 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
 
         # Use RooneyBiegler for algorithm validation (faster)
         experiment = get_rooney_biegler_experiment()
-        indx_param_experiment = get_rooney_biegler_experiment(index_vars=True)
+        ind_param_experiment = get_rooney_biegler_experiment(index_vars=True)
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
-        indx_param_DoE_args = get_standard_args(
-            indx_param_experiment, fd_method, obj_used
+        ind_param_DoE_args = get_standard_args(
+            ind_param_experiment, fd_method, obj_used
         )
 
         doe_obj = DesignOfExperiments(**DoE_args)
-        indx_param_doe_obj = DesignOfExperiments(**indx_param_DoE_args)
+        ind_param_doe_obj = DesignOfExperiments(**ind_param_DoE_args)
 
         doe_obj.run_doe()
-        indx_param_doe_obj.run_doe()
+        ind_param_doe_obj.run_doe()
 
         self.assertEqual(doe_obj.results["Solver Status"], "ok")
-        self.assertEqual(indx_param_doe_obj.results["Solver Status"], "ok")
+        self.assertEqual(ind_param_doe_obj.results["Solver Status"], "ok")
 
         # assert that Q, F, and L are the same.
         FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
-        FIM_indx, Q_indx, L_indx, sigma_inv_indx = get_FIM_Q_L(
-            doe_obj=indx_param_doe_obj
-        )
+        FIM_ind, Q_ind, L_ind, sigma_inv_ind = get_FIM_Q_L(doe_obj=ind_param_doe_obj)
 
         # Since Trace is used, no comparison for FIM and L.T @ L
 
         # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
-        self.assertTrue(
-            np.all(np.isclose(FIM_indx, Q_indx.T @ sigma_inv_indx @ Q_indx))
-        )
+        self.assertTrue(np.all(np.isclose(FIM_ind, Q_ind.T @ sigma_inv_ind @ Q_ind)))
 
     @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_rooney_biegler_obj_det_solve(self):
@@ -336,11 +328,11 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
 
         # Use RooneyBiegler for algorithm validation (faster)
         experiment = get_rooney_biegler_experiment()
-        indx_param_experiment = get_rooney_biegler_experiment(index_vars=True)
+        ind_param_experiment = get_rooney_biegler_experiment(index_vars=True)
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
-        indx_param_DoE_args = get_standard_args(
-            indx_param_experiment, fd_method, obj_used
+        ind_param_DoE_args = get_standard_args(
+            ind_param_experiment, fd_method, obj_used
         )
 
         DoE_args["scale_nominal_param_value"] = (
@@ -349,30 +341,30 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         DoE_args["_Cholesky_option"] = False
         DoE_args["_only_compute_fim_lower"] = False
 
-        indx_param_DoE_args["scale_nominal_param_value"] = False
-        indx_param_DoE_args["_Cholesky_option"] = False
-        indx_param_DoE_args["_only_compute_fim_lower"] = False
+        ind_param_DoE_args["scale_nominal_param_value"] = False
+        ind_param_DoE_args["_Cholesky_option"] = False
+        ind_param_DoE_args["_only_compute_fim_lower"] = False
 
         doe_obj = DesignOfExperiments(**DoE_args)
-        indx_param_doe_obj = DesignOfExperiments(**indx_param_DoE_args)
+        ind_param_doe_obj = DesignOfExperiments(**ind_param_DoE_args)
 
         # Increase numerical performance by adding a prior
         prior_FIM = doe_obj.compute_FIM()
-        prior_FIM_indx = indx_param_doe_obj.compute_FIM()
+        prior_FIM_ind = ind_param_doe_obj.compute_FIM()
         doe_obj.prior_FIM = prior_FIM
-        indx_param_doe_obj.prior_FIM = prior_FIM_indx
+        ind_param_doe_obj.prior_FIM = prior_FIM_ind
 
         doe_obj.run_doe()
-        indx_param_doe_obj.run_doe()
+        ind_param_doe_obj.run_doe()
 
         self.assertEqual(doe_obj.results["Solver Status"], "ok")
-        self.assertEqual(indx_param_doe_obj.results["Solver Status"], "ok")
+        self.assertEqual(ind_param_doe_obj.results["Solver Status"], "ok")
 
         expected_design = 9.999213890476453
         actual_design = doe_obj.results["Experiment Design"][0]
-        actual_design_indx = indx_param_doe_obj.results["Experiment Design"][0]
+        actual_design_ind = ind_param_doe_obj.results["Experiment Design"][0]
         self.assertAlmostEqual(actual_design, expected_design, places=3)
-        self.assertAlmostEqual(actual_design_indx, expected_design, places=3)
+        self.assertAlmostEqual(actual_design_ind, expected_design, places=3)
 
     @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_rooney_biegler_obj_cholesky_solve(self):
@@ -381,49 +373,43 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
 
         # Use RooneyBiegler for algorithm validation (faster)
         experiment = get_rooney_biegler_experiment()
-        indx_param_experiment = get_rooney_biegler_experiment(index_vars=True)
+        ind_param_experiment = get_rooney_biegler_experiment(index_vars=True)
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
-        indx_param_DoE_args = get_standard_args(
-            indx_param_experiment, fd_method, obj_used
+        ind_param_DoE_args = get_standard_args(
+            ind_param_experiment, fd_method, obj_used
         )
 
         # Add prior FIM for better numerical conditioning
         # This follows the pattern in rooney_biegler_doe_example.py
         doe_obj_prior = DesignOfExperiments(**DoE_args)
-        indx_doe_obj_prior = DesignOfExperiments(**indx_param_DoE_args)
+        ind_doe_obj_prior = DesignOfExperiments(**ind_param_DoE_args)
         prior_FIM = doe_obj_prior.compute_FIM()
-        prior_FIM_indx = indx_doe_obj_prior.compute_FIM()
+        prior_FIM_ind = ind_doe_obj_prior.compute_FIM()
         DoE_args['prior_FIM'] = prior_FIM
-        indx_param_DoE_args['prior_FIM'] = prior_FIM_indx
+        ind_param_DoE_args['prior_FIM'] = prior_FIM_ind
 
         doe_obj = DesignOfExperiments(**DoE_args)
-        indx_param_doe_obj = DesignOfExperiments(**indx_param_DoE_args)
+        ind_param_doe_obj = DesignOfExperiments(**ind_param_DoE_args)
 
         doe_obj.run_doe()
-        indx_param_doe_obj.run_doe()
+        ind_param_doe_obj.run_doe()
 
         self.assertEqual(doe_obj.results["Solver Status"], "ok")
-        self.assertEqual(indx_param_doe_obj.results["Solver Status"], "ok")
+        self.assertEqual(ind_param_doe_obj.results["Solver Status"], "ok")
 
         # assert that Q, F, and L are the same.
         FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
-        FIM_indx, Q_indx, L_indx, sigma_inv_indx = get_FIM_Q_L(
-            doe_obj=indx_param_doe_obj
-        )
+        FIM_ind, Q_ind, L_ind, sigma_inv_ind = get_FIM_Q_L(doe_obj=ind_param_doe_obj)
 
         # Since Cholesky is used, there is comparison for FIM and L.T @ L
         self.assertTrue(np.all(np.isclose(FIM, L @ L.T)))
-        self.assertTrue(np.all(np.isclose(FIM_indx, L_indx @ L_indx.T)))
+        self.assertTrue(np.all(np.isclose(FIM_ind, L_ind @ L_ind.T)))
 
         # Note: When using prior_FIM, the relationship FIM = Q.T @ sigma_inv @ Q + prior_FIM
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q + prior_FIM)))
         self.assertTrue(
-            np.all(
-                np.isclose(
-                    FIM_indx, Q_indx.T @ sigma_inv_indx @ Q_indx + prior_FIM_indx
-                )
-            )
+            np.all(np.isclose(FIM_ind, Q_ind.T @ sigma_inv_ind @ Q_ind + prior_FIM_ind))
         )
 
     def DISABLE_test_reactor_obj_cholesky_solve_bad_prior(self):
@@ -468,15 +454,15 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
 
         # Use RooneyBiegler for algorithm validation (faster)
         experiment = get_rooney_biegler_experiment()
-        indx_param_experiment = get_rooney_biegler_experiment(index_vars=True)
+        ind_param_experiment = get_rooney_biegler_experiment(index_vars=True)
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
-        indx_param_DoE_args = get_standard_args(
-            indx_param_experiment, fd_method, obj_used
+        ind_param_DoE_args = get_standard_args(
+            ind_param_experiment, fd_method, obj_used
         )
 
         doe_obj = DesignOfExperiments(**DoE_args)
-        indx_param_doe_obj = DesignOfExperiments(**indx_param_DoE_args)
+        ind_param_doe_obj = DesignOfExperiments(**ind_param_DoE_args)
 
         expected_FIM = np.array(
             [[18957.7788694, 4238.27606876], [4238.27606876, 947.52577076]]
@@ -488,7 +474,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         self.assertTrue(
             np.all(
                 np.isclose(
-                    indx_param_doe_obj.compute_FIM(method="sequential"), expected_FIM
+                    ind_param_doe_obj.compute_FIM(method="sequential"), expected_FIM
                 )
             )
         )
@@ -502,18 +488,18 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
 
         # Use RooneyBiegler for algorithm validation (faster)
         experiment = get_rooney_biegler_experiment()
-        indx_param_experiment = get_rooney_biegler_experiment(index_vars=True)
+        ind_param_experiment = get_rooney_biegler_experiment(index_vars=True)
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
-        indx_param_DoE_args = get_standard_args(
-            indx_param_experiment, fd_method, obj_used
+        ind_param_DoE_args = get_standard_args(
+            ind_param_experiment, fd_method, obj_used
         )
 
         doe_obj = DesignOfExperiments(**DoE_args)
-        indx_param_doe_obj = DesignOfExperiments(**indx_param_DoE_args)
+        ind_param_doe_obj = DesignOfExperiments(**ind_param_DoE_args)
 
         doe_obj.compute_FIM(method="sequential")
-        indx_param_doe_obj.compute_FIM(method="sequential")
+        ind_param_doe_obj.compute_FIM(method="sequential")
 
     # This test ensure that compute FIM runs without error using the
     # `kaug` option. kaug computes the FIM directly so no finite difference
@@ -527,15 +513,15 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         obj_used = "determinant"
 
         experiment = get_rooney_biegler_experiment()
-        indx_param_experiment = get_rooney_biegler_experiment(index_vars=True)
+        ind_param_experiment = get_rooney_biegler_experiment(index_vars=True)
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
-        indx_param_DoE_args = get_standard_args(
-            indx_param_experiment, fd_method, obj_used
+        ind_param_DoE_args = get_standard_args(
+            ind_param_experiment, fd_method, obj_used
         )
 
         doe_obj = DesignOfExperiments(**DoE_args)
-        indx_param_doe_obj = DesignOfExperiments(**indx_param_DoE_args)
+        ind_param_doe_obj = DesignOfExperiments(**ind_param_DoE_args)
 
         expected_FIM = np.array(
             [[18957.7788694, 4238.27606876], [4238.27606876, 947.52577076]]
@@ -546,7 +532,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
         )
         self.assertTrue(
             np.all(
-                np.isclose(indx_param_doe_obj.compute_FIM(method="kaug"), expected_FIM)
+                np.isclose(ind_param_doe_obj.compute_FIM(method="kaug"), expected_FIM)
             )
         )
 
@@ -559,18 +545,18 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
 
         # Use RooneyBiegler for algorithm validation (faster)
         experiment = get_rooney_biegler_experiment()
-        indx_param_experiment = get_rooney_biegler_experiment(index_vars=True)
+        ind_param_experiment = get_rooney_biegler_experiment(index_vars=True)
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
-        indx_param_DoE_args = get_standard_args(
-            indx_param_experiment, fd_method, obj_used
+        ind_param_DoE_args = get_standard_args(
+            ind_param_experiment, fd_method, obj_used
         )
 
         doe_obj = DesignOfExperiments(**DoE_args)
-        indx_param_doe_obj = DesignOfExperiments(**indx_param_DoE_args)
+        ind_param_doe_obj = DesignOfExperiments(**ind_param_DoE_args)
 
         doe_obj.compute_FIM(method="sequential")
-        indx_param_doe_obj.compute_FIM(method="sequential")
+        ind_param_doe_obj.compute_FIM(method="sequential")
 
     @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_grid_search(self):
