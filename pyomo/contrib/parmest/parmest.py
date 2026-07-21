@@ -221,7 +221,7 @@ def _build_meas_error_covariance_matrix(model, estimated_var=None):
 
         # fill the off-diagonal elements from covariance entries
         # supplied by the user
-        for key, entry in model.measurement_error.items():
+        for key, err_cov in model.measurement_error.items():
             if isinstance(key, tuple) and len(key) == 2:
                 yi, yj = key
                 if yi.name not in outputs_name or yj.name not in outputs_name:
@@ -236,8 +236,8 @@ def _build_meas_error_covariance_matrix(model, estimated_var=None):
 
                 # update the measurement-error covariance matrix which
                 # is a symmetric matrix
-                Sigma_y[i, j] = entry
-                Sigma_y[j, i] = entry
+                Sigma_y[i, j] = err_cov
+                Sigma_y[j, i] = err_cov
             elif not isinstance(key, tuple) and not hasattr(key, "name"):
                 raise TypeError(
                     "Expected a tuple of two measured variables when specifying a "
