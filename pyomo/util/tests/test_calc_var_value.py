@@ -8,6 +8,7 @@
 # ____________________________________________________________________________________
 
 import logging
+import re
 from io import StringIO
 
 import pyomo.common.unittest as unittest
@@ -300,23 +301,27 @@ class Test_calc_var(unittest.TestCase):
                     m.x, m.g, diff_mode=mode, scale_problem=True
                 )
         # Here, because both the variable and constraint are scaled, we don't terminate due to
-        # a zero derivative. It still raises an error, however, because we're asking for an
-        # unreasonable amount of precision
+        # a zero derivative. It still raises an error on some platforms, however, because we're
+        # asking for an unreasonable amount of precision
         m.scaling_factor[m.x] = 1e16
         m.scaling_factor[m.g] = 1e16
         m.rhs.set_value(3)
         for mode in all_diff_modes:
             m.x.set_value(1)
-            with self.assertRaisesRegex(
-                IterationLimitError,
-                "Linesearch iteration limit reached solving for variable 'x' using "
-                "constraint 'g'; remaining residual = "
-                + SCIENTIFIC_NOTATION_REGEX
-                + r"\.",
-            ):
+
+            try:
                 calculate_variable_from_constraint(
                     m.x, m.g, diff_mode=mode, scale_problem=True
                 )
+            except IterationLimitError as err:
+                out = re.match(
+                    "Linesearch iteration limit reached solving for variable 'x' using "
+                    "constraint 'g'; remaining residual = "
+                    + SCIENTIFIC_NOTATION_REGEX
+                    + r"\.",
+                    err.message,
+                )
+                assert out is not None
 
         # Calculate the bubble point of Benzene.  The first step
         # computed by calculate_variable_from_constraint will make the
