@@ -319,7 +319,7 @@ class Test_calc_var(unittest.TestCase):
                     "constraint 'g'; remaining residual = "
                     + SCIENTIFIC_NOTATION_REGEX
                     + r"\.",
-                    err.message,
+                    str(err),
                 )
                 assert out is not None
 
