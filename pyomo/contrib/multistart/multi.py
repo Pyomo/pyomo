@@ -25,11 +25,12 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.common.dependencies import numpy as np
 from pyomo.contrib.multistart.high_conf_stop import should_stop
 from pyomo.contrib.multistart.reinit import reinitialize_variables, strategies
-from pyomo.core import Objective, Var, minimize, value
+from pyomo.core import Objective, Constraint, Var, minimize, value
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.config import SolverConfig
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import SolutionStatus
+from pyomo.util.vars_from_expressions import get_vars_from_components
 
 from pyomo.common.dependencies.scipy import stats
 from pyomo.common.dependencies import numpy as np
@@ -120,7 +121,7 @@ class MultistartConfig(SolverConfig):
         self.suppress_unbounded_warning = self.declare(
             "suppress_unbounded_warning",
             ConfigValue(
-                default=True,
+                default=False,
                 domain=bool,
                 description="True to suppress warning for skipping unbounded variables.",
             ),
@@ -208,7 +209,7 @@ class MultiStart(SolverBase):
 
     def solve(self, model, **kwds):
         # initialize keyword args
-        config = self.CONFIG(kwds.pop('options', {}))
+        config = self.config(kwds.pop('options', {}))
         config.set_value(kwds)
 
         # Create centralized sampler once
@@ -253,9 +254,22 @@ class MultiStart(SolverBase):
             setattr(
                 model,
                 tmp_var_list_name,
-                list(model.component_data_objects(ctype=Var, descend_into=True)),
+                list(model.component_data_objects(Var, descend_into=True)),
             )
-
+            # If the list has nothing in it, check components
+            print(len(model._vars_list))
+            print(model._vars_list)
+            if len(model._vars_list) == 0:
+                setattr(
+                    model,
+                    tmp_var_list_name,
+                    list(get_vars_from_components(model, 
+                                                  ctype=(Constraint, Objective),
+                                                  active=True,
+                                                  ))
+                    
+                )
+            print(model._vars_list)
             best_result = result = solver.solve(model, **config.solver_args)
             # Check the solution status before loading variables into the model.
             if result.solution_status in {
@@ -357,7 +371,7 @@ class MultiStart(SolverBase):
 
 # Sampling class to organize and configure random samplers
 class SamplingManager:
-    def __init__(self, method="uniform", rng=None, seed=None):
+    def __init__(self, method="lhs", rng=None, seed=None):
         aliases = {
             "random_uniform": "uniform",
             "uniform": "uniform",

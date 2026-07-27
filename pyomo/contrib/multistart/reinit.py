@@ -13,7 +13,7 @@ import logging
 import random
 from pyomo.common.dependencies import numpy as np
 from pyomo.common.dependencies.scipy import stats
-from pyomo.core.expr.visitor import identify_variables
+from pyomo.util.vars_from_expressions import get_vars_from_components
 
 from pyomo.core import Var
 
@@ -81,8 +81,8 @@ def reinitialize_variables(model, config, sampler):
     """
 
     eligible_vars = []
-
-    for var in model.component_data_objects(ctype=Var, descend_into=True):
+    print(model._vars_list[0].value)
+    for var in model._vars_list:
         if var.is_fixed() or not var.is_continuous():
             continue
         if var.lb is None or var.ub is None:
