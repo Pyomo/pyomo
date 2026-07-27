@@ -15,7 +15,10 @@ from pyomo.contrib.solver.common.results import SolutionStatus
 from pyomo.devel.initialization.bounds.bound_variables import (
     bound_all_nonlinear_variables,
 )
-from pyomo.devel.initialization.utils import shallow_clone
+from pyomo.devel.initialization.utils import (
+    shallow_clone, 
+    fix_vars_with_equal_bounds,
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -29,6 +32,11 @@ def _initialize_with_multistart_solver(
     nlp = shallow_clone(nlp)
     # bounds on the nonlinear variables
     bound_all_nonlinear_variables(nlp, default_bound=default_bound)
+    logger.info('bounded nonlinear variables')
+
+    # fix variables with equal bounds for sampler
+    fix_vars_with_equal_bounds(nlp)
+    logger.info('fixed variables with equal bounds')
 
     multistart_solver.config.seed = seed
     res = multistart_solver.solve(nlp)
