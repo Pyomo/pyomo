@@ -30,6 +30,7 @@ def _initialize_with_multistart_solver(
     # bounds on the nonlinear variables
     bound_all_nonlinear_variables(nlp, default_bound=default_bound)
 
+    multistart_solver.config.seed=seed
     res = multistart_solver.solve(nlp)
     logger.info('Finished multistart optimization iterations.')
 

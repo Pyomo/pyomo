@@ -361,9 +361,9 @@ def initialize_with_multistart_opt(
 
     if multistart_solver is None:
         multistart_solver = pyo.SolverFactory("multistart")
-        multistart_solver.CONFIG.seed = seed
-        multistart_solver.CONFIG.sampling_method = "lhs"
-        multistart_solver.CONFIG.break_on_solution = True
+        multistart_solver.config.seed = seed
+        multistart_solver.config.sampling_method = "lhs"
+        multistart_solver.config.break_on_solution = True
 
     if not skip_initial_nlp_solve:
         res = _try_nlp_solve(nlp, nlp_solver)
