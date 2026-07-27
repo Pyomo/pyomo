@@ -60,9 +60,11 @@ def multistart_init_ex():
     multistart_solver = SolverFactory('multistart')
 
     opts = {"load_solutions": False, "raise_exception_on_nonoptimal_result": False}
+
     multistart_solver.config.strategy = "rand_vector"
     multistart_solver.config.solver_args = opts
     multistart_solver.config.iterations = 10
+    multistart_solver.config.break_on_solution = True
 
     results = ini.initialize_with_multistart_opt(
         nlp=m, nlp_solver=nlp_solver, multistart_solver=multistart_solver, seed=145
