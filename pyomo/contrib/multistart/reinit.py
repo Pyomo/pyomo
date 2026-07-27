@@ -81,7 +81,6 @@ def reinitialize_variables(model, config, sampler):
     """
 
     eligible_vars = []
-    print(model._vars_list[0].value)
     for var in model._vars_list:
         if var.is_fixed() or not var.is_continuous():
             continue

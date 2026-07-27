@@ -257,8 +257,6 @@ class MultiStart(SolverBase):
                 list(model.component_data_objects(Var, descend_into=True)),
             )
             # If the list has nothing in it, check components
-            print(len(model._vars_list))
-            print(model._vars_list)
             if len(model._vars_list) == 0:
                 setattr(
                     model,
@@ -269,7 +267,6 @@ class MultiStart(SolverBase):
                                                   ))
                     
                 )
-            print(model._vars_list)
             best_result = result = solver.solve(model, **config.solver_args)
             # Check the solution status before loading variables into the model.
             if result.solution_status in {
