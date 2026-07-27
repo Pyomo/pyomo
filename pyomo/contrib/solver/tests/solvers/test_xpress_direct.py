@@ -26,7 +26,7 @@ from pyomo.contrib.solver.common.util import (
 )
 from pyomo.contrib.solver.common.results import SolutionStatus
 from pyomo.contrib.solver.solvers.xpress import XpressDirect
-from pyomo.contrib.solver.solvers.xpress.xpress_base import _exit_external_function
+from pyomo.contrib.solver.solvers.xpress.xpress_base import _exit_external_function, xp
 from pyomo.contrib.solver.tests.solvers._xpress_test_utils import (
     _simple_lp,
     _simple_mip,
@@ -732,7 +732,9 @@ class TestXpressExternalFunction(unittest.TestCase):
         """Two external functions in the same model.
 
         Objective: f1(x) + f2(y) = x^2 + (y+1), x in [0,5], y in [0,5].
-        Optimum: x=0, y=0, obj=1.
+        Full license: optimum x=0, y=0, obj=1.
+        Community license: only one user function is allowed, so the solve
+        must surface Xpress error 1152 cleanly.
         """
 
         def f1(x):
@@ -747,16 +749,23 @@ class TestXpressExternalFunction(unittest.TestCase):
         m.f1 = pyo.ExternalFunction(function=f1)
         m.f2 = pyo.ExternalFunction(function=f2)
         m.obj = pyo.Objective(expr=m.f1(m.x) + m.f2(m.y))
-        _solve_and_check(
-            self,
-            self.opt,
-            m,
-            {
-                'status': SolutionStatus.feasible,
-                'objective': 1.0,
-                'vars': [(m.x, 0.0), (m.y, 0.0)],
-            },
-        )
+        if xp.featurequery("Community"):
+            # community raises "?1152 Error: Problem has too many nonlinear user
+            # functions. ...", matched on the stable numeric code at the start of
+            # the message rather than the English text.
+            with self.assertRaisesRegex(Exception, r"^\?1152"):
+                self.opt.solve(m)
+        else:
+            _solve_and_check(
+                self,
+                self.opt,
+                m,
+                {
+                    'status': SolutionStatus.feasible,
+                    'objective': 1.0,
+                    'vars': [(m.x, 0.0), (m.y, 0.0)],
+                },
+            )
 
     def test_external_function_fgh_callback(self):
         """ExternalFunction with fgh= callback: exercises the _fgh code path in
