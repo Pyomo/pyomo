@@ -39,8 +39,6 @@ import time
 from dataclasses import dataclass
 from typing import Any, Iterator, Mapping, Optional, Sequence, cast
 
-import numpy as np
-
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import InfeasibleConstraintException
@@ -70,7 +68,6 @@ from pyomo.core.expr.numeric_expr import (
     UnaryFunctionExpression,
 )
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
-from pyomo.core.expr import native_numeric_types
 from pyomo.core.base import Expression as NamedExpressionComponent
 from pyomo.core.expr.numvalue import value
 from pyomo.common.gc_manager import PauseGC
@@ -96,7 +93,7 @@ from pyomo.contrib.solver.common.util import (
 
 # ---- Pure-Python module-level constants (no xp dependency) ------------------
 
-_BOUND_TYPE_CODES = np.array([76, 85], dtype=np.int8)  # 'L', 'U'
+_BOUND_TYPE_CODES = ['L', 'U']
 
 _VAR_TYPE_CODES: dict[tuple[bool, bool], int] = {
     (True, True): 66,  # 'B' -- binary (implies integer)
@@ -198,14 +195,11 @@ def _exit_external_function(visitor: 'XpressExpressionWalker', node, *data) -> A
     return xp.user(xp_cb, *xp_args, derivatives="always" if has_grad else "never")
 
 
-def _init_xpress() -> tuple:
+def _init_xpress(xp, xpress_available):
     """Populate all Pyomo<->Xpress entity maps. No-op if already done or if
     xpress did not import successfully."""
-
-    xp, xpress_available = attempt_import('xpress', catch_exceptions=(Exception,))
-
     if not xpress_available:
-        return xp, xpress_available
+        return
 
     _VAR_XP_TYPE_MAP.update(
         {
@@ -302,10 +296,8 @@ def _init_xpress() -> tuple:
         }
     )
 
-    return xp, xpress_available
 
-
-xp, xpress_available = _init_xpress()
+xp, xpress_available = attempt_import('xpress', callback=_init_xpress)
 
 
 def _register_pool_collector(prob, pool_limit: int) -> 'list[list[float]]':
@@ -523,7 +515,8 @@ class XpressSolverMixin(SolverBase):
         """Bulk-set variable bounds for pyo_vars, respecting fixed-var pinning."""
         n = len(pyo_vars)
         cbounds = [b for var in pyo_vars for b in self._var_bounds(var)]
-        prob.chgBounds(np.repeat(xp_vars, 2), np.tile(_BOUND_TYPE_CODES, n), cbounds)
+        cols = [v for v in xp_vars for _ in range(2)]
+        prob.chgBounds(cols, _BOUND_TYPE_CODES * n, cbounds)
 
     def _add_vars_impl(self, prob, pyo_vars: list[VarData], symbolic_labels: bool):
         """Add columns, set types and bounds. Returns the xp.var array.
@@ -587,16 +580,15 @@ class XpressSolverMixin(SolverBase):
         n = len(pyo_sos)
         if n == 0:
             return []
-        settype = np.empty(n, dtype=np.int8)
-        setstart = np.empty(n + 1, dtype=np.int64)
-        setstart[0] = 0
+        settype: list[int] = []
+        setstart: list[int] = [0]
         setind: list[int] = []
         refval: list[float] = []
-        for i, con in enumerate(pyo_sos):
+        for con in pyo_sos:
             setind.extend(var_map[id(var)].index for var in con.variables)
             refval.extend(float(w) for _, w in con.get_items())
-            settype[i] = ord('1' if con.level == 1 else '2')
-            setstart[i + 1] = len(setind)
+            settype.append(ord('1' if con.level == 1 else '2'))
+            setstart.append(len(setind))
         nsos = prob.attributes.sets
         prob.addSets(settype, setstart, setind, refval)
         if symbolic_labels:
@@ -605,18 +597,15 @@ class XpressSolverMixin(SolverBase):
         return prob.getSOS(first=nsos, last=nsos + n - 1)
 
     def _warmstart(self, prob, vars: list[VarData], entind: list[int]) -> None:
-        n = len(entind)
-        ws_vals = np.empty(n, dtype=np.float64)
-        ws_cols = np.empty(n, dtype=np.int32)
-        count = 0
+        ws_vals: list[float] = []
+        ws_cols: list[int] = []
         for j in entind:
             var = vars[j]
             if var.value is not None:
-                ws_vals[count] = var.value
-                ws_cols[count] = j
-                count += 1
-        if count > 0:
-            prob.addMipSol(ws_vals[:count], ws_cols[:count])
+                ws_vals.append(var.value)
+                ws_cols.append(j)
+        if ws_vals:
+            prob.addMipSol(ws_vals, ws_cols)
 
     def _apply_solver_controls(self, prob, config: BranchAndBoundConfig) -> None:
         if config.time_limit is not None:
