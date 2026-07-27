@@ -261,11 +261,11 @@ class MultiStart(SolverBase):
                 setattr(
                     model,
                     tmp_var_list_name,
-                    list(get_vars_from_components(model, 
-                                                  ctype=(Constraint, Objective),
-                                                  active=True,
-                                                  ))
-                    
+                    list(
+                        get_vars_from_components(
+                            model, ctype=(Constraint, Objective), active=True
+                        )
+                    ),
                 )
             best_result = result = solver.solve(model, **config.solver_args)
             # Check the solution status before loading variables into the model.
