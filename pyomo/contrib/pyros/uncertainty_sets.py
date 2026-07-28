@@ -500,32 +500,26 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         int : Dimension of the uncertainty set (number of uncertain
         parameters in a corresponding optimization model of interest).
         """
-        raise NotImplementedError
+        ...
 
     @property
     @abc.abstractmethod
     def geometry(self):
-        """
-        Geometry : Geometry of the uncertainty set.
-        """
-        raise NotImplementedError
+        """Geometry : Geometry of the uncertainty set."""
+        ...
 
     @property
     @abc.abstractmethod
     def parameter_bounds(self):
         """
-        Bounds for the value of each uncertain parameter constrained
-        by the set (i.e. bounds for each set dimension).
-
-        Returns
-        -------
-        list[tuple[numbers.Real, numbers.Real]]
-            If the bounds can be calculated efficiently, then this list
-            should be of length ``self.dim`` and contain the
-            (lower, upper) bound pairs.
-            Otherwise, the list should be empty.
+        list[tuple[numbers.Real, numbers.Real]] : Valid lower and upper
+        bounds for the coordinate values of points comprising the
+        set. If the bounds can be calculated efficiently,
+        then this list should be of length ``self.dim``
+        and contain the (lower, upper) bound pairs.
+        Otherwise, the list should be empty.
         """
-        raise NotImplementedError
+        ...
 
     @property
     def _cache(self):
@@ -729,7 +723,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         UncertaintyQuantification
             A collection of the components added or addressed.
         """
-        pass
+        ...
 
     def point_in_set(self, point):
         """
