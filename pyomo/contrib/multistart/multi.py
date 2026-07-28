@@ -21,6 +21,8 @@ from pyomo.common.config import (
     ADVANCED_OPTION,
 )
 
+from typing import Any
+from pyomo.common.timing import HierarchicalTimer, default_timer
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.dependencies import numpy as np
 from pyomo.contrib.multistart.high_conf_stop import should_stop
@@ -30,6 +32,7 @@ from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.config import SolverConfig
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import SolutionStatus
+from pyomo.contrib.solver.common.util import NoOptimalSolutionError, NoSolutionError, NoFeasibleSolutionError
 from pyomo.util.vars_from_expressions import get_vars_from_components
 
 from pyomo.common.dependencies.scipy import stats
@@ -150,7 +153,7 @@ class MultistartConfig(SolverConfig):
         self.sampling_method = self.declare(
             "sampling_method",
             ConfigValue(
-                default="random_uniform",
+                default="latin_hypercube",
                 description="Method for sampling random starting points for reinitialization step. "
                 "Supported options are 'random_uniform', 'latin_hypercube', and 'sobol_sampling'. "
                 "Only utilized when config.strategy is 'rand_vector'.",
@@ -189,62 +192,80 @@ class MultiStart(SolverBase):
 
     CONFIG = MultistartConfig()
 
+    def __init__(self, **kwds: Any) -> None:
+        super().__init__(**kwds)
+
+        #: Instance configuration;
+        self.config = self.config
+
+
     def available(self, exception_flag=True):
         """Check if solver is available.
 
-        TODO: For now, it is always available. However, sub-solvers may not
-        always be available, and so this should reflect that possibility.
-
+        The multistart solver wrapper should always be available,
+        but it is not guaranteed the subsolvers will be. 
+        Check if the selected subsolver is available, which by default is ipopt.
         """
-        return True
+
+        subsolver = SolverFactory(self.config.solver)
+        return subsolver.available()
 
     def version(self):
-        """Get solver version
-        TODO: This is a solver wrapper, unsure how to define version in this case."""
-
-        return
+        """Get solver version."""
+        """
+            Original implementation: 0.1.0,
+            Current implementation: 0.2.0,
+        """
+        return (0, 2, 0)
 
     def license_is_valid(self):
         return True
 
     def solve(self, model, **kwds):
+        start_time = default_timer()
+
         # initialize keyword args
         config = self.config(kwds.pop('options', {}))
         config.set_value(kwds)
+
+        timer = config.timer
+        if timer is None:
+            timer = config.timer = HierarchicalTimer()
 
         # Create centralized sampler once
         sampler = SamplingManager(
             method=config.sampling_method, rng=config.rng, seed=config.seed
         )
 
-        # Set options so infeasible solve does not interrupt runs
-        # config.solver_args["load_solutions"] = False
-        # config.solver_args["raise_exception_on_nonoptimal_result"] = False
+        # Set sub-solver options so infeasible solve does not interrupt runs
+        config.solver_args["load_solutions"] = False
+        config.solver_args["raise_exception_on_nonoptimal_result"] = False
+
+        # config.raise_exception_on_nonoptimal_result = False
 
         solver = SolverFactory(config.solver)
 
         # Model sense
-        objectives = model.component_data_objects(Objective, active=True)
-        obj = next(objectives, None)
-        # Check model validity
-        if next(objectives, None) is not None:
+        objectives = list(model.component_data_objects(Objective, active=True))
+        # Check length
+        print(len(objectives))
+        if len(objectives) > 1:
             raise RuntimeError(
                 "Multistart solver is unable to handle model with multiple active objectives."
             )
-        # if obj is None:
-        #     raise RuntimeError(
-        #         "Multistart solver is unable to handle model with no active objective."
-        #     )
-        # if obj.polynomial_degree() == 0:
-        #     raise RuntimeError(
-        #         "Multistart solver received model with constant objective"
-        #     )
+        elif len(objectives) == 1:
+            obj = objectives[0]
+            obj.sign = 1 if obj.sense == minimize else -1
+            obj_sign = obj.sign
+
+        else:
+            obj_sign = 1      
+
+        best_objective = float('inf') * obj_sign
 
         # store objective values and objective/result information for best
         # solution obtained
         objectives = []
-        obj_sign = 1 if obj.sense == minimize else -1
-        best_objective = float('inf') * obj_sign
         best_model = model
         best_result = None
 
@@ -309,7 +330,7 @@ class MultiStart(SolverBase):
                 # at first iteration, solve the originally passed model
                 m = model.clone() if num_iter > 1 else model
                 reinitialize_variables(m, config, sampler)
-                result = solver.solve(m, **config.solver_args)  # , tee=True)
+                result = solver.solve(m, **config.solver_args)
 
                 # Check the solution status before loading variables into the model.
                 if result.solution_status in {
@@ -326,6 +347,7 @@ class MultiStart(SolverBase):
 
                 if best_result.solution_status is SolutionStatus.optimal:
                     model_objectives = m.component_data_objects(Objective, active=True)
+                    print("Model objs", model_objectives)
                     mobj = next(model_objectives)
                     obj_val = value(mobj.expr)
                     objectives.append(obj_val)
@@ -335,16 +357,23 @@ class MultiStart(SolverBase):
                         best_model = m
                         best_result = result
 
-            if using_HCS and not HCS_completed:
-                logger.warning(
-                    "High confidence stopping rule was unable to complete "
-                    "after %s iterations. To increase this limit, change the "
-                    "HCS_max_iterations flag." % num_iter
-                )
+            if using_HCS:
+                if not HCS_completed:
+                    logger.warning(
+                        "High confidence stopping rule was unable to complete "
+                        "after %s iterations. To increase this limit, change the "
+                        "HCS_max_iterations flag." % num_iter
+                    )
 
+            else:
+                if config.raise_exception_on_nonoptimal_result and not using_HCS:
+                    if best_result.solution_status != SolutionStatus.optimal:
+                        raise NoOptimalSolutionError
+                    
+            
             # if no better result was found than initial solve, then return
             # that without needing to copy variables.
-            if best_model is model:
+            if best_model is model:                             
                 return best_result
 
             # reassign the given models vars to the new models vars

@@ -1232,7 +1232,7 @@ class TestSolvers(unittest.TestCase):
         opt.config.load_solutions = False
         res = opt.solve(m)
         self.assertNotEqual(res.solution_status, SolutionStatus.optimal)
-        if isinstance(opt, Ipopt):
+        if isinstance(opt, Ipopt) or isinstance(opt, MultiStart):
             acceptable_termination_conditions = {
                 TerminationCondition.locallyInfeasible,
                 TerminationCondition.unbounded,

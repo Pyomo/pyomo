@@ -134,21 +134,6 @@ class MultistartTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "multiple active objectives"):
             SolverFactory('multistart').solve(m)
 
-    # Would like to remove these tests to allow for square model solves.
-    # def test_no_obj(self):
-    #     m = ConcreteModel()
-    #     m.x = Var()
-    #     with self.assertRaisesRegex(RuntimeError, "no active objective"):
-    #         SolverFactory('multistart').solve(m)
-
-    # def test_const_obj(self):
-    #     m = ConcreteModel()
-    #     m.x = Var()
-    #     m.o = Objective(expr=5)
-    #     with self.assertRaisesRegex(RuntimeError, "constant objective"):
-    #         SolverFactory('multistart').solve(m)
-
-
 def build_model():
     """Simple non-convex model with many local minima"""
     model = ConcreteModel()
