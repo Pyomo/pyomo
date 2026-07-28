@@ -400,16 +400,25 @@ class TestBoxSet(unittest.TestCase):
         """
         Test validate bounds check performs as expected.
         """
-        CONFIG = Bunch()
+        CONFIG = Bunch(progress_logger=logging.getLogger("pyomo.contrib.pyros"))
 
         # construct valid box set
         box_set = BoxSet(bounds=[[1.0, 2.0], [3.0, 4.0]])
 
         # check when LB >= UB
-        box_set.bounds[0][0] = 5
+        box_set.bounds[0, 0] = 5
         exc_str = r"Lower bound 5.0 exceeds upper bound 2.0"
         with self.assertRaisesRegex(ValueError, exc_str):
             box_set.validate(config=CONFIG)
+
+        # check infinite bounds
+        box_set.bounds[0, 0] = -float("inf")
+        exc_str = r"Entry.*is not a finite numeric value"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            box_set.validate(config=CONFIG)
+        exc_str = r"Boundedness check failed.*BoxSet"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            UncertaintySet.validate(box_set, config=CONFIG)
 
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_bounded_and_nonempty(self):
