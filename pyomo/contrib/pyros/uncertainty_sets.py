@@ -959,8 +959,8 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
     def _solve_feasibility(self, solver):
         """
-        Construct and solve feasibility problem using uncertainty set
-        constraints defined by ``self.set_as_constraint(self, ...)``.
+        Construct and solve feasibility problem with constraints
+        defined by ``self.set_as_constraint(self, ...)``.
 
         Parameters
         ----------
