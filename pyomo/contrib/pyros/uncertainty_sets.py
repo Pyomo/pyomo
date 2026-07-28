@@ -666,9 +666,10 @@ class UncertaintySet(metaclass=abc.ABCMeta):
             If the feasibility problem is neither solved to an
             acceptable level nor found to be infeasible.
         """
-        if config.nominal_uncertain_param_vals:
-            if self.point_in_set(config.nominal_uncertain_param_vals):
-                return True
+        if config.nominal_uncertain_param_vals and self.point_in_set(
+            config.nominal_uncertain_param_vals
+        ):
+            return True
 
         res = self._solve_feasibility(config.global_solver)
         if check_optimal_termination(res):
