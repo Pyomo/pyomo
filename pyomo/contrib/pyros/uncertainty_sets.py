@@ -41,6 +41,7 @@ from pyomo.core.base import (
 )
 from pyomo.core.expr import mutable_expression, native_numeric_types, value
 from pyomo.core.util import quicksum, dot_product
+from pyomo.opt import TerminationCondition
 from pyomo.opt.results import check_optimal_termination
 from pyomo.contrib.pyros.util import (
     copy_docstring,
@@ -649,7 +650,12 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
     def is_nonempty(self, config):
         """
-        Determine whether the uncertainty set is nonempty.
+        Return True if the uncertainty set is known to be nonempty,
+        False if the uncertainty set is known to be empty.
+
+        This check is performed by constructing and solving a
+        feasibility problem with constraints defined by
+        ``self.set_as_constraint(self, ...)``.
 
         Parameters
         ----------
@@ -658,31 +664,33 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Returns
         -------
-        : bool
-            True if the uncertainty set is nonempty,
-            and False otherwise.
+        bool
+
+        Raises
+        ------
+        ValueError
+            If the feasibility problem is neither solved to an
+            acceptable level nor found to be infeasible.
         """
-        # check if nominal point is in set for quick test
         if config.nominal_uncertain_param_vals:
-            set_nonempty = self.point_in_set(config.nominal_uncertain_param_vals)
+            if self.point_in_set(config.nominal_uncertain_param_vals):
+                return True
+
+        res = self._solve_feasibility(config.global_solver)
+        if check_optimal_termination(res):
+            return True
+        elif res.solver.termination_condition == TerminationCondition.infeasible:
+            return False
         else:
-            # construct feasibility problem and solve otherwise
-            self._solve_feasibility(config.global_solver)
-            set_nonempty = True
-
-        # log result
-        if not set_nonempty:
-            config.progress_logger.error(
-                "Nominal point is not within the uncertainty set. "
-                f"Got nominal point: {config.nominal_uncertain_param_vals}"
+            raise ValueError(
+                "Could not successfully confirm whether feasibility problem "
+                f"for {type(self).__name__} instance was feasible or infeasible. "
+                f"Solver status summary:\n {res.solver}."
             )
-
-        return set_nonempty
 
     def validate(self, config):
         """
-        Validate the uncertainty set with a nonemptiness
-        and boundedness check.
+        Validate the uncertainty set with a boundedness check.
 
         Parameters
         ----------
@@ -692,12 +700,8 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         Raises
         ------
         ValueError
-            If nonemptiness check or boundedness check fails.
+            If boundedness check fails.
         """
-        # perform validation checks
-        if not self.is_nonempty(config=config):
-            raise ValueError(f"Nonemptiness check failed for uncertainty set {self}.")
-
         if not self.is_bounded(config=config):
             raise ValueError(f"Boundedness check failed for uncertainty set {self}.")
 
@@ -956,28 +960,25 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     def _solve_feasibility(self, solver):
         """
         Construct and solve feasibility problem using uncertainty set
-        constraints and parameter bounds using `set_as_constraint` and
-        `_add_bounds_on_uncertain_parameters` of self.
+        constraints defined by ``self.set_as_constraint(self, ...)``.
 
         Parameters
         ----------
         solver : Pyomo solver
-            Optimizer capable of solving bounding problems to
-            global optimality.
+            Optimizer that can obtain a feasible solution to the
+            bounding problem or certify that the problem is
+            globally infeasible.
 
-        Raises
-        ------
-        ValueError
-            If feasibility problem fails to solve.
+        Returns
+        -------
+        pyomo.opt.SolverResults
+            Solver results for the feasibility problem.
         """
         model = ConcreteModel()
         model.u = Var(within=NonNegativeReals)
 
         # construct param vars
         model.param_vars = Var(range(self.dim))
-
-        # add bounds on param vars
-        self._add_bounds_on_uncertain_parameters(model.param_vars, global_solver=solver)
 
         # add constraints
         self.set_as_constraint(uncertain_params=model.param_vars, block=model)
@@ -988,12 +989,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             return model.u
 
         # solve feasibility problem
-        res = solver.solve(model, load_solutions=False)
-        if not check_optimal_termination(res):
-            raise ValueError(
-                "Could not successfully solve feasibility problem. "
-                f"Solver status summary:\n {res.solver}."
-            )
+        return solver.solve(model, load_solutions=False)
 
     def _add_bounds_on_uncertain_parameters(
         self, uncertain_param_vars, global_solver=None
@@ -2113,7 +2109,7 @@ class PolyhedralSet(UncertaintySet):
             If any uncertainty set attributes are not valid.
             (e.g., numeric values are infinite,
             or ``self.coefficients_mat`` has column of zeros).
-            If bounded and nonempty checks fail.
+            If boundedness check fails.
         """
         lhs_coeffs_arr = self.coefficients_mat
         rhs_vec_arr = self.rhs_vec
@@ -2147,7 +2143,7 @@ class PolyhedralSet(UncertaintySet):
                 "Ensure column has at least one nonzero entry"
             )
 
-        # check boundedness and nonemptiness
+        # boundedness check
         super().validate(config)
 
 
@@ -4064,6 +4060,10 @@ class IntersectionSet(UncertaintySet):
     def validate(self, config):
         """
         Check IntersectionSet validity.
+
+        This check is performed by validating each operand
+        set of the intersection and then validating the
+        intersection as a whole.
 
         Raises
         ------
