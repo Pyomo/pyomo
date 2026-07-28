@@ -3707,16 +3707,16 @@ class DiscreteScenarioSet(UncertaintySet):
         ]
         return parameter_bounds
 
-    def is_bounded(self, config):
+    def is_nonempty(self, config):
         """
-        Return True if the uncertainty set is bounded, and False
+        Return True if the uncertainty set is nonempty, and False
         otherwise.
 
-        By default, the discrete scenario set is bounded,
-        as the entries of all uncertain parameter scenarios
-        are finite.
+        Returns
+        -------
+        bool
         """
-        return True
+        return len(self.scenarios) > 0
 
     @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, uncertain_params=None, block=None):

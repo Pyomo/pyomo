@@ -2421,6 +2421,14 @@ class TestDiscreteScenarioSet(unittest.TestCase):
         discrete_set = DiscreteScenarioSet([[1, 2], [3, 4]])
         bounded_and_nonempty_check(self, discrete_set)
 
+    def test_is_nonempty(self):
+        # nonempty
+        discrete_set = DiscreteScenarioSet([[1, 2], [3, 4]])
+        self.assertTrue(discrete_set.is_nonempty(config=Bunch()))
+        # empty: scenarios list is empty
+        discrete_set.scenarios.clear()
+        self.assertFalse(discrete_set.is_nonempty(config=Bunch()))
+
     def test_is_coordinate_fixed(self):
         """
         Test method for checking whether there are coordinates
