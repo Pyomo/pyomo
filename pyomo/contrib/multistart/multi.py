@@ -32,7 +32,11 @@ from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.config import SolverConfig
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import SolutionStatus
-from pyomo.contrib.solver.common.util import NoOptimalSolutionError, NoSolutionError, NoFeasibleSolutionError
+from pyomo.contrib.solver.common.util import (
+    NoOptimalSolutionError,
+    NoSolutionError,
+    NoFeasibleSolutionError,
+)
 from pyomo.util.vars_from_expressions import get_vars_from_components
 
 from pyomo.common.dependencies.scipy import stats
@@ -198,12 +202,11 @@ class MultiStart(SolverBase):
         #: Instance configuration;
         self.config = self.config
 
-
     def available(self, exception_flag=True):
         """Check if solver is available.
 
         The multistart solver wrapper should always be available,
-        but it is not guaranteed the subsolvers will be. 
+        but it is not guaranteed the subsolvers will be.
         Check if the selected subsolver is available, which by default is ipopt.
         """
 
@@ -259,7 +262,7 @@ class MultiStart(SolverBase):
             obj_sign = obj.sign
 
         else:
-            obj_sign = 1      
+            obj_sign = 1
 
         best_objective = float('inf') * obj_sign
 
@@ -369,11 +372,10 @@ class MultiStart(SolverBase):
                 if config.raise_exception_on_nonoptimal_result and not using_HCS:
                     if best_result.solution_status != SolutionStatus.optimal:
                         raise NoOptimalSolutionError
-                    
-            
+
             # if no better result was found than initial solve, then return
             # that without needing to copy variables.
-            if best_model is model:                             
+            if best_model is model:
                 return best_result
 
             # reassign the given models vars to the new models vars

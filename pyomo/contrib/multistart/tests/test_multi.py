@@ -134,6 +134,7 @@ class MultistartTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "multiple active objectives"):
             SolverFactory('multistart').solve(m)
 
+
 def build_model():
     """Simple non-convex model with many local minima"""
     model = ConcreteModel()

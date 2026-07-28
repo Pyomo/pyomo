@@ -15,10 +15,7 @@ from pyomo.contrib.solver.common.results import SolutionStatus
 from pyomo.devel.initialization.bounds.bound_variables import (
     bound_all_nonlinear_variables,
 )
-from pyomo.devel.initialization.utils import (
-    shallow_clone, 
-    fix_vars_with_equal_bounds,
-)
+from pyomo.devel.initialization.utils import shallow_clone, fix_vars_with_equal_bounds
 import logging
 
 logger = logging.getLogger(__name__)
