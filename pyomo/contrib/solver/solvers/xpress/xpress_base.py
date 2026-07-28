@@ -36,7 +36,6 @@ import io
 import math
 import os
 import time
-from dataclasses import dataclass
 from typing import Any, Iterator, Mapping, Optional, Sequence, cast
 
 from pyomo.common.collections import ComponentMap
@@ -326,7 +325,6 @@ def _register_pool_collector(prob, pool_limit: int) -> 'list[list[float]]':
     return pool
 
 
-@dataclass
 class EntityMaps:
     """Stable handle maps from Pyomo entities to Xpress entity objects.
 
@@ -344,9 +342,10 @@ class EntityMaps:
     sos: values are single xp.sos handles (SOS sets are never split).
     """
 
-    vars: dict[int, Any]  # id(VarData) -> xp.var
-    cons: dict[ConstraintData, Any]  # ConstraintData -> xp.constraint
-    sos: dict[SOSConstraintData, Any]  # SOSConstraintData -> xp.sos
+    def __init__(self, vars: dict, cons: dict, sos: dict):
+        self.vars = vars  # id(VarData) -> xp.var
+        self.cons = cons  # ConstraintData -> xp.constraint
+        self.sos = sos  # SOSConstraintData -> xp.sos
 
 
 class XpressSolutionLoaderBase(SolutionLoader):
