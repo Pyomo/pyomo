@@ -474,7 +474,7 @@ class Geometry(Enum):
     DISCRETE_SCENARIOS = 4
 
 
-class UncertaintySet(object, metaclass=abc.ABCMeta):
+class UncertaintySet(metaclass=abc.ABCMeta):
     """
     An object representing an uncertainty set to be passed to the
     PyROS solver.
