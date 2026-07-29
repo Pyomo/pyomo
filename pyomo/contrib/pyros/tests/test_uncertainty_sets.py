@@ -3271,6 +3271,12 @@ class TestPolyhedralSet(unittest.TestCase):
         computed_bounds = pset._compute_exact_parameter_bounds(SolverFactory("baron"))
         self.assertEqual(computed_bounds, [(1, 2), (-1, 1)])
 
+        # computation should fail here, since set is not bounded
+        pset2 = PolyhedralSet(lhs_coefficients_mat=[[1, 1]], rhs_vec=[2])
+        exc_str = r"Could not compute lower.*dimension 1"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            pset2._compute_exact_parameter_bounds(SolverFactory("baron"))
+
     def test_point_in_set(self):
         """
         Test point in set checks work as expected.
