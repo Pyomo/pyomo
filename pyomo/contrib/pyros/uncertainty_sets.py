@@ -647,10 +647,6 @@ class UncertaintySet(metaclass=abc.ABCMeta):
         Return True if the uncertainty set is known to be nonempty,
         False if the uncertainty set is known to be empty.
 
-        This check is performed by constructing and solving a
-        feasibility problem with constraints defined by
-        ``self.set_as_constraint(self, ...)``.
-
         Parameters
         ----------
         config : ConfigDict
