@@ -578,7 +578,8 @@ class UncertaintySet(metaclass=abc.ABCMeta):
 
     def is_bounded(self, config):
         """
-        Determine whether the uncertainty set is bounded.
+        Return True if the uncertainty set is certified to be bounded,
+        False otherwise.
 
         Parameters
         ----------
@@ -587,9 +588,7 @@ class UncertaintySet(metaclass=abc.ABCMeta):
 
         Returns
         -------
-        : bool
-            True if the uncertainty set is certified to be bounded,
-            and False otherwise.
+        bool
 
         Notes
         -----
