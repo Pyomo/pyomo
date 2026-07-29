@@ -28,7 +28,12 @@ from pyomo.core.base import ConcreteModel, Param, Var, minimize, UnitInterval
 from pyomo.core.expr import RangedExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.environ import SolverFactory
-from pyomo.opt import assert_optimal_termination
+from pyomo.opt import (
+    assert_optimal_termination,
+    SolverResults,
+    SolverStatus,
+    TerminationCondition,
+)
 
 from pyomo.contrib.pyros.uncertainty_sets import (
     AxisAlignedEllipsoidalSet,
@@ -3395,6 +3400,23 @@ class TestPolyhedralSet(unittest.TestCase):
         # empty set q <= 2 and q >= 3
         pset = PolyhedralSet(lhs_coefficients_mat=[[1], [-1]], rhs_vec=[2, -3])
         self.assertFalse(pset.is_nonempty(config=CONFIG))
+
+        class UnknownSolver:
+            def available(self, exception_flag=None):
+                return True
+
+            def solve(self, model, *args, **kwargs):
+                res = SolverResults()
+                res.solver.termination_condition = TerminationCondition.unknown
+                res.solver.status = SolverStatus.warning
+                return res
+
+        # nonemptiness check fails as nomemptiness/emptiness could
+        # not be deduced using this solver
+        CONFIG.global_solver = UnknownSolver()
+        exc_str = "Could not successfully confirm.*feasible or infeasible"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            pset.is_nonempty(config=CONFIG)
 
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_is_coordinate_fixed(self):
