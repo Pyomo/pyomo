@@ -50,7 +50,9 @@ class InnerRepresentationGDPTransformation(PiecewiseLinearTransformationBase):
     CONFIG = PiecewiseLinearTransformationBase.CONFIG()
     _transformation_name = 'pw_linear_inner_repn'
 
-    def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):
+    def _transform_multiple_segment_pw_linear_expr(
+        self, pw_expr, pw_linear_func, transformation_block
+    ):
         transBlock = transformation_block.transformed_functions[
             len(transformation_block.transformed_functions)
         ]

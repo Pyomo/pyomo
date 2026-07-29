@@ -393,7 +393,7 @@ class CtypesEnviron:
     `os.environ` reflects the current python environment variables, and
     will be passed to subprocesses.  However, it does not reflect the C
     Runtime Library (MSVCRT) environment on Windows platforms.  This can
-    be problemmatic as DLLs loaded through the CTYPES interface will see
+    be problematic as DLLs loaded through the CTYPES interface will see
     the MSVCRT environment and not os.environ.  This class provides a
     way to manage environment variables and pass changes to both
     os.environ and the MSVCRT runtime.
