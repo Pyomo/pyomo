@@ -883,6 +883,11 @@ class TestFactorModelSet(unittest.TestCase):
         np.testing.assert_allclose(fset.psi_mat, [[1, 0], [0, 1], [1, 1]])
         np.testing.assert_allclose(fset.beta, 0.5)
 
+        # ensure finiteness check runs
+        exc_str = r"beta.*not a finite numeric value"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            fset.beta = float("inf")
+
     def test_error_on_factor_model_set_dim_change(self):
         """
         Test ValueError raised when attempting to change FactorModelSet
@@ -1930,6 +1935,11 @@ class TestCardinalitySet(unittest.TestCase):
         np.testing.assert_allclose(cset.positive_deviation, [3, 0])
         np.testing.assert_equal(cset.negative_deviation, [0, -1.5])
 
+        # ensure finiteness check runs
+        exc_str = r"gamma.*not a finite numeric value"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cset.gamma = float("inf")
+
     def test_cardinality_constructor_args_order(self):
         """
         Check that `CardinalitySet` constructor allows
@@ -2761,6 +2771,11 @@ class TestEllipsoidalSet(unittest.TestCase):
             eset.gaussian_conf_lvl,
             err_msg="EllipsoidalSet Gaussian confidence level update not as expected",
         )
+
+        # ensure finiteness check runs
+        exc_str = r"scale.*not a finite numeric value"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            eset.scale = float("inf")
 
     def test_normal_construction_and_update_gaussian_conf_lvl(self):
         """

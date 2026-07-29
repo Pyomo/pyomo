@@ -2708,6 +2708,13 @@ class FactorModelSet(UncertaintySet):
 
     @beta.setter
     def beta(self, val):
+        validate_arg_type(
+            arg_name="beta",
+            arg_val=val,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+            is_entry_of_arg=False,
+        )
         self._beta = val
 
     @property
