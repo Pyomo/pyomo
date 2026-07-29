@@ -27,6 +27,7 @@ from pyomo.environ import (
     value,
 )
 from pyomo.contrib.solver.common.factory import SolverFactory
+from pyomo.contrib.solver.common.util import NoOptimalSolutionError
 
 
 @unittest.skipIf(not SolverFactory('ipopt').available(), "IPOPT not available")
@@ -106,7 +107,9 @@ class MultistartTests(unittest.TestCase):
         m.x = Var(bounds=(0, 1))
         m.c = Constraint(expr=m.x >= 2)
         m.o = Objective(expr=m.x)
-        SolverFactory('multistart').solve(m, iterations=2)
+
+        with self.assertRaises(NoOptimalSolutionError):
+            SolverFactory('multistart').solve(m, iterations=2)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.WARNING):
             SolverFactory('multistart').solve(m, iterations=-1, HCS_max_iterations=3)
