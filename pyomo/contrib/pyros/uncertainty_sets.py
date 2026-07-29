@@ -658,8 +658,8 @@ class UncertaintySet(metaclass=abc.ABCMeta):
         Raises
         ------
         ValueError
-            If the feasibility problem is neither solved to an
-            acceptable level nor found to be infeasible.
+            If neither nonemptiness nor emptiness of the uncertainty
+            set can be certified.
         """
         if config.nominal_uncertain_param_vals and self.point_in_set(
             config.nominal_uncertain_param_vals
