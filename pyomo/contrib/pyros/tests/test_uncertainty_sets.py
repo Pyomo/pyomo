@@ -4067,8 +4067,6 @@ class TestCustomUncertaintySet(unittest.TestCase):
         custom_set = CustomUncertaintySet(dim=2)
         uq = custom_set.set_as_constraint(uncertain_params=None, block=m)
 
-        con1, con2, con3 = uq.uncertainty_cons
-        var1, var2 = uq.uncertain_param_vars
         self.assertEqual(uq.auxiliary_vars, [])
         self.assertIs(uq.block, m)
         self.assertEqual(len(uq.uncertainty_cons), 3)
@@ -4156,8 +4154,16 @@ class TestCustomUncertaintySet(unittest.TestCase):
         CONFIG = pyros_config()
         CONFIG.global_solver = global_solver
 
-        # constructing a feasibility problem
-        self.assertTrue(custom_set.is_nonempty(config=CONFIG), "Set is empty")
+        # nonempty by itself
+        self.assertTrue(custom_set.is_nonempty(config=CONFIG))
+
+        # nonempty since nominal point is in set
+        CONFIG.nominal_uncertain_param_vals = [0, 0]
+        self.assertTrue(custom_set.is_nonempty(config=CONFIG))
+
+        # nonempty even if nominal point is not in set
+        CONFIG.nominal_uncertain_param_vals = [-2, -2]
+        self.assertTrue(custom_set.is_nonempty(config=CONFIG))
 
     def test_fbbt_values(self):
         """
