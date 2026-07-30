@@ -20,8 +20,10 @@ from pyomo.core import Var
 logger = logging.getLogger('pyomo.contrib.multistart')
 
 
-def rand(val, lb, ub, rng):
-    sample = rng.uniform(lb, ub)  # uniform distribution between lb and ub
+def rand(val, lb, ub, sampler):
+    # if sampler.method == "uniform":
+    sample = sampler.rng.uniform(lb, ub)  # uniform distribution between lb and ub
+    
     return sample
 
 
@@ -33,28 +35,28 @@ def rand_vector(lbs, ubs, sampler):
     return samples
 
 
-def midpoint_guess_and_bound(val, lb, ub, rng=None):
+def midpoint_guess_and_bound(val, lb, ub, sampler=None):
     """Midpoint between current value and farthest bound."""
     far_bound = ub if ((ub - val) >= (val - lb)) else lb  # farther bound
     return (far_bound + val) / 2
 
 
-def rand_guess_and_bound(val, lb, ub, rng):
+def rand_guess_and_bound(val, lb, ub, sampler):
     """Random choice between current value and farthest bound."""
     far_bound = ub if ((ub - val) >= (val - lb)) else lb  # farther bound
     if far_bound == ub:
-        return rng.uniform(val, far_bound)
+        return sampler.rng.uniform(val, far_bound)
     else:
-        return rng.uniform(far_bound, val)
+        return sampler.rng.uniform(far_bound, val)
 
 
-def rand_distributed(val, lb, ub, rng, divisions=9):
+def rand_distributed(val, lb, ub, sampler, divisions=9):
     """Random choice among evenly distributed set of values between bounds."""
     set_distributed_vals = linspace(lb, ub, divisions)
-    return rng.choice(set_distributed_vals)
+    return sampler.rng.choice(set_distributed_vals)
 
 
-def simple_midpoint(val, lb, ub, rng=None):
+def simple_midpoint(val, lb, ub, sampler=None):
     return (lb + ub) * 0.5
 
 
@@ -121,6 +123,6 @@ def reinitialize_variables(model, config, sampler):
             # print(f"val = {val}\n")
             # apply reinitialization strategy to variable
             var.set_value(
-                strategies[config.strategy](val, var.lb, var.ub, sampler.rng),
+                strategies[config.strategy](val, var.lb, var.ub, sampler),
                 skip_validation=True,
             )

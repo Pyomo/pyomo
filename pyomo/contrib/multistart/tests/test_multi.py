@@ -61,6 +61,7 @@ class MultistartTests(unittest.TestCase):
                 clone_objective_value, standard_objective_value
             )  # assumes maximization
 
+
     def test_as_good_with_HCS_rule(self):
         """test that the high confidence stopping rule with very lenient
         parameters does no worse.

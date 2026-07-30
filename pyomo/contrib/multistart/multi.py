@@ -22,6 +22,7 @@ from pyomo.common.config import (
 )
 
 from typing import Any
+import datetime
 from pyomo.common.timing import HierarchicalTimer, default_timer
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.dependencies import numpy as np
@@ -31,7 +32,12 @@ from pyomo.core import Objective, Constraint, Var, minimize, value
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.config import SolverConfig
 from pyomo.contrib.solver.common.factory import SolverFactory
-from pyomo.contrib.solver.common.results import SolutionStatus
+from pyomo.contrib.solver.common.results import (
+    Results,
+    TerminationCondition,
+    SolutionStatus,
+)
+
 from pyomo.contrib.solver.common.util import (
     NoOptimalSolutionError,
     NoSolutionError,
@@ -80,16 +86,16 @@ class MultistartConfig(SolverConfig):
             """,
             ),
         )
-        self.solver = self.declare(
-            "solver",
+        self.subsolver = self.declare(
+            "subsolver",
             ConfigValue(
                 default="ipopt",
                 description="solver to use, defaults to ipopt"
                 "Should also be able to accept solver objects. In progress",
             ),
         )
-        self.solver_args = self.declare(
-            "solver_args",
+        self.subsolver_args = self.declare(
+            "subsolver_args",
             ConfigValue(
                 default={},
                 description="Dictionary of keyword arguments to pass to the solver.",
@@ -210,7 +216,7 @@ class MultiStart(SolverBase):
         Check if the selected subsolver is available, which by default is ipopt.
         """
 
-        subsolver = SolverFactory(self.config.solver)
+        subsolver = SolverFactory(self.config.subsolver)
         return subsolver.available()
 
     def version(self):
@@ -235,18 +241,26 @@ class MultiStart(SolverBase):
         if timer is None:
             timer = config.timer = HierarchicalTimer()
 
+        # Allocate the results object so we can populate it as we go
+        results = Results()
+        results.timing_info.start_timestamp = datetime.datetime.now(
+            datetime.timezone.utc
+        )
+        results.solver_name = self.name
+
         # Create centralized sampler once
         sampler = SamplingManager(
             method=config.sampling_method, rng=config.rng, seed=config.seed
         )
 
-        # Set sub-solver options so infeasible solve does not interrupt runs
-        config.solver_args["load_solutions"] = False
-        config.solver_args["raise_exception_on_nonoptimal_result"] = False
+        # Set sub-solver options
+        config.subsolver_args["load_solutions"] = False
+        config.subsolver_args["raise_exception_on_nonoptimal_result"] = False
 
-        # config.raise_exception_on_nonoptimal_result = False
+        config.subsolver_args["time_limit"] = config.time_limit
+        config.subsolver_args["tee"] = config.tee
 
-        solver = SolverFactory(config.solver)
+        solver = SolverFactory(config.subsolver)
 
         # Model sense
         objectives = list(model.component_data_objects(Objective, active=True))
@@ -262,7 +276,9 @@ class MultiStart(SolverBase):
             obj_sign = obj.sign
 
         else:
+            obj = None
             obj_sign = 1
+            config.break_on_solution = True
 
         best_objective = float('inf') * obj_sign
 
@@ -273,6 +289,7 @@ class MultiStart(SolverBase):
         best_result = None
 
         try:
+            timer.start('initial_solve')
             # create temporary variable list for value transfer
             tmp_var_list_name = unique_component_name(model, "_vars_list")
             setattr(
@@ -291,21 +308,25 @@ class MultiStart(SolverBase):
                         )
                     ),
                 )
-            best_result = result = solver.solve(model, **config.solver_args)
+            best_result = result = solver.solve(model, **config.subsolver_args)
             # Check the solution status before loading variables into the model.
             if result.solution_status in {
                 SolutionStatus.feasible,
                 SolutionStatus.optimal,
             }:
-                result.solution_loader.load_vars()
+
                 logger.info(
                     f'solved NLP: {result.solution_status}, {result.termination_condition}'
                 )
+                # if config.load_solutions:
+                result.solution_loader.load_solution()
 
-            if best_result.solution_status is SolutionStatus.optimal:
-                obj_val = value(obj.expr)
-                best_objective = obj_val
-                objectives.append(obj_val)
+            if result.solution_status is SolutionStatus.optimal:
+                if obj is not None:
+                    obj_val = value(obj.expr)
+                    best_objective = obj_val
+                    objectives.append(obj_val)
+            timer.stop('initial_solve')
 
             num_iter = 0
             max_iter = config.iterations
@@ -319,7 +340,9 @@ class MultiStart(SolverBase):
                 ), "High confidence stopping rule requires rand strategy."
                 max_iter = config.HCS_max_iterations
 
+            timer.start('iterative_solves')
             while num_iter < max_iter:
+                # timer.start(f"timer_iter_{num_iter}")
                 if using_HCS and should_stop(
                     objectives,
                     config.stopping_mass,
@@ -327,38 +350,50 @@ class MultiStart(SolverBase):
                     config.HCS_tolerance,
                 ):
                     HCS_completed = True
+                    # timer.stop(f"timer_iter_{num_iter}")
                     break
-                logger.info(f"num_iter: {num_iter}\n")
+
                 num_iter += 1
+                logger.info(f"num_iter: {num_iter}\n")
+
                 # at first iteration, solve the originally passed model
                 m = model.clone() if num_iter > 1 else model
                 reinitialize_variables(m, config, sampler)
-                result = solver.solve(m, **config.solver_args)
-
+                result = solver.solve(m, **config.subsolver_args)
+                # if config.load_solutions:
                 # Check the solution status before loading variables into the model.
                 if result.solution_status in {
                     SolutionStatus.feasible,
                     SolutionStatus.optimal,
                 }:
-                    result.solution_loader.load_vars()
                     logger.info(
                         f'solved NLP: {result.solution_status}, {result.termination_condition}'
                     )
+                    # if config.load_solutions:
+                    result.solution_loader.load_solution()
                     # If we are looking for the first feasible solution, then return immediately
                     if config.break_on_solution:
-                        return best_result
-
-                if best_result.solution_status is SolutionStatus.optimal:
-                    model_objectives = m.component_data_objects(Objective, active=True)
-                    print("Model objs", model_objectives)
-                    mobj = next(model_objectives)
-                    obj_val = value(mobj.expr)
-                    objectives.append(obj_val)
-                    if obj_val * obj_sign < obj_sign * best_objective:
-                        # objective has improved
-                        best_objective = obj_val
                         best_model = m
                         best_result = result
+                        # timer.stop(f"timer_iter_{num_iter}")
+                        break
+
+                if result.solution_status is SolutionStatus.optimal:
+                    if obj is not None:
+                        model_objectives = m.component_data_objects(Objective, active=True)
+                        # print("Model objs", model_objectives)
+                        mobj = next(model_objectives)
+                        obj_val = value(mobj.expr)
+                        objectives.append(obj_val)
+                        if obj_val * obj_sign < obj_sign * best_objective:
+                            # objective has improved
+                            best_objective = obj_val
+                            best_model = m
+                            best_result = result
+                # timer.stop(f"timer_iter_{num_iter}")
+
+            timer.stop('iterative_solves')
+            print(num_iter)
 
             if using_HCS:
                 if not HCS_completed:
@@ -368,24 +403,46 @@ class MultiStart(SolverBase):
                         "HCS_max_iterations flag." % num_iter
                     )
 
-            else:
-                if config.raise_exception_on_nonoptimal_result and not using_HCS:
-                    if best_result.solution_status != SolutionStatus.optimal:
-                        raise NoOptimalSolutionError
+            # if config.raise_exception_on_nonoptimal_result:
+            #     if best_result.solution_status != SolutionStatus.optimal:
+            #         raise NoOptimalSolutionError
+
+            if (
+                config.raise_exception_on_nonoptimal_result
+                and best_result.solution_status != SolutionStatus.optimal
+            ):
+                raise NoOptimalSolutionError()
 
             # if no better result was found than initial solve, then return
             # that without needing to copy variables.
-            if best_model is model:
-                return best_result
-
-            # reassign the given models vars to the new models vars
             orig_var_list = getattr(model, tmp_var_list_name)
             best_soln_var_list = getattr(best_model, tmp_var_list_name)
-            for orig_var, new_var in zip(orig_var_list, best_soln_var_list):
-                if not orig_var.is_fixed():
-                    orig_var.set_value(new_var.value, skip_validation=True)
+            if config.load_solutions:
+                if best_result.solution_status == SolutionStatus.noSolution:
+                    raise NoSolutionError()
 
+                if best_model is not model:
+                    # reassign the given models vars to the new models vars
+                    for orig_var, new_var in zip(orig_var_list, best_soln_var_list):
+                        if not orig_var.is_fixed():
+                            orig_var.set_value(new_var.value, skip_validation=True)
+
+
+
+            # # # results.subsolver_results = best_result
+            # results.solution_loader = best_result.solution_loader
+            # results.termination_condition = best_result.termination_condition
+            # results.solution_status = best_result.solution_status
+            # results.solution_loader = best_result.solution_loader
+
+            # results.timing_info.timer = timer
+            # results.timing_info.wall_time = default_timer() - start_time
+            # return results
+
+            best_result.timing_info.timer = timer
+            best_result.timing_info.wall_time = default_timer() - start_time
             return best_result
+
         finally:
             # Remove temporary variable list
             delattr(model, tmp_var_list_name)
@@ -425,9 +482,9 @@ class SamplingManager:
             return
 
         if self.method == "lhs":
-            self.qmc_sampler = stats.qmc.LatinHypercube(d=dim, seed=self.seed)
+            self.qmc_sampler = stats.qmc.LatinHypercube(d=dim, rng=self.rng)
         elif self.method == "sobol":
-            self.qmc_sampler = stats.qmc.Sobol(d=dim, scramble=True, seed=self.seed)
+            self.qmc_sampler = stats.qmc.Sobol(d=dim, scramble=True, seed=self.rng)
         else:
             raise ValueError(f"QMC sampler not valid for method '{self.method}'")
 
