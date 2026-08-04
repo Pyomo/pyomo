@@ -185,6 +185,10 @@ class MultistartConfig(SolverConfig):
             ),
         )
 
+# class MultiStartResults(Results):
+
+
+
 
 @SolverFactory.register('multistart', doc='MultiStart solver for NLPs')
 @document_class_CONFIG(methods=['solve'])
@@ -323,7 +327,7 @@ class MultiStart(SolverBase):
 
             if result.solution_status is SolutionStatus.optimal:
                 if obj is not None:
-                    obj_val = value(obj.expr)
+                    obj_val = result.incumbent_objective
                     best_objective = obj_val
                     objectives.append(obj_val)
             timer.stop('initial_solve')
