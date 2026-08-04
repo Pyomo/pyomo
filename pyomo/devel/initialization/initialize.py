@@ -153,7 +153,7 @@ def initialize_with_piecewise_linear_approximation(
             return res
 
     if mip_solver is None:
-        mip_solver = _get_solver('gurobi_persistent', 'MILP solver')
+        mip_solver = _get_solver('highs', 'MILP solver')
 
     orig_var_data = _setup(nlp)
 
@@ -240,7 +240,7 @@ def initialize_with_LP_approximation(
     orig_var_data = _setup(nlp)
 
     if lp_solver is None:
-        lp_solver = _get_solver('gurobi_persistent', 'LP solver')
+        lp_solver = _get_solver('highs', 'LP solver')
 
     try:
         res = _initialize_with_LP_approximation(
@@ -303,7 +303,7 @@ def initialize_with_global_opt(
     orig_var_data = _setup(nlp)
 
     if global_solver is None:
-        global_solver = _get_solver('gurobi_direct_minlp', 'global NLP solver')
+        global_solver = _get_solver('scip_direct', 'global NLP solver')
 
     try:
         res = _initialize_with_global_solver(
