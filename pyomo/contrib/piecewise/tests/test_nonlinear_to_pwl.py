@@ -116,8 +116,8 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         self.assertEqual(len(pwlf), 1)
         pwlf = pwlf[0]
 
-        points = [(1.0009,), (5.5,), (9.9991,)]
-        x1, x2, x3 = 1.0009, 5.5, 9.9991
+        points = [(1,), (5.5,), (10,)]
+        x1, x2, x3 = 1, 5.5, 10
         self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
 
     @unittest.skipUnless(numpy_available, "Numpy is not available")
@@ -142,8 +142,8 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         self.assertEqual(len(pwlf), 1)
         pwlf = pwlf[0]
 
-        points = [(1.0009,), (5.5,), (9.9991,)]
-        x1, x2, x3 = 1.0009, 5.5, 9.9991
+        points = [(1,), (5.5,), (10,)]
+        x1, x2, x3 = 1, 5.5, 10
 
         self.check_pw_linear_log_x(twin, pwlf, x1, x2, x3)
 
@@ -197,8 +197,8 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         self.assertEqual(len(pwlf), 1)
         pwlf = pwlf[0]
 
-        points = [(1.0009,), (5.5,), (9.9991,)]
-        x1, x2, x3 = 1.0009, 5.5, 9.9991
+        points = [(1,), (5.5,), (10,)]
+        x1, x2, x3 = 1, 5.5, 10
         self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
 
         # quad is not
@@ -228,8 +228,8 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         self.assertEqual(len(pwlf), 1)
         pwlf = pwlf[0]
 
-        points = [(1.0009,), (5.5,), (9.9991,)]
-        x1, x2, x3 = 1.0009, 5.5, 9.9991
+        points = [(1,), (5.5,), (10,)]
+        x1, x2, x3 = 1, 5.5, 10
         self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
 
         # quad is not
@@ -501,10 +501,10 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
         self.assertEqual(len(pwlf), 1)
         pwlf = pwlf[0]
 
-        x1 = 0.00030000000000000003
-        x2 = 2.9997
-        y1 = 1.0006
-        y2 = 6.9994
+        x1 = 0
+        x2 = 3
+        y1 = 1
+        y2 = 7
 
         self.check_pw_linear_paraboloid(m, pwlf, x1, x2, y1, y2)
 
@@ -531,10 +531,10 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
         self.assertEqual(len(pwlf), 1)
         pwlf = pwlf[0]
 
-        x1 = 0.00030000000000000003
-        x2 = 2.9997
-        y1 = 1.0006
-        y2 = 6.9994
+        x1 = 0
+        x2 = 3
+        y1 = 1
+        y2 = 7
 
         self.check_pw_linear_paraboloid(twin, pwlf, x1, x2, y1, y2)
 
@@ -562,10 +562,10 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
         self.assertEqual(len(pwlf), 1)
         pwlf = pwlf[0]
 
-        x1 = 0.00030000000000000003
-        x2 = 2.9997
-        y1 = 1.0006
-        y2 = 6.9994
+        x1 = 0
+        x2 = 3
+        y1 = 1
+        y2 = 7
 
         self.check_pw_linear_paraboloid(m, pwlf, x1, x2, y1, y2)
 

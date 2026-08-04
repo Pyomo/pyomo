@@ -319,7 +319,7 @@ jobs:
         conda-remove-defaults: true
         auto-update-conda: false
         python-version: ${{ matrix.python }}
-        channels: conda-forge, gurobi, ibmdecisionoptimization, fico-xpress
+        channels: conda-forge, gurobi, fico-xpress
         use-mamba: true
 
     # This is necessary for qt (UI) tests; the package utilized here does not
@@ -456,9 +456,6 @@ jobs:
             TIMEOUT_MSG="TIMEOUT: killing conda install process"
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
-            #
-            # Disallow cplex 12.9 (caused segfaults in tests)
-            CPLEX='cplex>=12.10'
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
             # on GHA/Windows under Python 3.10 and 3.11.  Exclude that
             # release on that platform.
@@ -471,7 +468,7 @@ jobs:
             else
                 XPRESS='xpress'
             fi
-            for PKG in "$CPLEX" docplex gurobi "$XPRESS" cyipopt pymumps scip pyscipopt; do
+            for PKG in gurobi "$XPRESS" cyipopt pymumps scip pyscipopt; do
                 echo ""
                 echo "*** Install $PKG ***"
                 echo ""
@@ -520,6 +517,12 @@ jobs:
                     echo "WARNING: $PKG is not available"
                 fi
             done
+            # As of June 2026, cplex/docplex want their users to move towards
+            # pypi and away from conda. Particularly:
+            # The CPLEX and CP Optimizer Python interfaces are no longer
+            # delivered inside CPLEX Optimization Studio, but can be
+            # installed directly from PyPI.
+            PYPI_DEPENDENCIES="$PYPI_DEPENDENCIES cplex docplex"
         fi
         # Re-try Pyomo (optional) dependencies with pip
         echo ""

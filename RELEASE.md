@@ -1,4 +1,4 @@
-We are pleased to announce the release of Pyomo 6.10.0.
+We are pleased to announce the release of Pyomo 6.10.1.
 
 Pyomo is a collection of Python software packages that supports a
 diverse set of optimization capabilities for formulating and analyzing
@@ -9,9 +9,11 @@ The following are highlights of the 6.10 release series:
 - Removed support for Python 3.9
 - Removed hard dependency on `ply`
 - New Model Observer package
+- New `initialization` module for nonconvex, nonlinear problems
 - New solver interfaces:
   - `gams_v2` solver, writer, and solution loader
   - `cuopt` direct solver interface
+  - `scip` direct and persistent solver interfaces
   - v2: Ongoing solver interface refactor
 - ...and of course numerous minor bug fixes and performance enhancements
 

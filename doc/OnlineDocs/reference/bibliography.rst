@@ -97,6 +97,10 @@ Bibliography
    *SIAM Journal on Applied Mathematics* 23(1), 61-19, 1972.
    DOI `10.1137/0123007 <https://doi.org/10.1137/0123007>`_
 
+.. [BS04] D. Bertsimas and M. Sim. "The price of robustness",
+   *Operations research*, 52(1), 35-53, 2004. DOI
+   `10.1287/opre.1030.0065 <https://doi.org/10.1287/opre.1030.0065>`_.
+
 .. [Dje20] H. Djelassi. "Discretization-based algorithms for the
    global solution of hierarchical programs".
    Dissertation, Rheinisch-Westfälische Technische Hochschule Aachen, 2020.
@@ -162,6 +166,11 @@ Bibliography
    problems", *Computer Aided Chemical Engineering*, 15(C),
    1032–1037. 2003. DOI `10.1016/S1570-7946(03)80444-3
    <https://doi.org/10.1016/S1570-7946(03)80444-3>`_
+
+.. [SIS+26] J. A. F. Sherman, N. M. Isenberg, J. D. Siirola,
+   and C. E. Gounaris. "PyROS: The Pyomo Robust Optimization Solver".
+   Optimization Online, Preprint. 2026.
+   https://optimization-online.org/2026/06/pyros-the-pyomo-robust-optimization-solver/
 
 .. [TG15] F. Trespalacios and I. E. Grossmann. "Improved Big-M
    reformulation for generalized disjunctive programs", *Computers and
