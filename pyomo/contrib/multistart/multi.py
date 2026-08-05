@@ -21,7 +21,7 @@ from pyomo.common.config import (
     ADVANCED_OPTION,
 )
 
-from typing import Any
+from typing import Any, Optional
 import datetime
 from pyomo.common.timing import HierarchicalTimer, default_timer
 from pyomo.common.modeling import unique_component_name
@@ -47,8 +47,11 @@ from pyomo.util.vars_from_expressions import get_vars_from_components
 
 from pyomo.common.dependencies.scipy import stats
 from pyomo.common.dependencies import numpy as np
+from pyomo.core.staleflag import StaleFlagManager
+
 
 logger = logging.getLogger('pyomo.contrib.multistart')
+
 
 
 @document_configdict()
@@ -127,7 +130,7 @@ class MultistartConfig(SolverConfig):
                 description="1 minus the confidence level required for the stopping rule.",
                 doc="""1 minus the confidence level required for the stopping rule for the
             high confidence stopping rule, only used with the random strategy.
-            The lower the parameter, the stricter the rule.
+            The lower the parameter, the stricter the rule.               visibility=DEVELOPER_OPTION,
             Value bounded in (0, 1].""",
             ),
         )
@@ -185,9 +188,28 @@ class MultistartConfig(SolverConfig):
             ),
         )
 
-# class MultiStartResults(Results):
-
-
+class MultiStartResults(Results):
+    def __init__(
+    self,
+    description=None,
+    doc=None,
+    implicit=False,
+    implicit_domain=None,
+    visibility=0,
+):
+        super().__init__(
+            description=description,
+            doc=doc,
+            implicit=implicit,
+            implicit_domain=implicit_domain,
+            visibility=visibility,
+        )
+        self.feasible_solution_list: Optional[list] = self.declare(
+            'feasible_solution_list',
+            ConfigValue(
+                description="Object for loading the solution back into the model.",
+            ),
+        )
 
 
 @SolverFactory.register('multistart', doc='MultiStart solver for NLPs')
@@ -246,11 +268,12 @@ class MultiStart(SolverBase):
             timer = config.timer = HierarchicalTimer()
 
         # Allocate the results object so we can populate it as we go
-        results = Results()
+        results = MultiStartResults()
         results.timing_info.start_timestamp = datetime.datetime.now(
             datetime.timezone.utc
         )
-        results.solver_name = self.name
+        # As we are about to run a solver, update the stale flag
+        StaleFlagManager.mark_all_as_stale()
 
         # Create centralized sampler once
         sampler = SamplingManager(
@@ -260,7 +283,6 @@ class MultiStart(SolverBase):
         # Set sub-solver options
         config.subsolver_args["load_solutions"] = False
         config.subsolver_args["raise_exception_on_nonoptimal_result"] = False
-
         config.subsolver_args["time_limit"] = config.time_limit
         config.subsolver_args["tee"] = config.tee
 
@@ -283,173 +305,169 @@ class MultiStart(SolverBase):
             obj = None
             obj_sign = 1
             config.break_on_solution = True
-
-        best_objective = float('inf') * obj_sign
-
+     
         # store objective values and objective/result information for best
         # solution obtained
         objectives = []
         best_model = model
         best_result = None
+        best_objective = float('inf') * obj_sign
+        results.feasible_solution_list = []
 
-        try:
-            timer.start('initial_solve')
-            # create temporary variable list for value transfer
-            tmp_var_list_name = unique_component_name(model, "_vars_list")
+
+
+        timer.start('initial_solve')
+        # create temporary variable list for value transfer
+        tmp_var_list_name = unique_component_name(model, "_vars_list")
+        setattr(
+            model,
+            tmp_var_list_name,
+            list(model.component_data_objects(Var, descend_into=True)),
+        )
+        # If the list has nothing in it, check components
+        if len(model._vars_list) == 0:
             setattr(
                 model,
                 tmp_var_list_name,
-                list(model.component_data_objects(Var, descend_into=True)),
+                list(
+                    get_vars_from_components(
+                        model, ctype=(Constraint, Objective), active=True
+                    )
+                ),
             )
-            # If the list has nothing in it, check components
-            if len(model._vars_list) == 0:
-                setattr(
-                    model,
-                    tmp_var_list_name,
-                    list(
-                        get_vars_from_components(
-                            model, ctype=(Constraint, Objective), active=True
-                        )
-                    ),
-                )
-            best_result = result = solver.solve(model, **config.subsolver_args)
+        best_result = result = solver.solve(model, **config.subsolver_args)
+        # Check the solution status before loading variables into the model.
+        if result.solution_status in {
+            SolutionStatus.feasible,
+            SolutionStatus.optimal,
+        }:
+
+            logger.info(
+                f'solved NLP: {result.solution_status}, {result.termination_condition}'
+            )
+            # if config.load_solutions:
+            result.solution_loader.load_solution()
+
+        if result.solution_status is SolutionStatus.optimal:
+            if obj is not None:
+                obj_val = result.incumbent_objective
+                best_objective = obj_val
+                objectives.append(obj_val)
+        timer.stop('initial_solve')
+
+        num_iter = 0
+        max_iter = config.iterations
+        # if HCS rule is specified, reinitialize completely randomly until
+        # rule specifies stopping
+        using_HCS = config.iterations == -1
+        HCS_completed = False
+        if using_HCS:
+            assert (
+                config.strategy == "rand"
+            ), "High confidence stopping rule requires rand strategy."
+            max_iter = config.HCS_max_iterations
+
+        timer.start('iterative_solves')
+        while num_iter < max_iter:
+            # timer.start(f"timer_iter_{num_iter}")
+            if using_HCS and should_stop(
+                objectives,
+                config.stopping_mass,
+                config.stopping_delta,
+                config.HCS_tolerance,
+            ):
+                HCS_completed = True
+                # timer.stop(f"timer_iter_{num_iter}")
+                break
+
+            num_iter += 1
+            logger.info(f"num_iter: {num_iter}\n")
+
+            # at first iteration, solve the originally passed model
+            m = model
+            reinitialize_variables(m, config, sampler)
+            result = solver.solve(m, **config.subsolver_args)
+            # if config.load_solutions:
             # Check the solution status before loading variables into the model.
             if result.solution_status in {
                 SolutionStatus.feasible,
                 SolutionStatus.optimal,
             }:
-
                 logger.info(
                     f'solved NLP: {result.solution_status}, {result.termination_condition}'
                 )
                 # if config.load_solutions:
-                result.solution_loader.load_solution()
-
-            if result.solution_status is SolutionStatus.optimal:
-                if obj is not None:
-                    obj_val = result.incumbent_objective
-                    best_objective = obj_val
-                    objectives.append(obj_val)
-            timer.stop('initial_solve')
-
-            num_iter = 0
-            max_iter = config.iterations
-            # if HCS rule is specified, reinitialize completely randomly until
-            # rule specifies stopping
-            using_HCS = config.iterations == -1
-            HCS_completed = False
-            if using_HCS:
-                assert (
-                    config.strategy == "rand"
-                ), "High confidence stopping rule requires rand strategy."
-                max_iter = config.HCS_max_iterations
-
-            timer.start('iterative_solves')
-            while num_iter < max_iter:
-                # timer.start(f"timer_iter_{num_iter}")
-                if using_HCS and should_stop(
-                    objectives,
-                    config.stopping_mass,
-                    config.stopping_delta,
-                    config.HCS_tolerance,
-                ):
-                    HCS_completed = True
+                results.feasible_solution_list.append(result)
+                # If we are looking for the first feasible solution, then return immediately
+                if config.break_on_solution:
+                    best_model = m
+                    best_result = result
                     # timer.stop(f"timer_iter_{num_iter}")
                     break
 
-                num_iter += 1
-                logger.info(f"num_iter: {num_iter}\n")
-
-                # at first iteration, solve the originally passed model
-                m = model.clone() if num_iter > 1 else model
-                reinitialize_variables(m, config, sampler)
-                result = solver.solve(m, **config.subsolver_args)
-                # if config.load_solutions:
-                # Check the solution status before loading variables into the model.
-                if result.solution_status in {
-                    SolutionStatus.feasible,
-                    SolutionStatus.optimal,
-                }:
-                    logger.info(
-                        f'solved NLP: {result.solution_status}, {result.termination_condition}'
-                    )
-                    # if config.load_solutions:
-                    result.solution_loader.load_solution()
-                    # If we are looking for the first feasible solution, then return immediately
-                    if config.break_on_solution:
+            if result.solution_status is SolutionStatus.optimal:
+                if obj is not None:
+                    model_objectives = m.component_data_objects(Objective, active=True)
+                    # print("Model objs", model_objectives)
+                    mobj = next(model_objectives)
+                    obj_val = value(mobj.expr)
+                    objectives.append(obj_val)
+                    if obj_val * obj_sign < obj_sign * best_objective:
+                        # objective has improved
+                        best_objective = obj_val
                         best_model = m
                         best_result = result
-                        # timer.stop(f"timer_iter_{num_iter}")
-                        break
+            # timer.stop(f"timer_iter_{num_iter}")
 
-                if result.solution_status is SolutionStatus.optimal:
-                    if obj is not None:
-                        model_objectives = m.component_data_objects(Objective, active=True)
-                        # print("Model objs", model_objectives)
-                        mobj = next(model_objectives)
-                        obj_val = value(mobj.expr)
-                        objectives.append(obj_val)
-                        if obj_val * obj_sign < obj_sign * best_objective:
-                            # objective has improved
-                            best_objective = obj_val
-                            best_model = m
-                            best_result = result
-                # timer.stop(f"timer_iter_{num_iter}")
+        timer.stop('iterative_solves')
+        print(num_iter)
 
-            timer.stop('iterative_solves')
-            print(num_iter)
+        if using_HCS:
+            if not HCS_completed:
+                logger.warning(
+                    "High confidence stopping rule was unable to complete "
+                    "after %s iterations. To increase this limit, change the "
+                    "HCS_max_iterations flag." % num_iter
+                )
 
-            if using_HCS:
-                if not HCS_completed:
-                    logger.warning(
-                        "High confidence stopping rule was unable to complete "
-                        "after %s iterations. To increase this limit, change the "
-                        "HCS_max_iterations flag." % num_iter
-                    )
+        # if config.raise_exception_on_nonoptimal_result:
+        #     if best_result.solution_status != SolutionStatus.optimal:
+        #         raise NoOptimalSolutionError
 
-            # if config.raise_exception_on_nonoptimal_result:
-            #     if best_result.solution_status != SolutionStatus.optimal:
-            #         raise NoOptimalSolutionError
+        if (
+            config.raise_exception_on_nonoptimal_result
+            and best_result.solution_status != SolutionStatus.optimal
+        ):
+            raise NoOptimalSolutionError()
 
-            if (
-                config.raise_exception_on_nonoptimal_result
-                and best_result.solution_status != SolutionStatus.optimal
-            ):
-                raise NoOptimalSolutionError()
+        # if no better result was found than initial solve, then return
+        # that without needing to copy variables.
+        orig_var_list = getattr(model, tmp_var_list_name)
+        best_soln_var_list = getattr(best_model, tmp_var_list_name)
+        if config.load_solutions:
+            if best_result.solution_status == SolutionStatus.noSolution:
+                raise NoSolutionError()
 
-            # if no better result was found than initial solve, then return
-            # that without needing to copy variables.
-            orig_var_list = getattr(model, tmp_var_list_name)
-            best_soln_var_list = getattr(best_model, tmp_var_list_name)
-            if config.load_solutions:
-                if best_result.solution_status == SolutionStatus.noSolution:
-                    raise NoSolutionError()
-
-                if best_model is not model:
-                    # reassign the given models vars to the new models vars
-                    for orig_var, new_var in zip(orig_var_list, best_soln_var_list):
-                        if not orig_var.is_fixed():
-                            orig_var.set_value(new_var.value, skip_validation=True)
+            if best_model is not model:
+                # reassign the given models vars to the new models vars
+                for orig_var, new_var in zip(orig_var_list, best_soln_var_list):
+                    if not orig_var.is_fixed():
+                        orig_var.set_value(new_var.value, skip_validation=True)
 
 
+        best_result.timing_info.timer = timer
+        best_result.timing_info.wall_time = default_timer() - start_time
+        return best_result
 
-            # # # results.subsolver_results = best_result
-            # results.solution_loader = best_result.solution_loader
-            # results.termination_condition = best_result.termination_condition
-            # results.solution_status = best_result.solution_status
-            # results.solution_loader = best_result.solution_loader
+        # # results.subsolver_results = best_result
+        results.solution_loader = best_result.solution_loader
+        results.termination_condition = best_result.termination_condition
+        results.solution_status = best_result.solution_status
+        results.solution_loader = best_result.solution_loader
 
-            # results.timing_info.timer = timer
-            # results.timing_info.wall_time = default_timer() - start_time
-            # return results
-
-            best_result.timing_info.timer = timer
-            best_result.timing_info.wall_time = default_timer() - start_time
-            return best_result
-
-        finally:
-            # Remove temporary variable list
-            delattr(model, tmp_var_list_name)
+        results.timing_info.timer = timer
+        results.timing_info.wall_time = default_timer() - start_time
+        return results
 
     def __enter__(self):
         return self

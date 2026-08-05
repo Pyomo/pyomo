@@ -55,14 +55,14 @@ def global_init_ex():
 
 def multistart_init_ex():
     m = build_model()
-    m.obj = pyo.Objective(expr=0)
+    # m.obj = pyo.Objective(expr=0)
     nlp_solver = SolverFactory('ipopt')
     multistart_solver = SolverFactory('multistart')
 
-    opts = {"load_solutions": False, "raise_exception_on_nonoptimal_result": False}
+    # opts = {"load_solutions": False, "raise_exception_on_nonoptimal_result": False}
 
     multistart_solver.config.strategy = "rand_vector"
-    multistart_solver.config.solver_args = opts
+    # multistart_solver.config.solver_args = opts
     multistart_solver.config.iterations = 10
     multistart_solver.config.break_on_solution = True
 
