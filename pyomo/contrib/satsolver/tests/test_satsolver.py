@@ -33,7 +33,7 @@ from pyomo.environ import (
 from pyomo.gdp import Disjunct, Disjunction
 
 exdir = join(PYOMO_ROOT_DIR, 'examples', 'gdp')
-is_pypy = platform.python_implementation().lower().startswith("pypy")
+from pyomo.common.envvar import is_pypy
 
 
 @unittest.skipUnless(z3_available, "Z3 SAT solver is not available.")
