@@ -80,7 +80,7 @@ all_solvers = [
     ('highs', Highs),
     ('scip_direct', ScipDirect),
     ('scip_persistent', ScipPersistent),
-    # ('gams', GAMS),
+    ('gams', GAMS),
     ('knitro_direct', KnitroDirectSolver),
     ('multistart', MultiStart),
 ]
