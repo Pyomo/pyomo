@@ -251,7 +251,8 @@ class MultiStart(SolverBase):
             Original implementation: 0.1.0,
             Current implementation: 0.2.0,
         """
-        return (0, 2, 0)
+        current = (0,2,0)
+        return current
 
     def license_is_valid(self):
         return True
@@ -309,12 +310,9 @@ class MultiStart(SolverBase):
         # store objective values and objective/result information for best
         # solution obtained
         objectives = []
-        best_model = model
         best_result = None
         best_objective = float('inf') * obj_sign
         results.feasible_solution_list = []
-
-
 
         timer.start('initial_solve')
         # create temporary variable list for value transfer
@@ -341,12 +339,10 @@ class MultiStart(SolverBase):
             SolutionStatus.feasible,
             SolutionStatus.optimal,
         }:
-
+            results.feasible_solution_list.append(result)
             logger.info(
                 f'solved NLP: {result.solution_status}, {result.termination_condition}'
             )
-            # if config.load_solutions:
-            result.solution_loader.load_solution()
 
         if result.solution_status is SolutionStatus.optimal:
             if obj is not None:
@@ -396,11 +392,9 @@ class MultiStart(SolverBase):
                 logger.info(
                     f'solved NLP: {result.solution_status}, {result.termination_condition}'
                 )
-                # if config.load_solutions:
                 results.feasible_solution_list.append(result)
                 # If we are looking for the first feasible solution, then return immediately
                 if config.break_on_solution:
-                    best_model = m
                     best_result = result
                     # timer.stop(f"timer_iter_{num_iter}")
                     break
@@ -410,7 +404,7 @@ class MultiStart(SolverBase):
                     model_objectives = m.component_data_objects(Objective, active=True)
                     # print("Model objs", model_objectives)
                     mobj = next(model_objectives)
-                    obj_val = value(mobj.expr)
+                    obj_val = result.incumbent_objective
                     objectives.append(obj_val)
                     if obj_val * obj_sign < obj_sign * best_objective:
                         # objective has improved
@@ -422,17 +416,12 @@ class MultiStart(SolverBase):
         timer.stop('iterative_solves')
         print(num_iter)
 
-        if using_HCS:
-            if not HCS_completed:
+        if using_HCS and not HCS_completed:
                 logger.warning(
                     "High confidence stopping rule was unable to complete "
                     "after %s iterations. To increase this limit, change the "
                     "HCS_max_iterations flag." % num_iter
                 )
-
-        # if config.raise_exception_on_nonoptimal_result:
-        #     if best_result.solution_status != SolutionStatus.optimal:
-        #         raise NoOptimalSolutionError
 
         if (
             config.raise_exception_on_nonoptimal_result
@@ -440,34 +429,26 @@ class MultiStart(SolverBase):
         ):
             raise NoOptimalSolutionError()
 
-        # if no better result was found than initial solve, then return
-        # that without needing to copy variables.
-        orig_var_list = getattr(model, tmp_var_list_name)
-        best_soln_var_list = getattr(best_model, tmp_var_list_name)
-        if config.load_solutions:
-            if best_result.solution_status == SolutionStatus.noSolution:
-                raise NoSolutionError()
 
-            if best_model is not model:
-                # reassign the given models vars to the new models vars
-                for orig_var, new_var in zip(orig_var_list, best_soln_var_list):
-                    if not orig_var.is_fixed():
-                        orig_var.set_value(new_var.value, skip_validation=True)
-
-
-        best_result.timing_info.timer = timer
-        best_result.timing_info.wall_time = default_timer() - start_time
-        return best_result
-
-        # # results.subsolver_results = best_result
         results.solution_loader = best_result.solution_loader
         results.termination_condition = best_result.termination_condition
         results.solution_status = best_result.solution_status
-        results.solution_loader = best_result.solution_loader
+        results.incumbent_objective = best_result.incumbent_objective
+        results.solver_log = best_result.solver_log
 
+        if config.load_solutions:
+            if results.solution_status == SolutionStatus.noSolution:
+                raise NoSolutionError()
+
+            results.solution_loader.load_solution()
+
+        results.solver_name = self.name
+        results.solver_version = self.version()
+        results.solver_config = config
         results.timing_info.timer = timer
         results.timing_info.wall_time = default_timer() - start_time
         return results
+    
 
     def __enter__(self):
         return self
