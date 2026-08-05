@@ -8,7 +8,6 @@
 # ____________________________________________________________________________________
 
 from os.path import join
-import platform
 
 import pyomo.common.unittest as unittest
 
