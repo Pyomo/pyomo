@@ -13,7 +13,6 @@ import math
 import os
 import threading
 import enum
-import platform
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import (
@@ -82,8 +81,6 @@ _thread_local.solver = None
 _thread_local.model = None
 _thread_local.config_use_primal_bound = None
 _thread_local.in_progress = False
-
-is_pypy = platform.python_implementation().lower().startswith("pypy")
 
 
 def Solver(val):
@@ -831,7 +828,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             if self._config.process_start_method is not None
             else (
                 ProcessStartMethod.spawn
-                if os.name == 'nt' or is_pypy
+                if os.name == 'nt'
                 else (
                     ProcessStartMethod.forkserver
                     if len(threading.enumerate()) > 1
