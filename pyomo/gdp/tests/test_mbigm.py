@@ -1138,7 +1138,8 @@ class EdgeCases(unittest.TestCase):
         SolverFactory('ipopt').available(exception_flag=False), "Ipopt is not available"
     )
     @unittest.skipIf(
-        is_pypy, "tests using multiprocessing stall on pypy; this will no longer be tested."
+        is_pypy,
+        "tests using multiprocessing stall on pypy; this will no longer be tested.",
     )
     def test_calculate_Ms_infeasible_Disjunct_local_solver(self):
         m = self.make_infeasible_disjunct_model()
