@@ -61,7 +61,6 @@ class MultistartTests(unittest.TestCase):
                 clone_objective_value, standard_objective_value
             )  # assumes maximization
 
-
     def test_as_good_with_HCS_rule(self):
         """test that the high confidence stopping rule with very lenient
         parameters does no worse.
@@ -113,7 +112,12 @@ class MultistartTests(unittest.TestCase):
             SolverFactory('multistart').solve(m, iterations=2)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.WARNING):
-            SolverFactory('multistart').solve(m, iterations=-1, HCS_max_iterations=3)
+            SolverFactory('multistart').solve(
+                m,
+                iterations=-1,
+                HCS_max_iterations=3,
+                raise_exception_on_nonoptimal_result=False,
+            )
             self.assertIn(
                 "High confidence stopping rule was unable to "
                 "complete after 3 iterations.",

@@ -49,9 +49,7 @@ from pyomo.common.dependencies.scipy import stats
 from pyomo.common.dependencies import numpy as np
 from pyomo.core.staleflag import StaleFlagManager
 
-
 logger = logging.getLogger('pyomo.contrib.multistart')
-
 
 
 @document_configdict()
@@ -188,15 +186,16 @@ class MultistartConfig(SolverConfig):
             ),
         )
 
+
 class MultiStartResults(Results):
     def __init__(
-    self,
-    description=None,
-    doc=None,
-    implicit=False,
-    implicit_domain=None,
-    visibility=0,
-):
+        self,
+        description=None,
+        doc=None,
+        implicit=False,
+        implicit_domain=None,
+        visibility=0,
+    ):
         super().__init__(
             description=description,
             doc=doc,
@@ -207,7 +206,7 @@ class MultiStartResults(Results):
         self.feasible_solution_list: Optional[list] = self.declare(
             'feasible_solution_list',
             ConfigValue(
-                description="Object for loading the solution back into the model.",
+                description="Object for loading the solution back into the model."
             ),
         )
 
@@ -251,7 +250,7 @@ class MultiStart(SolverBase):
             Original implementation: 0.1.0,
             Current implementation: 0.2.0,
         """
-        current = (0,2,0)
+        current = (0, 2, 0)
         return current
 
     def license_is_valid(self):
@@ -306,7 +305,7 @@ class MultiStart(SolverBase):
             obj = None
             obj_sign = 1
             config.break_on_solution = True
-     
+
         # store objective values and objective/result information for best
         # solution obtained
         objectives = []
@@ -335,10 +334,7 @@ class MultiStart(SolverBase):
             )
         best_result = result = solver.solve(model, **config.subsolver_args)
         # Check the solution status before loading variables into the model.
-        if result.solution_status in {
-            SolutionStatus.feasible,
-            SolutionStatus.optimal,
-        }:
+        if result.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
             results.feasible_solution_list.append(result)
             logger.info(
                 f'solved NLP: {result.solution_status}, {result.termination_condition}'
@@ -414,9 +410,11 @@ class MultiStart(SolverBase):
             # timer.stop(f"timer_iter_{num_iter}")
 
         timer.stop('iterative_solves')
+        delattr(model, tmp_var_list_name)
         print(num_iter)
 
-        if using_HCS and not HCS_completed:
+        if using_HCS:
+            if not HCS_completed:
                 logger.warning(
                     "High confidence stopping rule was unable to complete "
                     "after %s iterations. To increase this limit, change the "
@@ -428,7 +426,6 @@ class MultiStart(SolverBase):
             and best_result.solution_status != SolutionStatus.optimal
         ):
             raise NoOptimalSolutionError()
-
 
         results.solution_loader = best_result.solution_loader
         results.termination_condition = best_result.termination_condition
@@ -448,7 +445,6 @@ class MultiStart(SolverBase):
         results.timing_info.timer = timer
         results.timing_info.wall_time = default_timer() - start_time
         return results
-    
 
     def __enter__(self):
         return self

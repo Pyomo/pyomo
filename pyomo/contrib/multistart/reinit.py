@@ -23,7 +23,7 @@ logger = logging.getLogger('pyomo.contrib.multistart')
 def rand(val, lb, ub, sampler):
     # if sampler.method == "uniform":
     sample = sampler.rng.uniform(lb, ub)  # uniform distribution between lb and ub
-    
+
     return sample
 
 
