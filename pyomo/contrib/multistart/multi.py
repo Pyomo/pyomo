@@ -291,7 +291,6 @@ class MultiStart(SolverBase):
         # Model sense
         objectives = list(model.component_data_objects(Objective, active=True))
         # Check length
-        print(len(objectives))
         if len(objectives) > 1:
             raise RuntimeError(
                 "Multistart solver is unable to handle model with multiple active objectives."
@@ -397,21 +396,16 @@ class MultiStart(SolverBase):
 
             if result.solution_status is SolutionStatus.optimal:
                 if obj is not None:
-                    model_objectives = m.component_data_objects(Objective, active=True)
-                    # print("Model objs", model_objectives)
-                    mobj = next(model_objectives)
                     obj_val = result.incumbent_objective
                     objectives.append(obj_val)
                     if obj_val * obj_sign < obj_sign * best_objective:
                         # objective has improved
                         best_objective = obj_val
-                        best_model = m
                         best_result = result
             # timer.stop(f"timer_iter_{num_iter}")
 
         timer.stop('iterative_solves')
         delattr(model, tmp_var_list_name)
-        print(num_iter)
 
         if using_HCS:
             if not HCS_completed:
@@ -486,6 +480,17 @@ class SamplingManager:
             self.qmc_sampler = stats.qmc.Sobol(d=dim, scramble=True, seed=self.rng)
         else:
             raise ValueError(f"QMC sampler not valid for method '{self.method}'")
+
+    def sample_scalar(self, lower, upper):
+        if self.method == "uniform":
+            return self.rng.uniform(lower, upper)
+
+        if self.method in ("lhs", "sobol"):
+            self._ensure_qmc(dim=1)
+            x = self.qmc_sampler.random(n=1)  # shape (1, d)
+            return stats.qmc.scale(x, lower, upper).item()
+
+        raise ValueError(f"Unknown sampling method '{self.method}'")
 
     def sample_vector(self, lower, upper):
         """Vector sample for uniform/lhs/sobol over all vars at once."""

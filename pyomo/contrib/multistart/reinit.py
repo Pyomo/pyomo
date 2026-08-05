@@ -15,15 +15,12 @@ from pyomo.common.dependencies import numpy as np
 from pyomo.common.dependencies.scipy import stats
 from pyomo.util.vars_from_expressions import get_vars_from_components
 
-from pyomo.core import Var
-
 logger = logging.getLogger('pyomo.contrib.multistart')
 
 
 def rand(val, lb, ub, sampler):
-    # if sampler.method == "uniform":
-    sample = sampler.rng.uniform(lb, ub)  # uniform distribution between lb and ub
-
+    # sample = sampler.rng.uniform(lb, ub)
+    sample = sampler.sample_scalar(lb, ub)  # uniform distribution between lb and ub
     return sample
 
 
@@ -45,9 +42,9 @@ def rand_guess_and_bound(val, lb, ub, sampler):
     """Random choice between current value and farthest bound."""
     far_bound = ub if ((ub - val) >= (val - lb)) else lb  # farther bound
     if far_bound == ub:
-        return sampler.rng.uniform(val, far_bound)
+        return sampler.sample_scalar(val, far_bound)
     else:
-        return sampler.rng.uniform(far_bound, val)
+        return sampler.sample_scalar(far_bound, val)
 
 
 def rand_distributed(val, lb, ub, sampler, divisions=9):
