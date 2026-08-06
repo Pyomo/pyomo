@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 import collections
 from .visitor import StreamBasedExpressionVisitor
 from .numvalue import nonpyomo_leaf_types
@@ -71,6 +69,11 @@ def handle_sequence(node: collections.abc.Sequence, pn: List):
     return list(node)
 
 
+def handle_inequality(node: collections.abc.Sequence, pn: List):
+    pn.append((type(node), node.nargs(), node.strict))
+    return node.args
+
+
 def _generic_expression_handler():
     return handle_expression
 
@@ -83,7 +86,8 @@ handler[ExternalFunctionExpression] = handle_external_function_expression
 handler[NPV_ExternalFunctionExpression] = handle_external_function_expression
 handler[AbsExpression] = handle_unary_expression
 handler[NPV_AbsExpression] = handle_unary_expression
-handler[RangedExpression] = handle_expression
+handler[InequalityExpression] = handle_inequality
+handler[RangedExpression] = handle_inequality
 handler[list] = handle_sequence
 
 

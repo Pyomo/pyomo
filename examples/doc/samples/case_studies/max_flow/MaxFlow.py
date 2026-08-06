@@ -1,26 +1,24 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
-model.nodes = Set()
-model.arcs = Set(within=model.nodes * model.nodes)
-model.sources = Set(within=model.nodes)
-model.sinks = Set(within=model.nodes)
-model.upperBound = Param(model.arcs)
-model.supply = Param(model.sources)
-model.demand = Param(model.sinks)
-model.amount = Var(model.arcs, within=NonNegativeReals)
+model.nodes = pyo.Set()
+model.arcs = pyo.Set(within=model.nodes * model.nodes)
+model.sources = pyo.Set(within=model.nodes)
+model.sinks = pyo.Set(within=model.nodes)
+model.upperBound = pyo.Param(model.arcs)
+model.supply = pyo.Param(model.sources)
+model.demand = pyo.Param(model.sinks)
+model.amount = pyo.Var(model.arcs, within=pyo.NonNegativeReals)
 
 
 def totalRule(model):
@@ -28,7 +26,7 @@ def totalRule(model):
     return expression
 
 
-model.maxFlow = Objective(rule=totalRule, sense=maximize)
+model.maxFlow = pyo.Objective(rule=totalRule, sense=pyo.maximize)
 
 
 def maxRule(model, arcIn, arcOut):
@@ -36,7 +34,7 @@ def maxRule(model, arcIn, arcOut):
     return constraint_equation
 
 
-model.loadOnArc = Constraint(model.arcs, rule=maxRule)
+model.loadOnArc = pyo.Constraint(model.arcs, rule=maxRule)
 
 
 def flowRule(model, node):
@@ -56,4 +54,4 @@ def flowRule(model, node):
     return constraint_equation
 
 
-model.flow = Constraint(model.nodes, rule=flowRule)
+model.flow = pyo.Constraint(model.nodes, rule=flowRule)

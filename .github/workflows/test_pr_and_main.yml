@@ -31,32 +31,71 @@ env:
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver linear-tree
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels linear-tree
-  CACHE_VER: v221013.1
+  CACHE_VER: v260512.3
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
+  PYOMO_WORKFLOW: |
+    ${{ contains(github.event.pull_request.title, '[WIP]') && 'wip'
+        || github.event.pull_request.draft && 'draft_pr'
+        || github.event.pull_request.number && 'pr'
+        || 'main' }}
 
 jobs:
   lint:
     name: lint/style-and-typos
+    # Note: 'env' is not available in GHA jobs.<job_id>.if context.
+    if: ${{ ! contains(github.event.pull_request.title, '[WIP]') }}
     runs-on: ubuntu-latest
-    if: |
-      contains(github.event.pull_request.title, '[WIP]') != true && !github.event.pull_request.draft
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
-        python-version: '3.10'
+        python-version: 3.11
     - name: Black Formatting Check
       run: |
-        # Note v24.4.1 fails due to a bug in the parser
+        # Note v24.4.1 fails due to a bug in the parser. Project-level
+        # configuration is inherited from pyproject.toml.
         pip install 'black!=24.4.1'
-        black . -S -C --check --diff --exclude examples/pyomobook/python-ch/BadIndent.py
+        black . --check --diff
     - name: Spell Check
       uses: crate-ci/typos@master
-      with: 
+      with:
         config: ./.github/workflows/typos.toml
+    - name: Set DNS server
+      run: |
+        # This will hopefully resolve intermittent DNS resolution errors
+        echo "Reset DNS servers to use cloudfare"
+        LINK=`resolvectl query github.com | grep link: | sed -r 's/.*link://'`
+        sudo resolvectl dns $LINK 1.1.1.1 1.0.0.1
+        sudo resolvectl flush-caches
+        sudo resolvectl query github.com
+        sudo resolvectl status
+    - name: URL Checker
+      if: ${{ env.PYOMO_WORKFLOW == 'branch' }}
+      uses: urlstechie/urlchecker-action@0.0.34
+      with:
+        # A comma-separated list of file types to cover in the URL checks
+        file_types: .md,.rst,.py
+        # Choose whether to include file with no URLs in the prints.
+        print_all: false
+        # More verbose summary at the end of a run
+        verbose: true
+        # How many times to retry a failed request (defaults to 1)
+        retry_count: 3
+        # The timeout seconds to provide to requests, defaults to 5 seconds
+        timeout: 60
+        # Exclude:
+        #  - Jenkins because it's behind a firewall
+        #  - RTD because a magically-generated string triggers failures
+        #  - scipopt.org as they perform "validation" on the webclient (which fails)
+        exclude_urls: https://pyomo-jenkins.sandia.gov/,https://pyomo.readthedocs.io/en/%s/errors.html,https://www.scipopt.org
+        # Exclude:
+        #  - All gnu.org links because they consistently fail the checker
+        #  - All lpsolve.sourceforge.net links because SF appears to reject from GHA
+        #  - All www.mathworks.com links because MathWorks appears to reject from GHA
+        exclude_patterns: https://www.gnu.org,https://lpsolve.sourceforge.net/,https://www.mathworks.com/
 
 
   build:
@@ -68,70 +107,76 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [ 3.9, '3.10', 3.11, 3.12, 3.13 ]
+        python: [ '3.10', 3.11, 3.12, 3.13, 3.14 ]
         other: [""]
         category: [""]
 
         include:
         - os: ubuntu-latest
+          test_docs: 1
           TARGET: linux
           PYENV: pip
 
         - os: macos-latest
+          test_docs: 1
           TARGET: osx
           PYENV: pip
 
         - os: windows-latest
+          test_docs: 1
           TARGET: win
           PYENV: conda
           PACKAGES: glpk pytest-qt filelock
 
+        # Note: verify that pymumps is available when changing conda python version
         - os: ubuntu-latest
-          python: 3.11
+          python: 3.12
           other: /conda
-          skip_doctest: 1
           TARGET: linux
           PYENV: conda
           PACKAGES: pytest-qt
 
         - os: ubuntu-latest
-          python: '3.10'
+          python: 3.11
           other: /mpi
           mpi: 3
-          skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES: openmpi mpi4py
+          PACKAGES: openmpi==*[build=h*] mpi4py
 
         - os: ubuntu-latest
           python: 3.12
           other: /cython
           setup_options: --with-cython
-          skip_doctest: 1
           TARGET: linux
           PYENV: pip
           PACKAGES: cython
 
-        - os: windows-latest
-          python: 3.9
-          other: /pip
-          skip_doctest: 1
-          TARGET: win
+        # [13 May 26] Disabled until we can sort out the seg fault issue
+        #- os: windows-latest
+        #  python: '3.10'
+        #  other: /pip
+        #  TARGET: win
+        #  PYENV: pip
+
+        - os: ubuntu-latest
+          python: '3.10'
+          other: /slim
+          slim: 2
+          TARGET: linux
+          PYENV: pip
+
+        - os: ubuntu-latest
+          python: 3.13
+          other: /nosolvers
+          slim: 1
+          TARGET: linux
           PYENV: pip
 
         - os: ubuntu-latest
           python: 3.11
           other: /singletest
           category: "-m 'neos or importtest'"
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: pip
-
-        - os: ubuntu-latest
-          python: 3.9
-          other: /slim
-          slim: 1
-          skip_doctest: 1
           TARGET: linux
           PYENV: pip
 
@@ -139,7 +184,6 @@ jobs:
           python: 3.12
           other: /numpy2
           slim: 1
-          skip_doctest: 1
           TARGET: linux
           PYENV: pip
           PACKAGES: "gurobipy dill numpy>2.0 scipy networkx"
@@ -152,14 +196,22 @@ jobs:
           PACKAGES: pyutilib
 
         - os: ubuntu-latest
-          python: 'pypy-3.10'
-          skip_doctest: 1
+          python: 'pypy-3.11-v7.3.20'  #FIXME: Temporary version pin to avoid PyPy 7.3.21
           TARGET: linux
           PYENV: pip
 
+        - os: ubuntu-latest
+          python: 3.13
+          other: /rtd
+          category: notests
+          build_docs: 1
+          TARGET: linux
+          PYENV: pip
+
+
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Configure job parameters
       run: |
@@ -170,9 +222,8 @@ jobs:
         else
             echo "GHA_JOBGROUP=other" >> $GITHUB_ENV
         fi
-        # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
         EXTRAS=tests
-        if test -z "${{matrix.slim}}"; then
+        if test -z "${{matrix.slim}}" -o "${{matrix.slim}}" = 1; then
             EXTRAS="$EXTRAS,docs,optional"
         fi
         echo "EXTRAS=$EXTRAS" >> $GITHUB_ENV
@@ -181,7 +232,7 @@ jobs:
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
 
     #- name: Pip package cache
-    #  uses: actions/cache@v4
+    #  uses: actions/cache@v5
     #  if: matrix.PYENV == 'pip'
     #  id: pip-cache
     #  with:
@@ -189,7 +240,7 @@ jobs:
     #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
 
     #- name: OS package cache
-    #  uses: actions/cache@v4
+    #  uses: actions/cache@v5
     #  if: matrix.TARGET != 'osx'
     #  id: os-cache
     #  with:
@@ -197,23 +248,28 @@ jobs:
     #    key: pkg-${{env.CACHE_VER}}.0-${{runner.os}}
 
     - name: TPL package download cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       if: ${{ ! matrix.slim }}
       id: download-cache
       with:
         path: cache/download
-        key: download-${{env.CACHE_VER}}.0-${{runner.os}}
+        key: download-${{env.CACHE_VER}}-${{runner.os}}
 
     - name: Configure curl
       run: |
         CURLRC="$(cat <<EOF
-           retry = 0
-           max-time = 30
+           retry = 8
+           max-time = 150
+           location
         EOF
         )"
-        echo "$CURLRC" > ${GITHUB_WORKSPACE}/.curlrc
-        echo "$CURLRC" > ${GITHUB_WORKSPACE}/_curlrc
-        echo "CURL_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        echo "$CURLRC" | sed -r 's/^ +//' > ${GITHUB_WORKSPACE}/.curlrc
+        echo "$CURLRC" | sed -r 's/^ +//' > ${GITHUB_WORKSPACE}/_curlrc
+        if test "${{matrix.TARGET}}" == win; then
+            echo "CURL_HOME=$GITHUB_WORKSPACE" | sed 's|/|\\|g' >> $GITHUB_ENV
+        else
+            echo "CURL_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        fi
 
     - name: Update OSX
       if: matrix.TARGET == 'osx'
@@ -228,7 +284,7 @@ jobs:
         #  - install glpk
         #  - pyodbc needs: gcc pkg-config unixodbc freetds
         for pkg in bash pkg-config unixodbc freetds glpk ginac; do
-            brew list $pkg || brew install $pkg
+            brew list $pkg 2>/dev/null || brew install $pkg
         done
 
     - name: Update Linux
@@ -238,6 +294,7 @@ jobs:
         # Notes:
         #  - install glpk
         #  - ipopt needs: libopenblas-dev gfortran liblapack-dev
+        sudo apt-get update ca-certificates
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
             install libopenblas-dev gfortran liblapack-dev glpk-utils \
             libginac-dev
@@ -251,16 +308,19 @@ jobs:
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python }}
 
     - name: Set up Miniconda Python ${{ matrix.python }}
       if: matrix.PYENV == 'conda'
-      uses: conda-incubator/setup-miniconda@v3
+      uses: conda-incubator/setup-miniconda@v4
       with:
+        conda-remove-defaults: true
         auto-update-conda: false
         python-version: ${{ matrix.python }}
+        channels: conda-forge, gurobi, fico-xpress
+        use-mamba: true
 
     # This is necessary for qt (UI) tests; the package utilized here does not
     # have support for OSX.
@@ -293,7 +353,7 @@ jobs:
       run: |
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
-        python -m pip install --cache-dir cache/pip setuptools
+        python -m pip install --cache-dir cache/pip --upgrade setuptools
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
         PACKAGES="${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${PYOMO_DEPENDENCIES} "
@@ -305,6 +365,10 @@ jobs:
             for WORD in $EXCLUDE; do
                 PACKAGES=${PACKAGES//$WORD / }
             done
+        fi
+        # For windows, cannot use newer setuptools because of APPSI compilation issues
+        if test "${{matrix.TARGET}}" == 'win'; then
+            PACKAGES="$PACKAGES setuptools<74.0.0"
         fi
         python -m pip install --cache-dir cache/pip ${PACKAGES}
         python -m pip install --cache-dir cache/pip pymysql || \
@@ -318,6 +382,12 @@ jobs:
                 || echo "WARNING: Xpress Community Edition is not available"
             python -m pip install --cache-dir cache/pip maingopy \
                 || echo "WARNING: MAiNGO is not available"
+            if [[ ${{matrix.python}} == pypy* ]]; then
+                echo "skipping SCIP for pypy"
+            else
+                python -m pip install --cache-dir cache/pip pyscipopt \
+                    || echo "WARNING: SCIP is not available"
+            fi
             if [[ ${{matrix.python}} == pypy* ]]; then
                 echo "skipping wntr for pypy"
             else
@@ -336,21 +406,7 @@ jobs:
       run: |
         # Set up environment
         conda config --set always_yes yes
-        conda config --set auto_update_conda false
-        conda config --remove channels defaults
-        conda config --append channels nodefaults
-        conda config --append channels conda-forge
-        # Try to install mamba
-        conda install --update-deps -q -y -n base conda-libmamba-solver \
-            || MAMBA_FAILED=1
-        if test -z "$MAMBA_FAILED"; then
-            echo "*** Activating the mamba environment solver ***"
-            conda config --set solver libmamba
-        fi
-        # Add the rest of the channels
-        conda config --append channels gurobi
-        conda config --append channels ibmdecisionoptimization
-        conda config --append channels fico-xpress
+        conda config --set channel_priority strict
         # Print environment info
         echo "*** CONDA environment: ***"
         conda info
@@ -359,6 +415,10 @@ jobs:
         conda list --show-channel-urls
         which python
         python --version
+        # We need setuptools so we can run Pyomo's setup.py
+        conda install setuptools
+        # Make sure pip is installed for dependencies not available through conda
+        conda install pip
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
@@ -369,10 +429,6 @@ jobs:
         # HACK: Remove problem packages on conda+Linux
         if test "${{matrix.TARGET}}" == linux; then
             EXCLUDE="casadi numdifftools $EXCLUDE"
-        fi
-        if [[ "${{matrix.TARGET}}" == win && "${{matrix.python}}" == "3.13" ]]; then
-            # As of Nov 7, 2024, qtconsole is not compatible with python 3.13 on win
-            EXCLUDE="qtconsole $EXCLUDE"
         fi
         EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
@@ -395,22 +451,24 @@ jobs:
         fi
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
-        conda install --update-deps -q -y $CONDA_DEPENDENCIES
+        conda install --update-deps -q -y python="${{matrix.python}}" $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
-            # xpress.init() (from conda) hangs indefinitely on GHA/Windows under
-            # Python 3.10 and 3.11.  Exclude that release on that platform.
-            if [[ ${{matrix.TARGET}} == win && ${{matrix.python}} =~ 3.1[01] ]]; then
+            TIMEOUT_MSG="TIMEOUT: killing conda install process"
+            PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
+            echo "Installing for $PYVER"
+            # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
+            # on GHA/Windows under Python 3.10 and 3.11.  Exclude that
+            # release on that platform.
+            if [[ "${{matrix.TARGET}}" == win && ${{matrix.python}} =~ 3.1[01] ]]; then
                 # We would like to just use something like:
                 #  - "!=9.5.1" (conda errors)
                 #  - "<9.5.1|>9.5.1" (conda installs 9.1.2, which also hangs)
                 #  - "<=9.5.0|>9.5.1" (conda seg faults)
-                XPRESS='xpress=9.5.0'
+                XPRESS='xpress>=9.5.2'
             else
                 XPRESS='xpress'
             fi
-            PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
-            echo "Installing for $PYVER"
-            for PKG in 'cplex>=12.10' docplex gurobi "$XPRESS" cyipopt pymumps scip; do
+            for PKG in gurobi "$XPRESS" cyipopt pymumps scip pyscipopt; do
                 echo ""
                 echo "*** Install $PKG ***"
                 echo ""
@@ -432,7 +490,26 @@ jobs:
                     if test -z "$_ISPY" -o -n "$_PYOK"; then
                         echo ""
                         echo "... INSTALLING $PKG"
-                        conda install -y "$PKG" || _BUILDS=""
+                        # Because conda can occasionally hang
+                        # indefinitely (lately while installing SCIP),
+                        # we will run "conda install" in a subshell and
+                        # kill it after 5-minutes.
+                        (conda install -q -y $PKG |& tee conda.log) &
+                        conda_subshell_pid=$!
+                        sleep 1
+                        conda_pid=$(ps | grep conda | sed 's/^ *//' | sed 's/ .*//')
+                        # Only timeout the conda process if it's not to
+                        # the installation phase yet.  Signalling conda
+                        # after it has started the installation process
+                        # can irrecoverably corrupt the environment.
+                        (sleep 300 \
+                            && if test `grep 'Package Plan' conda.log | wc -l` -eq 0; \
+                            then echo "$TIMEOUT_MSG $conda_pid (TERM)" \
+                            && kill -TERM $conda_pid 2>/dev/null ; fi) &
+                        timeout_pid=$!
+                        wait $conda_subshell_pid || _BUILDS=""
+                        kill $timeout_pid 2>/dev/null \
+                            || echo "TIMEOUT: time limit expired"
                     fi
                 fi
                 echo ""
@@ -440,8 +517,16 @@ jobs:
                     echo "WARNING: $PKG is not available"
                 fi
             done
+            # As of June 2026, cplex/docplex want their users to move towards
+            # pypi and away from conda. Particularly:
+            # The CPLEX and CP Optimizer Python interfaces are no longer
+            # delivered inside CPLEX Optimization Studio, but can be
+            # installed directly from PyPI.
+            PYPI_DEPENDENCIES="$PYPI_DEPENDENCIES cplex docplex"
         fi
         # Re-try Pyomo (optional) dependencies with pip
+        echo ""
+        echo "Installing packages only available on PyPI"
         if test -n "$PYPI_DEPENDENCIES"; then
             python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES
         fi
@@ -483,58 +568,74 @@ jobs:
         IPOPT_DIR=$TPL_DIR/ipopt
         echo "$IPOPT_DIR" >> $GITHUB_PATH
         echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$IPOPT_DIR" >> $GITHUB_ENV
-        NEW_PYOMO_PATH="$IPOPT_DIR:$PYOMO_PATH"
-        echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
-        mkdir -p $IPOPT_DIR
+        echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$IPOPT_DIR" >> $GITHUB_ENV
+        echo "PYOMO_PATH=$IPOPT_DIR:$PYOMO_PATH" >> $GITHUB_ENV
+        mkdir -p "$IPOPT_DIR"
         IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
         if test ! -e $IPOPT_TAR; then
             echo "...downloading Ipopt"
-            if test "${{matrix.TARGET}}" == osx; then
-                echo "IDAES Ipopt not available on OSX"
-                exit 0
-            fi
             URL=https://github.com/IDAES/idaes-ext
-            RELEASE=$(curl --max-time 150 --retry 8 \
-                -L -s -H 'Accept: application/json' ${URL}/releases/latest)
+            RELEASE=$(curl -s -H 'Accept: application/json' ${URL}/releases/latest)
             VER=$(echo $RELEASE | sed -e 's/.*"tag_name":"\([^"]*\)".*/\1/')
+            if test -z "$VER"; then
+                echo "FAILED identifying IPOPT release"
+                exit 1
+            fi
             URL=${URL}/releases/download/$VER
             if test "${{matrix.TARGET}}" == linux; then
-                curl --max-time 150 --retry 8 \
-                    -L $URL/idaes-solvers-ubuntu2004-x86_64.tar.gz \
-                    > $IPOPT_TAR
+                curl $URL/idaes-solvers-ubuntu2204-x86_64.tar.gz > "$IPOPT_TAR"
+            elif test "${{matrix.TARGET}}" == osx; then
+                curl $URL/idaes-solvers-darwin-aarch64.tar.gz > "$IPOPT_TAR"
             else
-                curl --max-time 150 --retry 8 \
-                    -L $URL/idaes-solvers-windows-x86_64.tar.gz \
-                    $URL/idaes-lib-windows-x86_64.tar.gz > $IPOPT_TAR
+                # Note: use stdout redirection instead of -o because the
+                # shell can handle mixed "/" and "\", but curl cannot.
+                curl $URL/idaes-solvers-windows-x86_64.tar.gz > "$IPOPT_TAR"
             fi
         fi
-        cd $IPOPT_DIR
-        tar -xzi < $IPOPT_TAR
+        cd "$IPOPT_DIR"
+        if test "${{matrix.TARGET}}" == win; then
+            # tar on Windows apparently can't open "drive:\path" file names
+            tar -xzi < "$IPOPT_TAR"
+        else
+            tar -xzf "$IPOPT_TAR"
+        fi
         echo ""
         echo "$IPOPT_DIR"
         ls -l $IPOPT_DIR
+        $IPOPT_DIR/ipopt -v
 
     - name: Install GAMS
-      if: ${{ ! matrix.slim }}
-      # We install using Powershell because the GAMS installer hangs
-      # when launched from bash on Windows
+      if: ${{ ! matrix.slim && matrix.TARGET != 'osx' }}
+      # - We install using Powershell because the GAMS installer hangs
+      #   when launched from bash on Windows
+      # - We no longer install on OSX because GAMS no longer distributes
+      #   self extracting ZIP for OSX and the package is difficult [for JDS]
+      #   to install in GHA
       shell: pwsh
       run: |
         $GAMS_DIR = "${env:TPL_DIR}/gams"
         echo "$GAMS_DIR" | `
             Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        echo "LD_LIBRARY_PATH=${env:LD_LIBRARY_PATH}:$GAMS_DIR" `
+        echo "LD_LIBRARY_PATH=${env:LD_LIBRARY_PATH}:$GAMS_DIR" | `
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        echo "DYLD_LIBRARY_PATH=${env:DYLD_LIBRARY_PATH}:$GAMS_DIR" `
+        echo "DYLD_LIBRARY_PATH=${env:DYLD_LIBRARY_PATH}:$GAMS_DIR" | `
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        # Note: we put GAMS_DIR at the *end* of PYOMO_PATH so explicitly
+        #    installed solvers will be found first.
+        echo "PYOMO_PATH=${env:PYOMO_PATH}:$GAMS_DIR" | `
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $INSTALLER = "${env:DOWNLOAD_DIR}/gams_install.exe"
-        # We are pinning to 29.1.0 because a license is required for
-        # versions after this in order to run in demo mode.
-        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
+        # Demo licenses are included for 5mo from the newest release
+        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/latest"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $URL = "$URL/windows/windows_x64_64.exe"
         } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
-            $URL = "$URL/macosx/osx_x64_64_sfx.exe"
+            $osxarch = (uname -m).Trim()
+            if ( "$osxarch" -eq "arm64" ) {
+                $URL = "$URL/macosx/osx_arm64_sfx.exe"
+            } else {
+                $URL = "$URL/macosx/osx_x64_64_sfx.exe"
+            }
         } else {
             $URL = "$URL/linux/linux_x64_64_sfx.exe"
         }
@@ -562,15 +663,26 @@ jobs:
       if: ${{ ! matrix.slim }}
       run: |
         GAMS_DIR="$TPL_DIR/gams"
-        NEW_PYOMO_PATH="$GAMS_DIR:$PYOMO_PATH"
-        echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
-        py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
-            ;print(v if v != "_27" else "")')
-        if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
-            echo "Installing GAMS Python bindings"
-            pushd $GAMS_DIR/apifiles/Python/api$py_ver
-            $PYTHON_EXE setup.py install
+        pyver=$($PYTHON_EXE -c 'import sys; print("%s%s" % sys.version_info[:2])')
+        WHL=$(find "$GAMS_DIR/api/python/bdist" -name "*cp$pyver*.whl")
+        TRY_PYPI=0
+        set +e
+        if test -n "$WHL"; then
+            # Starting in 51.2.1 < GAMS <= 53.1, GAMS bundles wheels
+            echo "Installing GAMS Python bindings from wheel"
+            $PYTHON_EXE -m pip install "$WHL" || TRY_PYPI=1
+        elif test -e "$GAMS_DIR/apifiles/Python/api_$pyver"; then
+            echo "Installing GAMS Python bindings using setup.py"
+            pushd "$GAMS_DIR/apifiles/Python/api_$pyver"
+            $PYTHON_EXE setup.py install || TRY_PYPI=1
             popd
+        else
+            TRY_PYPI=1
+        fi
+        if test $TRY_PYPI -ne 0; then
+            echo "Installing GAMS Python bindings from PyPI"
+            # Note: we are seeing segfaults with 53.1 under pytest on GHA/linux
+            $PYTHON_EXE -m pip install 'gamsapi!=53.1' gamspy-highs gamspy-ipopt
         fi
 
     - name: Install BARON
@@ -580,16 +692,7 @@ jobs:
         $BARON_DIR = "${env:TPL_DIR}/baron"
         echo "$BARON_DIR" | `
             Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        $CURRENT_PYOMO_PATH="${env:PYOMO_PATH}"
-        # Prepend BARON_DIR with appropriate path separator
-        if ( "${{matrix.TARGET}}" -eq "win" ) {
-            $PATH_SEPARATOR = ";"
-        } else {
-            $PATH_SEPARATOR = ":"
-        }
-        $NEW_PYOMO_PATH = "$BARON_DIR$PATH_SEPARATOR$CURRENT_PYOMO_PATH"
-        echo "New PYOMO_PATH: $NEW_PYOMO_PATH"
-        echo "PYOMO_PATH=$NEW_PYOMO_PATH" | `
+        echo "PYOMO_PATH=${BARON_DIR}:${env:PYOMO_PATH}" | `
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $URL = "https://minlp-downloads.nyc3.cdn.digitaloceanspaces.com/xecs/baron/current/"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
@@ -625,18 +728,21 @@ jobs:
       run: |
         GJH_DIR="$TPL_DIR/gjh"
         echo "${GJH_DIR}" >> $GITHUB_PATH
-        NEW_PYOMO_PATH="$GJH_DIR:$PYOMO_PATH"
-        echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
+        echo "PYOMO_PATH=$GJH_DIR:$PYOMO_PATH" >> $GITHUB_ENV
         INSTALL_DIR="${DOWNLOAD_DIR}/gjh"
         if test ! -e "$INSTALL_DIR/bin"; then
             mkdir -p "$INSTALL_DIR"
             INSTALLER="$INSTALL_DIR/gjh_asl_json.zip"
             URL="https://codeload.github.com/ghackebeil/gjh_asl_json/zip/master"
-            curl --max-time 150 --retry 8 -L $URL > $INSTALLER
+            curl $URL > $INSTALLER
             cd $INSTALL_DIR
             unzip -q $INSTALLER
             cd gjh_asl_json-master/Thirdparty
-            ./get.ASL
+            # Patch get.ASL to use curl
+            URL="http://www.ampl.com/netlib/ampl/solvers.tgz"
+            sed "s|wget |curl -o solvers.tgz |" get.ASL > get.ASL.patched
+            cat get.ASL.patched
+            bash ./get.ASL.patched
             cd ..
             make
             mv bin "$INSTALL_DIR/bin"
@@ -648,6 +754,7 @@ jobs:
 
     - name: Install Pyomo
       run: |
+        export PYOMO_SETUP_ARGS=${{ matrix.setup_options }}
         echo ""
         echo "Clone Pyomo-model-libraries..."
         URL=https://github.com/Pyomo/pyomo-model-libraries.git
@@ -655,13 +762,13 @@ jobs:
         echo ""
         echo "Install Pyomo..."
         echo ""
-        $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
+        $PYTHON_EXE -m pip install -e .
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
         echo "PYOMO_CONFIG_DIR=${GITHUB_WORKSPACE}/config" >> $GITHUB_ENV
 
-    # this has to be done after Pyomo is installed because highspy 
+    # this has to be done after Pyomo is installed because highspy
     # depends on pyomo's find_library function
     - name: Install HiGHS
       if: ${{ ! matrix.slim }}
@@ -689,12 +796,18 @@ jobs:
             > ${SITE_PACKAGES}/run_coverage_at_startup.pth
 
     - name: Download and install extensions
-      if: ${{ ! matrix.slim }}
+      if: ${{ ! matrix.slim && matrix.category != 'notests' }}
       run: |
         echo ""
         echo "Pyomo download-extensions"
         echo ""
-        pyomo download-extensions || exit 1
+        #
+        # [26 Feb 26] For unknown reasons, SSL verification has stopped
+        # working on GHA (even though everything is fine when run
+        # locally).  Giving up and just turning off SSL verification.
+        # Someone should revisit this in the future.
+        #
+        pyomo download-extensions --retry 3 --retry-sleep 60 --insecure || exit 1
         echo ""
         echo "Pyomo build-extensions"
         echo ""
@@ -713,7 +826,7 @@ jobs:
         pyomo help --writers || exit 1
 
     - name: Run Pyomo tests
-      if: matrix.mpi == 0
+      if: ${{ matrix.mpi == 0 && matrix.category != 'notests' }}
       run: |
         export PATH=$PYOMO_PATH
         $PYTHON_EXE -m pytest -v \
@@ -722,7 +835,7 @@ jobs:
             `pwd`/examples `pwd`/doc --junitxml="TEST-pyomo.xml"
 
     - name: Run Pyomo MPI tests
-      if: matrix.mpi != 0
+      if: ${{ matrix.mpi != 0 && matrix.category != 'notests' }}
       run: |
         # Manually invoke the DAT parser so that parse_table_datacmds.py
         # is fully generated by a single process before invoking MPI
@@ -734,8 +847,19 @@ jobs:
             -m "mpi" -W ignore::Warning \
             pyomo `pwd`/pyomo-model-libraries
 
+    - name: Build documentation
+      if: matrix.build_docs != 0
+      run: |
+        sudo apt-get -y install graphviz latexmk texlive texlive-latex-extra \
+            texlive-pictures
+        make -C doc/OnlineDocs html
+        make -C doc/OnlineDocs latexpdf
+        # Run the doc tests (some check the html output for correctness)
+        $PYTHON_EXE -m pytest -v -W ignore::Warning \
+            doc/OnlineDocs --junitxml="TEST-pyomo-docs.xml"
+
     - name: Run documentation tests
-      if: matrix.skip_doctest == 0
+      if: matrix.test_docs != 0
       run: |
         make -C doc/OnlineDocs doctest -d
 
@@ -746,7 +870,7 @@ jobs:
         coverage xml -i
 
     - name: Record build artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{github.job}}_${{env.GHA_JOBGROUP}}-${{env.GHA_JOBNAME}}
         include-hidden-files: true
@@ -759,25 +883,25 @@ jobs:
 
 
   bare-python-env:
-    name: linux/3.9/bare-env
+    name: linux/3.10/bare-env
     needs: lint  # the linter job is a prerequisite for PRs
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v5
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v6
       with:
-        python-version: 3.9
+        python-version: '3.10'
 
     - name: Install Pyomo
       run: |
         echo ""
         echo "Install Pyomo..."
         echo ""
-        python setup.py develop
+        python -m pip install -e .
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
@@ -802,49 +926,50 @@ jobs:
   cover:
     name: process-coverage-${{ matrix.TARGET }}
     needs: build
-    if: success() || failure() # run even if a build job fails, but not if cancelled
+    # run even if a build job fails, but not if canceled
+    if: ${{ success() || failure() }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-13, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
         include:
         - os: ubuntu-latest
           TARGET: linux
-        - os: macos-13
+        - os: macos-latest
           TARGET: osx
         - os: windows-latest
           TARGET: win
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       # We need the source for .codecov.yml and running "coverage xml"
 
     #- name: Pip package cache
-    #  uses: actions/cache@v4
+    #  uses: actions/cache@v5
     #  id: pip-cache
     #  with:
     #    path: cache/pip
-    #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.9
+    #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.10
 
     - name: Download build artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         path: artifacts
 
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v5
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v6
       with:
-        python-version: 3.9
+        python-version: 3.12
 
     - name: Install Python Packages (pip)
       shell: bash # DO NOT REMOVE: see note above
       run: |
         python -c 'import sys;print(sys.executable)'
-        python -m pip install --cache-dir cache/pip --upgrade pip
+        python -m pip install --cache-dir cache/pip --upgrade pip setuptools
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "tests" | tail -1`
         python -m pip install --cache-dir cache/pip \
@@ -854,13 +979,14 @@ jobs:
 
     - name: Install Pyomo
       run: |
+        export PYOMO_SETUP_ARGS=${{ matrix.setup_options }}
         echo ""
         echo "Clone Pyomo-model-libraries..."
         git clone https://github.com/Pyomo/pyomo-model-libraries.git
         echo ""
         echo "Install Pyomo..."
         echo ""
-        $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
+        $PYTHON_EXE -m pip install -e .
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
@@ -872,26 +998,6 @@ jobs:
         # is generated before running "coverage xml"
         $PYTHON_EXE -c "from pyomo.dataportal.parse_datacmds import \
             parse_data_commands; parse_data_commands(data='')"
-
-    - name: Update codecov uploader
-      run: |
-        set +e
-        CODECOV="${GITHUB_WORKSPACE}/codecov.sh"
-        echo "CODECOV=$CODECOV" >> $GITHUB_ENV
-        for i in `seq 3`; do
-            echo "Downloading current codecov script (attempt ${i})"
-            curl -L https://codecov.io/bash -o $CODECOV
-            if test $? == 0; then
-                break
-            fi
-            DELAY=$(( RANDOM % 30 + 30))
-            echo "Pausing $DELAY seconds before re-attempting download"
-            sleep $DELAY
-        done
-        if test ! -e $CODECOV; then
-            echo "Failed to download codecov.sh"
-            exit 1
-        fi
 
     - name: Combine coverage reports
       if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
@@ -930,8 +1036,10 @@ jobs:
         fi
 
     - name: Upload codecov reports
-      if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
-      uses: codecov/codecov-action@v4
+      if: |
+        env.PYOMO_WORKFLOW != 'branch' &&
+        (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
+      uses: codecov/codecov-action@v6
       with:
         files: coverage.xml
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
@@ -941,12 +1049,13 @@ jobs:
 
     - name: Upload other coverage reports
       if: |
+        env.PYOMO_WORKFLOW != 'branch' &&
         hashFiles('coverage-other.xml') != '' &&
         (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v6
       with:
         files: coverage-other.xml
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
         name: ${{ matrix.TARGET }}/other
-        flags: ${{ matrix.TARGET }},other
+        flags: ${{ matrix.TARGET }}_other
         fail_ci_if_error: true

@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
 # Unit Tests for expression generation
 #
@@ -58,7 +56,7 @@ from pyomo.core.expr.numeric_expr import (
 from pyomo.environ import ConcreteModel, Param, Var, ExternalFunction
 
 
-class MockExternalFunction(object):
+class MockExternalFunction:
     def evaluate(self, args):
         (x,) = args
         return (math.log(x) / math.log(2)) ** 2
@@ -311,7 +309,7 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(e.polynomial_degree(), None)
         self.assertEqual(is_fixed(e), False)
         with self.assertRaisesRegex(
-            ValueError, 'No value for uninitialized NumericValue object y'
+            ValueError, 'No value for uninitialized ScalarVar object y'
         ):
             self.assertEqual(value(e), None)
         self.assertEqual(str(e), "y**x")
@@ -429,7 +427,7 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(e.polynomial_degree(), 2)
         self.assertEqual(is_fixed(e), False)
         with self.assertRaisesRegex(
-            ValueError, 'No value for uninitialized NumericValue object y'
+            ValueError, 'No value for uninitialized ScalarVar object y'
         ):
             self.assertEqual(value(e), None)
         self.assertEqual(str(e), "y*x")
@@ -441,7 +439,7 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(e.polynomial_degree(), 0)
         self.assertEqual(is_fixed(e), True)
         with self.assertRaisesRegex(
-            ValueError, 'No value for uninitialized NumericValue object y'
+            ValueError, 'No value for uninitialized ScalarVar object y'
         ):
             self.assertEqual(value(e), None)
         self.assertEqual(str(e), "y*x")
@@ -452,7 +450,7 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(e.polynomial_degree(), 1)
         self.assertEqual(is_fixed(e), False)
         with self.assertRaisesRegex(
-            ValueError, 'No value for uninitialized NumericValue object y'
+            ValueError, 'No value for uninitialized ScalarVar object y'
         ):
             self.assertEqual(value(e), None)
         self.assertEqual(str(e), "y*x")
@@ -464,7 +462,7 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(e.polynomial_degree(), None)
         self.assertEqual(is_fixed(e), False)
         with self.assertRaisesRegex(
-            ValueError, 'No value for uninitialized NumericValue object x'
+            ValueError, 'No value for uninitialized ScalarVar object x'
         ):
             self.assertEqual(value(e), None)
         self.assertEqual(str(e), "1/y*x")
@@ -640,13 +638,13 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertIs(type(e), LinearExpression)
         self.assertEqual(e.constant, 2)
         cache = e._cache
-        self.assertEqual(e.linear_coefs, [0, 1, 2, 1])
+        self.assertEqual(e.linear_coefs, (0, 1, 2, 1))
         self.assertIs(cache, e._cache)
-        self.assertEqual(e.linear_vars, [m.x[0], m.x[1], m.x[2], m.y])
+        self.assertEqual(e.linear_vars, (m.x[0], m.x[1], m.x[2], m.y))
         self.assertIs(cache, e._cache)
 
         e = LinearExpression()
-        self.assertEqual(e.linear_coefs, [])
+        self.assertEqual(e.linear_coefs, tuple())
         self.assertIsNot(cache, e._cache)
         cache = e._cache
         e = LinearExpression()
@@ -654,7 +652,7 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertIsNot(cache, e._cache)
         cache = e._cache
         e = LinearExpression()
-        self.assertEqual(e.linear_vars, [])
+        self.assertEqual(e.linear_vars, tuple())
         self.assertIsNot(cache, e._cache)
 
         self.assertTrue(e.is_potentially_variable())

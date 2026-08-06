@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 from io import StringIO
@@ -31,7 +29,6 @@ from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.core.expr.calculus.diff_with_sympy import differentiate_available
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.expr.sympy_tools import sympy_available
-
 
 all_diff_modes = [
     differentiate.Modes.sympy,
@@ -459,3 +456,13 @@ class Test_calc_var(unittest.TestCase):
             calculate_variable_from_constraint(
                 m.x, m.c, diff_mode=differentiate.Modes.sympy
             )
+
+    def test_linea_search_overflow(self):
+        # This tests the example from #3540
+        m = ConcreteModel()
+        m.x = Var(initialize=5)
+        m.y = Var(initialize=1)
+        m.con = Constraint(expr=m.y == 10 ** (-m.x))
+
+        calculate_variable_from_constraint(m.x, m.con)
+        self.assertAlmostEqual(value(m.x), 0)

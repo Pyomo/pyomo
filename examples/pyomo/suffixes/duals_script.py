@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 # A Suffix example for the collection of duals.
 #
@@ -22,16 +20,14 @@
 # on this system. This example was tested using Gurobi
 # Solver 5.1.0
 
-import pyomo.environ
-from pyomo.core import *
-from pyomo.opt import SolverFactory
+import pyomo.environ as pyo
 
 ### Create the a solver plugin
 solver = 'gurobi'
 solver_io = 'lp'  # Uses the LP file interface
 stream_solver = False  # True prints solver output to screen
 keepfiles = False  # True prints intermediate file names (.nl,.sol,...)
-opt = SolverFactory(solver, solver_io=solver_io)
+opt = pyo.SolverFactory(solver, solver_io=solver_io)
 
 if opt is None:
     print("")

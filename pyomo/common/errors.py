@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import inspect
 import textwrap
@@ -95,7 +93,8 @@ def format_exception(msg, prolog=None, epilog=None, exception=None, width=76):
             # We want to strip off the leading indent that we just
             # added, but only if there is no prolog
             msg = msg.lstrip()
-    fields.append(msg)
+    if msg:
+        fields.append(msg)
 
     if epilog is not None:
         if '\n' not in epilog:
@@ -117,17 +116,22 @@ class ApplicationError(Exception):
     An exception used when an external application generates an error.
     """
 
-    pass
-
 
 class PyomoException(Exception):
-    """
-    Exception class for other Pyomo exceptions to inherit from,
-    allowing Pyomo exceptions to be caught in a general way
-    (e.g., in other applications that use Pyomo).
+    """General base class for Pyomo exceptions.
+
+    This allows Pyomo exceptions to be caught in a general way (e.g., in
+    other applications that use Pyomo).
+
+    Subclasses can define a class-level `default_message` attribute that
+    is used if no other message/arguments are provided.
+
     """
 
-    pass
+    def __init__(self, *args):
+        if not args and getattr(self, 'default_message', None):
+            args = (self.default_message,)
+        return super().__init__(*args)
 
 
 class DeferredImportError(ImportError):
@@ -136,8 +140,6 @@ class DeferredImportError(ImportError):
     import failed.
 
     """
-
-    pass
 
 
 class DeveloperError(PyomoException, NotImplementedError):
@@ -148,8 +150,11 @@ class DeveloperError(PyomoException, NotImplementedError):
     """
 
     def __str__(self):
+        msg = super().__str__()
+        if msg:
+            msg = repr(msg)
         return format_exception(
-            repr(super().__str__()),
+            msg,
             prolog="Internal Pyomo implementation error:",
             epilog="Please report this to the Pyomo Developers.",
             exception=self,
@@ -157,13 +162,38 @@ class DeveloperError(PyomoException, NotImplementedError):
 
 
 class InfeasibleConstraintException(PyomoException):
-    """
-    Exception class used by Pyomo transformations to indicate
-    that an infeasible constraint has been identified (e.g. in
-    the course of range reduction).
+    """Exception raised by Pyomo transformations or solver interfaces
+    to indicate that an infeasible constraint has been identified
+    (e.g. in the course of range reduction).
+
     """
 
-    pass
+
+class InvalidExpressionError(PyomoException, ValueError):
+    """Exception raised for expressions that cannot be represented or emitted.
+
+    Pyomo will raise this exception when:
+
+      - Compiling an expression that cannot be expressed / written in the
+        target format or interface.
+
+    See also the derived :class:`InvalidConstraintError`.
+    """
+
+
+class InvalidConstraintError(InvalidExpressionError):
+    """Exception raised for constraints that cannot be represented or emitted.
+
+    Pyomo will raise this exception when:
+
+      - Creating a constraint with a trivial (Boolean) expression.
+      - Creating a constraint from an incorrectly structured tuple.
+      - Compiling a ranged constraint (``lb <= body <= ub``) where
+        either ``lb`` or ``ub`` are variable expressions.
+      - Compiling a constraint that cannot be expressed / written in the
+        target format or interface.
+
+    """
 
 
 class IterationLimitError(PyomoException, RuntimeError):
@@ -182,15 +212,11 @@ class IntervalException(PyomoException, ValueError):
     Exception class used for errors in interval arithmetic.
     """
 
-    pass
-
 
 class InvalidValueError(PyomoException, ValueError):
     """
     Exception class used for value errors in compiled model representations
     """
-
-    pass
 
 
 class MouseTrap(PyomoException, NotImplementedError):
@@ -218,16 +244,12 @@ class MouseTrap(PyomoException, NotImplementedError):
 class NondifferentiableError(PyomoException, ValueError):
     """A Pyomo-specific ValueError raised for non-differentiable expressions"""
 
-    pass
-
 
 class TempfileContextError(PyomoException, IndexError):
     """A Pyomo-specific IndexError raised when attempting to use the
     TempfileManager when it does not have a currently active context.
 
     """
-
-    pass
 
 
 class TemplateExpressionError(ValueError):

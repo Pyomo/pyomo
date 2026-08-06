@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.environ import (
     Param,
@@ -133,7 +131,7 @@ def _add_sensitivity_suffixes(block):
             block.add_component(name, Suffix(direction=direction))
 
 
-class _NotAnIndex(object):
+class _NotAnIndex:
     pass
 
 
@@ -214,6 +212,11 @@ def sensitivity_calculation(
     sens.perturb_parameters(perturbList)
 
     if method == 'sipopt':
+        # Notes on sIpopt documentation:
+        # Documentation:
+        #  - https://coin-or.github.io/Ipopt/SPECIALS.html#SIPOPT
+        # Original docs (archived):
+        #  - http://web.archive.org/web/20210412132144/https://projects.coin-or.org/Ipopt/wiki/sIpopt
         ipopt_sens = SolverFactory('ipopt_sens', solver_io='nl')
         ipopt_sens.options['run_sens'] = 'yes'
         if solver_options is not None:
@@ -504,7 +507,7 @@ def line_num(file_name, target):
     raise Exception(file_name + " does not include " + target)
 
 
-class SensitivityInterface(object):
+class SensitivityInterface:
     def __init__(self, instance, clone_model=True):
         """Constructor clones model if necessary and attaches
         to this object.

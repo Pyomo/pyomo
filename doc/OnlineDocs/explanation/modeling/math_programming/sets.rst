@@ -29,15 +29,30 @@ and postpones creation of its members:
 
 The :class:`Set` class takes optional arguments such as:
 
-- ``dimen`` = Dimension of the members of the set
-- ``doc`` = String describing the set
-- ``filter`` = A Boolean function used during construction to indicate if a
-  potential new member should be assigned to the set
-- ``initialize`` = An iterable containing the initial members of the Set, or
-  function that returns an iterable of the initial members the set.
-- ``ordered`` = A Boolean indicator that the set is ordered; the default is ``True``
-- ``validate`` = A Boolean function that validates new member data
-- ``within`` = Set used for validation; it is a super-set of the set being declared.
+``dimen``
+    Dimension of the members of the set; ``None`` for "jagged" sets
+    (where members do not have a uniform length).
+
+``doc``
+    String describing the set
+
+``filter``
+    A Boolean function used during construction to indicate if a
+    potential new member should be assigned to the set
+
+``initialize``
+    An iterable containing the initial members of the Set, or
+    function that returns an iterable of the initial members the set.
+
+``ordered``
+    A Boolean indicator that the set is ordered; the default is ``True``
+    (Set is ordered by insertion order)
+
+``validate``
+    A Boolean function that validates new member data
+
+``within``
+    Set used for validation; it is a super-set of the set being declared.
 
 In general, Pyomo attempts to infer the "dimensionality" of Set
 components (that is, the number of apparent indices) when they are
@@ -277,12 +292,12 @@ Consider the following simple version of minimum cost flow problem:
 .. math::
    :nowrap:
 
-	\begin{array}{lll}
-	\mbox{minimize} & \sum_{a \in \mathcal{A}} c_{a}x_{a} \\
-	\mbox{subject to:} & S_{n} + \sum_{(i,n) \in \mathcal{A}}x_{(i,n)} &  \\
-					& -D_{n} - \sum_{(n,j) \in \mathcal{A}}x_{(n,j)} & n \in \mathcal{N} \\
-					& x_{a} \geq 0, &  a \in \mathcal{A}
-	\end{array}
+   \[\begin{array}{lll}
+     \mbox{minimize} & \sum_{a \in \mathcal{A}} c_{a}x_{a} \\
+     \mbox{subject to:} & S_{n} + \sum_{(i,n) \in \mathcal{A}}x_{(i,n)} &  \\
+			& -D_{n} - \sum_{(n,j) \in \mathcal{A}}x_{(n,j)} & n \in \mathcal{N} \\
+			& x_{a} \geq 0, &  a \in \mathcal{A}
+   \end{array}\]
 
 where
 
@@ -451,8 +466,10 @@ for this model, a toy data file (in AMPL "``.dat``" format) would be:
 
    >>> inst = model.create_instance('src/scripting/Isinglecomm.dat')
 
-This can also be done somewhat more efficiently, and perhaps more clearly,
-using a :class:`BuildAction` (for more information, see :ref:`BuildAction`):
+A similar result can be accomplished more efficiently (because we only
+iterate over the Arcs twice) using initialization functions that accept
+only a model block and return a ``dict`` with all the information needed
+for the indexed set:
 
 .. doctest::
    :hide:
@@ -463,8 +480,59 @@ using a :class:`BuildAction` (for more information, see :ref:`BuildAction`):
 
 .. testcode::
 
-   model.NodesOut = pyo.Set(model.Nodes, within=model.Nodes)
+    def NodesIn_init(m):
+        # Create a dict to show NodesIn list for every node
+        d = {i: [] for i in m.Nodes}
+        # loop over the arcs and record the end points
+        for i, j in model.Arcs:
+            d[j].append(i)
+        return d
+    model.NodesIn = pyo.Set(model.Nodes, initialize=NodesIn_init)
+
+    def NodesOut_init(m):
+        d = {i: [] for i in m.Nodes}
+        for i, j in model.Arcs:
+            d[i].append(j)
+        return d
+    model.NodesOut = pyo.Set(model.Nodes, initialize=NodesOut_init)
+
+Alternatively, this can also be done even more efficiently, and perhaps
+more clearly, outside the context of Set initialization.  For concrete
+models, scripts can explicitly add elements to the Sets after
+declaration:
+
+.. doctest::
+   :hide:
+
+   >>> model = inst
+   >>> del model.NodesIn
+   >>> del model.NodesOut
+
+.. testcode::
+
    model.NodesIn = pyo.Set(model.Nodes, within=model.Nodes)
+   model.NodesOut = pyo.Set(model.Nodes, within=model.Nodes)
+
+   # loop over the arcs and record the end points
+   for i, j in model.Arcs:
+       model.NodesIn[j].add(i)
+       model.NodesOut[i].add(j)
+
+For abstract models, that action must be deferred to instance
+construction time using a :class:`BuildAction` (for more information,
+see :ref:`BuildAction`):
+
+.. doctest::
+   :hide:
+
+   >>> model = inst
+   >>> del model.NodesIn
+   >>> del model.NodesOut
+
+.. testcode::
+
+   model.NodesIn = pyo.Set(model.Nodes, within=model.Nodes)
+   model.NodesOut = pyo.Set(model.Nodes, within=model.Nodes)
 
    def Populate_In_and_Out(model):
        # loop over the arcs and record the end points

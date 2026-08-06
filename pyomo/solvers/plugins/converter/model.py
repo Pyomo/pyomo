@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 
 import os
@@ -20,7 +18,7 @@ from pyomo.core.kernel.block import IBlock
 
 
 @ProblemConverterFactory.register('pyomo')
-class PyomoMIPConverter(object):
+class PyomoMIPConverter:
     pico_converter = PicoMIPConverter()
 
     def can_convert(self, from_type, to_type):
@@ -72,10 +70,10 @@ class PyomoMIPConverter(object):
                         format=ProblemFormat.cpxlp,
                         _solver_capability=capabilities,
                         _called_by_solver=True,
-                        **io_options
+                        **io_options,
                     )
                 else:
-                    (problem_filename, symbol_map_id) = instance.write(
+                    problem_filename, symbol_map_id = instance.write(
                         filename=problem_filename,
                         format=ProblemFormat.cpxlp,
                         solver_capability=capabilities,
@@ -120,10 +118,10 @@ class PyomoMIPConverter(object):
                         format=ProblemFormat.bar,
                         _solver_capability=capabilities,
                         _called_by_solver=True,
-                        **io_options
+                        **io_options,
                     )
                 else:
-                    (problem_filename, symbol_map_id) = instance.write(
+                    problem_filename, symbol_map_id = instance.write(
                         filename=problem_filename,
                         format=ProblemFormat.bar,
                         solver_capability=capabilities,
@@ -178,10 +176,10 @@ class PyomoMIPConverter(object):
                         format=args[1],
                         _solver_capability=capabilities,
                         _called_by_solver=True,
-                        **io_options
+                        **io_options,
                     )
                 else:
-                    (problem_filename, symbol_map_id) = instance.write(
+                    problem_filename, symbol_map_id = instance.write(
                         filename=problem_filename,
                         format=args[1],
                         solver_capability=capabilities,
@@ -243,10 +241,10 @@ class PyomoMIPConverter(object):
                             format=ProblemFormat.osil,
                             _solver_capability=capabilities,
                             _called_by_solver=True,
-                            **io_options
+                            **io_options,
                         )
                     else:
-                        (problem_filename, symbol_map_id) = instance.write(
+                        problem_filename, symbol_map_id = instance.write(
                             filename=problem_filename,
                             format=ProblemFormat.osil,
                             solver_capability=capabilities,

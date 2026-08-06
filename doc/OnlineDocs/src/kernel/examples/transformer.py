@@ -1,15 +1,13 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
-import pyomo.environ
+import pyomo.environ as pyo
 import pyomo.kernel
 
 import pympler.asizeof
@@ -53,11 +51,11 @@ print("Memory:", _fmt(pympler.asizeof.asizeof(Transformer())))
 
 # @aml
 def Transformer():
-    b = pyomo.environ.Block(concrete=True)
-    b._a = pyomo.environ.Param(mutable=True)
-    b._v_in = pyomo.environ.Expression()
-    b._v_out = pyomo.environ.Expression()
-    b._c = pyomo.environ.Constraint(expr=b._a * b._v_out == b._v_in)
+    b = pyo.Block(concrete=True)
+    b._a = pyo.Param(mutable=True)
+    b._v_in = pyo.Expression()
+    b._v_out = pyo.Expression()
+    b._c = pyo.Constraint(expr=b._a * b._v_out == b._v_in)
     return b
 
 

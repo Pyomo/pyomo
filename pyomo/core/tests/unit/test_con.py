@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
 # Unit Tests for Elements of a Model
 #
@@ -38,6 +36,7 @@ from pyomo.environ import (
     simple_constraint_rule,
     inequality,
 )
+from pyomo.common.log import LoggingIntercept
 from pyomo.core.expr import (
     SumExpression,
     EqualityExpression,
@@ -191,15 +190,28 @@ class TestConstraintCreation(unittest.TestCase):
     def test_tuple_construct_unbounded_inequality(self):
         model = self.create_model()
 
+        # Note: inequality with only a single non-None returns the non-None value
+
         def rule(model):
             return (None, model.y, None)
 
-        model.c = Constraint(rule=rule)
+        with self.assertRaisesRegex(
+            ValueError,
+            "Constraint 'c' does not have a proper value. Found ScalarVar 'y'",
+        ):
+            model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c.equality, False)
-        self.assertEqual(model.c.lower, None)
-        self.assertIs(model.c.body, model.y)
-        self.assertEqual(model.c.upper, None)
+        with self.assertRaisesRegex(
+            ValueError,
+            "Constraint 'c' does not have a proper value. Found ScalarVar 'y'",
+        ):
+            model.c = (model.y, None, None)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Constraint 'c' does not have a proper value. Found ScalarVar 'y'",
+        ):
+            model.c = (None, None, model.y)
 
         model = self.create_model()
 
@@ -254,6 +266,44 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertEqual(model.c.lower, 0)
         self.assertIs(model.c.body, model.y)
         self.assertEqual(model.c.upper, 1)
+
+        def rule(model):
+            return (float(0), model.y, float(0))
+
+        model.d = Constraint(rule=rule)
+
+        self.assertEqual(model.d.equality, True)
+        self.assertEqual(model.d.lower, 0)
+        self.assertIs(model.d.body, model.y)
+        self.assertEqual(model.d.upper, 0)
+
+        model.p = Param(mutable=True)
+        e = model.p * 2 + 1
+
+        def rule(model):
+            return (e, model.y, e)
+
+        model.e = Constraint(rule=rule)
+
+        self.assertEqual(model.e.equality, True)
+        self.assertIs(model.e.lower, e)
+        self.assertIs(model.e.body, model.y)
+        self.assertIs(model.e.upper, e)
+
+        #
+        # Note: because we do not test for symbolic equivalence, the
+        # following will be seen as a ranged inequality and not an
+        # equality:
+        #
+        def rule(model):
+            return (e, model.y, model.p * 2 + 1)
+
+        model.f = Constraint(rule=rule)
+
+        self.assertEqual(model.f.equality, False)
+        self.assertIs(model.f.lower, e)
+        self.assertIs(model.f.body, model.y)
+        self.assertIsNot(model.f.upper, e)
 
     def test_tuple_construct_invalid_2sided_inequality(self):
         model = self.create_model(abstract=True)
@@ -816,7 +866,7 @@ class TestSimpleCon(unittest.TestCase):
         model.c = Constraint(expr=ans)
 
         with self.assertRaisesRegex(
-            ValueError, "No value for uninitialized NumericValue object x"
+            ValueError, "No value for uninitialized ScalarVar object x"
         ):
             value(model.c)
         model.x = 2
@@ -1375,26 +1425,59 @@ class Test2DArrayCon(unittest.TestCase):
 class MiscConTests(unittest.TestCase):
     def test_infeasible(self):
         m = ConcreteModel()
-        with self.assertRaisesRegex(ValueError, "Constraint 'c' is always infeasible"):
-            m.c = Constraint(expr=Constraint.Infeasible)
-        self.assertEqual(m.c._data, {})
+        m.x = Var()
+        m.c = Constraint(expr=Constraint.Infeasible)
+        self.assertIn(None, m.c._data)
+        self.assertEqual(m.c.lb, None)
+        self.assertEqual(m.c.body, 1)
+        self.assertEqual(m.c.ub, 0)
 
-        with self.assertRaisesRegex(ValueError, "Constraint 'c' is always infeasible"):
-            m.c = Constraint.Infeasible
-        self.assertEqual(m.c._data, {})
-        self.assertIsNone(m.c.expr)
+        with self.assertRaisesRegex(
+            ValueError,
+            "Invalid constraint expression. The constraint expression resolved "
+            r"to a trivial Boolean \(True\) instead of a Pyomo object.",
+        ):
+            m.c = (0, 1, 2)
 
-        m.c = (0, 1, 2)
+        m.c = (0, m.x, 2)
         self.assertIn(None, m.c._data)
         self.assertEqual(m.c.lb, 0)
+        self.assertEqual(m.c.body, m.x)
         self.assertEqual(m.c.ub, 2)
 
-        with self.assertRaisesRegex(ValueError, "Constraint 'c' is always infeasible"):
-            m.c = Constraint.Infeasible
-        self.assertEqual(m.c._data, {})
-        self.assertIsNone(m.c.expr)
+        m.c = Constraint.Infeasible
+        self.assertIn(None, m.c._data)
         self.assertEqual(m.c.lb, None)
-        self.assertEqual(m.c.ub, None)
+        self.assertEqual(m.c.body, 1)
+        self.assertEqual(m.c.ub, 0)
+
+    def test_feasible(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.c = Constraint(expr=Constraint.Feasible)
+        self.assertIn(None, m.c._data)
+        self.assertEqual(m.c.lb, None)
+        self.assertEqual(m.c.body, 0)
+        self.assertEqual(m.c.ub, 0)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Invalid constraint expression. The constraint expression resolved "
+            r"to a trivial Boolean \(True\) instead of a Pyomo object.",
+        ):
+            m.c = (0, 1, 2)
+
+        m.c = (0, m.x, 2)
+        self.assertIn(None, m.c._data)
+        self.assertEqual(m.c.lb, 0)
+        self.assertEqual(m.c.body, m.x)
+        self.assertEqual(m.c.ub, 2)
+
+        m.c = Constraint.Feasible
+        self.assertIn(None, m.c._data)
+        self.assertEqual(m.c.lb, None)
+        self.assertEqual(m.c.body, 0)
+        self.assertEqual(m.c.ub, 0)
 
     def test_slack_methods(self):
         model = ConcreteModel()
@@ -1553,6 +1636,26 @@ class MiscConTests(unittest.TestCase):
         self.assertEqual(a.strict_lower, False)
         self.assertEqual(a.strict_upper, False)
 
+    def test_deprecated_rule_attribute(self):
+        def rule(m):
+            return m.x <= 0
+
+        def new_rule(m):
+            return m.x >= 0
+
+        m = ConcreteModel()
+        m.x = Var()
+        m.con = Constraint(rule=rule)
+
+        self.assertIs(m.con.rule._fcn, rule)
+        with LoggingIntercept() as LOG:
+            m.con.rule = new_rule
+        self.assertIn(
+            "DEPRECATED: The 'Constraint.rule' attribute will be made read-only",
+            LOG.getvalue(),
+        )
+        self.assertIs(m.con.rule, new_rule)
+
     def test_rule(self):
         def rule1(model):
             return Constraint.Skip
@@ -1595,6 +1698,16 @@ class MiscConTests(unittest.TestCase):
             self.fail("Can only return tuples of length 2 or 3")
         except ValueError:
             pass
+
+    def test_rule_kwargs(self):
+        m = ConcreteModel()
+        m.x = Var()
+
+        @m.Constraint(rhs=5)
+        def c(m, *, rhs):
+            return m.x <= rhs
+
+        self.assertExpressionsEqual(m.c.expr, m.x <= 5)
 
     def test_tuple_constraint_create(self):
         def rule1(model):
@@ -1760,7 +1873,11 @@ class MiscConTests(unittest.TestCase):
         model.x = Var()
         model.L = Param(initialize=0)
         model.U = Param(initialize=1)
-        model.o = Constraint(rule=rule1)
+        with self.assertRaisesRegex(
+            ValueError,
+            r"The constraint expression resolved to a trivial Boolean \(False\)",
+        ):
+            model.o = Constraint(rule=rule1)
 
         #
         def rule1(model):
@@ -1859,11 +1976,11 @@ class MiscConTests(unittest.TestCase):
         self.assertIs(m.c.lower, m.l)
         self.assertIs(m.c.upper, m.u)
         with self.assertRaisesRegex(
-            ValueError, 'No value for uninitialized NumericValue object l'
+            ValueError, 'No value for uninitialized ScalarExpression object l'
         ):
             m.c.lb
         with self.assertRaisesRegex(
-            ValueError, 'No value for uninitialized NumericValue object u'
+            ValueError, 'No value for uninitialized ScalarExpression object u'
         ):
             m.c.ub
 
@@ -1973,9 +2090,8 @@ class MiscConTests(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            "Constraint 'c' does not have a proper value. "
-            "Equality Constraints expressed as 2-tuples cannot "
-            "contain None",
+            "Cannot create EqualityExpression from argument types "
+            "'ScalarVar' and 'NoneType'",
         ):
             m.c = (m.x, None)
 

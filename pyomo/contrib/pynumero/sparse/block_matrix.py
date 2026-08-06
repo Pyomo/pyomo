@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 """
 The pyomo.contrib.pynumero.sparse.block_matrix module includes methods that extend
 linear algebra operations in scipy for case of structured problems
@@ -30,7 +28,6 @@ import operator
 import numpy as np
 import logging
 import warnings
-
 
 logger = logging.getLogger(__name__)
 
@@ -764,7 +761,7 @@ class BlockMatrix(BaseBlockMatrix):
 
     def copy_structure(self):
         """
-        Makes a copy of the structure of this BlockMatrix. This proivides a
+        Makes a copy of the structure of this BlockMatrix. This provides a
         light-weighted copy of each block in this BlockMatrix. The blocks in the
         resulting matrix have the same shape as in the original matrices but not
         the same number of nonzeros.

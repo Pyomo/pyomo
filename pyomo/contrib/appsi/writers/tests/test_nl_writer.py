@@ -1,17 +1,15 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import pyomo.common.unittest as unittest
 from pyomo.common.tempfiles import TempfileManager
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo.contrib import appsi
 from pyomo.contrib.appsi.cmodel import cmodel_available
 import os
@@ -20,12 +18,12 @@ import os
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestNLWriter(unittest.TestCase):
     def test_all_vars_fixed(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-        m.c1 = pe.Constraint(expr=m.y >= pe.exp(m.x))
-        m.c2 = pe.Constraint(expr=m.y >= (m.x - 1) ** 2)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+        m.c1 = pyo.Constraint(expr=m.y >= pyo.exp(m.x))
+        m.c2 = pyo.Constraint(expr=m.y >= (m.x - 1) ** 2)
         m.x.fix(1)
         m.y.fix(2)
         writer = appsi.writers.NLWriter()
@@ -46,11 +44,11 @@ class TestNLWriter(unittest.TestCase):
                     self.assertTrue(line.startswith(correct_lines[ndx]))
 
     def test_header_1(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x + m.y)
-        m.c = pe.Constraint(expr=m.x + m.y == 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x + m.y)
+        m.c = pyo.Constraint(expr=m.x + m.y == 1)
         correct_lines = [
             'g3 1 1 0',
             '2 1 1 0 1',
@@ -66,11 +64,11 @@ class TestNLWriter(unittest.TestCase):
         self._write_and_check_header(m, correct_lines)
 
     def test_header_2(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x**2 + m.y)
-        m.c = pe.Constraint(expr=m.x + m.y == 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y)
+        m.c = pyo.Constraint(expr=m.x + m.y == 1)
         correct_lines = [
             'g3 1 1 0',
             '2 1 1 0 1',
@@ -86,11 +84,11 @@ class TestNLWriter(unittest.TestCase):
         self._write_and_check_header(m, correct_lines)
 
     def test_header_3(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x + m.y)
-        m.c = pe.Constraint(expr=m.x**2 + m.y == 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x + m.y)
+        m.c = pyo.Constraint(expr=m.x**2 + m.y == 1)
         correct_lines = [
             'g3 1 1 0',
             '2 1 1 0 1',
@@ -106,11 +104,11 @@ class TestNLWriter(unittest.TestCase):
         self._write_and_check_header(m, correct_lines)
 
     def test_header_4(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x**2 + m.y)
-        m.c = pe.Constraint(expr=m.x**2 + m.y == 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y)
+        m.c = pyo.Constraint(expr=m.x**2 + m.y == 1)
         correct_lines = [
             'g3 1 1 0',
             '2 1 1 0 1',
@@ -126,11 +124,11 @@ class TestNLWriter(unittest.TestCase):
         self._write_and_check_header(m, correct_lines)
 
     def test_header_5(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-        m.c = pe.Constraint(expr=m.x**2 + m.y == 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+        m.c = pyo.Constraint(expr=m.x**2 + m.y == 1)
         correct_lines = [
             'g3 1 1 0',
             '2 1 1 0 1',
@@ -146,11 +144,11 @@ class TestNLWriter(unittest.TestCase):
         self._write_and_check_header(m, correct_lines)
 
     def test_header_6(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x**2 + m.y)
-        m.c = pe.Constraint(expr=m.x**2 + m.y**2 == 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y)
+        m.c = pyo.Constraint(expr=m.x**2 + m.y**2 == 1)
         correct_lines = [
             'g3 1 1 0',
             '2 1 1 0 1',
@@ -166,11 +164,11 @@ class TestNLWriter(unittest.TestCase):
         self._write_and_check_header(m, correct_lines)
 
     def test_header_7(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x + m.y)
-        m.c = pe.Constraint(expr=m.x + m.y**2 == 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x + m.y)
+        m.c = pyo.Constraint(expr=m.x + m.y**2 == 1)
         correct_lines = [
             'g3 1 1 0',
             '2 1 1 0 1',
@@ -186,11 +184,11 @@ class TestNLWriter(unittest.TestCase):
         self._write_and_check_header(m, correct_lines)
 
     def test_header_8(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x + m.y)
-        m.c = pe.Constraint(expr=m.x**2 + m.y**2 == 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x + m.y)
+        m.c = pyo.Constraint(expr=m.x**2 + m.y**2 == 1)
         correct_lines = [
             'g3 1 1 0',
             '2 1 1 0 1',
@@ -206,11 +204,11 @@ class TestNLWriter(unittest.TestCase):
         self._write_and_check_header(m, correct_lines)
 
     def test_header_9(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x + m.y**2)
-        m.c = pe.Constraint(expr=m.x + m.y == 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x + m.y**2)
+        m.c = pyo.Constraint(expr=m.x + m.y == 1)
         correct_lines = [
             'g3 1 1 0',
             '2 1 1 0 1',
@@ -226,11 +224,11 @@ class TestNLWriter(unittest.TestCase):
         self._write_and_check_header(m, correct_lines)
 
     def test_header_10(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x + m.y**2)
-        m.c = pe.Constraint(expr=m.x + m.y**2 == 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x + m.y**2)
+        m.c = pyo.Constraint(expr=m.x + m.y**2 == 1)
         correct_lines = [
             'g3 1 1 0',
             '2 1 1 0 1',
@@ -246,11 +244,11 @@ class TestNLWriter(unittest.TestCase):
         self._write_and_check_header(m, correct_lines)
 
     def test_header_11(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x + m.y**2)
-        m.c = pe.Constraint(expr=m.x**2 + m.y == 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x + m.y**2)
+        m.c = pyo.Constraint(expr=m.x**2 + m.y == 1)
         correct_lines = [
             'g3 1 1 0',
             '2 1 1 0 1',
@@ -266,11 +264,11 @@ class TestNLWriter(unittest.TestCase):
         self._write_and_check_header(m, correct_lines)
 
     def test_header_12(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x + m.y**2)
-        m.c = pe.Constraint(expr=m.x**2 + m.y**2 == 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x + m.y**2)
+        m.c = pyo.Constraint(expr=m.x**2 + m.y**2 == 1)
         correct_lines = [
             'g3 1 1 0',
             '2 1 1 0 1',
@@ -286,11 +284,11 @@ class TestNLWriter(unittest.TestCase):
         self._write_and_check_header(m, correct_lines)
 
     def test_header_13(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x**2 + m.y)
-        m.c = pe.Constraint(expr=m.x + m.y**2 == 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y)
+        m.c = pyo.Constraint(expr=m.x + m.y**2 == 1)
         correct_lines = [
             'g3 1 1 0',
             '2 1 1 0 1',
@@ -306,11 +304,11 @@ class TestNLWriter(unittest.TestCase):
         self._write_and_check_header(m, correct_lines)
 
     def test_header_14(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-        m.c = pe.Constraint(expr=m.x + m.y == 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+        m.c = pyo.Constraint(expr=m.x + m.y == 1)
         correct_lines = [
             'g3 1 1 0',
             '2 1 1 0 1',
@@ -326,11 +324,11 @@ class TestNLWriter(unittest.TestCase):
         self._write_and_check_header(m, correct_lines)
 
     def test_header_15(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-        m.c = pe.Constraint(expr=m.x + m.y**2 == 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+        m.c = pyo.Constraint(expr=m.x + m.y**2 == 1)
         correct_lines = [
             'g3 1 1 0',
             '2 1 1 0 1',
@@ -346,11 +344,11 @@ class TestNLWriter(unittest.TestCase):
         self._write_and_check_header(m, correct_lines)
 
     def test_header_16(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-        m.c = pe.Constraint(expr=m.x**2 + m.y**2 == 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+        m.c = pyo.Constraint(expr=m.x**2 + m.y**2 == 1)
         correct_lines = [
             'g3 1 1 0',
             '2 1 1 0 1',

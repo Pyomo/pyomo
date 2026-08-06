@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 """
 Methods for constructing and solving PyROS separation problems
@@ -15,14 +13,17 @@ and related objects.
 """
 
 from itertools import product
-import math
-import os
+import logging
 
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import numpy as np
 from pyomo.core.base import Block, Constraint, maximize, Objective, value, Var
 from pyomo.opt import TerminationCondition as tc
-from pyomo.core.expr import replace_expressions, identify_mutable_parameters
+from pyomo.core.expr import (
+    replace_expressions,
+    identify_variables,
+    identify_mutable_parameters,
+)
 
 from pyomo.contrib.pyros.solve_data import (
     DiscreteSeparationSolveCallResults,
@@ -35,8 +36,8 @@ from pyomo.contrib.pyros.util import (
     ABS_CON_CHECK_FEAS_TOL,
     call_solver,
     check_time_limit_reached,
-    PARAM_IS_CERTAIN_ABS_TOL,
-    PARAM_IS_CERTAIN_REL_TOL,
+    get_all_first_stage_eq_cons,
+    write_subproblem,
 )
 
 
@@ -77,17 +78,26 @@ def add_uncertainty_set_constraints(separation_model, config):
         for auxvar, auxval in zip(aux_vars, aux_var_vals):
             auxvar.set_value(auxval)
 
-    # preprocess uncertain parameters which have been fixed by bounds
-    # in order to simplify the separation problems
-    for param_var, nomval in zip(param_var_list, config.nominal_uncertain_param_vals):
-        bounds_close = math.isclose(
-            a=param_var.lb,
-            b=param_var.ub,
-            rel_tol=PARAM_IS_CERTAIN_REL_TOL,
-            abs_tol=PARAM_IS_CERTAIN_ABS_TOL,
-        )
-        if bounds_close:
+    # fix the effectively certain parameters
+    param_val_enum_zip = enumerate(
+        zip(param_var_list, config.nominal_uncertain_param_vals)
+    )
+    fixed_param_var_set = ComponentSet()
+    for idx, (param_var, nomval) in param_val_enum_zip:
+        if idx not in separation_model.effective_uncertain_dimensions:
             param_var.fix(nomval)
+            fixed_param_var_set.add(param_var)
+
+    # deactivate constraints that depend on only the
+    # effective certain parameters
+    separation_model.uncertainty.certain_param_var_cons = []
+    for con in uncertainty_cons:
+        unfixed_param_vars_in_con = (
+            ComponentSet(identify_variables(con.expr)) - fixed_param_var_set
+        )
+        if not unfixed_param_vars_in_con:
+            con.deactivate()
+            separation_model.uncertainty.certain_param_var_cons.append(con)
 
 
 def construct_separation_problem(model_data):
@@ -111,7 +121,7 @@ def construct_separation_problem(model_data):
     # fix/deactivate all nonadjustable components
     for var in separation_model.all_nonadjustable_variables:
         var.fix()
-    for fs_eqcon in separation_model.first_stage.equality_cons.values():
+    for fs_eqcon in get_all_first_stage_eq_cons(separation_model):
         fs_eqcon.deactivate()
     for fs_ineqcon in separation_model.first_stage.inequality_cons.values():
         fs_ineqcon.deactivate()
@@ -182,27 +192,23 @@ def get_sep_objective_values(separation_data, ss_ineq_cons):
     con_to_obj_map = separation_data.separation_model.second_stage_ineq_con_to_obj_map
     violations = ComponentMap()
 
-    user_var_partitioning = separation_data.separation_model.user_var_partitioning
-    first_stage_variables = user_var_partitioning.first_stage_variables
-    second_stage_variables = user_var_partitioning.second_stage_variables
-
     for ss_ineq_con in ss_ineq_cons:
         obj = con_to_obj_map[ss_ineq_con]
         try:
             violations[ss_ineq_con] = value(obj.expr)
-        except ValueError:
-            for v in first_stage_variables:
-                config.progress_logger.info(v.name + " " + str(v.value))
-            for v in second_stage_variables:
-                config.progress_logger.info(v.name + " " + str(v.value))
-            raise ArithmeticError(
-                f"Evaluation of second-stage inequality constraint {ss_ineq_con.name} "
-                f"(separation objective {obj.name}) "
-                "led to a math domain error. "
-                "Does the constraint expression "
-                "contain log(x) or 1/x functions "
+        except (ValueError, ArithmeticError):
+            vars_in_expr_str = ",\n  ".join(
+                f"{var.name}={var.value}" for var in identify_variables(obj.expr)
+            )
+            config.progress_logger.error(
+                "PyROS encountered an exception evaluating "
+                "expression of second-stage inequality constraint with name "
+                f"{ss_ineq_con.name!r} (separation objective {obj.name!r}) "
+                f"at variable values:\n  {vars_in_expr_str}\n"
+                "Does the expression contain log(x) or 1/x functions "
                 "or others with tricky domains?"
             )
+            raise
 
     return violations
 
@@ -348,9 +354,10 @@ def evaluate_violations_by_nominal_master(separation_data, master_data, ss_ineq_
     """
     nom_ss_ineq_con_violations = ComponentMap()
     for ss_ineq_con in ss_ineq_cons:
-        nom_violation = value(
-            master_data.master_model.scenarios[0, 0].find_component(ss_ineq_con)
+        nom_master_con = master_data.master_model.scenarios[0, 0].find_component(
+            ss_ineq_con
         )
+        nom_violation = value(nom_master_con.body - nom_master_con.upper)
         nom_ss_ineq_con_violations[ss_ineq_con] = nom_violation
 
     return nom_ss_ineq_con_violations
@@ -376,21 +383,43 @@ def group_ss_ineq_constraints_by_priority(separation_data):
         Keys are sorted in descending order
         (i.e. highest priority first).
     """
+    separation_data.config.progress_logger.debug(
+        "Grouping second-stage inequality constraints by separation priority..."
+    )
+
     ss_ineq_cons = separation_data.separation_model.second_stage.inequality_cons
     separation_priority_groups = dict()
     for name, ss_ineq_con in ss_ineq_cons.items():
-        # by default, priority set to 0
         priority = separation_data.separation_priority_order[name]
         cons_with_same_priority = separation_priority_groups.setdefault(priority, [])
         cons_with_same_priority.append(ss_ineq_con)
 
     # sort separation priority groups
-    return {
+    numeric_priority_grp_items = [
+        (priority, cons) for priority, cons in separation_priority_groups.items()
+    ]
+    sorted_priority_groups = {
         priority: ss_ineq_cons
-        for priority, ss_ineq_cons in sorted(
-            separation_priority_groups.items(), reverse=True
-        )
+        for priority, ss_ineq_cons in sorted(numeric_priority_grp_items, reverse=True)
     }
+
+    num_priority_groups = len(sorted_priority_groups)
+    separation_data.config.progress_logger.debug(
+        f"Found {num_priority_groups} separation "
+        f"priority group{'s' if num_priority_groups != 1 else ''}."
+    )
+    separation_data.config.progress_logger.debug(
+        "Separation priority grouping statistics:"
+    )
+    separation_data.config.progress_logger.debug(
+        f"  {'Priority':20s}{'# Ineq Cons':15s}"
+    )
+    for priority, cons in sorted_priority_groups.items():
+        separation_data.config.progress_logger.debug(
+            f"  {priority:<20d}{len(cons):<15d}"
+        )
+
+    return sorted_priority_groups
 
 
 def get_worst_discrete_separation_solution(
@@ -423,8 +452,13 @@ def get_worst_discrete_separation_solution(
     # violation of specified second-stage inequality
     # constraint by separation
     # problem solutions for all scenarios
+    # scenarios with subsolver errors are replaced with nan
     violations_of_ss_ineq_con = [
-        solve_call_res.scaled_violations[ss_ineq_con]
+        (
+            solve_call_res.scaled_violations[ss_ineq_con]
+            if not solve_call_res.subsolver_error
+            else np.nan
+        )
         for solve_call_res in discrete_solve_results.solver_call_results.values()
     ]
 
@@ -433,9 +467,9 @@ def get_worst_discrete_separation_solution(
     # determine separation solution for which scaled violation of this
     # second-stage inequality constraint is the worst
     worst_case_res = discrete_solve_results.solver_call_results[
-        list_of_scenario_idxs[np.argmax(violations_of_ss_ineq_con)]
+        list_of_scenario_idxs[np.nanargmax(violations_of_ss_ineq_con)]
     ]
-    worst_case_violation = np.max(violations_of_ss_ineq_con)
+    worst_case_violation = np.nanmax(violations_of_ss_ineq_con)
     assert worst_case_violation in worst_case_res.scaled_violations.values()
 
     # evaluate violations for specified second-stage inequality constraints
@@ -463,6 +497,13 @@ def get_worst_discrete_separation_solution(
     else:
         results_list = []
 
+    # check if there were any failed scenarios for subsolver_error
+    # if there are failed scenarios, subsolver error triggers for all ineq
+    if any(np.isnan(violations_of_ss_ineq_con)):
+        subsolver_error_flag = True
+    else:
+        subsolver_error_flag = False
+
     return SeparationSolveCallResults(
         solved_globally=worst_case_res.solved_globally,
         results_list=results_list,
@@ -471,7 +512,7 @@ def get_worst_discrete_separation_solution(
         variable_values=worst_case_res.variable_values,
         found_violation=(worst_case_violation > config.robust_feasibility_tolerance),
         time_out=False,
-        subsolver_error=False,
+        subsolver_error=subsolver_error_flag,
         discrete_set_scenario_index=worst_case_res.discrete_set_scenario_index,
     )
 
@@ -544,7 +585,7 @@ def perform_separation_loop(separation_data, master_data, solve_globally):
         master_data=master_data,
         ss_ineq_cons=all_ss_ineq_constraints,
     )
-    sorted_priority_groups = group_ss_ineq_constraints_by_priority(separation_data)
+    sorted_priority_groups = separation_data.separation_priority_groups
     uncertainty_set_is_discrete = (
         config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS
     )
@@ -606,11 +647,12 @@ def perform_separation_loop(separation_data, master_data, solve_globally):
 
     all_solve_call_results = ComponentMap()
     priority_groups_enum = enumerate(sorted_priority_groups.items())
+    solve_adverb = "Globally" if solve_globally else "Locally"
     for group_idx, (priority, ss_ineq_constraints) in priority_groups_enum:
         priority_group_solve_call_results = ComponentMap()
+
         for idx, ss_ineq_con in enumerate(ss_ineq_constraints):
             # log progress of separation loop
-            solve_adverb = "Globally" if solve_globally else "Locally"
             config.progress_logger.debug(
                 f"{solve_adverb} separating second-stage inequality constraint "
                 f"{get_con_name_repr(separation_data.separation_model, ss_ineq_con)} "
@@ -642,18 +684,42 @@ def perform_separation_loop(separation_data, master_data, solve_globally):
 
             priority_group_solve_call_results[ss_ineq_con] = solve_call_results
 
-            termination_not_ok = (
-                solve_call_results.time_out or solve_call_results.subsolver_error
-            )
-            if termination_not_ok:
+            if solve_call_results.time_out:
                 all_solve_call_results.update(priority_group_solve_call_results)
                 return SeparationLoopResults(
                     solver_call_results=all_solve_call_results,
                     solved_globally=solve_globally,
                     worst_case_ss_ineq_con=None,
                 )
+            elif not solve_call_results.subsolver_error:
+                config.progress_logger.debug("Separation successful. Results: ")
+                config.progress_logger.debug(
+                    " Scaled violation: "
+                    f"{solve_call_results.scaled_violations[ss_ineq_con]}"
+                )
+                config.progress_logger.debug(
+                    " Worst-case violating realization: "
+                    f"{solve_call_results.violating_param_realization}"
+                )
+                config.progress_logger.debug(
+                    f" Is constraint violated: {solve_call_results.found_violation} "
+                    f"(compared to tolerance {config.robust_feasibility_tolerance})"
+                )
+
+            # provide message that PyROS will attempt to find a violation and move
+            # to the next iteration even after subsolver error
+            if solve_call_results.subsolver_error:
+                config.progress_logger.warning(
+                    "PyROS is attempting to recover and will continue to "
+                    "the next iteration if a constraint violation is found."
+                )
 
         all_solve_call_results.update(priority_group_solve_call_results)
+
+        config.progress_logger.debug(
+            f"Done separating all constraints of priority {priority} "
+            f"(group {group_idx + 1} of {len(sorted_priority_groups)})"
+        )
 
         # there may be multiple separation problem solutions
         # found to have violated a second-stage inequality constraint.
@@ -810,9 +876,7 @@ def initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data)
     in general, be feasible, provided the set does not have a
     discrete geometry (as there is no master model block corresponding
     to any of the remaining discrete scenarios against which we
-    separate). If the uncertainty set constraints involve
-    auxiliary variables, then some uncertainty set constraints
-    may be violated.
+    separate).
     """
     config = separation_data.config
     master_model = master_data.master_model
@@ -852,34 +916,50 @@ def initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data)
             worst_master_block_idx
         ]
         for aux_param_var, aux_val in zip(aux_param_vars, aux_param_values):
-            aux_param_var.set_value(val)
+            aux_param_var.set_value(aux_val)
 
     # confirm the initial point is feasible for cases where
     # we expect it to be (i.e. non-discrete uncertainty sets).
     # otherwise, log the violated constraints
-    # NOTE: some uncertainty set constraints may be violated
-    #       at the initial point if there are auxiliary variables
-    #       (e.g. factor model, cardinality sets).
-    #       revisit initialization of auxiliary uncertainty set
-    #       variables later
-    tol = ABS_CON_CHECK_FEAS_TOL
-    ss_ineq_con_name_repr = get_con_name_repr(
-        separation_model=sep_model, con=ss_ineq_con_to_maximize, with_obj_name=True
-    )
-    uncertainty_set_is_discrete = (
-        config.uncertainty_set.geometry is Geometry.DISCRETE_SCENARIOS
-    )
-    for con in sep_model.component_data_objects(Constraint, active=True):
-        lslack, uslack = con.lslack(), con.uslack()
-        if (lslack < -tol or uslack < -tol) and not uncertainty_set_is_discrete:
-            con_name_repr = get_con_name_repr(
-                separation_model=sep_model, con=con, with_obj_name=False
+    if config.progress_logger.isEnabledFor(logging.DEBUG):
+        tol = ABS_CON_CHECK_FEAS_TOL
+        ss_ineq_con_name_repr = get_con_name_repr(
+            separation_model=sep_model, con=ss_ineq_con_to_maximize, with_obj_name=True
+        )
+        uncertainty_set_is_discrete = (
+            config.uncertainty_set.geometry is Geometry.DISCRETE_SCENARIOS
+        )
+        for con in sep_model.component_data_objects(Constraint, active=True):
+            lslack, uslack = con.lslack(), con.uslack()
+            if (lslack < -tol or uslack < -tol) and not uncertainty_set_is_discrete:
+                config.progress_logger.debug(
+                    f"Initial point for separation of second-stage ineq constraint "
+                    f"{ss_ineq_con_name_repr} violates the model constraint "
+                    f"{con.name!r} by more than {tol} ({lslack=}, {uslack=})"
+                )
+
+    for con in sep_model.uncertainty.certain_param_var_cons:
+        trivially_infeasible = (
+            con.lslack() < -ABS_CON_CHECK_FEAS_TOL
+            or con.uslack() < -ABS_CON_CHECK_FEAS_TOL
+        )
+        if trivially_infeasible:
+            # this should never happen in the context of a full solve,
+            # since the certain parameters should be at their
+            # nominal values, and the nominal point was already
+            # confirmed to be a member of the set
+            config.progress_logger.error(
+                f"Uncertainty set "
+                f"(type {type(config.uncertainty_set).__name__}) "
+                f"constraint {con.name!r}, with expression {con.expr}, "
+                "is trivially infeasible at the parameter realization "
+                f"{config.nominal_uncertain_param_vals}. "
+                f"Check implementation of "
+                f"{config.uncertainty_set.set_as_constraint.__name__}."
             )
-            config.progress_logger.debug(
-                f"Initial point for separation of second-stage ineq constraint "
-                f"{ss_ineq_con_name_repr} violates the model constraint "
-                f"{con_name_repr} by more than {tol}. "
-                f"(lslack={con.lslack()}, uslack={con.uslack()})"
+            raise ValueError(
+                f"Trivial infeasibility detected in the uncertainty set "
+                f"(type {type(config.uncertainty_set).__name__}) constraints."
             )
 
 
@@ -953,12 +1033,15 @@ def solver_call_separation(
     )
     for idx, opt in enumerate(solvers):
         if idx > 0:
-            config.progress_logger.warning(
+            config.progress_logger.debug(
                 f"Invoking backup solver {opt!r} "
                 f"(solver {idx + 1} of {len(solvers)}) for {solve_mode} "
                 f"separation of second-stage inequality constraint {con_name_repr} "
                 f"in iteration {separation_data.iteration}."
             )
+            # TODO: confirm this is sufficient for tracking
+            #       discrete separation backup solver usage
+            solve_call_results.backup_solver_used = True
         results = call_solver(
             model=separation_model,
             solver=opt,
@@ -1032,30 +1115,6 @@ def solver_call_separation(
     # termination condition. PyROS will terminate with subsolver
     # error. At this point, export model if desired
     solve_call_results.subsolver_error = True
-    save_dir = config.subproblem_file_directory
-    serialization_msg = ""
-    if save_dir and config.keepfiles:
-        objective = separation_obj.name
-        output_problem_path = os.path.join(
-            save_dir,
-            (
-                config.uncertainty_set.type
-                + "_"
-                + separation_model.name
-                + "_separation_"
-                + str(separation_data.iteration)
-                + "_obj_"
-                + objective
-                + ".bar"
-            ),
-        )
-        separation_model.write(
-            output_problem_path, io_options={'symbolic_solver_labels': True}
-        )
-        serialization_msg = (
-            " For debugging, problem has been serialized to the file "
-            f"{output_problem_path!r}."
-        )
     solve_call_results.message = (
         "Could not successfully solve separation problem of iteration "
         f"{separation_data.iteration} "
@@ -1063,9 +1122,19 @@ def solver_call_separation(
         f"provided subordinate {solve_mode} optimizers. "
         f"(Termination statuses: "
         f"{[str(term_cond) for term_cond in solver_status_dict.values()]}.)"
-        f"{serialization_msg}"
     )
     config.progress_logger.warning(solve_call_results.message)
+
+    if config.keepfiles and config.subproblem_file_directory is not None:
+        write_subproblem(
+            model=separation_model,
+            fname=(
+                f"{config.uncertainty_set.type}_{separation_model.name}"
+                f"_separation_{separation_data.iteration}"
+                f"_obj_{separation_obj.name}"
+            ),
+            config=config,
+        )
 
     separation_obj.deactivate()
 
@@ -1139,12 +1208,18 @@ def discrete_solve(
     ]
 
     solve_call_results_dict = {}
-    for scenario_idx in scenario_idxs_to_separate:
+    for idx, scenario_idx in enumerate(scenario_idxs_to_separate):
         # fix uncertain parameters to scenario value
         # hence, no need to activate uncertainty set constraints
         scenario = config.uncertainty_set.scenarios[scenario_idx]
         for param, coord_val in zip(uncertain_param_vars, scenario):
             param.fix(coord_val)
+
+        # debug statement for solving square problem for each scenario
+        config.progress_logger.debug(
+            f"Attempting to solve square problem for discrete scenario {scenario}"
+            f" ({idx + 1} of {len(scenario_idxs_to_separate)} total)"
+        )
 
         # obtain separation problem solution
         solve_call_results = solver_call_separation(
@@ -1158,11 +1233,16 @@ def discrete_solve(
         solve_call_results_dict[scenario_idx] = solve_call_results
 
         # halt at first encounter of unacceptable termination
-        termination_not_ok = (
-            solve_call_results.subsolver_error or solve_call_results.time_out
-        )
+        termination_not_ok = solve_call_results.time_out
         if termination_not_ok:
             break
+
+        # report any subsolver errors, but continue
+        if solve_call_results.subsolver_error:
+            config.progress_logger.warning(
+                f"All solvers failed to solve discrete scenario {scenario_idx}: "
+                f"{scenario}"
+            )
 
     return DiscreteSeparationSolveCallResults(
         solved_globally=solve_globally,
@@ -1240,6 +1320,8 @@ class SeparationProblemData:
             ]
         else:
             self.idxs_of_master_scenarios = None
+
+        self.separation_priority_groups = group_ss_ineq_constraints_by_priority(self)
 
     def solve_separation(self, master_data):
         """

@@ -1,16 +1,15 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import abc
 import logging
+import numpy as np
 from scipy.sparse import coo_matrix
 from pyomo.common.dependencies import numpy as np
 
@@ -25,7 +24,6 @@ from pyomo.core.base.set import UnindexedComponent_set
 from pyomo.core.base.reference import Reference
 
 from ..sparse.block_matrix import BlockMatrix
-
 
 logger = logging.getLogger('pyomo.contrib.pynumero')
 
@@ -44,6 +42,10 @@ external models) with a Pyomo model.
 Note: To solve a Pyomo model that contains these external models
       we have a specialized interface built on PyNumero that provides
       an interface to the CyIpopt solver.
+
+constraints: c(x) = 0
+outputs: y = c(x)
+
 
 To use this interface:
    * Create a class that is derived from ExternalGreyBoxModel and
@@ -84,7 +86,7 @@ Note:
 """
 
 
-class ExternalGreyBoxModel(object):
+class ExternalGreyBoxModel:
     """
     This is the base class for building external input output models
     for use with Pyomo and CyIpopt. See the module documentation above,
@@ -125,6 +127,9 @@ class ExternalGreyBoxModel(object):
         function that computes the vector of outputs at the values for
         the input variables. This method must return
         H_o^k = sum_i (y_o^k)_i * grad^2_{uu} w_o(u^k)
+
+    def evaluate_hessian_objective(self):
+        Compute the hessian of the objective
 
     Examples that show Hessian support are also found in:
     pyomo/contrib/pynumero/examples/external_grey_box/react-example/
@@ -314,6 +319,29 @@ class ExternalGreyBoxModel(object):
     # def evaluate_hessian_equality_constraints(self):
     # def evaluate_hessian_outputs(self):
     #
+
+    # Support for objectives
+    def has_objective(self):
+        return False
+
+    def evaluate_objective(self) -> float:
+        """
+        Compute the objective from the  values set in
+        input_values
+        """
+        raise NotImplementedError(
+            'evaluate_objective called but not implemented in the derived class.'
+        )
+
+    def evaluate_grad_objective(self, out=None):
+        """
+        Compute the gradient of the objective from the
+        values set in input_values
+        """
+        raise NotImplementedError(
+            'evaluate_grad_objective called but not '
+            'implemented in the derived class.'
+        )
 
 
 class ExternalGreyBoxBlockData(BlockData):

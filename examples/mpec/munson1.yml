@@ -11,7 +11,7 @@ model:
   file determinism: 1            # When interfacing with a solver using file
                                  #   based I/O, set the effort level for
                                  #   ensuring the file creation process is
-                                 #   determistic. The default (1) sorts the
+                                 #   deterministic. The default (1) sorts the
                                  #   index of components when transforming the
                                  #   model. Anything less than 1 disables
                                  #   index sorting. Anything greater than 1
@@ -24,7 +24,7 @@ runtime:
   logfile: null                  # Redirect output to the specified file.
   catch errors: true            # Trigger failures for exceptions to print
                                  #   the program stack.
-  disable gc: false              # Disable the garbage collecter.
+  disable gc: false              # Disable the garbage collector.
   interactive: false             # After executing Pyomo, launch an
                                  #   interactive Python shell. If IPython is
                                  #   installed, this shell is an IPython

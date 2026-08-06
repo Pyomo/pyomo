@@ -1,42 +1,39 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
+model = pyo.AbstractModel()
 
-model = AbstractModel()
+model.ITEMS = pyo.Set()
 
-model.ITEMS = Set()
+model.v = pyo.Param(model.ITEMS, within=pyo.PositiveReals)
 
-model.v = Param(model.ITEMS, within=PositiveReals)
+model.w = pyo.Param(model.ITEMS, within=pyo.PositiveReals)
 
-model.w = Param(model.ITEMS, within=PositiveReals)
+model.limit = pyo.Param(within=pyo.PositiveReals)
 
-model.limit = Param(within=PositiveReals)
-
-model.x = Var(model.ITEMS, within=PercentFraction)
+model.x = pyo.Var(model.ITEMS, within=pyo.PercentFraction)
 
 
 def value_rule(model):
     return sum(model.v[i] * model.x[i] for i in model.ITEMS)
 
 
-model.value = Objective(sense=maximize, rule=value_rule)
+model.value = pyo.Objective(sense=pyo.maximize, rule=value_rule)
 
 
 def weight_rule(model):
     return sum(model.w[i] * model.x[i] for i in model.ITEMS) <= model.limit
 
 
-model.weight = Constraint(rule=weight_rule)
+model.weight = pyo.Constraint(rule=weight_rule)
 
 
 # This constraint is not active, to illustrate how zero dual values are
@@ -45,4 +42,4 @@ def W_rule(model):
     return sum(model.w[i] * model.x[i] for i in model.ITEMS) <= 2 * model.limit
 
 
-model.W = Constraint(rule=W_rule)
+model.W = pyo.Constraint(rule=W_rule)

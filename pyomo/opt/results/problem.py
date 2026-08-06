@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.common.enums import ExtendedEnumType, IntEnum, ObjectiveSense
 from pyomo.opt.results.container import MapContainer
@@ -24,7 +22,7 @@ class ProblemSense(IntEnum, metaclass=ExtendedEnumType):
 
 class ProblemInformation(MapContainer):
     def __init__(self):
-        MapContainer.__init__(self)
+        super().__init__()
         self.declare('name')
         self.declare('lower_bound', value=float('-inf'))
         self.declare('upper_bound', value=float('inf'))

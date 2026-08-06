@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 """Implementation of a general "block vector"
 
 
@@ -798,7 +796,7 @@ class BlockVector(BaseBlockVector, np.ndarray):
 
     def argmax(self, axis=None, out=None):
         """
-        Returns the index of the larges element.
+        Returns the index of the largest element.
         """
         assert_block_structure(self)
         return self.flatten().argmax(axis=axis, out=out)
@@ -1526,6 +1524,9 @@ class BlockVector(BaseBlockVector, np.ndarray):
         return True
 
     def __getitem__(self, item):
+        # numpy: __getitem__[()] is identity
+        if item.__class__ is tuple and not item:
+            return self
         if not self._has_equal_structure(item):
             raise ValueError(
                 'BlockVector.__getitem__ only accepts slices in the form of BlockVectors of the same structure'

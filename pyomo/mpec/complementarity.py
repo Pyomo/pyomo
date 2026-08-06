@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from collections import namedtuple
 
@@ -119,7 +117,12 @@ class ComplementarityData(BlockData):
             _e1, _e2 = _e2, _e1
         #
         if _e2[0] is None and _e2[2] is None:
-            self.c = Constraint(expr=(None, _e2[1], None))
+            # FIXME: this is making an unbounded RangedExpression -
+            # which makes little sense.  When we rework Complimentarity,
+            # we should determine how to avoid this overhead.
+            self.c = Constraint(
+                expr=EXPR.RangedExpression((None, _e2[1], None), strict=False)
+            )
             self.c._complementarity_type = 3
         elif _e2[2] is None:
             self.c = Constraint(expr=_e2[0] <= _e2[1])
@@ -203,15 +206,12 @@ class Complementarity(Block):
             return
         cc = _rule(b.parent_block(), idx)
         if cc is None:
-            raise ValueError(
-                """
+            raise ValueError("""
 Invalid complementarity condition.  The complementarity condition
 is None instead of a 2-tuple.  Please modify your rule to return
 Complementarity.Skip instead of None.
 
-Error thrown for Complementarity "%s"."""
-                % (b.name,)
-            )
+Error thrown for Complementarity "%s".""" % (b.name,))
         b.set_value(cc)
 
     def __init__(self, *args, **kwargs):
@@ -287,9 +287,9 @@ Error thrown for Complementarity "%s"."""
         # Book).
         _transformed = not issubclass(self.ctype, Complementarity)
 
-        def _conditional_block_printer(ostream, idx, data):
+        def _conditional_block_printer(ostream, sort, idx, data):
             if _transformed or len(data.component_map()):
-                self._pprint_callback(ostream, idx, data)
+                self._pprint_callback(ostream, sort, idx, data)
 
         return (
             [
@@ -297,7 +297,7 @@ Error thrown for Complementarity "%s"."""
                 ("Index", self._index_set if self.is_indexed() else None),
                 ("Active", self.active),
             ],
-            self._data.items(),
+            self.items,
             ("Arg0", "Arg1", "Active"),
             (_table_data, _conditional_block_printer),
         )

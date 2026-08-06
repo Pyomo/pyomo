@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
 # Unit Tests for pyomo.opt.problem.ampl
 #
@@ -262,9 +260,10 @@ class Test(unittest.TestCase):
         _test = TempfileManager.create_tempfile(suffix='test3.out')
         results = opt.solve(self.model, keepfiles=False)
         results.write(filename=_test, format='json')
-        with open(_test, 'r') as out, open(
-            join(currdir, "test3.baseline.out"), 'r'
-        ) as txt:
+        with (
+            open(_test, 'r') as out,
+            open(join(currdir, "test3.baseline.out"), 'r') as txt,
+        ):
             self.assertStructuredAlmostEqual(
                 json.load(txt), json.load(out), abstol=1e-6, allow_second_superset=True
             )
@@ -279,9 +278,10 @@ class Test(unittest.TestCase):
         results = opt.solve(self.model, keepfiles=False)
         _test = TempfileManager.create_tempfile(suffix='test3a.out')
         results.write(filename=_test, format='json')
-        with open(_test, 'r') as out, open(
-            join(currdir, "test3.baseline.out"), 'r'
-        ) as txt:
+        with (
+            open(_test, 'r') as out,
+            open(join(currdir, "test3.baseline.out"), 'r') as txt,
+        ):
             self.assertStructuredAlmostEqual(
                 json.load(txt), json.load(out), abstol=1e-6, allow_second_superset=True
             )

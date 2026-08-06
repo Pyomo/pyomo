@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import pandas as pd
 from os.path import join, abspath, dirname
@@ -39,11 +37,11 @@ def main():
     obj, theta = pest.theta_est()
 
     # Bootstrapping
-    bootstrap_theta = pest.theta_est_bootstrap(10)
+    bootstrap_theta = pest.theta_est_bootstrap(10, seed=524)
     print(bootstrap_theta)
 
     # Confidence region test
-    CR = pest.confidence_region_test(bootstrap_theta, "MVN", [0.5, 0.75, 1.0])
+    CR = pest.confidence_region_test(bootstrap_theta, "MVN", [0.5, 0.75, 1.0], seed=524)
     print(CR)
 
 

@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from collections.abc import Iterable
 import logging
@@ -111,7 +109,7 @@ class GurobiResults(Results):
         self.solution_loader = GurobiSolutionLoader(solver=solver)
 
 
-class _MutableLowerBound(object):
+class _MutableLowerBound:
     def __init__(self, expr):
         self.var = None
         self.expr = expr
@@ -120,7 +118,7 @@ class _MutableLowerBound(object):
         self.var.setAttr('lb', value(self.expr))
 
 
-class _MutableUpperBound(object):
+class _MutableUpperBound:
     def __init__(self, expr):
         self.var = None
         self.expr = expr
@@ -129,7 +127,7 @@ class _MutableUpperBound(object):
         self.var.setAttr('ub', value(self.expr))
 
 
-class _MutableLinearCoefficient(object):
+class _MutableLinearCoefficient:
     def __init__(self):
         self.expr = None
         self.var = None
@@ -140,7 +138,7 @@ class _MutableLinearCoefficient(object):
         self.gurobi_model.chgCoeff(self.con, self.var, value(self.expr))
 
 
-class _MutableRangeConstant(object):
+class _MutableRangeConstant:
     def __init__(self):
         self.lhs_expr = None
         self.rhs_expr = None
@@ -156,7 +154,7 @@ class _MutableRangeConstant(object):
         slack.ub = rhs_val - lhs_val
 
 
-class _MutableConstant(object):
+class _MutableConstant:
     def __init__(self):
         self.expr = None
         self.con = None
@@ -165,7 +163,7 @@ class _MutableConstant(object):
         self.con.rhs = value(self.expr)
 
 
-class _MutableQuadraticConstraint(object):
+class _MutableQuadraticConstraint:
     def __init__(
         self, gurobi_model, gurobi_con, constant, linear_coefs, quadratic_coefs
     ):
@@ -200,7 +198,7 @@ class _MutableQuadraticConstraint(object):
         return value(self.constant.expr)
 
 
-class _MutableObjective(object):
+class _MutableObjective:
     def __init__(self, gurobi_model, constant, linear_coefs, quadratic_coefs):
         self.gurobi_model = gurobi_model
         self.constant = constant
@@ -228,7 +226,7 @@ class _MutableObjective(object):
         return gurobi_expr
 
 
-class _MutableQuadraticCoefficient(object):
+class _MutableQuadraticCoefficient:
     def __init__(self):
         self.expr = None
         self.var1 = None
@@ -367,25 +365,24 @@ class Gurobi(PersistentBase, PersistentSolver):
         if self.config.stream_solver:
             ostreams.append(sys.stdout)
 
-        with TeeStream(*ostreams) as t:
-            with capture_output(output=t.STDOUT, capture_fd=False):
-                config = self.config
-                options = self.gurobi_options
+        with capture_output(output=TeeStream(*ostreams), capture_fd=False):
+            config = self.config
+            options = self.gurobi_options
 
-                self._solver_model.setParam('LogToConsole', 1)
-                self._solver_model.setParam('LogFile', config.logfile)
+            self._solver_model.setParam('LogToConsole', 1)
+            self._solver_model.setParam('LogFile', config.logfile)
 
-                if config.time_limit is not None:
-                    self._solver_model.setParam('TimeLimit', config.time_limit)
-                if config.mip_gap is not None:
-                    self._solver_model.setParam('MIPGap', config.mip_gap)
+            if config.time_limit is not None:
+                self._solver_model.setParam('TimeLimit', config.time_limit)
+            if config.mip_gap is not None:
+                self._solver_model.setParam('MIPGap', config.mip_gap)
 
-                for key, option in options.items():
-                    self._solver_model.setParam(key, option)
+            for key, option in options.items():
+                self._solver_model.setParam(key, option)
 
-                timer.start('optimize')
-                self._solver_model.optimize(self._callback)
-                timer.stop('optimize')
+            timer.start('optimize')
+            self._solver_model.optimize(self._callback)
+            timer.stop('optimize')
 
         self._needs_updated = False
         return self._postsolve(timer)
@@ -1378,15 +1375,15 @@ class Gurobi(PersistentBase, PersistentSolver):
             as an MILP using extended cutting planes in callbacks.
 
                 >>> from gurobipy import GRB # doctest:+SKIP
-                >>> import pyomo.environ as pe
+                >>> import pyomo.environ as pyo
                 >>> from pyomo.core.expr.taylor_series import taylor_series_expansion
                 >>> from pyomo.contrib import appsi
                 >>>
-                >>> m = pe.ConcreteModel()
-                >>> m.x = pe.Var(bounds=(0, 4))
-                >>> m.y = pe.Var(within=pe.Integers, bounds=(0, None))
-                >>> m.obj = pe.Objective(expr=2*m.x + m.y)
-                >>> m.cons = pe.ConstraintList()  # for the cutting planes
+                >>> m = pyo.ConcreteModel()
+                >>> m.x = pyo.Var(bounds=(0, 4))
+                >>> m.y = pyo.Var(within=pyo.Integers, bounds=(0, None))
+                >>> m.obj = pyo.Objective(expr=2*m.x + m.y)
+                >>> m.cons = pyo.ConstraintList()  # for the cutting planes
                 >>>
                 >>> def _add_cut(xval):
                 ...     # a function to generate the cut

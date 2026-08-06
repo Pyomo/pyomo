@@ -10,24 +10,24 @@ Another common optimization problem is the transportation problem.  In this prob
 We begin by importing the Pyomo package and creating an object of the type Model, which we call model.
 
 \begin{verbatim}
-from pyomo.core import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 \end{verbatim}
 
 The next step is to define our sets that are being acted upon.  The warehouses have a supply and the stores have demand, so those two make sense as sets (with supply and demand parameters that rely on them).  Each route will have an associated cost, so we could create a set of routes.  However, it's more efficient (and easier to read) to make the costs a parameter over two set, the warehouses and the stores, so we will only need to define those two sets.
 
 \begin{verbatim}
-model.warehouses = Set()
-model.stores = Set()
+model.warehouses = pyo.Set()
+model.stores = pyo.Set()
 \end{verbatim}
 
 As outlined above, we also have several parameters to take into account: supply, demand and costs  We input these similar to how we did it in the diet problem.
 
 \begin{verbatim}
-model.supply = Param(model.warehouses)
-model.demand = Param(model.stores)
-model.costs = Param(model.warehouses, model.stores)
+model.supply = pyo.Param(model.warehouses)
+model.demand = pyo.Param(model.stores)
+model.costs = pyo.Param(model.warehouses, model.stores)
 \end{verbatim}
 
 \noindent
@@ -36,8 +36,8 @@ Note once again that the costs are a parameter of two dimensions since it takes 
 We have one final addition to make: the variable to solve for.  We're looking for the amount of goods to be sent from each warehouse to each store, so we create a variable over the set of warehouses and the set of stores that determines how much will be shipped from each warehouse to each store.  This is slightly different than in the diet problem, where our variable was just over one set, but the difference is minor in the implementation.
 
 \begin{verbatim}
-model.amounts = Var(model.warehouses, model.stores, 
-    within = NonNegativeReals)
+model.amounts = pyo.Var(model.warehouses, model.stores, 
+    within = pyo.NonNegativeReals)
 \end{verbatim}
 
 \noindent
@@ -53,7 +53,7 @@ At this point, we can construct the objective.  Remember, the objective is what 
         for i in model.stores
     )
 
-model.cost=Objective(rule=costRule)
+model.cost=pyo.Objective(rule=costRule)
 \end{verbatim}
 
 \noindent
@@ -66,7 +66,7 @@ def minDemandRule(store, model):
     return sum(model.amounts[i, store] for i in model.warehouses) 
         >= model.demand[store]
 
-model.demandConstraint = Constraint(model.stores, 
+model.demandConstraint = pyo.Constraint(model.stores, 
     rule=minDemandRule)
 \end{verbatim}
 
@@ -78,7 +78,7 @@ def maxSupplyRule(warehouse, model):
     return sum(model.amounts[warehouse, j] for j in model.stores) 
         <= model.supply[warehouse]
 
-model.supplyConstraint = Constraint(model.warehouses, 
+model.supplyConstraint = pyo.Constraint(model.warehouses, 
     rule=maxSupplyRule)
 \end{verbatim}
 

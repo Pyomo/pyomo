@@ -1,11 +1,17 @@
+# ____________________________________________________________________________________
+#
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 """
 Interfaces for managing PyROS solver options.
 """
 
-from collections.abc import Iterable
 import logging
 
-from pyomo.common.collections import ComponentSet
 from pyomo.common.config import (
     ConfigDict,
     ConfigValue,
@@ -14,8 +20,8 @@ from pyomo.common.config import (
     NonNegativeFloat,
     InEnum,
     Path,
-    _domain_name,
 )
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import ApplicationError, PyomoException
 from pyomo.core.base import Var, VarData
 from pyomo.core.base.param import Param, ParamData
@@ -26,7 +32,6 @@ from pyomo.contrib.pyros.util import (
     standardize_component_data,
 )
 from pyomo.contrib.pyros.uncertainty_sets import UncertaintySet
-
 
 default_pyros_solver_logger = setup_pyros_logger()
 
@@ -61,64 +66,130 @@ def positive_int_or_minus_one(obj):
 positive_int_or_minus_one.domain_name = "positive int or -1"
 
 
-def mutable_param_validator(param_obj):
+def _deprecated_separation_priority_order(obj):
     """
-    Check that Param-like object has attribute `mutable=True`.
+    Domain validator for argument `separation_priority_order`.
+
+    As this argument has been deprecated, a deprecation warning
+    is issued through a WARNING-level logger message if
+    the argument is cast to a nonempty dict.
 
     Parameters
     ----------
-    param_obj : Param or ParamData
-        Param-like object of interest.
+    obj : object
+        Argument value.
+
+    Returns
+    -------
+    separation_priority_order : dict
+        Argument value, cast to a dict.
+    """
+    separation_priority_order = dict(obj)
+    if separation_priority_order:
+        deprecation_warning(
+            "The argument 'separation_priority_order' is deprecated. "
+            "Consider specifying separation priorities by declaring, on your "
+            "model, Suffix components with local name `pyros_separation_priority`.",
+            version="6.9.3",
+        )
+    return separation_priority_order
+
+
+_deprecated_separation_priority_order.domain_name = dict.__name__
+
+
+def uncertain_param_validator(uncertain_obj):
+    """
+    Check that a component object modeling an
+    uncertain parameter in PyROS is appropriately constructed,
+    initialized, and/or mutable, where applicable.
+
+    Parameters
+    ----------
+    uncertain_obj : Param or Var
+        Object on which to perform checks.
 
     Raises
     ------
     ValueError
-        If lengths of the param object and the accompanying
-        index set do not match. This may occur if some entry
-        of the Param is not initialized.
-    ValueError
-        If attribute `mutable` is of value False.
+        If the length of the component (data) object does not
+        match that of its index set, or the object is a Param
+        with attribute `mutable=False`.
     """
-    if len(param_obj) != len(param_obj.index_set()):
+    if len(uncertain_obj) != len(uncertain_obj.index_set()):
         raise ValueError(
-            f"Length of Param component object with "
-            f"name {param_obj.name!r} is {len(param_obj)}, "
+            f"Length of {type(uncertain_obj).__name__} object with "
+            f"name {uncertain_obj.name!r} is {len(uncertain_obj)}, "
             "and does not match that of its index set, "
-            f"which is of length {len(param_obj.index_set())}. "
-            "Check that all entries of the component object "
-            "have been initialized."
+            f"which is of length {len(uncertain_obj.index_set())}. "
+            "Check that the component has been properly constructed, "
+            "and all entries have been initialized. "
         )
-    if not param_obj.mutable:
-        raise ValueError(f"Param object with name {param_obj.name!r} is immutable.")
+    if uncertain_obj.ctype is Param and not uncertain_obj.mutable:
+        raise ValueError(
+            f"{type(uncertain_obj).__name__} object with name {uncertain_obj.name!r} "
+            "is immutable."
+        )
 
 
-class InputDataStandardizer(object):
+def uncertain_param_data_validator(uncertain_obj):
     """
-    Standardizer for objects castable to a list of Pyomo
-    component types.
+    Validator for component data object specified as an
+    uncertain parameter.
 
     Parameters
     ----------
-    ctype : type
-        Pyomo component type, such as Component, Var or Param.
-    cdatatype : type
-        Corresponding Pyomo component data type, such as
+    uncertain_obj : ParamData or VarData
+        Object on which to perform checks.
+
+    Raises
+    ------
+    ValueError
+        If `uncertain_obj` is a VarData object
+        that is not fixed explicitly via VarData.fixed
+        or implicitly via bounds.
+    """
+    if isinstance(uncertain_obj, VarData):
+        is_fixed_var = uncertain_obj.fixed or (
+            uncertain_obj.lower is uncertain_obj.upper
+            and uncertain_obj.lower is not None
+        )
+        if not is_fixed_var:
+            raise ValueError(
+                f"{type(uncertain_obj).__name__} object with name "
+                f"{uncertain_obj.name!r} is not fixed."
+            )
+
+
+class InputDataStandardizer:
+    """
+    Domain validator for an object that is castable to
+    a list of Pyomo component data objects.
+
+    Parameters
+    ----------
+    ctype : type or tuple of type
+        Valid Pyomo component type(s),
+        such as Component, Var or Param.
+    cdatatype : type or tuple of type
+        Valid Pyomo component data type(s), such as
         ComponentData, VarData, or ParamData.
     ctype_validator : callable, optional
         Validator function for objects of type `ctype`.
     cdatatype_validator : callable, optional
         Validator function for objects of type `cdatatype`.
     allow_repeats : bool, optional
-        True to allow duplicate component data entries in final
-        list to which argument is cast, False otherwise.
+        True to allow duplicate component data object
+        entries in final list to which argument is cast,
+        False otherwise.
 
     Attributes
     ----------
-    ctype
-    cdatatype
-    ctype_validator
-    cdatatype_validator
-    allow_repeats
+    ctype : type or tuple of type
+    cdatatype : type or tuple of type
+    ctype_validator : callable or None
+    cdatatype_validator : callable or None
+    allow_repeats : bool
     """
 
     def __init__(
@@ -151,13 +222,10 @@ class InputDataStandardizer(object):
             True if list can contain repeated entries,
             False otherwise.
 
-        Raises
-        ------
-        TypeError
-            If all entries in the resulting list
-            are not of type ``self.cdatatype``.
-        ValueError
-            If the resulting list contains duplicate entries.
+        Returns
+        -------
+        list of ComponentData
+            Each entry is an instance of ``self.cdatatype``.
         """
         return standardize_component_data(
             obj=obj,
@@ -171,9 +239,12 @@ class InputDataStandardizer(object):
 
     def domain_name(self):
         """Return str briefly describing domain encompassed by self."""
-        cdt = _domain_name(self.cdatatype)
-        ct = _domain_name(self.ctype)
-        return f"{cdt}, {ct}, or Iterable[{cdt}/{ct}]"
+        ctypes_tup = (self.ctype,) if isinstance(self.ctype, type) else self.ctype
+        cdtypes_tup = (
+            (self.cdatatype,) if isinstance(self.cdatatype, type) else self.cdatatype
+        )
+        alltypes_desc = ", ".join(vtype.__name__ for vtype in ctypes_tup + cdtypes_tup)
+        return f"(iterable of) {alltypes_desc}"
 
 
 class SolverNotResolvable(PyomoException):
@@ -182,7 +253,7 @@ class SolverNotResolvable(PyomoException):
     """
 
 
-class SolverResolvable(object):
+class SolverResolvable:
     """
     Callable for casting an object (such as a str)
     to a Pyomo solver.
@@ -305,7 +376,7 @@ class SolverResolvable(object):
         return "str or Solver"
 
 
-class SolverIterable(object):
+class SolverIterable:
     """
     Callable for casting an iterable (such as a list of strs)
     to a list of Pyomo solvers.
@@ -419,13 +490,11 @@ def pyros_config():
         ConfigValue(
             default=None,
             domain=NonNegativeFloat,
-            doc=(
-                """
+            doc=("""
                 Wall time limit for the execution of the PyROS solver
                 in seconds (including time spent by subsolvers).
                 If `None` is provided, then no time limit is enforced.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -433,14 +502,12 @@ def pyros_config():
         ConfigValue(
             default=False,
             domain=bool,
-            description=(
-                """
+            description=("""
                 Export subproblems with a non-acceptable termination status
                 for debugging purposes.
                 If True is provided, then the argument
                 `subproblem_file_directory` must also be specified.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -456,12 +523,10 @@ def pyros_config():
         ConfigValue(
             default=True,
             domain=bool,
-            description=(
-                """
+            description=("""
                 Load final solution(s) found by PyROS to the deterministic
                 model provided.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -469,14 +534,12 @@ def pyros_config():
         ConfigValue(
             default=False,
             domain=bool,
-            description=(
-                """
+            description=("""
                 True to ensure the component names given to the
                 subordinate solvers for every subproblem reflect
                 the names of the corresponding Pyomo modeling components,
                 False otherwise.
-                """
-            ),
+                """),
         ),
     )
 
@@ -506,18 +569,19 @@ def pyros_config():
         ConfigValue(
             default=[],
             domain=InputDataStandardizer(
-                ctype=Param,
-                cdatatype=ParamData,
-                ctype_validator=mutable_param_validator,
+                ctype=(Param, Var),
+                cdatatype=(ParamData, VarData),
+                ctype_validator=uncertain_param_validator,
+                cdatatype_validator=uncertain_param_data_validator,
                 allow_repeats=False,
             ),
-            description=(
-                """
+            description=("""
                 Uncertain model parameters.
-                The `mutable` attribute for all uncertain parameter
-                objects should be set to True.
-                """
-            ),
+                Of every constituent `Param` object,
+                the `mutable` attribute must be set to True.
+                All constituent `Var`/`VarData` objects should be
+                fixed.
+                """),
             visibility=1,
         ),
     )
@@ -526,13 +590,11 @@ def pyros_config():
         ConfigValue(
             default=None,
             domain=IsInstance(UncertaintySet),
-            description=(
-                """
+            description=("""
                 Uncertainty set against which the
                 final solution(s) returned by PyROS should be certified
                 to be robust.
-                """
-            ),
+                """),
             visibility=1,
         ),
     )
@@ -564,15 +626,12 @@ def pyros_config():
         ConfigValue(
             default=ObjectiveType.nominal,
             domain=InEnum(ObjectiveType),
-            description=(
-                """
+            description=("""
                 Choice of objective focus to optimize in the master problems.
                 Choices are: `ObjectiveType.worst_case`,
                 `ObjectiveType.nominal`.
-                """
-            ),
-            doc=(
-                """
+                """),
+            doc=("""
                 Objective focus for the master problems:
 
                 - `ObjectiveType.nominal`:
@@ -589,8 +648,7 @@ def pyros_config():
                 by PyROS.
                 If a nominal objective focus is chosen, then only robust
                 feasibility is guaranteed.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -598,15 +656,13 @@ def pyros_config():
         ConfigValue(
             default=[],
             domain=list,
-            doc=(
-                """
+            doc=("""
                 Nominal uncertain parameter realization.
                 Entries should be provided in an order consistent with the
                 entries of the argument `uncertain_params`.
                 If an empty list is provided, then the values of the `Param`
                 objects specified through `uncertain_params` are chosen.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -614,15 +670,12 @@ def pyros_config():
         ConfigValue(
             default=0,
             domain=In([0, 1, 2]),
-            description=(
-                """
+            description=("""
                 Order (or degree) of the polynomial decision rule functions
                 used for approximating the adjustability of the second stage
                 variables with respect to the uncertain parameters.
-                """
-            ),
-            doc=(
-                """
+                """),
+            doc=("""
                 Order (or degree) of the polynomial decision rule functions
                 for approximating the adjustability of the second stage
                 variables with respect to the uncertain parameters.
@@ -632,8 +685,7 @@ def pyros_config():
                 - 0: static recourse
                 - 1: affine recourse
                 - 2: quadratic recourse
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -641,8 +693,7 @@ def pyros_config():
         ConfigValue(
             default=False,
             domain=bool,
-            doc=(
-                """
+            doc=("""
                 True to solve all master problems with the subordinate
                 global solver, False to solve all master problems with
                 the subordinate local solver.
@@ -652,8 +703,7 @@ def pyros_config():
                 for certification
                 of robust optimality of the final solution(s) returned
                 by PyROS. Otherwise, only robust feasibility is guaranteed.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -661,12 +711,10 @@ def pyros_config():
         ConfigValue(
             default=-1,
             domain=positive_int_or_minus_one,
-            description=(
-                """
+            description=("""
                 Iteration limit. If -1 is provided, then no iteration
                 limit is enforced.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -674,31 +722,44 @@ def pyros_config():
         ConfigValue(
             default=1e-4,
             domain=NonNegativeFloat,
-            description=(
-                """
+            description=("""
                 Relative tolerance for assessing maximal inequality
                 constraint violations during the GRCS separation step.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
         "separation_priority_order",
         ConfigValue(
             default={},
-            domain=dict,
-            doc=(
-                """
-                Mapping from model inequality constraint names
-                to positive integers specifying the priorities
-                of their corresponding separation subproblems.
-                A higher integer value indicates a higher priority.
-                Constraints not referenced in the `dict` assume
-                a priority of 0.
-                Separation subproblems are solved in order of decreasing
-                priority.
-                """
-            ),
+            domain=_deprecated_separation_priority_order,
+            doc=("""
+                (DEPRECATED)
+                A dict-like object, each entry of which
+                maps the full name of a model ``Var`` or ``Constraint``
+                component to a value specifying the separation priority
+                for all constraints derived from the component.
+                A separation priority can be a numeric value or None.
+                A higher numeric value indicates a higher priority.
+                For all constraints, the default priority is 0.
+                (Inequality and equality) constraints with a
+                priority of None are excluded from
+                the separation problems and enforced subject to only
+                the nominal uncertain parameter realization in the master
+                problems.
+                Separation problems corresponding to inequality
+                constraints with numeric priorities are grouped by
+                priority. In every iteration, the groups are traversed
+                in descending order of priority,
+                until, within a group, constraint violations
+                are detected.
+
+                *Deprecated since Pyomo 6.9.3*: The argument
+                `separation_priority_order` is deprecated.
+                Specify separation priorities by declaring, on your
+                model, `Suffix` components with local name
+                'pyros_separation_priority'.
+                """),
         ),
     )
     CONFIG.declare(
@@ -706,8 +767,7 @@ def pyros_config():
         ConfigValue(
             default=default_pyros_solver_logger,
             domain=logger_domain,
-            doc=(
-                """
+            doc=("""
                 Logger (or name thereof) used for reporting PyROS solver
                 progress. If `None` or a `str` is provided, then
                 ``progress_logger``
@@ -715,8 +775,7 @@ def pyros_config():
                 In the default case, `progress_logger` is set to
                 a :class:`pyomo.contrib.pyros.util.PreformattedLogger`
                 object of level ``logging.INFO``.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -728,13 +787,11 @@ def pyros_config():
                 require_available=False,
                 filter_by_availability=True,
             ),
-            doc=(
-                """
+            doc=("""
                 Additional subordinate local NLP optimizers to invoke
                 in the event the primary local NLP optimizer fails
                 to solve a subproblem to an acceptable termination condition.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -746,13 +803,11 @@ def pyros_config():
                 require_available=False,
                 filter_by_availability=True,
             ),
-            doc=(
-                """
+            doc=("""
                 Additional subordinate global NLP optimizers to invoke
                 in the event the primary global NLP optimizer fails
                 to solve a subproblem to an acceptable termination condition.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -760,15 +815,31 @@ def pyros_config():
         ConfigValue(
             default=None,
             domain=Path(),
-            description=(
-                """
+            description=("""
                 Directory to which to export subproblems not successfully
                 solved to an acceptable termination condition.
                 In the event ``keepfiles=True`` is specified, a str or
                 path-like referring to an existing directory must be
                 provided.
-                """
-            ),
+                """),
+        ),
+    )
+    CONFIG.declare(
+        "subproblem_format_options",
+        ConfigValue(
+            default={"bar": {"symbolic_solver_labels": True}},
+            # note: we leave all validation of the dict entries
+            #       to ``BlockData.write()``
+            domain=dict,
+            description=("""
+                File format options for writing/exporting subproblems
+                that were not solved to an acceptable level
+                if ``keepfiles=True`` is specified.
+                Each entry of the dict should map a Pyomo WriterFactory
+                format (e.g., 'bar' for BARON, 'gams' for GAMS)
+                to a value for the argument ``io_options``
+                to the method ``BlockData.write()``.
+                """),
         ),
     )
 
@@ -780,16 +851,14 @@ def pyros_config():
         ConfigValue(
             default=False,
             domain=bool,
-            description=(
-                """
+            description=("""
                 This is an advanced option.
                 Solve all separation subproblems with the subordinate global
                 solver(s) only.
                 This option is useful for expediting PyROS
                 in the event that the subordinate global optimizer(s) provided
                 can quickly solve separation subproblems to global optimality.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -797,8 +866,7 @@ def pyros_config():
         ConfigValue(
             default=False,
             domain=bool,
-            doc=(
-                """
+            doc=("""
                 This is an advanced option.
                 Solve all separation subproblems with the subordinate local
                 solver(s) only.
@@ -809,8 +877,7 @@ def pyros_config():
                 in the event that the subordinate global optimizer provided
                 cannot tractably solve separation subproblems to global
                 optimality.
-                """
-            ),
+                """),
         ),
     )
     CONFIG.declare(
@@ -818,8 +885,7 @@ def pyros_config():
         ConfigValue(
             default={},
             domain=dict,
-            doc=(
-                """
+            doc=("""
                 This is an advanced option.
                 Add p-robustness constraints to all master subproblems.
                 If an empty dict is provided, then p-robustness constraints
@@ -831,8 +897,7 @@ def pyros_config():
                 objective function value under any PyROS-sampled uncertain
                 parameter realization to the objective function under
                 the nominal parameter realization.
-                """
-            ),
+                """),
             visibility=1,
         ),
     )

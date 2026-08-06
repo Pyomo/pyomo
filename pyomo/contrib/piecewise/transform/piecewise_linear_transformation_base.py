@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.errors import DeveloperError
@@ -251,6 +249,33 @@ class PiecewiseLinearTransformationBase(Transformation):
             visitor.walk_expression((o.expr, o, 0))
 
     def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):
+        if len(pw_linear_func._simplices) == 1:
+            return self._transform_single_segment_pw_linear_expr(
+                pw_expr, pw_linear_func, transformation_block
+            )
+        return self._transform_multiple_segment_pw_linear_expr(
+            pw_expr, pw_linear_func, transformation_block
+        )
+
+    def _transform_single_segment_pw_linear_expr(
+        self, pw_expr, pw_linear_func, transformation_block
+    ):
+        # There's no actual choice to make between pieces, so we don't need
+        # any discrete variables: We can just substitute the (single) linear
+        # function directly in place of the PiecewiseLinearExpression.
+        transBlock = transformation_block.transformed_functions[
+            len(transformation_block.transformed_functions)
+        ]
+        linear_func = pw_linear_func._linear_functions[0]
+        transBlock.substitute_expr = Expression(expr=linear_func(*pw_expr.args))
+        pw_linear_func.map_transformation_var(pw_expr, transBlock.substitute_expr)
+
+        return transBlock.substitute_expr
+
+    def _transform_multiple_segment_pw_linear_expr(
+        self, pw_expr, pw_linear_func, transformation_block
+    ):
         raise DeveloperError(
-            "Derived class failed to implement '_transform_pw_linear_expr'"
+            "Derived class failed to implement "
+            "'_transform_multiple_segment_pw_linear_expr'"
         )

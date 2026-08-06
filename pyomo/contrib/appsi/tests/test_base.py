@@ -1,17 +1,15 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.common import unittest
 from pyomo.contrib import appsi
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo.core.base.var import ScalarVar
 
 
@@ -42,11 +40,11 @@ class TestResults(unittest.TestCase):
             res.solution_loader.get_slacks()
 
     def test_results(self):
-        m = pe.ConcreteModel()
+        m = pyo.ConcreteModel()
         m.x = ScalarVar()
         m.y = ScalarVar()
-        m.c1 = pe.Constraint(expr=m.x == 1)
-        m.c2 = pe.Constraint(expr=m.y == 2)
+        m.c1 = pyo.Constraint(expr=m.x == 1)
+        m.c2 = pyo.Constraint(expr=m.y == 2)
 
         primals = dict()
         primals[id(m.x)] = (m.x, 1)

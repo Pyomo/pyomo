@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 ## variant of diet.py that presents constraints and objectives twice,
 ## to see how terms are collected
@@ -15,28 +13,28 @@
 #
 # Imports
 #
-from pyomo.core import *
+import pyomo.environ as pyo
 
 #
 # Setup
 #
 
-model = AbstractModel()
-model.NUTR = Set()
-model.FOOD = Set()
+model = pyo.AbstractModel()
+model.NUTR = pyo.Set()
+model.FOOD = pyo.Set()
 
-model.cost = Param(model.FOOD, within=NonNegativeReals)
+model.cost = pyo.Param(model.FOOD, within=pyo.NonNegativeReals)
 
-model.f_min = Param(model.FOOD, within=NonNegativeReals)
+model.f_min = pyo.Param(model.FOOD, within=pyo.NonNegativeReals)
 
 
 def f_max_valid(model, value, j):
     return model.f_max[j] > model.f_min[j]
 
 
-model.f_max = Param(model.FOOD, validate=f_max_valid)
+model.f_max = pyo.Param(model.FOOD, validate=f_max_valid)
 
-model.n_min = Param(model.NUTR, within=NonNegativeReals)
+model.n_min = pyo.Param(model.NUTR, within=pyo.NonNegativeReals)
 
 
 def paramn_max(model, i):
@@ -44,18 +42,18 @@ def paramn_max(model, i):
     return model.n_max[i]
 
 
-model.n_max = Param(model.NUTR, initialize=paramn_max)
+model.n_max = pyo.Param(model.NUTR, initialize=paramn_max)
 
 # ***********************************
 
-model.amt = Param(model.NUTR, model.FOOD, within=NonNegativeReals)
+model.amt = pyo.Param(model.NUTR, model.FOOD, within=pyo.NonNegativeReals)
 
 
 def Buy_bounds(model, i):
     return (model.f_min[i], model.f_max[i])
 
 
-model.Buy = Var(model.FOOD, bounds=Buy_bounds)
+model.Buy = pyo.Var(model.FOOD, bounds=Buy_bounds)
 
 
 def Objective_rule(model):
@@ -67,7 +65,7 @@ def Objective_rule(model):
     return ans
 
 
-model.totalcost = Objective(rule=Objective_rule)
+model.totalcost = pyo.Objective(rule=Objective_rule)
 
 
 def Diet_rule(model, i):
@@ -81,4 +79,4 @@ def Diet_rule(model, i):
     return expr
 
 
-model.Diet = Constraint(model.NUTR, rule=Diet_rule)
+model.Diet = pyo.Constraint(model.NUTR, rule=Diet_rule)

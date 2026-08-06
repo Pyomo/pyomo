@@ -13,6 +13,7 @@ Analysis in Pyomo
    mpc/index
    parmest/index
    sensitivity_toolbox
+   nlp_initialization/nlp_initialization
 
 ..
    Reorganization notes:

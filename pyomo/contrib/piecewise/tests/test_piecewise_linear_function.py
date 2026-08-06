@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from io import StringIO
 import logging
@@ -103,6 +101,20 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
         m = self.make_ln_x_model()
         m.pw = PiecewiseLinearFunction(points=[1, 3, 6, 10], function=m.f)
         self.check_ln_x_approx(m.pw, m.x)
+
+    def test_pw_linear_approx_of_ln_x_single_segment(self):
+        m = self.make_ln_x_model()
+        m.pw = PiecewiseLinearFunction(points=[1, 10], function=m.f)
+
+        self.assertEqual(len(m.pw._simplices), 1)
+        self.assertEqual(len(m.pw._linear_functions), 1)
+        self.assertEqual(m.pw._simplices[0], (0, 1))
+
+        slope = log(10) / 9
+        intercept = -log(10) / 9
+        assertExpressionsEqual(
+            self, m.pw._linear_functions[0](m.x), slope * m.x + intercept, places=7
+        )
 
     def test_pw_linear_approx_of_ln_x_linear_funcs(self):
         m = self.make_ln_x_model()

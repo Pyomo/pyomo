@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import MouseTrap
@@ -27,6 +25,10 @@ from pyomo.core.base.expression import ScalarExpression, ExpressionData
 from pyomo.core.base.param import ScalarParam, ParamData
 from pyomo.core.base.var import ScalarVar, VarData
 from pyomo.gdp.disjunct import AutoLinkedBooleanVar, Disjunct, Disjunction
+
+
+def _dispatch_boolean_const(visitor, node):
+    return False, 1 if node.value else 0
 
 
 def _dispatch_boolean_var(visitor, node):
@@ -197,6 +199,7 @@ _operator_dispatcher[EXPR.AtLeastExpression] = _dispatch_atleast
 _operator_dispatcher[EXPR.AtMostExpression] = _dispatch_atmost
 
 _before_child_dispatcher = {}
+_before_child_dispatcher[EXPR.BooleanConstant] = _dispatch_boolean_const
 _before_child_dispatcher[BV.ScalarBooleanVar] = _dispatch_boolean_var
 _before_child_dispatcher[BV.BooleanVarData] = _dispatch_boolean_var
 _before_child_dispatcher[AutoLinkedBooleanVar] = _dispatch_boolean_var
@@ -264,5 +267,9 @@ class LogicalToDisjunctiveVisitor(StreamBasedExpressionVisitor):
         # This LogicalExpression must evaluate to True (but note that we cannot
         # fix this variable to 1 since this logical expression could be living
         # on a Disjunct and later need to be relaxed.)
-        self.constraints.add(result >= 1)
+        expr = result >= 1
+        if expr.__class__ is bool:
+            self.constraints.add(Constraint.Feasible if expr else Constraint.Infeasible)
+        else:
+            self.constraints.add(expr)
         return result

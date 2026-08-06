@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import argparse
 import io
@@ -38,7 +36,7 @@ logger = logging.getLogger('pyomo.common.download')
 DownloadFactory = pyomo.common.Factory('library downloaders')
 
 
-class FileDownloader(object):
+class FileDownloader:
     _os_version = None
 
     def __init__(self, insecure=False, cacert=None):
@@ -440,9 +438,20 @@ class FileDownloader(object):
             info.mode &= 0o755
             return True
 
+        if sys.version_info[:2] < (3, 12):
+            tar_args = {}
+        else:
+            # Add a tar filter to suppress deprecation warning in Python 3.12+
+            #
+            # Note that starting in Python 3.14 the default is 'data',
+            # however, this method is already filtering for many of the
+            # things that 'data' would catch (and raise an exception
+            # for).  For backwards compatibility, we will use the more
+            # permissive "tar" filter.
+            tar_args = {'filter': tarfile.tar_filter}
         with tarfile.open(fileobj=io.BytesIO(self.retrieve_url(url))) as TAR:
             dest = os.path.realpath(self._fname)
-            TAR.extractall(dest, filter(filter_fcn, TAR.getmembers()))
+            TAR.extractall(dest, filter(filter_fcn, TAR.getmembers()), **tar_args)
 
     def get_gzipped_binary_file(self, url):
         if self._fname is None:

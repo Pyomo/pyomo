@@ -1,20 +1,18 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
-#  Part of this module was originally developed as part of the PyUtilib project
-#  Copyright (c) 2008 Sandia Corporation.
-#  This software is distributed under the BSD License.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  ___________________________________________________________________________
+# Part of this module was originally developed as part of the PyUtilib project
+# Copyright (c) 2008 Sandia Corporation.
+# This software is distributed under the BSD License.
+# Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+# the U.S. Government retains certain rights in this software.
+# ____________________________________________________________________________________
 
 import enum
 import glob
@@ -27,14 +25,14 @@ import subprocess
 import sys
 from io import StringIO
 
-
 # Now, import the base unittest environment.  We will override things
 # specifically later
 from unittest import *
 import unittest as _unittest
+import pyomo.common.dependencies as deps
 
 from pyomo.common.collections import Mapping, Sequence
-from pyomo.common.dependencies import attempt_import, check_min_version
+from pyomo.common.dependencies import attempt_import, check_min_version, multiprocessing
 from pyomo.common.errors import InvalidValueError
 from pyomo.common.fileutils import import_file
 from pyomo.common.log import LoggingIntercept, pyomo_formatter
@@ -46,6 +44,10 @@ from unittest import mock
 # Note that importing test modules may cause this import to be resolved
 # (and then enforce a strict dependence on pytest)
 pytest, pytest_available = attempt_import('pytest')
+
+#: A time limit for acquiring the capture_output_lock lock
+#: before terminating a subprocess
+_timeout_terminate_timeout = 2  # seconds
 
 
 def _defaultFormatter(msg, default):
@@ -318,10 +320,28 @@ def _runner(pipe, qualname):
         resultType = _RunnerResult.unittest
 
         def fcn():
-            s = _unittest.TestLoader().loadTestsFromName(qualname)
-            r = _unittest.TestResult()
-            s.run(r)
-            return r.errors + r.failures, r.skipped
+            suite = _unittest.TestLoader().loadTestsFromName(qualname)
+            result = _unittest.TestResult()
+            # Starting in Python 3.14, the default interface is
+            # forkserver, so timeout will fall back on spawn (getting us
+            # here).  Unfortunately, starting in pytest 9.0, if the
+            # test is expecting to fail, pytest will completely suppress
+            # recording the failure from the subTest, causing the main
+            # test to unexpectedly succeed.  We will resolve this by
+            # looking at the testmethod we just loaded and if we are
+            # expecting a failure, then we will turn that off *in the
+            # subTest* so that the result is properly propagated.
+            for test in suite:
+                test.__unittest_expecting_failure__ = False
+                # Note: fetch the unbound function off the class and not
+                # the bound method.
+                func = getattr(test.__class__, test._testMethodName)
+                if hasattr(func, '__unittest_expecting_failure__'):
+                    delattr(func, '__unittest_expecting_failure__')
+            # Now we can actually run the test (including all necessary
+            # setUp/tearDown)
+            suite.run(result)
+            return result.errors + result.failures, result.skipped
 
         args = ()
         kwargs = {}
@@ -410,7 +430,6 @@ def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
 
     """
     import functools
-    import multiprocessing
     import queue
 
     def timeout_decorator(fcn):
@@ -473,7 +492,27 @@ def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
                 if pipe_recv.poll(seconds):
                     resultType, result, stdout = pipe_recv.recv()
                 else:
-                    test_proc.terminate()
+                    # Note: because we are using capture_output within
+                    # the _runner handler, we can trigger a deadlock
+                    # when we call terminate() while the _runner's
+                    # capture_output holds the capture_output_lock lock
+                    # (terminate() bypasses all __exit__ handlers!).  To
+                    # avoid that, we will grab the lock here before
+                    # terminating the subprocess.
+                    locked = deps.capture_output_lock.acquire(
+                        timeout=_timeout_terminate_timeout
+                    )
+                    if not locked:
+                        logging.getLogger(__name__).error(
+                            "Failed to acquire capture_output_lock "
+                            "Lock before terminating subprocess on timeout: "
+                            "process deadlock is likely."
+                        )
+                    try:
+                        test_proc.terminate()
+                    finally:
+                        if locked:
+                            deps.capture_output_lock.release()
                     raise timeout_raises(
                         "test timed out after %s seconds" % (seconds,)
                     ) from None
@@ -687,7 +726,7 @@ TestCase.assertStructuredAlmostEqual.__doc__ = re.sub(
 )
 
 
-class BaselineTestDriver(object):
+class BaselineTestDriver:
     """Generic driver for performing baseline tests in bulk
 
     This test driver was originally crafted for testing the examples in

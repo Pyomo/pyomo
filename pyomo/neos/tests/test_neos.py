@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
 # Test NEOS solver interface
 #
@@ -20,13 +18,14 @@
 import os
 import json
 import os.path
+import tempfile
 
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 
 from pyomo.scripting.pyomo_main import main
 from pyomo.scripting.util import cleanup
-from pyomo.neos.kestrel import kestrelAMPL
+from pyomo.neos.kestrel import kestrelAMPL, xmlrpclib
 import pyomo.neos
 
 import pyomo.environ as pyo
@@ -64,6 +63,110 @@ def _model(sense):
 
     model.obj = pyo.Objective(expr=model.y, sense=sense)
     return model
+
+
+class _MockedServer:
+    def __init__(self, *, ping_err=None, list_err=None, final_results=b"OK"):
+        self._ping_err = ping_err
+        self._list_err = list_err or (0, None)
+        self._list_calls = 0
+        self._final_results = final_results
+        self.kill_args = None
+
+    def ping(self):
+        if self._ping_err:
+            raise self._ping_err
+        return "avail"
+
+    def listSolversInCategory(self, cat):
+        self._list_calls += 1
+        if self._list_calls <= self._list_err[0]:
+            raise self._list_err[1]
+        return ["ipopt:AMPL", "cbc:AMPL", "baron:GAMS"]
+
+    def killJob(self, job, pw):
+        self.kill_args = (job, pw)
+        return "killed"
+
+    def getFinalResults(self, *_):
+        return self._final_results
+
+
+class TestNEOSInterface(unittest.TestCase):
+    """
+    This uses a mocked server to test basic functionality from kestrel;
+    can run all the time, not necessary to have a real connection
+    """
+
+    def _uninit_kestrel(self):
+        """Return an un-initialized kestrelAMPL"""
+        return object.__new__(kestrelAMPL)
+
+    def test_tempfile_env_set_and_unset(self):
+        k = self._uninit_kestrel()
+
+        # ampl_id unset  -> unknown
+        os.environ.pop("ampl_id", None)
+        self.assertTrue(kestrelAMPL.tempfile(k).endswith("atunknown.jobs"))
+
+        # ampl_id present
+        os.environ["ampl_id"] = "123"
+        self.assertTrue(kestrelAMPL.tempfile(k).endswith("at123.jobs"))
+
+    def test_kill_calls_remote(self):
+        srv = _MockedServer()
+        k = self._uninit_kestrel()
+        k.neos = srv
+        kestrelAMPL.kill(k, 42, "pw")
+        self.assertEqual(srv.kill_args, (42, "pw"))
+
+    def test_retrieve_string_and_binary(self):
+        with tempfile.TemporaryDirectory() as td:
+            stub = os.path.join(td, "foo")
+
+            # string payload -> encoded
+            srv = _MockedServer(final_results="text")
+            k = self._uninit_kestrel()
+            k.neos = srv
+            kestrelAMPL.retrieve(k, stub, 1, "pw")
+            with open(stub + ".sol", "rb") as fh:
+                self.assertEqual(fh.read(), b"text")
+
+            # binary payload
+            payload = b"binary"
+            srv = _MockedServer(final_results=xmlrpclib.Binary(payload))
+            k.neos = srv
+            kestrelAMPL.retrieve(k, stub, 1, "pw")
+            with open(stub + ".sol", "rb") as fh:
+                self.assertEqual(fh.read(), payload)
+
+    def test_parsing_and_default(self):
+        k = self._uninit_kestrel()
+
+        # env absent
+        os.environ.pop("kestrel_options", None)
+        self.assertEqual(kestrelAMPL.getJobAndPassword(k), (0, ""))
+
+        # env present
+        os.environ["kestrel_options"] = "job=12 password=xyz"
+        self.assertEqual(kestrelAMPL.getJobAndPassword(k), (12, "xyz"))
+
+    def test_solvers_none_neos(self):
+        k = self._uninit_kestrel()
+        k.neos = None
+        self.assertEqual(kestrelAMPL.getAvailableSolvers(k), [])
+
+    def test_solvers_exception_returns_empty(self):
+        srv = _MockedServer(list_err=(99, RuntimeError("boom")))
+        k = self._uninit_kestrel()
+        k.neos = srv
+        self.assertEqual(kestrelAMPL.getAvailableSolvers(k), [])
+
+    def test_solvers_filter_and_strip(self):
+        srv = _MockedServer()
+        k = self._uninit_kestrel()
+        k.neos = srv
+        self.assertEqual(kestrelAMPL.getAvailableSolvers(k), ["cbc", "ipopt"])
 
 
 @unittest.pytest.mark.default
@@ -107,7 +210,10 @@ class TestKestrel(unittest.TestCase):
                 self.fail(f"RunAllNEOSSolvers missing test for '{solver}'")
 
 
-class RunAllNEOSSolvers(object):
+class RunAllNEOSSolvers:
+    def test_baron(self):
+        self._run('baron')
+
     def test_bonmin(self):
         self._run('bonmin')
 
@@ -117,17 +223,26 @@ class RunAllNEOSSolvers(object):
     def test_conopt(self):
         self._run('conopt')
 
+    def test_copt(self):
+        self._run('copt')
+
     def test_couenne(self):
         self._run('couenne')
 
     def test_cplex(self):
         self._run('cplex')
 
+    def test_ficoxpress(self):
+        self._run('fico-xpress')
+
     def test_filmint(self):
         self._run('filmint')
 
     def test_filter(self):
         self._run('filter')
+
+    def test_highs(self):
+        self._run('highs')
 
     def test_ipopt(self):
         self._run('ipopt')
@@ -141,6 +256,9 @@ class RunAllNEOSSolvers(object):
 
     def test_lancelot(self):
         self._run('lancelot')
+
+    def test_lgo(self):
+        self._run('lgo')
 
     def test_loqo(self):
         self._run('loqo')
@@ -160,7 +278,10 @@ class RunAllNEOSSolvers(object):
     # [16 Jul 24]: Octeract is erroring.  We will disable the interface
     # (and testing) until we have time to resolve #3321
     # [20 Sep 24]: and appears to have been removed from NEOS
-    #
+    # [24 Apr 25]: it appears to be there but causes timeouts
+    # [29 Apr 25]: JK, it has been removed again
+    # [21 Apr 26]: it is ALIVE again
+    # [28 Apr 26]: It lasted longer than last time but alas is gone again
     # def test_octeract(self):
     #     self._run('octeract')
 
@@ -174,21 +295,20 @@ class RunAllNEOSSolvers(object):
             self._run('ooqp')
 
     def test_path(self):
-        # The simple tests aren't complementarity
-        # problems
+        # The simple tests aren't complementarity problems
         self.skipTest("The simple NEOS test is not a complementarity problem")
-
-    def test_snopt(self):
-        self._run('snopt')
 
     def test_raposa(self):
         self._run('raposa')
 
-    def test_lgo(self):
-        self._run('lgo')
+    def test_scip(self):
+        self._run('scip')
+
+    def test_snopt(self):
+        self._run('snopt')
 
 
-class DirectDriver(object):
+class DirectDriver:
     def _run(self, opt, constrained=True):
         m = _model(self.sense)
         with pyo.SolverManagerFactory('neos') as solver_manager:
@@ -209,7 +329,7 @@ class DirectDriver(object):
         self.assertAlmostEqual(pyo.value(m.y), expected_y, delta=1e-5)
 
 
-class PyomoCommandDriver(object):
+class PyomoCommandDriver:
     def _run(self, opt, constrained=True):
         expected_y = {
             (pyo.minimize, True): -1,

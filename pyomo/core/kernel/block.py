@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 import math
@@ -277,7 +275,7 @@ class block(IBlock):
         format=None,
         _solver_capability=None,
         _called_by_solver=False,
-        **kwds
+        **kwds,
     ):
         """
         Write the model to a file, with a given format.
@@ -310,7 +308,7 @@ class block(IBlock):
 
         if _solver_capability is None:
             _solver_capability = lambda x: True
-        (filename_, smap) = problem_writer(self, filename, _solver_capability, kwds)
+        filename_, smap = problem_writer(self, filename, _solver_capability, kwds)
         assert filename_ == filename
 
         if _called_by_solver:

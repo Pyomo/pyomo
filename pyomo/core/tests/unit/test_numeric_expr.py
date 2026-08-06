@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
 # Unit Tests for expression generation
 #
@@ -118,7 +116,7 @@ from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numvalue import NumericValue
 
 
-class decompose_linear_term_wrapper(object):
+class decompose_linear_term_wrapper:
     def __init__(self, pairs):
         self.pairs = pairs
 
@@ -1627,7 +1625,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertExpressionsEqual(e, m.a)
 
         #
-        # Check that numeric constants are simply muliplied out
+        # Check that numeric constants are simply multiplied out
         #
         e = NumericConstant(3) * NumericConstant(2)
         self.assertExpressionsEqual(e, 6)
@@ -1934,6 +1932,22 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         expr = 5 * model.a / model.a / 2
         self.assertEqual("div(div(mon(5, a), a), 2)", str(expr))
 
+    def test_pow(self):
+        model = ConcreteModel()
+
+        model.x = Var()
+        model.A = Expression(initialize=1)
+        model.B = Expression(initialize=-2)
+
+        expr = model.A**2 + model.B**2
+        self.assertEqual("sum(pow(A{1}, 2), pow(B{-2}, 2))", str(expr))
+
+        expr = model.A**2 - model.B**2
+        self.assertEqual("sum(pow(A{1}, 2), neg(pow(B{-2}, 2)))", str(expr))
+
+        expr = (1) ** model.x + (-1) ** model.x
+        self.assertEqual("sum(pow(1, x), pow(-1, x))", str(expr))
+
     def test_other(self):
         #
         # Print other stuff
@@ -2166,6 +2180,22 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.a = 1
         model.a.fixed = True
         self.assertEqual("b", expression_to_string(expr, compute_values=True))
+
+    def test_pow(self):
+        model = ConcreteModel()
+
+        model.x = Var()
+        model.A = Expression(initialize=1)
+        model.B = Expression(initialize=-2)
+
+        expr = model.A**2 + model.B**2
+        self.assertEqual("1**2 + (-2)**2", str(expr))
+
+        expr = model.A**2 - model.B**2
+        self.assertEqual("1**2 - (-2)**2", str(expr))
+
+        expr = (1) ** model.x + (-1) ** model.x
+        self.assertEqual("1**x + (-1)**x", str(expr))
 
     def test_inequality(self):
         #
@@ -3335,7 +3365,7 @@ class TestPolynomialDegree(unittest.TestCase):
         self.assertEqual(expr.polynomial_degree(), 1)
         #
         # A fraction with a variable in the denominator has degree None.
-        # This indicates that it is not a polyomial.
+        # This indicates that it is not a polynomial.
         #
         expr = self.model.c / self.model.a
         self.assertEqual(expr.polynomial_degree(), None)
@@ -4223,14 +4253,16 @@ class TestCloneExpression(unittest.TestCase):
         e = LinearExpression()
         f = e.clone()
         self.assertIsNot(e, f)
-        self.assertIsNot(e.linear_coefs, f.linear_coefs)
-        self.assertIsNot(e.linear_vars, f.linear_vars)
+        # turns out that two empty tuples, a and b, return True for a is b
+        # self.assertIsNot(e.linear_coefs, f.linear_coefs)
+        # self.assertIsNot(e.linear_vars, f.linear_vars)
+        self.assertIsNot(e._args_, f._args_)
         self.assertEqual(e.constant, f.constant)
         self.assertEqual(e.linear_coefs, f.linear_coefs)
         self.assertEqual(e.linear_vars, f.linear_vars)
         self.assertEqual(f.constant, 0)
-        self.assertEqual(f.linear_coefs, [])
-        self.assertEqual(f.linear_vars, [])
+        self.assertEqual(f.linear_coefs, tuple())
+        self.assertEqual(f.linear_vars, tuple())
 
         e = LinearExpression(
             constant=5, linear_vars=[m.x, m.y[1]], linear_coefs=[10, 20]
@@ -4243,8 +4275,8 @@ class TestCloneExpression(unittest.TestCase):
         self.assertEqual(e.linear_coefs, f.linear_coefs)
         self.assertEqual(e.linear_vars, f.linear_vars)
         self.assertEqual(f.constant, 5)
-        self.assertEqual(f.linear_coefs, [10, 20])
-        self.assertEqual(f.linear_vars, [m.x, m.y[1]])
+        self.assertEqual(f.linear_coefs, (10, 20))
+        self.assertEqual(f.linear_vars, (m.x, m.y[1]))
 
     def test_getitem(self):
         # Testing cloning of the abs() function
@@ -4792,13 +4824,13 @@ class TestLinearExpression(unittest.TestCase):
 
         e = LinearExpression(constant=5, linear_vars=[m.x, m.y], linear_coefs=[2, 3])
         self.assertEqual(e.constant, 5)
-        self.assertEqual(e.linear_vars, [m.x, m.y])
-        self.assertEqual(e.linear_coefs, [2, 3])
+        self.assertEqual(e.linear_vars, (m.x, m.y))
+        self.assertEqual(e.linear_coefs, (2, 3))
 
         f = LinearExpression([5, 2 * m.x, 3 * m.y])
         self.assertEqual(e.constant, 5)
-        self.assertEqual(e.linear_vars, [m.x, m.y])
-        self.assertEqual(e.linear_coefs, [2, 3])
+        self.assertEqual(e.linear_vars, (m.x, m.y))
+        self.assertEqual(e.linear_coefs, (2, 3))
 
         self.assertExpressionsEqual(e, f)
 
@@ -4808,8 +4840,8 @@ class TestLinearExpression(unittest.TestCase):
         self.assertEqual(OUT.getvalue(), "")
         self.assertIs(e._args_, args)
         self.assertEqual(e.constant, 10)
-        self.assertEqual(e.linear_vars, [m.y, m.x])
-        self.assertEqual(e.linear_coefs, [4, 5])
+        self.assertEqual(e.linear_vars, (m.y, m.x))
+        self.assertEqual(e.linear_coefs, (4, 5))
 
     def test_to_string(self):
         m = ConcreteModel()

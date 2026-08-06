@@ -1,45 +1,37 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import sys
 import copy
+import logging
+import traceback
 from pyomo.common.deprecation import deprecation_warning
 
-try:
-    import pkg_resources
+logger = logging.getLogger(__name__)
 
-    pyomo_commands = pkg_resources.iter_entry_points('pyomo.command')
-except:
-    pyomo_commands = []
-#
-# Load modules associated with Plugins that are defined in
-# EGG files.
-#
-for entrypoint in pyomo_commands:
-    try:
-        plugin_class = entrypoint.load()
-    except Exception:
-        exctype, err, tb = sys.exc_info()  # BUG?
-        import traceback
 
-        msg = (
-            "Error loading pyomo.command entry point %s:\nOriginal %s: %s\n"
-            "Traceback:\n%s"
-            % (entrypoint, exctype.__name__, err, ''.join(traceback.format_tb(tb)))
-        )
-        # clear local variables to remove circular references
-        exctype = err = tb = None
-        # TODO: Should this just log an error and re-raise the original
-        # exception?
-        raise ImportError(msg)
+pyomo_commands = []
+
+
+def load_entry_points():
+    import importlib.metadata
+
+    ep_list = importlib.metadata.entry_points(group='pyomo.command')
+    for ep in ep_list:
+        try:
+            pyomo_commands.append(ep.load())
+        except:
+            logger.error(
+                f"Importing 'pyomo.command' entry point '{ep.name}' failed:\n"
+                f"{traceback.format_exc(limit=1)}"
+            )
+            raise
 
 
 def main(args=None):
@@ -49,6 +41,11 @@ def main(args=None):
     from pyomo.scripting import pyomo_parser
     import pyomo.environ
 
+    #
+    # Load the pyomo.command entry points
+    #
+    if not pyomo_commands:
+        load_entry_points()
     #
     # Parse the arguments
     #

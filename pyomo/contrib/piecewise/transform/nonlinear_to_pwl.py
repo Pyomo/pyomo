@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from collections import defaultdict
 import itertools
@@ -39,21 +37,42 @@ from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue, PositiveInt, InEnum
 from pyomo.common.dependencies import attempt_import
-from pyomo.common.dependencies import numpy as np
+from pyomo.common.dependencies import numpy as np, packaging
 from pyomo.common.enums import IntEnum
 from pyomo.common.modeling import unique_component_name
-from pyomo.core.expr.numeric_expr import SumExpression
+from pyomo.core.expr.numeric_expr import SumExpression, mutable_expression
 from pyomo.core.expr import identify_variables
 from pyomo.core.expr import SumExpression
 from pyomo.core.util import target_list
 from pyomo.contrib.piecewise import PiecewiseLinearExpression, PiecewiseLinearFunction
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.network import Port
-from pyomo.repn.quadratic import QuadraticRepnVisitor
-from pyomo.repn.util import ExprType
+from pyomo.repn.quadratic import QuadraticRepnVisitor, QuadraticRepn
+from pyomo.repn.util import ExprType, OrderedVarRecorder
 
 
-lineartree, lineartree_available = attempt_import('lineartree')
+def _lt_importer():
+    import lineartree
+    import importlib.metadata
+
+    # linear-tree through version 0.3.5 relies on a private method from
+    # scikit-learn.  That method was removed in scikit-learn version
+    # 1.7.0.  We will report linear-tree as "unavailable" if
+    # scikit-learn is "too new."
+    lt_ver = packaging.version.parse(importlib.metadata.version('linear-tree'))
+    if lt_ver <= packaging.version.Version('0.3.5'):
+        import sklearn
+
+        skl_ver = packaging.version.parse(sklearn.__version__)
+        if skl_ver >= packaging.version.Version('1.7.0'):
+            raise ImportError(
+                f"linear-tree<=0.3.5 (found {lt_ver}) is incompatible with "
+                f"scikit-learn>=1.7.0 (found {skl_ver})"
+            )
+    return lineartree
+
+
+lineartree, lineartree_available = attempt_import('lineartree', importer=_lt_importer)
 sklearn_lm, sklearn_available = attempt_import('sklearn.linear_model')
 
 logger = logging.getLogger(__name__)
@@ -99,13 +118,13 @@ def _get_random_point_grid(bounds, n, func, config, seed=42):
     return list(itertools.product(*linspaces))
 
 
-def _get_uniform_point_grid(bounds, n, func, config):
+def _get_uniform_point_grid(bounds, n, func, config, nudge_factor=0):
     # Generate non-randomized grid of points
     linspaces = []
     for (lb, ub), is_integer in bounds:
         if not is_integer:
             # Issues happen when exactly using the boundary
-            nudge = (ub - lb) * 1e-4
+            nudge = (ub - lb) * nudge_factor
             linspaces.append(np.linspace(lb + nudge, ub - nudge, n))
         else:
             size = min(n, ub - lb + 1)
@@ -120,7 +139,7 @@ def _get_points_lmt_random_sample(bounds, n, func, config, seed=42):
 
 
 def _get_points_lmt_uniform_sample(bounds, n, func, config, seed=42):
-    points = _get_uniform_point_grid(bounds, n, func, config)
+    points = _get_uniform_point_grid(bounds, n, func, config, nudge_factor=1e-4)
     return _get_points_lmt(points, bounds, func, config, seed)
 
 
@@ -326,6 +345,17 @@ def _find_leaves(splits, leaves, input_node):
     return leaves_list
 
 
+class _Evaluator:
+    def __init__(self, expr, expr_vars):
+        self.expr = expr
+        self.expr_vars = expr_vars
+
+    def __call__(self, *args):
+        for i, v in enumerate(self.expr_vars):
+            v.value = args[i]
+        return value(self.expr)
+
+
 @TransformationFactory.register(
     'contrib.piecewise.nonlinear_to_pwl',
     doc="Convert nonlinear constraints and objectives to piecewise-linear "
@@ -419,7 +449,7 @@ class NonlinearToPWL(Transformation):
 
             It is recommended to leave this False as long as no nonlinear constraint 
             involves more than about 5-6 variables. For constraints with higher-
-            dimmensional nonlinear functions, additive decomposition will improve
+            dimensional nonlinear functions, additive decomposition will improve
             the scalability of the approximation (since partitioning the domain is
             subject to the curse of dimensionality).""",
         ),
@@ -497,7 +527,8 @@ class NonlinearToPWL(Transformation):
         self._transformation_blocks = {}
         self._transformation_block_set = ComponentSet()
         self._quadratic_repn_visitor = QuadraticRepnVisitor(
-            subexpression_cache={}, var_map={}, var_order={}, sorter=None
+            subexpression_cache={},
+            var_recorder=OrderedVarRecorder(var_map={}, var_order={}, sorter=None),
         )
 
     def _apply_to(self, instance, **kwds):
@@ -626,8 +657,9 @@ class NonlinearToPWL(Transformation):
                 bounds.append((v.bounds, v.is_integer()))
         return bounds
 
-    def _needs_approximating(self, expr, approximate_quadratic):
-        repn = self._quadratic_repn_visitor.walk_expression(expr)
+    def _needs_approximating(self, expr, approximate_quadratic, repn=None):
+        if repn is None:
+            repn = self._quadratic_repn_visitor.walk_expression(expr)
         if repn.nonlinear is None:
             if repn.quadratic is None:
                 # Linear constraint. Always skip.
@@ -639,24 +671,82 @@ class NonlinearToPWL(Transformation):
                 return ExprType.QUADRATIC, True
         return ExprType.GENERAL, True
 
+    def _separate_linear_parts(
+        self, repn: QuadraticRepn, visitor: QuadraticRepnVisitor
+    ):
+        """
+        The idea here is to ensure that linear parts of constraints
+        always get separated from the nonlinear parts, even if
+        additively_decompose if False. The idea is that
+
+        y >= exp(x) + x**3
+
+        should become
+
+        y >= PWL(exp(x) + x**3)
+
+        and not
+
+        0 >= PWL(exp(x) + x**3 - y)
+        """
+        assert repn.multiplier == 1
+        linear_repn = QuadraticRepn()
+        linear_repn.constant = repn.constant
+        linear_repn.linear = repn.linear
+        linear = linear_repn.to_expression(visitor)
+
+        return linear, repn.quadratic, repn.nonlinear
+
+    def _get_quadratic_part_of_repn(
+        self, repn: QuadraticRepn, visitor: QuadraticRepnVisitor
+    ):
+        assert repn.multiplier == 1
+        r = QuadraticRepn()
+        r.quadratic = repn.quadratic
+        q = r.to_expression(visitor)
+        return q
+
     def _approximate_expression(
         self, expr, obj, trans_block, config, approximate_quadratic
     ):
+        repn = self._quadratic_repn_visitor.walk_expression(expr)
         expr_type, needs_approximating = self._needs_approximating(
-            expr, approximate_quadratic
+            expr, approximate_quadratic, repn
         )
         if not needs_approximating:
             return None, expr_type
 
+        linear_part, quadratic_part, nonlinear_part = self._separate_linear_parts(
+            repn, self._quadratic_repn_visitor
+        )
+        if quadratic_part is None:
+            quadratic_part = {}
+
         # Additively decompose expr and work on the pieces
-        pwl_summands = []
-        for k, subexpr in enumerate(
-            _additively_decompose_expr(
-                expr, config.min_dimension_to_additively_decompose
-            )
-            if config.additively_decompose
-            else (expr,)
-        ):
+        pwl_summands = [linear_part]
+        Nmin = config.min_dimension_to_additively_decompose
+        subexpr_list = []
+        if config.additively_decompose:
+            # dimension = len(list(identify_variables(input_expr)))
+            vset = set()
+            vmap = self._quadratic_repn_visitor.var_map
+            for x12 in quadratic_part.keys():
+                vset.update(x12)
+            if len(vset) < Nmin and nonlinear_part is not None:
+                vset.update(id(v) for v in identify_variables(nonlinear_part))
+            if len(vset) >= Nmin:
+                for (x1k, x2k), coef in quadratic_part.items():
+                    x1 = vmap[x1k]
+                    x2 = vmap[x2k]
+                    subexpr_list.append(coef * (x1 * x2))
+                if nonlinear_part is not None:
+                    subexpr_list.extend(_additively_decompose_expr(nonlinear_part, 0))
+        if not subexpr_list:
+            e = self._get_quadratic_part_of_repn(repn, self._quadratic_repn_visitor)
+            if nonlinear_part is not None:
+                e += nonlinear_part
+            subexpr_list = [e]
+        for k, subexpr in enumerate(subexpr_list):
             # First check if this is a good idea
             expr_vars = list(identify_variables(subexpr, include_fixed=False))
             orig_values = ComponentMap((v, v.value) for v in expr_vars)
@@ -676,10 +766,7 @@ class NonlinearToPWL(Transformation):
                 continue
             # else we approximate subexpr
 
-            def eval_expr(*args):
-                for i, v in enumerate(expr_vars):
-                    v.value = args[i]
-                return value(subexpr)
+            eval_expr = _Evaluator(subexpr, expr_vars)
 
             pwlf = _get_pwl_function_approximation(
                 eval_expr, config, self._get_bounds_list(expr_vars, obj)

@@ -1,17 +1,16 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.common.deprecation import deprecated
 from pyomo.common.modeling import NOTSET
 import pyomo.core.expr as EXPR
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.kernel.base import ICategorizedObject, _abstract_readwrite_property
 from pyomo.core.kernel.container_utils import define_simple_containers
 from pyomo.core.expr.numvalue import (
@@ -46,7 +45,7 @@ class IIdentityExpression(NumericValue):
     # Implement the NumericValue abstract methods
     #
 
-    def __call__(self, exception=False):
+    def __call__(self, exception=NOTSET):
         """Compute the value of this expression.
 
         Args:
@@ -61,6 +60,7 @@ class IIdentityExpression(NumericValue):
         Returns:
             numeric value or None
         """
+        exception = _type_check_exception_arg(self, exception)
         return value(self._expr, exception=exception)
 
     def is_fixed(self):

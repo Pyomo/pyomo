@@ -1,15 +1,14 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 """Transformation to detect variables fixed by bounds and fix them."""
+
 from math import fabs
 
 from pyomo.core.base.transformation import TransformationFactory
@@ -23,6 +22,8 @@ from pyomo.common.config import (
 from pyomo.core.base.var import Var
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
+from pyomo.core.base.block import Block
+from pyomo.gdp import Disjunct
 
 
 @TransformationFactory.register(
@@ -67,7 +68,9 @@ class FixedVarDetector(IsomorphicTransformation):
         if config.tmp:
             instance._xfrm_detect_fixed_vars_old_values = ComponentMap()
 
-        for var in instance.component_data_objects(ctype=Var, descend_into=True):
+        for var in instance.component_data_objects(
+            ctype=Var, descend_into=[Block, Disjunct]
+        ):
             if var.fixed or var.lb is None or var.ub is None:
                 # if the variable is already fixed, or if it is missing a
                 # bound, we skip it.

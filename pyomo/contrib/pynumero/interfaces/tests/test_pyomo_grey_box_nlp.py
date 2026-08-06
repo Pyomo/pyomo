@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
@@ -41,6 +39,11 @@ from pyomo.contrib.pynumero.interfaces.tests.compare_utils import (
     check_sparse_matrix_specific_order,
 )
 import pyomo.contrib.pynumero.interfaces.tests.external_grey_box_models as ex_models
+from pyomo.contrib.pynumero.examples.external_grey_box.external_with_objective import (
+    solve_unconstrained,
+    solve_constrained,
+    solve_constrained_with_hessian,
+)
 
 
 class TestExternalGreyBoxAsNLP(unittest.TestCase):
@@ -134,17 +137,6 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         egb_nlp.set_duals(np.asarray([21], dtype=np.float64))
         y = egb_nlp.get_duals()
         self.assertTrue(np.array_equal(y, np.asarray([21], dtype=np.float64)))
-
-        with self.assertRaises(NotImplementedError):
-            fac = egb_nlp.get_obj_factor()
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(42)
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(1)
-        with self.assertRaises(NotImplementedError):
-            f = egb_nlp.evaluate_objective()
-        with self.assertRaises(NotImplementedError):
-            gradf = egb_nlp.evaluate_grad_objective()
 
         c = egb_nlp.evaluate_constraints()
         comparison_c = np.asarray([-22], dtype=np.float64)
@@ -293,17 +285,6 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         egb_nlp.set_duals(np.asarray([21], dtype=np.float64))
         y = egb_nlp.get_duals()
         self.assertTrue(np.array_equal(y, np.asarray([21], dtype=np.float64)))
-
-        with self.assertRaises(NotImplementedError):
-            fac = egb_nlp.get_obj_factor()
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(42)
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(1)
-        with self.assertRaises(NotImplementedError):
-            f = egb_nlp.evaluate_objective()
-        with self.assertRaises(NotImplementedError):
-            gradf = egb_nlp.evaluate_grad_objective()
 
         c = egb_nlp.evaluate_constraints()
         comparison_c = np.asarray([22], dtype=np.float64)
@@ -458,17 +439,6 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         egb_nlp.set_duals(np.asarray([21, 5], dtype=np.float64))
         y = egb_nlp.get_duals()
         self.assertTrue(np.array_equal(y, np.asarray([21, 5], dtype=np.float64)))
-
-        with self.assertRaises(NotImplementedError):
-            fac = egb_nlp.get_obj_factor()
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(42)
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(1)
-        with self.assertRaises(NotImplementedError):
-            f = egb_nlp.evaluate_objective()
-        with self.assertRaises(NotImplementedError):
-            gradf = egb_nlp.evaluate_grad_objective()
 
         c = egb_nlp.evaluate_constraints()
         comparison_c = np.asarray([-16, -22], dtype=np.float64)
@@ -629,17 +599,6 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         egb_nlp.set_duals(np.asarray([21, 5], dtype=np.float64))
         y = egb_nlp.get_duals()
         self.assertTrue(np.array_equal(y, np.asarray([21, 5], dtype=np.float64)))
-
-        with self.assertRaises(NotImplementedError):
-            fac = egb_nlp.get_obj_factor()
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(42)
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(1)
-        with self.assertRaises(NotImplementedError):
-            f = egb_nlp.evaluate_objective()
-        with self.assertRaises(NotImplementedError):
-            gradf = egb_nlp.evaluate_grad_objective()
 
         c = egb_nlp.evaluate_constraints()
         comparison_c = np.asarray([16, 6], dtype=np.float64)
@@ -812,17 +771,6 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         egb_nlp.set_duals(np.asarray([21, 5, 6, 7], dtype=np.float64))
         y = egb_nlp.get_duals()
         self.assertTrue(np.array_equal(y, np.asarray([21, 5, 6, 7], dtype=np.float64)))
-
-        with self.assertRaises(NotImplementedError):
-            fac = egb_nlp.get_obj_factor()
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(42)
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(1)
-        with self.assertRaises(NotImplementedError):
-            f = egb_nlp.evaluate_objective()
-        with self.assertRaises(NotImplementedError):
-            gradf = egb_nlp.evaluate_grad_objective()
 
         c = egb_nlp.evaluate_constraints()
         comparison_c = np.asarray([-2, 26, -13, -22], dtype=np.float64)
@@ -2637,6 +2585,42 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
             m.dual[m.egb]['egb.output_constraints[o]'], -25.0, places=3
         )
         self.assertAlmostEqual(m.dual[m.egb]['egb.u2_con'], 62.5, places=3)
+
+    def test_has_hessian_support_false(self):
+        external_model = ex_models.PressureDropSingleOutput()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(range(external_model.n_inputs()))
+        m.gb = ExternalGreyBoxBlock()
+        m.gb.set_external_model(external_model, inputs=list(m.x.values()))
+        # Some random constraint to let us construct the NLP...
+        m.eq = pyo.Constraint(expr=sum(m.x.values()) == 1)
+        nlp = PyomoNLPWithGreyBoxBlocks(m)
+        self.assertFalse(nlp.has_hessian_support())
+
+    def test_has_hessian_support_true(self):
+        external_model = ex_models.PressureDropSingleOutputWithHessian()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(range(external_model.n_inputs()))
+        m.gb = ExternalGreyBoxBlock()
+        m.gb.set_external_model(external_model, inputs=list(m.x.values()))
+        # Some random constraint to let us construct the NLP...
+        m.eq = pyo.Constraint(expr=sum(m.x.values()) == 1)
+        nlp = PyomoNLPWithGreyBoxBlocks(m)
+        self.assertTrue(nlp.has_hessian_support())
+
+
+class TestGreyBoxObjectives(unittest.TestCase):
+    @unittest.skipIf(not cyipopt_available, "CyIpopt needed to run tests with solve")
+    def test_unconstrained(self):
+        solve_unconstrained()
+
+    @unittest.skipIf(not cyipopt_available, "CyIpopt needed to run tests with solve")
+    def test_constrained(self):
+        solve_constrained()
+
+    @unittest.skipIf(not cyipopt_available, "CyIpopt needed to run tests with solve")
+    def test_constrained_with_hessian(self):
+        solve_constrained_with_hessian()
 
 
 if __name__ == '__main__':

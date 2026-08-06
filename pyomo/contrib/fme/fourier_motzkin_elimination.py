@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.core import (
     Var,
@@ -730,12 +728,9 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                 continue
             # deactivate the constraint
             projected_constraints[i].deactivate()
-            m.del_component(obj)
-            # make objective to maximize its infeasibility
-            obj = Objective(
-                expr=projected_constraints[i].body - projected_constraints[i].lower
-            )
-            m.add_component(obj_name, obj)
+            # Our constraint looks like: 0 <= a^Tx - b, so make objective to
+            # maximize its infeasibility
+            obj.expr = projected_constraints[i].body - projected_constraints[i].lower
             results = solver_factory.solve(m)
             if results.solver.termination_condition == TerminationCondition.unbounded:
                 obj_val = -float('inf')
@@ -753,7 +748,6 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                 obj_val = value(obj)
             # if we couldn't make it infeasible, it's useless
             if obj_val >= tolerance:
-                m.del_component(projected_constraints[i])
                 del projected_constraints[i]
             else:
                 projected_constraints[i].activate()

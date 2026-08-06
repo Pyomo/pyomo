@@ -1,17 +1,15 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.common.dependencies import numpy as numpy, numpy_available
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo.common import unittest
 import pyomo.opt
 
@@ -57,7 +55,7 @@ class TestLPEnum:
     def test_3d_polyhedron(self, mip_solver):
         m = tc.get_3d_polyhedron_problem()
         m.o.deactivate()
-        m.obj = pe.Objective(expr=m.x[0] + m.x[1] + m.x[2])
+        m.obj = pyo.Objective(expr=m.x[0] + m.x[1] + m.x[2])
 
         sols = lp_enum.enumerate_linear_solutions(m, solver=mip_solver)
         assert len(sols) == 2
@@ -67,7 +65,7 @@ class TestLPEnum:
     def test_3d_polyhedron(self, mip_solver):
         m = tc.get_3d_polyhedron_problem()
         m.o.deactivate()
-        m.obj = pe.Objective(expr=m.x[0] + 2 * m.x[1] + 3 * m.x[2])
+        m.obj = pyo.Objective(expr=m.x[0] + 2 * m.x[1] + 3 * m.x[2])
 
         sols = lp_enum.enumerate_linear_solutions(m, solver=mip_solver)
         assert len(sols) == 2
@@ -88,9 +86,9 @@ class TestLPEnum:
     @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_pentagonal_pyramid(self, mip_solver):
         n = tc.get_pentagonal_pyramid_mip()
-        n.o.sense = pe.minimize
-        n.x.domain = pe.Reals
-        n.y.domain = pe.Reals
+        n.o.sense = pyo.minimize
+        n.x.domain = pyo.Reals
+        n.y.domain = pyo.Reals
 
         sols = lp_enum.enumerate_linear_solutions(n, solver=mip_solver, tee=False)
         for s in sols:

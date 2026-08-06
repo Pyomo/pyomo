@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 from weakref import ref as weakref_ref, ReferenceType
@@ -19,6 +17,7 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.boolean_value import BooleanValue
 from pyomo.core.expr import GetItemExpression
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -28,13 +27,12 @@ from pyomo.core.base.set import Set, BooleanSet, Binary
 from pyomo.core.base.util import is_functor
 from pyomo.core.base.var import Var
 
-
 logger = logging.getLogger('pyomo.core')
 
 _logical_var_types = {bool, type(None)}
 
 
-class _DeprecatedImplicitAssociatedBinaryVariable(object):
+class _DeprecatedImplicitAssociatedBinaryVariable:
     __slots__ = ('_boolvar',)
 
     def __init__(self, boolvar):
@@ -155,8 +153,9 @@ class BooleanVarData(ComponentData, BooleanValue):
     def clear(self):
         self.value = None
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Compute the value of this variable."""
+        exception = _type_check_exception_arg(self, exception)
         return self.value
 
     @property
@@ -455,7 +454,7 @@ class BooleanVar(IndexedComponent):
                 ("Size", len(self)),
                 ("Index", self._index_set if self.is_indexed() else None),
             ],
-            self._data.items(),
+            self.items,
             ("Value", "Fixed", "Stale"),
             lambda k, v: [v.value, v.fixed, v.stale],
         )

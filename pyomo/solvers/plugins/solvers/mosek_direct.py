@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 import re
@@ -163,21 +161,28 @@ class MOSEKDirect(DirectSolver):
         for key, option in self.options.items():
             try:
                 param = key.split('.')
-                if param[0] == 'mosek':
-                    param.pop(0)
-                param = getattr(mosek, param[0])(param[1])
-                if 'sparam' in key.split('.'):
-                    self._solver_model.putstrparam(param, option)
-                elif 'dparam' in key.split('.'):
-                    self._solver_model.putdouparam(param, option)
-                elif 'iparam' in key.split('.'):
-                    if isinstance(option, str):
-                        option = option.split('.')
-                        if option[0] == 'mosek':
-                            option.pop('mosek')
-                        option = getattr(mosek, option[0])(option[1])
-                    else:
+                if key == param[0]:
+                    self._solver_model.putparam(key, option)
+                else:
+                    if param[0] == 'mosek':
+                        param.pop(0)
+                    assert (
+                        len(param) == 2
+                    ), "unrecognized MOSEK parameter name '{}'".format(key)
+                    param = getattr(mosek, param[0])(param[1])
+                    if 'sparam.' in key:
+                        self._solver_model.putstrparam(param, option)
+                    elif 'dparam.' in key:
+                        self._solver_model.putdouparam(param, option)
+                    elif 'iparam.' in key:
+                        if isinstance(option, str):
+                            option = option.split('.')
+                            if option[0] == 'mosek':
+                                option.pop(0)
+                            option = getattr(mosek, option[0])(option[1])
                         self._solver_model.putintparam(param, option)
+                    else:
+                        raise ValueError(f"unrecognized MOSEK parameter name '{key}'")
             except (TypeError, AttributeError):
                 raise
         try:
@@ -1068,7 +1073,7 @@ class MOSEKDirect(DirectSolver):
         for pyomo_var, mosek_var in self._pyomo_var_to_solver_var_map.items():
             if pyomo_var.value is not None:
                 self._solver_model.putxxslice(
-                    self._whichsol, mosek_var, mosek_var + 1, [(pyomo_var.value)]
+                    self._whichsol, mosek_var, mosek_var + 1, [pyomo_var.value]
                 )
 
         if (self._version[0] > 9) & (self._whichsol == mosek.soltype.itg):

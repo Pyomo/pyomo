@@ -1,16 +1,15 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from io import StringIO
 import logging
+import math
 
 from pyomo.common.dependencies import attempt_import, scipy_available, numpy_available
 from pyomo.common.log import LoggingIntercept
@@ -19,6 +18,8 @@ from pyomo.contrib.piecewise import PiecewiseLinearFunction
 from pyomo.contrib.piecewise.transform.nonlinear_to_pwl import (
     NonlinearToPWL,
     DomainPartitioningMethod,
+    lineartree_available,
+    sklearn_available,
 )
 from pyomo.core.base.expression import _ExpressionData
 from pyomo.core.expr.compare import (
@@ -33,6 +34,7 @@ from pyomo.environ import (
     Constraint,
     Integers,
     TransformationFactory,
+    exp,
     log,
     Objective,
     Reals,
@@ -45,8 +47,6 @@ gurobi_available = (
     SolverFactory('gurobi').available(exception_flag=False)
     and SolverFactory('gurobi').license_is_valid()
 )
-lineartree_available = attempt_import('lineartree')[1]
-sklearn_available = attempt_import('sklearn.linear_model')[1]
 
 
 class TestNonlinearToPWL_1D(unittest.TestCase):
@@ -116,8 +116,8 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         self.assertEqual(len(pwlf), 1)
         pwlf = pwlf[0]
 
-        points = [(1.0009,), (5.5,), (9.9991,)]
-        (x1, x2, x3) = 1.0009, 5.5, 9.9991
+        points = [(1,), (5.5,), (10,)]
+        x1, x2, x3 = 1, 5.5, 10
         self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
 
     @unittest.skipUnless(numpy_available, "Numpy is not available")
@@ -142,8 +142,8 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         self.assertEqual(len(pwlf), 1)
         pwlf = pwlf[0]
 
-        points = [(1.0009,), (5.5,), (9.9991,)]
-        (x1, x2, x3) = 1.0009, 5.5, 9.9991
+        points = [(1,), (5.5,), (10,)]
+        x1, x2, x3 = 1, 5.5, 10
 
         self.check_pw_linear_log_x(twin, pwlf, x1, x2, x3)
 
@@ -197,8 +197,8 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         self.assertEqual(len(pwlf), 1)
         pwlf = pwlf[0]
 
-        points = [(1.0009,), (5.5,), (9.9991,)]
-        (x1, x2, x3) = 1.0009, 5.5, 9.9991
+        points = [(1,), (5.5,), (10,)]
+        x1, x2, x3 = 1, 5.5, 10
         self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
 
         # quad is not
@@ -228,8 +228,8 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         self.assertEqual(len(pwlf), 1)
         pwlf = pwlf[0]
 
-        points = [(1.0009,), (5.5,), (9.9991,)]
-        (x1, x2, x3) = 1.0009, 5.5, 9.9991
+        points = [(1,), (5.5,), (10,)]
+        x1, x2, x3 = 1, 5.5, 10
         self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
 
         # quad is not
@@ -294,7 +294,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
     def test_do_not_additively_decompose_below_min_dimension(self):
         m = ConcreteModel()
         m.x = Var([0, 1, 2, 3, 4], bounds=(-4, 5))
-        m.c = Constraint(expr=m.x[0] * m.x[1] + m.x[3] <= 4)
+        m.c = Constraint(expr=m.x[0] * m.x[1] + m.x[3] ** 3 <= 4)
 
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         n_to_pwl.apply_to(
@@ -347,7 +347,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(['rocky', 'bullwinkle'], domain=Binary)
         m.y = Var(domain=Integers, bounds=(0, 5))
-        m.c = Constraint(expr=m.x['rocky'] * m.x['bullwinkle'] + m.y <= 4)
+        m.c = Constraint(expr=m.x['rocky'] * m.x['bullwinkle'] + m.y**2 <= 4)
 
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         output = StringIO()
@@ -380,7 +380,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(['rocky', 'bullwinkle'], domain=Binary)
         m.y = Var(domain=Integers, bounds=(0, 5))
-        m.c = Constraint(expr=m.x['rocky'] * m.x['bullwinkle'] + m.y <= 4)
+        m.c = Constraint(expr=m.x['rocky'] * m.x['bullwinkle'] + m.y**2 <= 4)
 
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         output = StringIO()
@@ -406,6 +406,34 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
             for y in [0, 1]:
                 for z in [0, 1, 5]:
                     self.assertIn((x, y, z), points)
+
+    @unittest.skipUnless(numpy_available, "Numpy is not available")
+    @unittest.skipUnless(scipy_available, "Scipy is not available")
+    def test_do_not_pwl_linear_part(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-3, 4))
+        m.y = Var(initialize=7)
+        m.c = Constraint(expr=m.y >= exp(m.x) + m.x**3)
+
+        # we want to make sure m.y does not show up in the PWL function
+        # even if additively_decompose is False
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        num_points = 5
+        n_to_pwl.apply_to(
+            m,
+            num_points=num_points,
+            additively_decompose=False,
+            domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
+        )
+
+        transformed_c = n_to_pwl.get_transformed_component(m.c)
+        self.assertIsInstance(transformed_c.body, SumExpression)
+        assertExpressionsEqual(self, transformed_c.body.args[0], -m.y)
+        pwlf = transformed_c.body.args[1].expr.pw_linear_function
+        for tup in pwlf._points:
+            self.assertEqual(len(tup), 1)
+            x = tup[0]
+            self.assertAlmostEqual(pwlf(x), math.exp(x) + x**3)
 
 
 class TestNonlinearToPWL_2D(unittest.TestCase):
@@ -473,10 +501,10 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
         self.assertEqual(len(pwlf), 1)
         pwlf = pwlf[0]
 
-        x1 = 0.00030000000000000003
-        x2 = 2.9997
-        y1 = 1.0006
-        y2 = 6.9994
+        x1 = 0
+        x2 = 3
+        y1 = 1
+        y2 = 7
 
         self.check_pw_linear_paraboloid(m, pwlf, x1, x2, y1, y2)
 
@@ -503,10 +531,10 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
         self.assertEqual(len(pwlf), 1)
         pwlf = pwlf[0]
 
-        x1 = 0.00030000000000000003
-        x2 = 2.9997
-        y1 = 1.0006
-        y2 = 6.9994
+        x1 = 0
+        x2 = 3
+        y1 = 1
+        y2 = 7
 
         self.check_pw_linear_paraboloid(twin, pwlf, x1, x2, y1, y2)
 
@@ -534,10 +562,10 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
         self.assertEqual(len(pwlf), 1)
         pwlf = pwlf[0]
 
-        x1 = 0.00030000000000000003
-        x2 = 2.9997
-        y1 = 1.0006
-        y2 = 6.9994
+        x1 = 0
+        x2 = 3
+        y1 = 1
+        y2 = 7
 
         self.check_pw_linear_paraboloid(m, pwlf, x1, x2, y1, y2)
 
@@ -602,7 +630,7 @@ class TestLinearTreeDomainPartitioning(unittest.TestCase):
             # pretty close to m.x, but we're a bit off because we don't have 0
             # as a breakpoint.
             0.9833360108369479 * m.x + 0.16663989163052034,
-            places=7,
+            places=6,
         )
 
     def test_linear_model_tree_random(self):
@@ -657,7 +685,7 @@ class TestLinearTreeDomainPartitioning(unittest.TestCase):
             pwlf._simplices,
             [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8)],
         )
-        self.assertEqual(
+        self.assertStructuredAlmostEqual(
             pwlf._points,
             [
                 (-10,),
@@ -670,6 +698,7 @@ class TestLinearTreeDomainPartitioning(unittest.TestCase):
                 (2.15597,),
                 (10,),
             ],
+            places=4,
         )
         self.assertEqual(len(pwlf._linear_functions), 8)
         for i in range(3):
@@ -680,7 +709,7 @@ class TestLinearTreeDomainPartitioning(unittest.TestCase):
             # pretty close to - m.x, but we're a bit off because we don't have 0
             # as a breakpoint.
             -0.9851979299618323 * m.x + 0.12006477080409184,
-            places=7,
+            places=6,
         )
         for i in range(4, 8):
             assertExpressionsEqual(self, pwlf._linear_functions[i](m.x), m.x)
@@ -717,8 +746,8 @@ class TestNonlinearToPWLIntegration(unittest.TestCase):
         # two terms
         self.assertIsInstance(new_obj.expr, SumExpression)
         self.assertEqual(len(new_obj.expr.args), 2)
-        first = new_obj.expr.args[0]
-        pwlf = first.expr.pw_linear_function
+        second = new_obj.expr.args[1]
+        pwlf = second.expr.pw_linear_function
         all_pwlf = list(
             xm.component_data_objects(PiecewiseLinearFunction, descend_into=True)
         )
@@ -726,8 +755,8 @@ class TestNonlinearToPWLIntegration(unittest.TestCase):
         # It is on the active tree.
         self.assertIs(pwlf, all_pwlf[0])
 
-        second = new_obj.expr.args[1]
-        assertExpressionsEqual(self, second, 5.04 * xm.x1)
+        first = new_obj.expr.args[0]
+        assertExpressionsEqual(self, first, 5.04 * xm.x1)
 
         objs = n_to_pwl.get_transformed_nonlinear_objectives(xm)
         self.assertEqual(len(objs), 0)

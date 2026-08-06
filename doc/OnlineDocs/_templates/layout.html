@@ -1,0 +1,15 @@
+{% extends "!layout.html" %}
+{# Explicitly put RTD's ads in the sidebar.  If we don't specify a
+   location, RTD puts them at the bottom of the page content in a
+   style that is easily visually confused with the documentation
+   content.
+#}
+{%- block navigation %}
+{{ super() }}
+<div id="side-ad-box" style="max-width:90%; margin-left: auto; margin-right: auto;">
+  <hr/>
+  <div id="readthedocs-ea" class="raised ethical-rtd ethical-dark-theme">
+    <div id="ethical-ad-placement"></div>
+  </div
+</div>
+{% endblock %}

@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from io import StringIO
 
@@ -114,22 +112,25 @@ class TestDisjunction(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError,
             "Unexpected term for Disjunction 'dd'.\n    "
-            "Expected a Disjunct object, relational expression, or iterable of\n"
-            "    relational expressions but got 'IndexedDisjunct'",
+            "Expected a Disjunct object, relational or logical "
+            "expression, or\n    iterable of relational/logical "
+            "expressions but got 'IndexedDisjunct'",
         ):
             m.dd = Disjunction(expr=[m.d])
         with self.assertRaisesRegex(
             ValueError,
             "Unexpected term for Disjunction 'ee'.\n    "
-            "Expected a Disjunct object, relational expression, or iterable of\n"
-            "    relational expressions but got 'str' in 'list'",
+            "Expected a Disjunct object, relational or logical "
+            "expression, or\n    iterable of relational/logical "
+            "expressions but got 'str' in 'list'",
         ):
             m.ee = Disjunction(expr=[['a']])
         with self.assertRaisesRegex(
             ValueError,
             "Unexpected term for Disjunction 'ff'.\n    "
-            "Expected a Disjunct object, relational expression, or iterable of\n"
-            "    relational expressions but got 'str'",
+            "Expected a Disjunct object, relational or logical "
+            "expression, or\n    iterable of relational/logical "
+            "expressions but got 'str'",
         ):
             m.ff = Disjunction(expr=['a'])
 

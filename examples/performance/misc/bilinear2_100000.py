@@ -1,29 +1,27 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
 
 def create_model(N):
-    model = ConcreteModel()
+    model = pyo.ConcreteModel()
 
-    model.A = RangeSet(N)
-    model.x = Var(model.A, bounds=(1, 2))
+    model.A = pyo.RangeSet(N)
+    model.x = pyo.Var(model.A, bounds=(1, 2))
 
-    with nonlinear_expression as expr:
+    with pyo.nonlinear_expression as expr:
         for i in model.A:
             if not (i + 1) in model.A:
                 continue
             expr += i * (model.x[i] * model.x[i + 1] + 1)
-    model.obj = Objective(expr=expr)
+    model.obj = pyo.Objective(expr=expr)
 
     return model
 

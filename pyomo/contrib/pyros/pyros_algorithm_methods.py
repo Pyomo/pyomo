@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 """
 Methods for execution of the main PyROS cutting set algorithm.
@@ -180,6 +178,10 @@ def ROSolver_iterative_solve(model_data):
                 all_sep_problems_solved=None,
                 global_separation=None,
                 elapsed_time=get_main_elapsed_time(model_data.timing),
+                master_backup_solver=master_soln.backup_solver_used,
+                master_feasibility_success=master_soln.feasibility_problem_success,
+                separation_backup_local_solver=None,
+                separation_backup_global_solver=None,
             )
             iter_log_record.log(config.progress_logger.info)
             return GRCSResults(
@@ -226,6 +228,10 @@ def ROSolver_iterative_solve(model_data):
                 all_sep_problems_solved=None,
                 global_separation=None,
                 elapsed_time=model_data.timing.get_main_elapsed_time(),
+                master_backup_solver=master_soln.backup_solver_used,
+                master_feasibility_success=master_soln.feasibility_problem_success,
+                separation_backup_local_solver=None,
+                separation_backup_global_solver=None,
             )
             iter_log_record.log(config.progress_logger.info)
             return GRCSResults(
@@ -269,10 +275,23 @@ def ROSolver_iterative_solve(model_data):
             all_sep_problems_solved=all_sep_problems_solved,
             global_separation=separation_results.solved_globally,
             elapsed_time=get_main_elapsed_time(model_data.timing),
+            master_backup_solver=master_soln.backup_solver_used,
+            master_feasibility_success=master_soln.feasibility_problem_success,
+            separation_backup_local_solver=separation_results.backup_local_solver_used,
+            separation_backup_global_solver=(
+                separation_results.backup_global_solver_used
+            ),
         )
 
         # terminate on time limit
         if separation_results.time_out or separation_results.subsolver_error:
+            # report PyROS failure to find violated constraint for subsolver error
+            if separation_results.subsolver_error:
+                config.progress_logger.warning(
+                    "PyROS failed to find a constraint violation and "
+                    "will terminate with sub-solver error."
+                )
+
             pyros_term_cond = (
                 pyrosTerminationCondition.time_out
                 if separation_results.time_out
@@ -320,6 +339,7 @@ def ROSolver_iterative_solve(model_data):
             from_block=nominal_master_blk,
             clone_first_stage_components=False,
         )
+
         separation_data.points_added_to_master[(k + 1, 0)] = (
             separation_results.violating_param_realization
         )

@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import pyomo.environ as pyo
 from pyomo.environ import (
@@ -40,6 +38,7 @@ opt_gms = SolverFactory('gams', solver_io='gms')
 gamsgms_available = opt_gms.available(exception_flag=False)
 
 
+@unittest.pytest.mark.solver("gams")
 class GAMSTests(unittest.TestCase):
     @unittest.skipIf(
         not gamspy_available, "The 'gams' python bindings are not available"
@@ -355,7 +354,7 @@ class GAMSLogfileTestBase(unittest.TestCase):
         """Clean up temporary directory after tests are over."""
         shutil.rmtree(self.tmpdir)
 
-    def _check_logfile(self, exists=True):
+    def _check_logfile(self, exists=True, logfile=None):
         """Check for logfiles existence and contents.
 
         exists=True:
@@ -364,12 +363,14 @@ class GAMSLogfileTestBase(unittest.TestCase):
             Optionally check that the logfiles contents is equal to this value.
 
         """
+        if not logfile:
+            logfile = self.logfile
         if not exists:
-            self.assertFalse(os.path.exists(self.logfile))
+            self.assertFalse(os.path.exists(logfile))
             return
 
-        self.assertTrue(os.path.exists(self.logfile))
-        with open(self.logfile) as f:
+        self.assertTrue(os.path.exists(logfile))
+        with open(logfile) as f:
             logfile_contents = f.read()
         self.assertIn(self.characteristic_output_string, logfile_contents)
 
@@ -387,6 +388,7 @@ class GAMSLogfileTestBase(unittest.TestCase):
 
 
 @unittest.skipIf(not gamsgms_available, "The 'gams' executable is not available")
+@unittest.pytest.mark.solver("gams")
 class GAMSLogfileGmsTests(GAMSLogfileTestBase):
     """Test class for testing permultations of tee and logfile options.
 
@@ -416,6 +418,15 @@ class GAMSLogfileGmsTests(GAMSLogfileTestBase):
         self._check_stdout(output.getvalue(), exists=False)
         self._check_logfile(exists=True)
 
+    def test_logfile_with_spaces(self):
+        # In response to Issue 3579
+        logfile_with_spaces = os.path.join(self.tmpdir, "My File.log")
+        with SolverFactory("gams", solver_io="gms") as opt:
+            with capture_output() as output:
+                opt.solve(self.m, logfile=logfile_with_spaces)
+        self._check_stdout(output.getvalue(), exists=False)
+        self._check_logfile(exists=True, logfile=logfile_with_spaces)
+
     def test_logfile_relative(self):
         cwd = os.getcwd()
         with TempfileManager:
@@ -441,6 +452,7 @@ class GAMSLogfileGmsTests(GAMSLogfileTestBase):
 
 
 @unittest.skipIf(not gamspy_available, "The 'gams' python bindings are not available")
+@unittest.pytest.mark.solver("gams")
 class GAMSLogfilePyTests(GAMSLogfileTestBase):
     """Test class for testing permultations of tee and logfile options.
 
@@ -469,6 +481,15 @@ class GAMSLogfilePyTests(GAMSLogfileTestBase):
                 opt.solve(self.m, logfile=self.logfile)
         self._check_stdout(output.getvalue(), exists=False)
         self._check_logfile(exists=True)
+
+    def test_logfile_with_spaces(self):
+        # In response to Issue 3579
+        logfile_with_spaces = os.path.join(self.tmpdir, "My File.log")
+        with SolverFactory("gams", solver_io="gms") as opt:
+            with capture_output() as output:
+                opt.solve(self.m, logfile=logfile_with_spaces)
+        self._check_stdout(output.getvalue(), exists=False)
+        self._check_logfile(exists=True, logfile=logfile_with_spaces)
 
     def test_logfile_relative(self):
         cwd = os.getcwd()

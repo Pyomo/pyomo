@@ -6,7 +6,7 @@ Publications
    Note to developers: For these references, we will use the package
    name followed by a description of the publication type.
 
-These publications describe various Pyomo capabilitites or subpackages:
+These publications describe various Pyomo capabilities or subpackages:
 
 .. [Pyomo-paper] William E. Hart, Jean-Paul Watson, David L. Woodruff.
    "Pyomo: modeling and solving mathematical programs in Python,"
@@ -29,11 +29,19 @@ These publications describe various Pyomo capabilitites or subpackages:
    Vol. 67. Springer. 2021.  DOI `10.1007/978-3-030-68928-5
    <https://doi.org/10.1007/978-3-030-68928-5>`_
 
+..
+   NOTE: When adding a new edition of the Pyomo Book, search the codebase
+   both for citation references "[PyomoBookIII]" and references "pyomobookiii"
+
 .. [PyomoDAE-paper] Bethany Nicholson, John D. Siirola, Jean-Paul Watson,
    Victor M. Zavala, and Lorenz T. Biegler. "pyomo.dae: a modeling and
    automatic discretization framework for optimization with differential
    and algebraic equations", *Mathematical Programming Computation*, 10(2),
    187-223. 2018.
+
+.. [PyomoDOE-paper] Wang, Jialu, and Alexander W. Dowling. "Pyomo.DOE: An open‐source
+   package for model‐based design of experiments in Python", *AIChE Journal*,
+   68(12), e17813. 2022. DOI `10.1002/aic.17813 <https://doi.org/10.1002/aic.17813>`_
 
 .. [Parmest-paper] Katherine A. Klise, Bethany L. Nicholson, Andrea
    Staid, David L.Woodruff.  "Parmest: Parameter Estimation Via Pyomo."
@@ -89,6 +97,15 @@ Bibliography
    *SIAM Journal on Applied Mathematics* 23(1), 61-19, 1972.
    DOI `10.1137/0123007 <https://doi.org/10.1137/0123007>`_
 
+.. [BS04] D. Bertsimas and M. Sim. "The price of robustness",
+   *Operations research*, 52(1), 35-53, 2004. DOI
+   `10.1287/opre.1030.0065 <https://doi.org/10.1287/opre.1030.0065>`_.
+
+.. [Dje20] H. Djelassi. "Discretization-based algorithms for the
+   global solution of hierarchical programs".
+   Dissertation, Rheinisch-Westfälische Technische Hochschule Aachen, 2020.
+   DOI `10.18154/RWTH-2020-09163 <https://doi.org/10.18154/RWTH-2020-09163>`_.
+
 .. [FGK02] R. Fourer, D. M. Gay, and B. W. Kernighan. *AMPL: A Modeling
    Language for Mathematical Programming*, 2nd Edition, Duxbury
    Press, 2002.
@@ -103,6 +120,10 @@ Bibliography
    of discrete-continuous optimization models through generalized
    disjunctive programming", *AIChE Journal*, 59(9),
    3276–3295. 2013.  DOI `10.1002/aic.14088 <https://doi.org/10.1002/aic.14088>`_
+
+.. [HG83] K. P. Halemane and I. E. Grossmann.  "Optimal process design
+   under uncertainty", *AIChE Journal*, 29(3), 425--433. 1983.
+   DOI `10.1002/aic.690290312 <https://doi.org/10.1002/aic.690290312>`_
 
 .. [IAE+21] N. M. Isenberg, P. Akula, J. C. Eslick, D. Bhattacharyya,
    D. C. Miller, and C. E. Gounaris.  "A generalized cutting‐set approach
@@ -121,12 +142,18 @@ Bibliography
    Intermediate Relaxations between big-M and Convex Hull
    Reformulations". 2021.  https://arxiv.org/abs/2101.12708
 
+.. [MHJ+25] M. Mundt, W. E. Hart, E. S. Johnson, B. Nicholson, and
+   J. D. Siirola. "Pyomo: Accidentally outrunning the bear", *Patterns*,
+   6(7), 101311. 2025. ISSN 2666-3899. DOI
+   `10.1016/j.patter.2025.101311
+   <https://doi.org/10.1016/j.patter.2025.101311>`_
+
 .. [NW88] G. L. Nemhauser and L. A. Wolsey. *Integer and combinatorial
    optimization*, New York: Wiley. 1988.
 
 .. [RB01] W. C. Rooney and L. T. Biegler. "Design for model parameter
    uncertainty using nonlinear confidence regions", *AIChE Journal*,
-   47(8). 2001.
+   47(8). 2001.  DOI `10.1002/aic.690470811 <https://doi.org/10.1002/aic.690470811>`_
 
 .. [RG94] R. Raman and I. E. Grossmann. "Modelling and computational
    techniques for logic based integer programming", *Computers and
@@ -140,6 +167,11 @@ Bibliography
    1032–1037. 2003. DOI `10.1016/S1570-7946(03)80444-3
    <https://doi.org/10.1016/S1570-7946(03)80444-3>`_
 
+.. [SIS+26] J. A. F. Sherman, N. M. Isenberg, J. D. Siirola,
+   and C. E. Gounaris. "PyROS: The Pyomo Robust Optimization Solver".
+   Optimization Online, Preprint. 2026.
+   https://optimization-online.org/2026/06/pyros-the-pyomo-robust-optimization-solver/
+
 .. [TG15] F. Trespalacios and I. E. Grossmann. "Improved Big-M
    reformulation for generalized disjunctive programs", *Computers and
    Chemical Engineering*, 76, 98–103. 2015.  DOI
@@ -149,3 +181,14 @@ Bibliography
 .. [VAN10] J. P. Vielma, S. Ahmed, and G. Nemhauser. "Mixed-Integer
    Models for Non-separable Piecewise Linear Optimization: Unifying
    framework and Extensions", *Operations Research* 58(2), 303-315. 2010.
+
+.. [Vie15] J. P. Vielma. "Mixed Integer Linear Programming Formluation
+   Techniques", *SIAM Review*, 57(1), 3-57.  2015.  DOI
+   `10.1137/130915303 <https://doi.org/10.1137/130915303>`_
+
+.. [YLH18] Y. Yuan, Z. Li, and B. Huang.  "Nonlinear robust optimization
+   for process design", *AIChE Journal*, 64(2), 481--494. 2018.
+   DOI `10.1002/aic.15950 <https://doi.org/10.1002/aic.15950>`_
+
+.. [NW99] Nocedal, Jorge, and Stephen J. Wright, eds. Numerical
+   optimization. New York, NY: Springer New York, 1999.

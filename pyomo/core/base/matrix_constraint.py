@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 
 import logging
@@ -15,7 +13,9 @@ import weakref
 
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
+from pyomo.common.modeling import NOTSET
 from pyomo.core.base.set_types import Any
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.numeric_expr import LinearExpression
 from pyomo.core.base.component import ModelComponentFactory
@@ -23,7 +23,6 @@ from pyomo.core.base.constraint import IndexedConstraint, ConstraintData
 from pyomo.repn.standard_repn import StandardRepn
 
 from collections.abc import Mapping
-
 
 logger = logging.getLogger('pyomo.core')
 
@@ -130,8 +129,9 @@ class _MatrixConstraintData(ConstraintData):
     # possible
     #
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Compute the value of the body of this constraint."""
+        exception = _type_check_exception_arg(self, exception)
         comp = self.parent_component()
         index = self._index
         data = comp._A_data

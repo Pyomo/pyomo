@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 
 import os
@@ -42,7 +40,7 @@ logger = logging.getLogger('pyomo.solvers')
 
 
 def _validate_file_name(cplex, filename, description):
-    """Validate filenames against the set of allowable chaacters in CPLEX.
+    """Validate filenames against the set of allowable characters in CPLEX.
 
     Returns the filename, possibly enclosed in double-quotes, or raises
     a ValueError is unallowable characters are found.
@@ -132,7 +130,7 @@ class CPLEX(OptSolver):
         return opt
 
 
-class ORDFileSchema(object):
+class ORDFileSchema:
     HEADER = "* ENCODING=ISO-8859-1\nNAME             Priority Order\n"
     FOOTER = "ENDATA\n"
 

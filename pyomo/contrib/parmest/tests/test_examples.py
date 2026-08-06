@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import pyomo.common.unittest as unittest
 import pyomo.contrib.parmest.parmest as parmest
@@ -33,18 +31,6 @@ class TestRooneyBieglerExamples(unittest.TestCase):
     def tearDownClass(self):
         pass
 
-    def test_model(self):
-        from pyomo.contrib.parmest.examples.rooney_biegler import rooney_biegler
-
-        rooney_biegler.main()
-
-    def test_model_with_constraint(self):
-        from pyomo.contrib.parmest.examples.rooney_biegler import (
-            rooney_biegler_with_constraint,
-        )
-
-        rooney_biegler_with_constraint.main()
-
     @unittest.skipUnless(pynumero_ASL_available, "test requires libpynumero_ASL")
     @unittest.skipUnless(seaborn_available, "test requires seaborn")
     def test_parameter_estimation_example(self):
@@ -67,6 +53,23 @@ class TestRooneyBieglerExamples(unittest.TestCase):
         )
 
         likelihood_ratio_example.main()
+
+    def test_regularization_example(self):
+        from pyomo.contrib.parmest.examples.rooney_biegler import regularization_example
+
+        results = regularization_example.main()
+        # Keep this as a lightweight contract test: example must return both
+        # regularization modes with expected outputs
+        self.assertIn("L2", results)
+
+        l2_obj, l2_theta, _ = results["L2"]
+
+        # expected values for the regularized example are close to the reference values
+        # (asymptote ~ 19.14, rate_constant ~ 0.53), which are the same as the unregularized example
+        relative_error = abs(l2_theta['asymptote'] - 19.1426) / 19.1426
+        self.assertTrue(relative_error < 0.01)
+        relative_error = abs(l2_theta['rate_constant'] - 0.5311) / 0.5311
+        self.assertTrue(relative_error < 0.01)
 
 
 @unittest.skipUnless(pynumero_ASL_available, "test requires libpynumero_ASL")
@@ -193,6 +196,15 @@ class TestReactorDesignExamples(unittest.TestCase):
         from pyomo.contrib.parmest.examples.reactor_design import datarec_example
 
         datarec_example.main()
+
+    def test_update_suffix_example(self):
+        from pyomo.contrib.parmest.examples.reactor_design import update_suffix_example
+
+        suffix_obj, new_vals, new_var_vals = update_suffix_example.main()
+
+        # Check that the suffix object has been updated correctly
+        for i, v in enumerate(new_var_vals):
+            self.assertAlmostEqual(new_var_vals[i], new_vals[i], places=6)
 
 
 if __name__ == "__main__":

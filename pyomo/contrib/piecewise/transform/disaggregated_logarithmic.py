@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.contrib.piecewise.transform.piecewise_linear_transformation_base import (
     PiecewiseLinearTransformationBase,
@@ -46,7 +44,9 @@ class DisaggregatedLogarithmicMIPTransformation(PiecewiseLinearTransformationBas
 
     # Implement to use PiecewiseLinearTransformationBase. This function returns the Var
     # that replaces the transformed piecewise linear expr
-    def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):
+    def _transform_multiple_segment_pw_linear_expr(
+        self, pw_expr, pw_linear_func, transformation_block
+    ):
         # Get a new Block for our transformation in transformation_block.transformed_functions,
         # which is a Block(Any). This is where we will put our new components.
         transBlock = transformation_block.transformed_functions[

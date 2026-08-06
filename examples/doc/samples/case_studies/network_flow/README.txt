@@ -14,17 +14,17 @@ We begin this model as we always do
 
 {{{
 #!python
-from pyomo.core import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 }}}
 
 Now we must define our sets.  In the transportation problem, we had a set for the warehouses and a set for the stores.  In this example, we're going to be more sophisticated: we're going to just have one set for all the locations. Additionally, we're going to have one set that holds all of the different routes between these locations.  This construction will help later when creating the constraints and is a more typical model for a network flow problem: we care about the nodes and arcs, so it makes sense to make those the sets.  The code is a little different than what we've done before.
 
 {{{
 #!python
-model.places = Set()
-model.routes = Set(within=model.places*model.places)
+model.places = pyo.Set()
+model.routes = pyo.Set(within=model.places*model.places)
 }}}
 
 While the definition for the set "places" should be familiar, how we defined "routes" is a bit more foreign.  By saying 
@@ -38,25 +38,25 @@ The parameters are fairly straightforward after this point.  Each place has an a
 
 {{{
 #!python
-model.supply = Param(model.places)
-model.demand = Param(model.places)
-model.cost = Param(model.routes)
-model.minimum = Param(model.routes)
-model.maximum = Param(model.routes)
+model.supply = pyo.Param(model.places)
+model.demand = pyo.Param(model.places)
+model.cost = pyo.Param(model.routes)
+model.minimum = pyo.Param(model.routes)
+model.maximum = pyo.Param(model.routes)
 }}}
 
 Now to define our variables.  We're trying to figure out how much to ship along any route, so creating an amount variable over the set of routes seems logical.  As in the previous examples, we restrict it to non-negative numbers as shipping negative shoes is impossible and illogical.
 
 {{{
 #!python
-model.amount = Var(model.routes, within=NonNegativeReals)
+model.amount = pyo.Var(model.routes, within=pyo.NonNegativeReals)
 }}}
 
 In the transportation problem, we were lucky and (after we added a bit more supply) the total supply was the same as the total demand.  But what if we had more supply than demand?  It would be hard for a user to track down where that extra supply is; they would need to carefully look through each warehouse and store, calculating how much is coming in compared to the location's supply and demand to find where the extra supplies went.  To make it simpler for the user in this problem to find the extra amounts, we introduce another variable: excess.  At the end, when we solve the problem, the solution will also include an "excess" section that tells us how many shoes are left over at each location so we won't lose track of any of our supply.  Note that excess is a variable over the locations and shouldn't be negative.  From here, the implementation is similar to the amount variable.
 
 {{{
 #!python
-model.excess = Var(model.places, within=NonNegativeReals)
+model.excess = pyo.Var(model.places, within=pyo.NonNegativeReals)
 }}}
 
 As in the diet problem and the transportation problem, our goal is to minimize cost.  To calculate the total cost, we just take the amount that will travel along each route, multiply it with the cost to travel that route, and sum all of these values together.  To code it we input
@@ -66,7 +66,7 @@ As in the diet problem and the transportation problem, our goal is to minimize c
 def costRule(model):
     return sum(model.cost[n]*model.amount[n] for n in model.routes)
 
-model.costTotal = Objective(rule=costRule)
+model.costTotal = pyo.Objective(rule=costRule)
 }}}
 Once again, this is just taking the dot product of the cost and amount vectors.  Recall the being an objective means that Pyomo will try to minimize this value.  Since total cost is our objective, Pyomo will find the least expensive way to ship our goods from the mills to the factories which is exactly what we're looking for.
 
@@ -77,7 +77,7 @@ One of the main factors outlined above was that we ship a minimum amount on each
 def loadRule(i,j, model):
     return (model.minimum[i,j], model.amount[i,j], model.maximum[i,j])
 
-model.loadOnRoad = Constraint(model.routes, rule=loadRule)
+model.loadOnRoad = pyo.Constraint(model.routes, rule=loadRule)
 }}}
 
 The second line here indicates that the value of "amount" must be between the minimum and maximum values (inclusive) allowed on that route.  Also, by putting routes as one of the arguments to the constraint we will cycle through every possible route when doing this rule.  Essentially, this is just the cost rule for each individual route compressed into one constraint.  Considering that this one constraint also contains the minimum and maximum load rules, we see that it is very, very powerful.
@@ -106,7 +106,7 @@ def supplyDemandRule(nn, model):
     
     return input == output
 
-model.supplyDemand = Constraint(model.places, rule=supplyDemandRule)
+model.supplyDemand = pyo.Constraint(model.places, rule=supplyDemandRule)
 }}}
 
 What we did was just construct a few additional variables; this wasn't required but makes reading and understanding the code much, much simpler.  The variable "amountIn" looks at each route to find ones that end in this location, then adds the amount on each of those routes together to determine how much flows to each location.  The "amountOut" variable functions similarly for the flow out.  Then we just create an "input" and "output" and ensure they're equal.  Like in some of the previous constraints, we feed the set of places into the constraint as an argument so it will index over that set, and thus this rule functions for all the places in our network.

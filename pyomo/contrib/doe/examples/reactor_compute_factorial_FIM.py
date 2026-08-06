@@ -1,14 +1,12 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-from pyomo.common.dependencies import numpy as np
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
+from pyomo.common.dependencies import numpy as np, pathlib
 
 from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
 from pyomo.contrib.doe import DesignOfExperiments
@@ -16,13 +14,12 @@ from pyomo.contrib.doe import DesignOfExperiments
 import pyomo.environ as pyo
 
 import json
-from pathlib import Path
 
 
 # Example to run a DoE on the reactor
 def run_reactor_doe():
     # Read in file
-    DATA_DIR = Path(__file__).parent
+    DATA_DIR = pathlib.Path(__file__).parent
     file_path = DATA_DIR / "result.json"
 
     with open(file_path) as f:

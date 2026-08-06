@@ -1,50 +1,48 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
 # Imports
 #
-from pyomo.core import *
+import pyomo.environ as pyo
 
 #
 # Setup
 #
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
 # ***********************************
 
-model.PROD = Set()
+model.PROD = pyo.Set()
 
-model.ACT = Set()
-
-# ***********************************
-
-model.cost = Param(model.ACT, within=PositiveReals)
-
-model.demand = Param(model.PROD, within=NonNegativeReals)
-
-model.io = Param(model.PROD, model.ACT, within=NonNegativeReals)
+model.ACT = pyo.Set()
 
 # ***********************************
 
-model.Level = Var(model.ACT)
+model.cost = pyo.Param(model.ACT, within=pyo.PositiveReals)
+
+model.demand = pyo.Param(model.PROD, within=pyo.NonNegativeReals)
+
+model.io = pyo.Param(model.PROD, model.ACT, within=pyo.NonNegativeReals)
+
+# ***********************************
+
+model.Level = pyo.Var(model.ACT)
 
 # ***********************************
 
 
 def Total_Cost_rule(model):
-    return sum_product(model.cost, model.Level)
+    return pyo.sum_product(model.cost, model.Level)
 
 
-model.Total_Cost = Objective(rule=Total_Cost_rule)
+model.Total_Cost = pyo.Objective(rule=Total_Cost_rule)
 
 
 def Demand_rule(model, i):
@@ -54,4 +52,4 @@ def Demand_rule(model, i):
     return expr > model.demand[i]
 
 
-model.Demand = Constraint(model.PROD, rule=Demand_rule)
+model.Demand = pyo.Constraint(model.PROD, rule=Demand_rule)

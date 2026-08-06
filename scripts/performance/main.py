@@ -1,14 +1,12 @@
 #!/usr/bin/env python
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import argparse
 import importlib
@@ -75,7 +73,7 @@ class TimingHandler(logging.Handler):
             cat_data[name] = val
 
 
-class DataRecorder(object):
+class DataRecorder:
     """pytest plugin to add a 'testdata' attribute to all tests
 
     This plugin adds an OrderedDict `testdata` attribute to all tests,
@@ -130,7 +128,7 @@ def getProjectInfo(project):
         diffs = os.popen('git diff-index --name-only HEAD').read()
         diffs = diffs.strip().split()
         branch = os.popen('git symbolic-ref -q --short HEAD').read().strip()
-        version = _module.__version__
+        version = getattr(_module, "__version__", "unknown")
     finally:
         os.chdir(cwd)
     return {'branch': branch, 'sha': sha, 'diffs': diffs, 'version': version}

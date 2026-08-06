@@ -1,18 +1,17 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import pyomo.contrib.piecewise.tests.models as models
 from pyomo.core import Var
 from pyomo.core.base import TransformationFactory
-from pyomo.environ import value
+from pyomo.core.expr.compare import assertExpressionsEqual
+from pyomo.environ import value, Expression
 from pyomo.gdp import Disjunct, Disjunction
 
 
@@ -87,3 +86,25 @@ def check_descend_into_expressions_objective_target(test, transformation, m=None
     test.check_pw_log(m)
     # And check that the paraboloid was *not* transformed.
     test.assertIsNone(m.pw_paraboloid.get_transformation_var(m.paraboloid_expr))
+
+
+def check_single_segment_no_disjunction(test, transformation, m=None):
+    if m is None:
+        m = models.make_single_segment_log_x_model()
+    transform = TransformationFactory(transformation)
+    transform.apply_to(m)
+
+    # A single segment doesn't require making a discrete choice, so this
+    # should not have created any GDP components.
+    test.assertEqual(len(list(m.component_data_objects(Disjunct))), 0)
+    test.assertEqual(len(list(m.component_data_objects(Disjunction))), 0)
+    # Nor should it have introduced any new Vars (such as a substitute_var
+    # or an indicator_var)--m.x should be the only Var in the model.
+    model_vars = list(m.component_data_objects(Var))
+    test.assertEqual(len(model_vars), 1)
+    test.assertIs(model_vars[0], m.x)
+
+    z = m.pw_log.get_transformation_var(m.log_expr)
+    test.assertIsInstance(z, Expression)
+    assertExpressionsEqual(test, z.expr, m.f1(m.x), places=7)
+    test.assertIs(m.log_expr.expr, z)

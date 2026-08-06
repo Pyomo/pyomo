@@ -1,20 +1,20 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import datetime
-import multiprocessing
 import os
+import pickle
 import time
 
 import pyomo.common.unittest as unittest
+import pyomo.common.dependencies as deps
+from pyomo.common.dependencies import multiprocessing
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
 from pyomo.common.tempfiles import TempfileManager
@@ -172,8 +172,28 @@ class TestPyomoUnittest(unittest.TestCase):
 
     def test_timeout_fcn_call(self):
         self.assertEqual(short_sleep(), 42)
-        with self.assertRaisesRegex(TimeoutError, 'test timed out after 0.01 seconds'):
-            long_sleep()
+        with LoggingIntercept() as LOG:
+            with self.assertRaisesRegex(
+                TimeoutError, 'test timed out after 0.01 seconds'
+            ):
+                long_sleep()
+            self.assertEqual(LOG.getvalue(), "")
+            deps.capture_output_lock.acquire()
+            save = unittest._timeout_terminate_timeout
+            unittest._timeout_terminate_timeout = 0.01
+            try:
+                with self.assertRaisesRegex(
+                    TimeoutError, 'test timed out after 0.01 seconds'
+                ):
+                    long_sleep()
+            finally:
+                unittest._timeout_terminate_timeout = save
+                deps.capture_output_lock.release()
+            self.assertEqual(
+                LOG.getvalue(),
+                "Failed to acquire capture_output_lock Lock before "
+                "terminating subprocess on timeout: process deadlock is likely.\n",
+            )
         with self.assertRaisesRegex(
             NameError, r"name 'foo' is not defined\s+Original traceback:"
         ):
@@ -191,23 +211,24 @@ class TestPyomoUnittest(unittest.TestCase):
         time.sleep(1)
         self.assertEqual(0, 0)
 
-    @unittest.timeout(10)
-    def test_timeout_skip(self):
-        if TestPyomoUnittest.test_timeout_skip.skip:
+    def timeout_skip(self, skip):
+        if skip:
             self.skipTest("Skipping this test")
         self.assertEqual(0, 1)
 
-    test_timeout_skip.skip = True
+    @unittest.timeout(10)
+    def test_timeout_skip(self):
+        self.timeout_skip(True)
 
-    def test_timeout_skip_fails(self):
-        try:
-            with self.assertRaisesRegex(unittest.SkipTest, r"Skipping this test"):
-                self.test_timeout_skip()
-            TestPyomoUnittest.test_timeout_skip.skip = False
-            with self.assertRaisesRegex(AssertionError, r"0 != 1"):
-                self.test_timeout_skip()
-        finally:
-            TestPyomoUnittest.test_timeout_skip.skip = True
+    @unittest.timeout(10)
+    def test_timeout_skip_pass(self):
+        with self.assertRaisesRegex(AssertionError, r"0 != 1"):
+            self.timeout_skip(False)
+
+    @unittest.expectedFailure
+    @unittest.timeout(10)
+    def test_timeout_skip_fail(self):
+        self.timeout_skip(False)
 
     @unittest.timeout(10)
     def bound_function(self):
@@ -218,7 +239,9 @@ class TestPyomoUnittest(unittest.TestCase):
             self.bound_function()
             return
         with LoggingIntercept() as LOG:
-            with self.assertRaises((TypeError, EOFError, AttributeError)):
+            with self.assertRaises(
+                (TypeError, EOFError, AttributeError, pickle.PicklingError)
+            ):
                 self.bound_function()
         self.assertIn("platform that does not support 'fork'", LOG.getvalue())
         self.assertIn("one of its arguments is not serializable", LOG.getvalue())

@@ -17,11 +17,6 @@ Modeling in Pyomo.GDP
     from pyomo.gdp import Disjunct, Disjunction
     from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_from_binary
 
-    # This is to make unicode comparison work in python 2.7.
-    import sys
-    if sys.version[0] == '2':
-        reload(sys)
-        sys.setdefaultencoding("utf-8")
 
 Disjunctions
 ============
@@ -220,13 +215,36 @@ logical propositions.
 Here, we demonstrate this capability with a toy example:
 
 .. math::
+   :nowrap:
 
-    \min~&x\\
-    \text{s.t.}~&\left[\begin{gathered}Y_1\\x \geq 2\end{gathered}\right] \vee \left[\begin{gathered}Y_2\\x \geq 3\end{gathered}\right]\\
-    &\left[\begin{gathered}Y_3\\x \leq 8\end{gathered}\right] \vee \left[\begin{gathered}Y_4\\x = 2.5\end{gathered}\right] \\
-    &Y_1 \veebar Y_2\\
-    &Y_3 \veebar Y_4\\
-    &Y_1 \Rightarrow Y_4
+   \[\begin{array}{ll}
+    \min & x \\
+    \text{s.t.} & \left[
+      \begin{gathered}
+        Y_1\\
+        x \geq 2
+      \end{gathered}
+    \right] \vee \left[
+      \begin{gathered}
+        Y_2 \\
+        x \geq 3
+      \end{gathered}
+    \right]\\
+    & \left[
+      \begin{gathered}
+        Y_3 \\
+        x \leq 8
+      \end{gathered}
+    \right] \vee \left[
+      \begin{gathered}
+        Y_4 \\
+        x = 2.5
+      \end{gathered}
+    \right] \\
+    & Y_1 \veebar Y_2 \\
+    & Y_3 \veebar Y_4 \\
+    & Y_1 \Rightarrow Y_4
+   \end{array}\]
 
 .. doctest::
     :skipif: not glpk_available
@@ -302,9 +320,9 @@ Expressions within CP-type operators
 Here, augmented variables may be automatically added to the model as follows:
 
 .. math::
-    \text{atleast}(3, &Y_1, Y_A, Y_B, Y_6)\\
-    &Y_A \Leftrightarrow Y_2 \vee Y_3\\
-    &Y_B \Leftrightarrow (Y_4 \Rightarrow Y_5)
+    \text{atleast}(3, Y_1, Y_A, Y_B, Y_6)\\
+    Y_A \Leftrightarrow Y_2 \vee Y_3\\
+    Y_B \Leftrightarrow (Y_4 \Rightarrow Y_5)
 
 .. code::
 
@@ -366,22 +384,22 @@ The following models all work and are equivalent for :math:`\left[x = 0\right] \
 
    Option 1: Rule-based construction
 
-   >>> from pyomo.environ import *
-   >>> from pyomo.gdp import *
-   >>> model = ConcreteModel()
+   >>> import pyomo.environ as pyo
+   >>> from pyomo.gdp import Disjunct, Disjunction
+   >>> model = pyo.ConcreteModel()
 
-   >>> model.x = Var()
-   >>> model.y = Var()
+   >>> model.x = pyo.Var()
+   >>> model.y = pyo.Var()
 
    >>> # Two conditions
    >>> def _d(disjunct, flag):
    ...    model = disjunct.model()
    ...    if flag:
    ...       # x == 0
-   ...       disjunct.c = Constraint(expr=model.x == 0)
+   ...       disjunct.c = pyo.Constraint(expr=model.x == 0)
    ...    else:
    ...       # y == 0
-   ...       disjunct.c = Constraint(expr=model.y == 0)
+   ...       disjunct.c = pyo.Constraint(expr=model.y == 0)
    >>> model.d = Disjunct([0,1], rule=_d)
 
    >>> # Define the disjunction
@@ -391,29 +409,29 @@ The following models all work and are equivalent for :math:`\left[x = 0\right] \
 
    Option 2: Explicit disjuncts
 
-   >>> from pyomo.environ import *
-   >>> from pyomo.gdp import *
-   >>> model = ConcreteModel()
+   >>> import pyomo.environ as pyo
+   >>> from pyomo.gdp import Disjunct, Disjunction
+   >>> model = pyo.ConcreteModel()
 
-   >>> model.x = Var()
-   >>> model.y = Var()
+   >>> model.x = pyo.Var()
+   >>> model.y = pyo.Var()
 
    >>> model.fix_x = Disjunct()
-   >>> model.fix_x.c = Constraint(expr=model.x == 0)
+   >>> model.fix_x.c = pyo.Constraint(expr=model.x == 0)
 
    >>> model.fix_y = Disjunct()
-   >>> model.fix_y.c = Constraint(expr=model.y == 0)
+   >>> model.fix_y.c = pyo.Constraint(expr=model.y == 0)
 
    >>> model.c = Disjunction(expr=[model.fix_x, model.fix_y])
 
    Option 3: Implicit disjuncts (disjunction rule returns a list of
    expressions or a list of lists of expressions)
 
-   >>> from pyomo.environ import *
-   >>> from pyomo.gdp import *
-   >>> model = ConcreteModel()
+   >>> import pyomo.environ as pyo
+   >>> from pyomo.gdp import Disjunction
+   >>> model = pyo.ConcreteModel()
 
-   >>> model.x = Var()
-   >>> model.y = Var()
+   >>> model.x = pyo.Var()
+   >>> model.y = pyo.Var()
 
    >>> model.c = Disjunction(expr=[model.x == 0, model.y == 0])

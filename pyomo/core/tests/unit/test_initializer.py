@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import functools
 import pickle
@@ -42,7 +40,6 @@ from pyomo.core.base.initializer import (
     function_types,
 )
 from pyomo.environ import ConcreteModel, Var
-
 
 is_pypy = platform.python_implementation().lower().startswith("pypy")
 
@@ -228,7 +225,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(next(c), 335)
 
     def test_method(self):
-        class Init(object):
+        class Init:
             def a_init(self, m):
                 return 0
 
@@ -288,7 +285,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(next(c), 40)
 
     def test_classmethod(self):
-        class Init(object):
+        class Init:
             @classmethod
             def a_init(cls, m):
                 return 0
@@ -350,7 +347,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(next(c), 40)
 
     def test_staticmethod(self):
-        class Init(object):
+        class Init:
             @staticmethod
             def a_init(m):
                 return 0
@@ -446,7 +443,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(list(a(None, (1, 4))), [4, 2])
 
     def test_generator_method(self):
-        class Init(object):
+        class Init:
             def a_init(self, m):
                 yield 0
                 yield 3
@@ -506,7 +503,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(list(a(None, 1)), [0, 3])
 
     def test_functor(self):
-        class InitScalar(object):
+        class InitScalar:
             def __init__(self, val):
                 self.val = val
 
@@ -519,7 +516,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertFalse(a.verified)
         self.assertEqual(a(None, None), 10)
 
-        class InitIndexed(object):
+        class InitIndexed:
             def __init__(self, val):
                 self.val = val
 
@@ -688,10 +685,26 @@ class Test_Initializer(unittest.TestCase):
 
         d = {'col1': [1, 2, 4], 'col2': [10, 20, 40]}
         df = pd.DataFrame(data=d)
-        with self.assertRaisesRegex(
-            ValueError, 'DataFrameInitializer for DataFrame with multiple columns'
-        ):
-            a = Initializer(df)
+        a = Initializer(df)
+        self.assertIs(type(a), DataFrameInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(
+            list(a.indices()),
+            [
+                (0, 'col1'),
+                (0, 'col2'),
+                (1, 'col1'),
+                (1, 'col2'),
+                (2, 'col1'),
+                (2, 'col2'),
+            ],
+        )
+        self.assertEqual(a(None, (0, 'col1')), 1)
+        self.assertEqual(a(None, (1, 'col2')), 20)
+        self.assertEqual(a(None, (2, 'col2')), 40)
+
         a = DataFrameInitializer(df, 'col2')
         self.assertIs(type(a), DataFrameInitializer)
         self.assertFalse(a.constant())
@@ -884,7 +897,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertIs(type(a), ParameterizedIndexedCallInitializer)
         self.assertEqual(a('m', 1, 5), ('m', 5, 1))
 
-        class Functor(object):
+        class Functor:
             def __init__(self, i):
                 self.i = i
 

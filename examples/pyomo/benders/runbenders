@@ -6,7 +6,6 @@
 #
 
 # Python imports
-from pyomo.environ import *
 from pyomo.common.fileutils import import_file
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory

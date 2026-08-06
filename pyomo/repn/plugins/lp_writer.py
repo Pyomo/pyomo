@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import logging
 from io import StringIO
@@ -19,6 +17,8 @@ from pyomo.common.config import (
     InEnum,
     document_kwargs_from_configdict,
 )
+from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.errors import InvalidConstraintError, InvalidExpressionError
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
 
@@ -30,12 +30,10 @@ from pyomo.core.base import (
     Param,
     Expression,
     SOSConstraint,
-    SortComponents,
     Suffix,
     SymbolMap,
     minimize,
 )
-from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.label import LPFileLabeler, NumericLabeler
 from pyomo.opt import WriterFactory
 from pyomo.repn.linear import LinearRepnVisitor
@@ -48,6 +46,7 @@ from pyomo.repn.util import (
     initialize_var_map_from_column_order,
     int_float,
     ordered_active_constraints,
+    row_order2row_map,
 )
 
 ### FIXME: Remove the following as soon as non-active components no
@@ -61,7 +60,7 @@ neg_inf = float('-inf')
 
 
 # TODO: make a proper base class
-class LPWriterInfo(object):
+class LPWriterInfo:
     """Return type for LPWriter.write()
 
     Attributes
@@ -81,7 +80,7 @@ class LPWriterInfo(object):
     'cpxlp_v2', 'Generate the corresponding CPLEX LP file (version 2).'
 )
 @WriterFactory.register('lp_v2', 'Generate the corresponding LP file (version 2).')
-class LPWriter(object):
+class LPWriter:
     CONFIG = ConfigBlock('lpwriter')
     CONFIG.declare(
         'show_section_timing',
@@ -242,7 +241,7 @@ class LPWriter(object):
             return _LPWriter_impl(ostream, config).write(model)
 
 
-class _LPWriter_impl(object):
+class _LPWriter_impl:
     def __init__(self, ostream, config):
         self.ostream = ostream
         self.config = config
@@ -377,7 +376,7 @@ class _LPWriter_impl(object):
         )
         repn = objective_visitor.walk_expression(obj.expr)
         if repn.nonlinear is not None:
-            raise ValueError(
+            raise InvalidExpressionError(
                 f"Model objective ({obj.name}) contains nonlinear terms that "
                 "cannot be written to LP format"
             )
@@ -423,7 +422,7 @@ class _LPWriter_impl(object):
                 continue
             repn = constraint_visitor.walk_expression(body)
             if repn.nonlinear is not None:
-                raise ValueError(
+                raise InvalidConstraintError(
                     f"Model constraint ({con.name}) contains nonlinear terms that "
                     "cannot be written to LP format"
                 )
@@ -555,18 +554,16 @@ class _LPWriter_impl(object):
                     )
                 )
             if self.config.row_order:
-                # sort() is stable (per Python docs), so we can let
-                # all unspecified rows have a row number one bigger than
-                # the number of rows specified by the user ordering.
-                _n = len(row_order)
-                sos.sort(key=lambda x: _row_getter(x, _n))
+                row_map = row_order2row_map(self.config)
+                _n = len(row_map)
+                sos.sort(key=lambda x: row_map.get(id(x), _n))
 
             ostream.write("\nSOS\n")
             for soscon in sos:
                 ostream.write(f'\n{getSymbol(soscon)}: S{soscon.level}::\n')
                 for v, w in getattr(soscon, 'get_items', soscon.items)():
                     if w.__class__ not in int_float:
-                        w = float(f)
+                        w = float(w)
                     ostream.write(f"  {getSymbol(v)}:{w!s}\n")
 
         ostream.write("\nend\n")

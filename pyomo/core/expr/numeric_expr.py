@@ -1,22 +1,20 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import collections
 import logging
 import math
 import operator
+import sys
 
 logger = logging.getLogger('pyomo.core')
 
-from pyomo.common import enums
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
 from pyomo.common.errors import PyomoException, DeveloperError
@@ -33,14 +31,23 @@ from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.expr.expr_common import (
     OperatorAssociativity,
     ExpressionType,
-    _lt,
-    _le,
-    _eq,
+    _unary_op_dispatcher_type_mapping,
+    _binary_op_dispatcher_type_mapping,
+    _invalid,
+    _recast_mutable,
+    NUMERIC_ARG_TYPE as ARG_TYPE,
 )
 
 # Note: pyggyback on expr.base's use of attempt_import(visitor)
 from pyomo.core.expr.base import ExpressionBase, NPV_Mixin, visitor
 
+# Note: There is a circular dependency between relational_expr and this
+# module: relational_expr would like to reuse/build on
+# _categorize_arg_type(), and NumericValue needs to call the relational
+# dispatchers from relational_expr.  Instead of ensuring that one of the
+# modules is fully declared before importing into the other, we will
+# have BOTH modules assume that the other module has NOT been declared.
+import pyomo.core.expr.relational_expr as relational_expr
 
 _ndarray, _ = attempt_import('pyomo.core.expr.ndarray')
 
@@ -92,13 +99,14 @@ relocated_module_attribute(
     version='6.6.2',
     f_globals=globals(),
 )
+relocated_module_attribute(
+    'register_arg_type',
+    'pyomo.core.expr.expr_common',
+    version='6.9.2',
+    f_globals=globals(),
+)
 
 _zero_one_optimizations = {1}
-
-
-# Stub in the dispatchers
-def _generate_relational_expression(etype, lhs, rhs):
-    raise RuntimeError("incomplete import of Pyomo expression system")
 
 
 def enable_expression_optimizations(zero=None, one=None):
@@ -151,7 +159,7 @@ def enable_expression_optimizations(zero=None, one=None):
             _zero_one_optimizations.discard(key)
 
 
-class mutable_expression(object):
+class mutable_expression:
     """Context manager for mutable sums.
 
     This context manager is used to compute a sum while treating the
@@ -306,17 +314,14 @@ class NumericValue(PyomoObject):
         # __bool__ is not defined.
         if self.is_constant():
             return bool(self())
-        raise PyomoException(
-            """
+        raise PyomoException("""
 Cannot convert non-constant Pyomo numeric value (%s) to bool.
 This error is usually caused by using a Var, unit, or mutable Param in a
 Boolean context such as an "if" statement. For example,
     >>> m.x = Var()
     >>> if not m.x:
     ...     pass
-would cause this exception.""".strip()
-            % (self,)
-        )
+would cause this exception.""".strip() % (self,))
 
     def __float__(self):
         """Coerce the value to a floating point
@@ -331,16 +336,13 @@ would cause this exception.""".strip()
         """
         if self.is_constant():
             return float(self())
-        raise TypeError(
-            """
+        raise TypeError("""
 Implicit conversion of Pyomo numeric value (%s) to float is disabled.
 This error is often the result of using Pyomo components as arguments to
 one of the Python built-in math module functions when defining
 expressions. Avoid this error by using Pyomo-provided math functions or
 explicitly resolving the numeric value using the Pyomo value() function.
-""".strip()
-            % (self,)
-        )
+""".strip() % (self,))
 
     def __int__(self):
         """Coerce the value to an integer
@@ -355,16 +357,13 @@ explicitly resolving the numeric value using the Pyomo value() function.
         """
         if self.is_constant():
             return int(self())
-        raise TypeError(
-            """
+        raise TypeError("""
 Implicit conversion of Pyomo numeric value (%s) to int is disabled.
 This error is often the result of using Pyomo components as arguments to
 one of the Python built-in math module functions when defining
 expressions. Avoid this error by using Pyomo-provided math functions or
 explicitly resolving the numeric value using the Pyomo value() function.
-""".strip()
-            % (self,)
-        )
+""".strip() % (self,))
 
     def __lt__(self, other):
         """
@@ -375,7 +374,9 @@ explicitly resolving the numeric value using the Pyomo value() function.
             self < other
             other > self
         """
-        return _generate_relational_expression(_lt, self, other)
+        return relational_expr._lt_dispatcher[self.__class__, other.__class__](
+            self, other
+        )
 
     def __gt__(self, other):
         """
@@ -386,7 +387,9 @@ explicitly resolving the numeric value using the Pyomo value() function.
             self > other
             other < self
         """
-        return _generate_relational_expression(_lt, other, self)
+        return relational_expr._lt_dispatcher[other.__class__, self.__class__](
+            other, self
+        )
 
     def __le__(self, other):
         """
@@ -397,7 +400,9 @@ explicitly resolving the numeric value using the Pyomo value() function.
             self <= other
             other >= self
         """
-        return _generate_relational_expression(_le, self, other)
+        return relational_expr._le_dispatcher[self.__class__, other.__class__](
+            self, other
+        )
 
     def __ge__(self, other):
         """
@@ -408,7 +413,9 @@ explicitly resolving the numeric value using the Pyomo value() function.
             self >= other
             other <= self
         """
-        return _generate_relational_expression(_le, other, self)
+        return relational_expr._le_dispatcher[other.__class__, self.__class__](
+            other, self
+        )
 
     def __eq__(self, other):
         """
@@ -418,7 +425,13 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self == other
         """
-        return _generate_relational_expression(_eq, self, other)
+        # Note: While it would appear that keeping the attribute lookup
+        # into the relational_expr module would be a performance hit, we
+        # want that indirection as it allows us to selectively disable
+        # operator overloading for comparisons.
+        return relational_expr._eq_dispatcher[self.__class__, other.__class__](
+            self, other
+        )
 
     def __add__(self, other):
         """
@@ -1181,7 +1194,12 @@ class SumExpression(NumericExpression):
         return self.__class__(_args)
 
     def _apply_operation(self, result):
-        return sum(result)
+        # Avoid 0 being added to summations by specifying the start
+        if result:
+            _iter = iter(result)
+            return sum(_iter, start=next(_iter))
+        else:
+            return 0
 
     def _compute_polynomial_degree(self, result):
         # NB: We can't use max() here because None (non-polynomial)
@@ -1308,6 +1326,8 @@ class LinearExpression(SumExpression):
                 assert arg.is_potentially_variable()
                 coef.append(1)
                 var.append(arg)
+        coef = tuple(coef)
+        var = tuple(var)
         LinearExpression._cache = (self, const, coef, var)
 
     @property
@@ -1637,21 +1657,6 @@ def _decompose_linear_terms(expr, multiplier=1):
 #
 # -------------------------------------------------------
 
-
-class ARG_TYPE(enums.IntEnum):
-    MUTABLE = -2
-    ASNUMERIC = -1
-    INVALID = 0
-    NATIVE = 1
-    NPV = 2
-    PARAM = 3
-    VAR = 4
-    MONOMIAL = 5
-    LINEAR = 6
-    SUM = 7
-    OTHER = 8
-
-
 _known_arg_types = {}
 
 
@@ -1713,91 +1718,6 @@ def _categorize_arg_type(arg):
 
 def _categorize_arg_types(*args):
     return tuple(_categorize_arg_type(arg) for arg in args)
-
-
-def _invalid(*args):
-    return NotImplemented
-
-
-def _recast_mutable(expr):
-    expr.make_immutable()
-    if expr._nargs > 1:
-        return expr
-    elif not expr._nargs:
-        return 0
-    else:
-        return expr._args_[0]
-
-
-def _unary_op_dispatcher_type_mapping(dispatcher, updates):
-    #
-    # Special case (wrapping) operators
-    #
-    def _asnumeric(a):
-        a = a.as_numeric()
-        return dispatcher[a.__class__](a)
-
-    def _mutable(a):
-        a = _recast_mutable(a)
-        return dispatcher[a.__class__](a)
-
-    mapping = {
-        ARG_TYPE.ASNUMERIC: _asnumeric,
-        ARG_TYPE.MUTABLE: _mutable,
-        ARG_TYPE.INVALID: _invalid,
-    }
-
-    mapping.update(updates)
-    return mapping
-
-
-def _binary_op_dispatcher_type_mapping(dispatcher, updates):
-    #
-    # Special case (wrapping) operators
-    #
-    def _any_asnumeric(a, b):
-        b = b.as_numeric()
-        return dispatcher[a.__class__, b.__class__](a, b)
-
-    def _asnumeric_any(a, b):
-        a = a.as_numeric()
-        return dispatcher[a.__class__, b.__class__](a, b)
-
-    def _asnumeric_asnumeric(a, b):
-        a = a.as_numeric()
-        b = b.as_numeric()
-        return dispatcher[a.__class__, b.__class__](a, b)
-
-    def _any_mutable(a, b):
-        b = _recast_mutable(b)
-        return dispatcher[a.__class__, b.__class__](a, b)
-
-    def _mutable_any(a, b):
-        a = _recast_mutable(a)
-        return dispatcher[a.__class__, b.__class__](a, b)
-
-    def _mutable_mutable(a, b):
-        if a is b:
-            a = b = _recast_mutable(a)
-        else:
-            a = _recast_mutable(a)
-            b = _recast_mutable(b)
-        return dispatcher[a.__class__, b.__class__](a, b)
-
-    mapping = {}
-    mapping.update({(i, ARG_TYPE.ASNUMERIC): _any_asnumeric for i in ARG_TYPE})
-    mapping.update({(ARG_TYPE.ASNUMERIC, i): _asnumeric_any for i in ARG_TYPE})
-    mapping[ARG_TYPE.ASNUMERIC, ARG_TYPE.ASNUMERIC] = _asnumeric_asnumeric
-
-    mapping.update({(i, ARG_TYPE.MUTABLE): _any_mutable for i in ARG_TYPE})
-    mapping.update({(ARG_TYPE.MUTABLE, i): _mutable_any for i in ARG_TYPE})
-    mapping[ARG_TYPE.MUTABLE, ARG_TYPE.MUTABLE] = _mutable_mutable
-
-    mapping.update({(i, ARG_TYPE.INVALID): _invalid for i in ARG_TYPE})
-    mapping.update({(ARG_TYPE.INVALID, i): _invalid for i in ARG_TYPE})
-
-    mapping.update(updates)
-    return mapping
 
 
 #
@@ -3847,8 +3767,10 @@ def _fcn_mutable(a, name, fcn):
 
 
 def _fcn_invalid(a, name, fcn):
-    fcn(a)
-    # returns None
+    try:
+        return a._op(fcn, a)
+    except:
+        return _invalid(str(sys.exc_info()[1]))
 
 
 def _fcn_native(a, name, fcn):

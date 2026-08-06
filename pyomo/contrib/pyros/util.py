@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 '''
 Utility functions for the PyROS solver
@@ -21,10 +19,12 @@ import functools
 import itertools as it
 import logging
 import math
+import os
 import timeit
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.dependencies import scipy as sp
+from pyomo.common.flags import NOTSET
 from pyomo.common.errors import ApplicationError, InvalidValueError
 from pyomo.common.log import Preformatted
 from pyomo.common.modeling import unique_component_name
@@ -39,10 +39,14 @@ from pyomo.core.base import (
     Objective,
     maximize,
     minimize,
+    Param,
+    ParamData,
     Reals,
     Var,
+    VarData,
     value,
 )
+from pyomo.core.base.suffix import SuffixFinder
 from pyomo.core.expr.numeric_expr import SumExpression
 from pyomo.core.expr.numvalue import native_types
 from pyomo.core.expr.visitor import (
@@ -53,11 +57,10 @@ from pyomo.core.expr.visitor import (
 from pyomo.core.util import prod
 from pyomo.opt import SolverFactory
 import pyomo.repn.ampl as pyomo_ampl_repn
-from pyomo.repn.parameterized_quadratic import ParameterizedQuadraticRepnVisitor
+from pyomo.repn.parameterized import ParameterizedQuadraticRepnVisitor
 import pyomo.repn.plugins.nl_writer as pyomo_nl_writer
 from pyomo.repn.util import OrderedVarRecorder
 from pyomo.util.vars_from_expressions import get_vars_from_components
-
 
 # Tolerances used in the code
 PARAM_IS_CERTAIN_REL_TOL = 1e-4
@@ -72,6 +75,7 @@ DR_POLISHING_PARAM_PRODUCT_ZERO_TOL = 1e-10
 TIC_TOC_SOLVE_TIME_ATTR = "pyros_tic_toc_time"
 DEFAULT_LOGGER_NAME = "pyomo.contrib.pyros"
 DEFAULT_SEPARATION_PRIORITY = 0
+BYPASSING_SEPARATION_PRIORITY = None
 
 
 class TimingData:
@@ -558,12 +562,53 @@ def standardize_component_data(
     from_iterable=None,
 ):
     """
-    Standardize object to a list of component data objects.
+    Cast an object to a list of Pyomo ComponentData objects.
+
+    Parameters
+    ----------
+    obj : Component, ComponentData, or iterable
+        Object from which component data objects
+        are cast.
+    valid_ctype : type or tuple of type
+        Valid Component type(s).
+    valid_cdatatype : type or tuple of type
+        Valid ComponentData type(s).
+    ctype_validator : None or callable, optional
+        Validator for component objects derived from `obj`.
+    cdatatype_validator : None or callable, optional
+        Validator for component data objects derived from `obj`.
+    allow_repeats : bool, optional
+        True to allow for nonunique component data objects
+        derived from `obj`, False otherwise.
+    from_iterable : str, optional
+        Description of the object to include in error messages.
+        Meant to be used if the object is an iterable from which
+        to derive component data objects.
+
+    Returns
+    -------
+    list of ComponentData
+        The ComponentData objects derived from `obj`.
+        Note: If `obj` is a valid ComponentData type,
+        then ``[obj]`` is returned.
+
+    Raises
+    ------
+    TypeError
+        If `obj` is not an iterable and not an instance of
+        `valid_ctype` or `valid_cdatatype`.
+    ValueError
+        If ``allow_repeats=False`` and there are duplicates
+        among the component data objects derived from `obj`.
     """
     if isinstance(obj, valid_ctype):
         if ctype_validator is not None:
             ctype_validator(obj)
-        return list(obj.values())
+        ans = list(obj.values())
+        if cdatatype_validator is not None:
+            for entry in ans:
+                cdatatype_validator(entry)
+        return ans
     elif isinstance(obj, valid_cdatatype):
         if cdatatype_validator is not None:
             cdatatype_validator(obj)
@@ -745,9 +790,8 @@ VariablePartitioning = namedtuple(
 
 def validate_variable_partitioning(model, config):
     """
-    Check that partitioning of the first-stage variables,
-    second-stage variables, and uncertain parameters
-    is valid.
+    Check that the partitioning of the in-scope variables of the
+    model is valid.
 
     Parameters
     ----------
@@ -768,13 +812,6 @@ def validate_variable_partitioning(model, config):
         overlap, or there are no first-stage variables
         and no second-stage variables.
     """
-    # at least one DOF required
-    if not config.first_stage_variables and not config.second_stage_variables:
-        raise ValueError(
-            "Arguments `first_stage_variables` and "
-            "`second_stage_variables` are both empty lists."
-        )
-
     # ensure no overlap between DOF var sets
     overlapping_vars = ComponentSet(config.first_stage_variables) & ComponentSet(
         config.second_stage_variables
@@ -791,15 +828,17 @@ def validate_variable_partitioning(model, config):
             "contain at least one common Var object."
         )
 
+    # uncertain parameters can be VarData objects;
+    # ensure they are not considered decision variables here
     active_model_vars = ComponentSet(
         get_vars_from_components(
             block=model,
             active=True,
-            include_fixed=False,
+            include_fixed=True,
             descend_into=True,
             ctype=(Objective, Constraint),
         )
-    )
+    ) - ComponentSet(config.uncertain_params)
     check_components_descended_from_model(
         model=model,
         components=active_model_vars,
@@ -815,9 +854,64 @@ def validate_variable_partitioning(model, config):
     second_stage_vars = ComponentSet(config.second_stage_variables) & active_model_vars
     state_vars = active_model_vars - (first_stage_vars | second_stage_vars)
 
+    if not active_model_vars:
+        config.progress_logger.warning(
+            "NOTE: No variables declared on the user-provided model "
+            "appear in the active model objective or constraints. "
+            "PyROS will proceed with solving for the optimal objective value, "
+            "subject to the active declared constraints, "
+            "according to the user-provided options."
+        )
+    elif not (first_stage_vars or second_stage_vars):
+        config.progress_logger.warning(
+            "NOTE: No user-provided first-stage variables or second-stage variables "
+            "appear in the active model objective or constraints. "
+            "PyROS will proceed with optimizing the state variables "
+            "according to the user-provided options."
+        )
+
     return VariablePartitioning(
         list(first_stage_vars), list(second_stage_vars), list(state_vars)
     )
+
+
+def _get_uncertain_param_val(var_or_param_data):
+    """
+    Get value of VarData/ParamData object
+    that is considered an uncertain parameter.
+
+    For any unfixed VarData object, we assume that
+    the `lower` and `upper` attributes are identical,
+    so the value of `lower` is returned in lieu of
+    the level value.
+
+    Parameters
+    ----------
+    var_or_param_data : VarData or ParamData
+        Object to be evaluated.
+
+    Returns
+    -------
+    object
+        Value of the VarData/ParamData object.
+        The value is typically of a numeric type.
+    """
+    if isinstance(var_or_param_data, ParamData):
+        expr_to_evaluate = var_or_param_data
+    elif isinstance(var_or_param_data, VarData):
+        if var_or_param_data.fixed:
+            expr_to_evaluate = var_or_param_data
+        else:
+            expr_to_evaluate = var_or_param_data.lower
+    else:
+        raise ValueError(
+            f"Uncertain parameter object {var_or_param_data!r}"
+            f"is of type {type(var_or_param_data).__name__!r}, "
+            "but should be of type "
+            f"{ParamData.__name__} or {VarData.__name__}."
+        )
+
+    return value(expr_to_evaluate, exception=True)
 
 
 def validate_uncertainty_specification(model, config):
@@ -837,10 +931,12 @@ def validate_uncertainty_specification(model, config):
     ValueError
         If at least one of the following holds:
 
+        - there are entries of `config.uncertain_params`
+          that are also in `config.first_stage_variables` or
+          `config.second_stage_variables`
         - dimension of uncertainty set does not equal number of
           uncertain parameters
-        - uncertainty set `is_valid()` method does not return
-          true.
+        - uncertainty set `validate()` method fails.
         - nominal parameter realization is not in the uncertainty set.
     """
     check_components_descended_from_model(
@@ -850,6 +946,26 @@ def validate_uncertainty_specification(model, config):
         config=config,
     )
 
+    first_stg_vars = config.first_stage_variables
+    second_stg_vars = config.second_stage_variables
+    for stg_str, vars in zip(["first", "second"], [first_stg_vars, second_stg_vars]):
+        overlapping_uncertain_params = ComponentSet(vars) & ComponentSet(
+            config.uncertain_params
+        )
+        if overlapping_uncertain_params:
+            overlapping_var_list = "\n ".join(
+                f"{var.name!r}" for var in overlapping_uncertain_params
+            )
+            config.progress_logger.error(
+                f"The following Vars were found in both `{stg_str}_stage_variables`"
+                f"and `uncertain_params`:\n {overlapping_var_list}"
+                "\nEnsure no Vars are included in both arguments."
+            )
+            raise ValueError(
+                f"Arguments `{stg_str}_stage_variables` and `uncertain_params` "
+                "contain at least one common Var object."
+            )
+
     if len(config.uncertain_params) != config.uncertainty_set.dim:
         raise ValueError(
             "Length of argument `uncertain_params` does not match dimension "
@@ -857,18 +973,18 @@ def validate_uncertainty_specification(model, config):
             f"({len(config.uncertain_params)} != {config.uncertainty_set.dim})."
         )
 
-    # validate uncertainty set
-    if not config.uncertainty_set.is_valid(config=config):
-        raise ValueError(
-            f"Uncertainty set {config.uncertainty_set} is invalid, "
-            "as it is either empty or unbounded."
-        )
-
     # fill-in nominal point as necessary, if not provided.
     # otherwise, check length matches uncertainty dimension
     if not config.nominal_uncertain_param_vals:
         config.nominal_uncertain_param_vals = [
-            value(param, exception=True) for param in config.uncertain_params
+            # NOTE: this allows uncertain parameters that are of type
+            #       VarData and implicitly fixed by identical bounds
+            #       that are mutable expressions in ParamData-type
+            #       uncertain parameters;
+            #       the bounds expressions are evaluated to
+            #       to get the nominal realization
+            _get_uncertain_param_val(param)
+            for param in config.uncertain_params
         ]
     elif len(config.nominal_uncertain_param_vals) != len(config.uncertain_params):
         raise ValueError(
@@ -878,6 +994,9 @@ def validate_uncertainty_specification(model, config):
             f"({len(config.uncertain_params)} != "
             f"{len(config.nominal_uncertain_param_vals)})."
         )
+
+    # validate uncertainty set
+    config.uncertainty_set.validate(config=config)
 
     # uncertainty set should contain nominal point
     nominal_point_in_set = config.uncertainty_set.point_in_set(
@@ -969,6 +1088,11 @@ class ModelData:
     separation_priority_order : dict
         Mapping from constraint names to separation priority
         values.
+    separation_priority_suffix_finder : SuffixFinder
+        Object for resolving active Suffix components
+        added to the model by the user as a means of
+        prioritizing separation problems mapped to
+        second-stage inequality constraints.
     """
 
     def __init__(self, original_model, config, timing):
@@ -978,6 +1102,9 @@ class ModelData:
         self.separation_priority_order = dict()
         # working model will be addressed by preprocessing
         self.working_model = None
+        self.separation_priority_suffix_finder = SuffixFinder(
+            name="pyros_separation_priority", default=NOTSET
+        )
 
     def preprocess(self, user_var_partitioning):
         """
@@ -991,6 +1118,91 @@ class ModelData:
             True if robust infeasibility detected, False otherwise.
         """
         return preprocess_model_data(self, user_var_partitioning)
+
+    def get_user_separation_priority(self, component_data, component_data_name):
+        """
+        Infer user specification for the separation priority/priorities
+        of the second-stage inequality constraint/constraints derived
+        from a given component data attribute of the working model.
+
+        Parameters
+        ----------
+        component_data : ComponentData
+            Component data from which the inequality constraints
+            are meant to be derived.
+        component_data_name : str
+            Name of the component data object as it is expected
+            to appear in ``self.config.separation_priority_order``.
+
+        Returns
+        -------
+        numeric type or None
+            Priority of the derived constraint(s).
+
+        Notes
+        -----
+        The separation priorities for the constraints derived from
+        ``component_data`` are inferred from either the
+        active ``Suffix`` components of ``self.working_model``
+        with name 'pyros_separation_priority'
+        or from ``self.config.separation_priority``.
+        Priorities specified through the active ``Suffix`` components
+        take precedence over priorities specified through
+        ``self.config.separation_priority_order``.
+        Moreover, priorities are inferred from ``Suffix`` components
+        using the Pyomo ``SuffixFinder``.
+        """
+        priority = self.separation_priority_suffix_finder.find(component_data)
+        if priority is NOTSET:
+            priority = self.config.separation_priority_order.get(
+                component_data_name, DEFAULT_SEPARATION_PRIORITY
+            )
+        return priority
+
+
+def log_original_model_statistics(model_data, user_var_partitioning):
+    """
+    Log statistics for the original model (before preprocessing).
+
+    Parameters
+    ----------
+    model_data : model data object
+        Main model data object.
+    user_var_partitioning : VariablePartitioning
+        User-specified partitioning of the model variables.
+    """
+    config = model_data.config
+    original_model = model_data.original_model
+
+    # variables. we log the user partitioning
+    num_first_stage_vars = len(user_var_partitioning.first_stage_variables)
+    num_second_stage_vars = len(user_var_partitioning.second_stage_variables)
+    num_state_vars = len(user_var_partitioning.state_variables)
+    num_vars = num_first_stage_vars + num_second_stage_vars + num_state_vars
+
+    # uncertain parameters
+    num_uncertain_params = len(model_data.config.uncertain_params)
+
+    # constraints
+    num_cons, num_eq_cons, num_ineq_cons = 0, 0, 0
+    for con in original_model.component_data_objects(Constraint, active=True):
+        num_cons += 1
+        if con.equality:
+            num_eq_cons += 1
+        else:
+            num_ineq_cons += 1
+
+    info_log_func = config.progress_logger.info
+
+    info_log_func("Model Statistics (before preprocessing):")
+    info_log_func(f"  Number of variables : {num_vars}")
+    info_log_func(f"    First-stage variables : {num_first_stage_vars}")
+    info_log_func(f"    Second-stage variables : {num_second_stage_vars}")
+    info_log_func(f"    State variables : {num_state_vars}")
+    info_log_func(f"  Number of uncertain parameters : {num_uncertain_params}")
+    info_log_func(f"  Number of constraints : {num_cons}")
+    info_log_func(f"    Equality constraints : {num_eq_cons}")
+    info_log_func(f"    Inequality constraints : {num_ineq_cons}")
 
 
 def setup_quadratic_expression_visitor(
@@ -1244,6 +1456,24 @@ def get_effective_var_partitioning(model_data):
     # truly nonadjustable variables
     nonadjustable_var_set = ComponentSet()
 
+    effective_uncertain_params_set = ComponentSet(
+        working_model.effective_uncertain_params
+    )
+    if not effective_uncertain_params_set:
+        config.progress_logger.info(
+            "Model has no effective uncertain parameters. "
+            "All variables are considered effectively first-stage."
+        )
+        return VariablePartitioning(
+            first_stage_variables=(
+                user_var_partitioning.first_stage_variables
+                + user_var_partitioning.second_stage_variables
+                + user_var_partitioning.state_variables
+            ),
+            second_stage_variables=[],
+            state_variables=[],
+        )
+
     # the following variables are immediately known to be nonadjustable:
     # - first-stage variables
     # - (if decision rule order is 0) second-stage variables
@@ -1257,7 +1487,7 @@ def get_effective_var_partitioning(model_data):
     for vartype, varlist in var_type_list_pairs:
         for wvar in varlist:
             certain_var_bounds, _ = get_var_certain_uncertain_bounds(
-                wvar, working_model.uncertain_params
+                wvar, working_model.effective_uncertain_params
             )
 
             is_var_nonadjustable = (
@@ -1287,8 +1517,6 @@ def get_effective_var_partitioning(model_data):
             if certain_var_bounds.eq is not None:
                 config.progress_logger.debug(" the variable is fixed by domain/bounds")
 
-    uncertain_params_set = ComponentSet(working_model.uncertain_params)
-
     # determine constraints that are potentially applicable for
     # pretriangularization
     certain_eq_cons = ComponentSet()
@@ -1296,7 +1524,8 @@ def get_effective_var_partitioning(model_data):
         if not wcon.equality:
             continue
         uncertain_params_in_expr = (
-            ComponentSet(identify_mutable_parameters(wcon.expr)) & uncertain_params_set
+            ComponentSet(identify_mutable_parameters(wcon.expr))
+            & effective_uncertain_params_set
         )
         if uncertain_params_in_expr:
             continue
@@ -1495,6 +1724,10 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
     Consequently, all constraints added to the working model
     in this method are considered second-stage constraints.
 
+    Uncertain bounds that have been assigned a separation priority
+    of None are not reformulated, and are subsequently enforced
+    subject to only the nominal uncertain parameter realization.
+
     Parameters
     ----------
     model_data : model data object
@@ -1502,18 +1735,25 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
     """
     working_model = model_data.working_model
     nonadjustable_vars = working_model.effective_var_partitioning.first_stage_variables
-    uncertain_params_set = ComponentSet(working_model.uncertain_params)
+    uncertain_params_set = ComponentSet(working_model.effective_uncertain_params)
     for var in nonadjustable_vars:
         _, declared_bounds = get_var_bound_pairs(var)
         declared_bound_triple = rearrange_bound_pair_to_triple(*declared_bounds)
         var_name = var.getname(
             relative_to=working_model.user_model, fully_qualified=True
         )
+        var_bound_sep_priority = model_data.get_user_separation_priority(
+            component_data=var, component_data_name=var_name
+        )
         for btype, bound in declared_bound_triple._asdict().items():
             is_bound_uncertain = bound is not None and (
                 ComponentSet(identify_mutable_parameters(bound)) & uncertain_params_set
             )
-            if is_bound_uncertain:
+            is_bound_second_stage = (
+                is_bound_uncertain
+                and var_bound_sep_priority is not BYPASSING_SEPARATION_PRIORITY
+            )
+            if is_bound_second_stage:
                 new_con_expr = create_bound_constraint_expr(var, bound, btype)
                 new_con_name = f"var_{var_name}_uncertain_{btype}_bound_con"
                 remove_var_declared_bound(var, btype)
@@ -1525,15 +1765,9 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
                     working_model.second_stage.inequality_cons[new_con_name] = (
                         new_con_expr
                     )
-                    # can't specify custom priorities for variable bounds
-                    model_data.separation_priority_order[new_con_name] = (
-                        DEFAULT_SEPARATION_PRIORITY
-                    )
-
-    # for subsequent developments: return a mapping
-    # from each variable to the corresponding binding constraints?
-    # we will add this as needed when changes are made to
-    # the interface for separation priority ordering
+                model_data.separation_priority_order[new_con_name] = (
+                    var_bound_sep_priority
+                )
 
 
 def turn_adjustable_var_bounds_to_constraints(model_data):
@@ -1549,6 +1783,11 @@ def turn_adjustable_var_bounds_to_constraints(model_data):
     Since these constraints depend on adjustable variables,
     they are taken to be (effective) second-stage constraints.
 
+    Bounds that have been assigned a separation priority
+    of None are reformulated to first-stage constraints,
+    and are subsequently enforced subject to only the
+    nominal uncertain parameter realization.
+
     Parameters
     ----------
     model_data : model data object
@@ -1562,7 +1801,7 @@ def turn_adjustable_var_bounds_to_constraints(model_data):
     )
     for var in adjustable_vars:
         cert_bound_triple, uncert_bound_triple = get_var_certain_uncertain_bounds(
-            var, working_model.uncertain_params
+            var, working_model.effective_uncertain_params
         )
         var_name = var.getname(
             relative_to=working_model.user_model, fully_qualified=True
@@ -1571,31 +1810,97 @@ def turn_adjustable_var_bounds_to_constraints(model_data):
             ("certain", cert_bound_triple),
             ("uncertain", uncert_bound_triple),
         )
+        var_bound_sep_priority = model_data.get_user_separation_priority(
+            component_data=var, component_data_name=var_name
+        )
+        is_bound_second_stage = (
+            var_bound_sep_priority is not BYPASSING_SEPARATION_PRIORITY
+        )
+        if is_bound_second_stage:
+            ineq_con_component = working_model.second_stage.inequality_cons
+            eq_con_component = working_model.second_stage.equality_cons
+        else:
+            ineq_con_component = working_model.first_stage.inequality_cons
+            eq_con_component = working_model.first_stage.dr_independent_equality_cons
         for certainty_desc, bound_triple in cert_uncert_bound_zip:
             for btype, bound in bound_triple._asdict().items():
                 if bound is not None:
                     new_con_name = f"var_{var_name}_{certainty_desc}_{btype}_bound_con"
                     new_con_expr = create_bound_constraint_expr(var, bound, btype)
                     if btype == BoundType.EQ:
-                        working_model.second_stage.equality_cons[new_con_name] = (
-                            new_con_expr
-                        )
+                        eq_con_component[new_con_name] = new_con_expr
                     else:
-                        working_model.second_stage.inequality_cons[new_con_name] = (
-                            new_con_expr
-                        )
-                        # no custom separation priorities for Var
-                        # bound constraints
+                        ineq_con_component[new_con_name] = new_con_expr
+
+                    if is_bound_second_stage:
                         model_data.separation_priority_order[new_con_name] = (
-                            DEFAULT_SEPARATION_PRIORITY
+                            var_bound_sep_priority
                         )
 
         remove_all_var_bounds(var)
 
-    # for subsequent developments: return a mapping
-    # from each variable to the corresponding binding constraints?
-    # we will add this as needed when changes are made to
-    # the interface for separation priority ordering
+
+def _replace_vars_in_component_exprs(block, substitution_map, ctype):
+    """
+    Substitute other objects for Vars in the expression attributes
+    of the component objects of a given type in a given block.
+
+    For efficiency purposes, only components whose expressions
+    contain the Vars to remove via the substitution are acted upon.
+
+    Named expressions in the components acted upon are descended
+    into, but not removed.
+
+    Parameters
+    ----------
+    block : BlockData
+        Block on which to perform the replacement.
+    substitution_map : ComponentMap
+        First entry of each tuple is a Var to remove,
+        second entry is an object to introduce in its place.
+    ctype : type or tuple of type
+        Type(s) of the components whose expressions are to be
+        modified.
+    """
+    vars_to_be_replaced = ComponentSet([var for var, _ in substitution_map.items()])
+    substitution_map = {id(var): dest for var, dest in substitution_map.items()}
+    for cdata in block.component_data_objects(ctype, active=None, descend_into=True):
+        # efficiency: act only on components containing
+        #             the Vars to be substituted
+        if ComponentSet(identify_variables(cdata.expr)) & vars_to_be_replaced:
+            cdata.set_value(
+                replace_expressions(
+                    expr=cdata.expr,
+                    substitution_map=substitution_map,
+                    descend_into_named_expressions=True,
+                    remove_named_expressions=False,
+                )
+            )
+
+
+def replace_vars_with_params(block, var_to_param_map):
+    """
+    Substitute ParamData objects for VarData objects
+    in the Expression, Constraint, and Objective components
+    declared on a block and all its sub-blocks.
+
+    Note that when performing the substitutions in the
+    Constraint and Objective components,
+    named Expressions are descended into, but not replaced.
+
+    Parameters
+    ----------
+    block : BlockData
+        Block on which to perform the substitution.
+    var_to_param_map : ComponentMap
+        Mapping from VarData objects to be replaced
+        to the ParamData objects to be introduced.
+    """
+    _replace_vars_in_component_exprs(
+        block=block,
+        substitution_map=var_to_param_map,
+        ctype=(Expression, Constraint, Objective),
+    )
 
 
 def setup_working_model(model_data, user_var_partitioning):
@@ -1619,7 +1924,7 @@ def setup_working_model(model_data, user_var_partitioning):
     temp_util_block_attr_name = unique_component_name(original_model, "util")
     original_model.add_component(temp_util_block_attr_name, Block())
     orig_temp_util_block = getattr(original_model, temp_util_block_attr_name)
-    orig_temp_util_block.uncertain_params = config.uncertain_params
+    orig_temp_util_block.orig_uncertain_params = config.uncertain_params
     orig_temp_util_block.user_var_partitioning = VariablePartitioning(
         **user_var_partitioning._asdict()
     )
@@ -1629,7 +1934,8 @@ def setup_working_model(model_data, user_var_partitioning):
 
     # stagewise blocks for containing stagewise constraints
     working_model.first_stage = Block()
-    working_model.first_stage.equality_cons = Constraint(Any)
+    working_model.first_stage.dr_independent_equality_cons = Constraint(Any)
+    working_model.first_stage.dr_dependent_equality_cons = Constraint(Any)
     working_model.first_stage.inequality_cons = Constraint(Any)
     working_model.second_stage = Block()
     working_model.second_stage.equality_cons = Constraint(Any)
@@ -1643,8 +1949,8 @@ def setup_working_model(model_data, user_var_partitioning):
     working_temp_util_block = getattr(
         working_model.user_model, temp_util_block_attr_name
     )
-    model_data.working_model.uncertain_params = (
-        working_temp_util_block.uncertain_params.copy()
+    model_data.working_model.orig_uncertain_params = (
+        working_temp_util_block.orig_uncertain_params.copy()
     )
     working_model.user_var_partitioning = VariablePartitioning(
         **working_temp_util_block.user_var_partitioning._asdict()
@@ -1653,6 +1959,47 @@ def setup_working_model(model_data, user_var_partitioning):
     # we are done with the util blocks
     delattr(original_model, temp_util_block_attr_name)
     delattr(working_model.user_model, temp_util_block_attr_name)
+
+    uncertain_param_var_idxs = []
+    for idx, obj in enumerate(working_model.orig_uncertain_params):
+        if isinstance(obj, VarData):
+            obj.fix()
+            uncertain_param_var_idxs.append(idx)
+    temp_params = working_model.temp_uncertain_params = Param(
+        uncertain_param_var_idxs,
+        within=Reals,
+        initialize={
+            idx: config.nominal_uncertain_param_vals[idx]
+            for idx in uncertain_param_var_idxs
+        },
+        mutable=True,
+    )
+    working_model.uncertain_params = [
+        temp_params[idx] if idx in uncertain_param_var_idxs else orig_param
+        for idx, orig_param in enumerate(working_model.orig_uncertain_params)
+    ]
+
+    # don't want to pass over the model components unless
+    # at least one Var is to be replaced
+    if uncertain_param_var_idxs:
+        uncertain_var_to_param_map = ComponentMap(
+            (working_model.orig_uncertain_params[idx], temp_param)
+            for idx, temp_param in temp_params.items()
+        )
+        replace_vars_with_params(
+            working_model, var_to_param_map=uncertain_var_to_param_map
+        )
+        for var, param in uncertain_var_to_param_map.items():
+            config.progress_logger.debug(
+                "Uncertain parameter with name "
+                f"{var.name!r} (relative to the working model clone) "
+                f"is of type {VarData.__name__}. "
+                f"A newly declared {ParamData.__name__} object "
+                f"with name {param.name!r} "
+                f"has been substituted for the {VarData.__name__} object "
+                "in all named expressions, constraints, and objectives "
+                "of the working model clone. "
+            )
 
     # keep track of the original active constraints
     working_model.original_active_equality_cons = []
@@ -1677,9 +2024,8 @@ def standardize_inequality_constraints(model_data):
     model_data : model data object
         Main model data object, containing the working model.
     """
-    config = model_data.config
     working_model = model_data.working_model
-    uncertain_params_set = ComponentSet(working_model.uncertain_params)
+    uncertain_params_set = ComponentSet(working_model.effective_uncertain_params)
     adjustable_vars_set = ComponentSet(
         working_model.effective_var_partitioning.second_stage_variables
         + working_model.effective_var_partitioning.state_variables
@@ -1694,8 +2040,13 @@ def standardize_inequality_constraints(model_data):
         con_rel_name = con.getname(
             relative_to=working_model.user_model, fully_qualified=True
         )
-
-        if uncertain_params_in_con_expr | adjustable_vars_in_con_body:
+        con_sep_priority = model_data.get_user_separation_priority(
+            component_data=con, component_data_name=con_rel_name
+        )
+        is_con_potentially_second_stage = (
+            uncertain_params_in_con_expr | adjustable_vars_in_con_body
+        ) and con_sep_priority is not BYPASSING_SEPARATION_PRIORITY
+        if is_con_potentially_second_stage:
             con_bounds_triple = rearrange_bound_pair_to_triple(
                 lower_bound=con.lower, upper_bound=con.upper
             )
@@ -1733,9 +2084,7 @@ def standardize_inequality_constraints(model_data):
                     )
                     # account for user-specified priority specifications
                     model_data.separation_priority_order[new_con_name] = (
-                        config.separation_priority_order.get(
-                            con_rel_name, DEFAULT_SEPARATION_PRIORITY
-                        )
+                        con_sep_priority
                     )
                 else:
                     # we do not want to modify the arrangement of
@@ -1771,7 +2120,7 @@ def standardize_equality_constraints(model_data):
         Main model data object, containing the working model.
     """
     working_model = model_data.working_model
-    uncertain_params_set = ComponentSet(working_model.uncertain_params)
+    uncertain_params_set = ComponentSet(working_model.effective_uncertain_params)
     adjustable_vars_set = ComponentSet(
         working_model.effective_var_partitioning.second_stage_variables
         + working_model.effective_var_partitioning.state_variables
@@ -1788,12 +2137,20 @@ def standardize_equality_constraints(model_data):
         con_rel_name = con.getname(
             relative_to=working_model.user_model, fully_qualified=True
         )
-        if uncertain_params_in_con_expr | adjustable_vars_in_con_body:
-            working_model.second_stage.equality_cons[f"eq_con_{con_rel_name}"] = (
+        con_sep_priority = model_data.get_user_separation_priority(
+            component_data=con, component_data_name=con_rel_name
+        )
+        new_con_name = f"eq_con_{con_rel_name}"
+        is_con_second_stage = (
+            uncertain_params_in_con_expr | adjustable_vars_in_con_body
+        ) and con_sep_priority is not BYPASSING_SEPARATION_PRIORITY
+        if is_con_second_stage:
+            working_model.second_stage.equality_cons[new_con_name] = con.expr
+            model_data.separation_priority_order[new_con_name] = con_sep_priority
+        else:
+            working_model.first_stage.dr_independent_equality_cons[new_con_name] = (
                 con.expr
             )
-        else:
-            working_model.first_stage.equality_cons[f"eq_con_{con_rel_name}"] = con.expr
 
         # definitely don't want active duplicate
         con.deactivate()
@@ -1869,7 +2226,7 @@ def declare_objective_expressions(working_model, objective, sense=minimize):
     first_stage_var_set = ComponentSet(
         working_model.user_var_partitioning.first_stage_variables
     )
-    uncertain_param_set = ComponentSet(working_model.uncertain_params)
+    uncertain_param_set = ComponentSet(working_model.effective_uncertain_params)
 
     obj_sense = objective.sense
     for term in obj_args:
@@ -1914,7 +2271,7 @@ def standardize_active_objective(model_data):
     The epigraph constraint is considered a first-stage
     inequality provided that it is independent of the
     adjustable (i.e., effective second-stage and effective state)
-    variables and the uncertain parameters.
+    variables and the effective uncertain parameters.
 
     Parameters
     ----------
@@ -1949,7 +2306,7 @@ def standardize_active_objective(model_data):
     )
     uncertain_params_in_obj = ComponentSet(
         identify_mutable_parameters(active_obj.expr)
-    ) & ComponentSet(working_model.uncertain_params)
+    ) & ComponentSet(working_model.effective_uncertain_params)
     adjustable_vars_in_obj = (
         ComponentSet(identify_variables(active_obj.expr)) & adjustable_vars
     )
@@ -2001,6 +2358,12 @@ def get_all_nonadjustable_variables(working_model):
     )
 
     return [epigraph_var] + decision_rule_vars + effective_first_stage_vars
+
+
+def get_all_first_stage_eq_cons(working_model):
+    return list(working_model.first_stage.dr_dependent_equality_cons.values()) + list(
+        working_model.first_stage.dr_independent_equality_cons.values()
+    )
 
 
 def get_all_adjustable_variables(working_model):
@@ -2108,25 +2471,284 @@ def check_time_limit_reached(timing_data, config):
     )
 
 
+def _reformulate_eq_con_scenario_uncertainty(
+    model_data,
+    discrete_set,
+    ss_eq_con,
+    ss_eq_con_index,
+    ss_var_id_to_dr_expr_map,
+    all_dr_vars_set,
+):
+    """
+    Reformulate a second-stage equality constraint that
+    is independent of the state variables and subject
+    to scenario-based uncertainty.
+
+    This reformulation merely involves adding to the set
+    of first-stage equalities the original constraint
+    subject to each (hard-coded) scenario in the uncertainty set.
+
+    The original constraint is removed from the model.
+
+    Parameters
+    ----------
+    model_data : ModelData
+        Model data object, with mostly preprocessed working model.
+    discrete_set : UncertaintySet
+        Uncertainty set with scenario-based geometry.
+    ss_eq_con : ConstraintData
+        Second-stage equality constraint to be reformulated.
+        Expected to be a member of
+        ``model_data.working_model.second_stage.equality_cons``.
+    ss_eq_con_index : hashable
+        Index of the equality constraint in
+        ``model_data.working_model.second_stage.equality_cons``.
+    ss_var_id_to_dr_expr_map : dict
+        Mapping from object IDs of second-stage variables to
+        corresponding decision rule expressions.
+    all_dr_vars_set : ComponentSet
+        A set of all the decision rule variables declared on
+        ``model_data.working_model``.
+    """
+    working_model = model_data.working_model
+    con_expr_after_dr_substitution = replace_expressions(
+        expr=ss_eq_con.expr, substitution_map=ss_var_id_to_dr_expr_map
+    )
+    vars_in_coeff_expr = ComponentSet(
+        identify_variables(con_expr_after_dr_substitution)
+    )
+    has_con_dr_vars = vars_in_coeff_expr & all_dr_vars_set
+    indexed_con_to_update = (
+        working_model.first_stage.dr_dependent_equality_cons
+        if has_con_dr_vars
+        else working_model.first_stage.dr_independent_equality_cons
+    )
+
+    scenarios_enum = enumerate(discrete_set.scenarios)
+    for sc_idx, scenario in scenarios_enum:
+        indexed_con_to_update[f"scenario_{sc_idx}_{ss_eq_con_index}"] = (
+            replace_expressions(
+                expr=con_expr_after_dr_substitution,
+                substitution_map={
+                    id(param): scenario_val
+                    for param, scenario_val in zip(
+                        working_model.uncertain_params, scenario
+                    )
+                },
+            )
+        )
+    del working_model.second_stage.equality_cons[ss_eq_con_index]
+
+
+def _reformulate_eq_con_continuous_uncertainty(
+    model_data,
+    config,
+    ss_eq_con,
+    ss_eq_con_index,
+    ss_var_id_to_dr_expr_map,
+    uncertain_param_id_to_temp_var_map,
+    originally_unfixed_vars,
+    all_dr_vars_set,
+):
+    """
+    Reformulate a second-stage equality constraint that
+    is independent of the state variables and subject
+    to non-scenario-based uncertainty.
+
+    If, after substitution of the decision rule expressions,
+    the constraint expression is a polynomial (up to degree 2)
+    in the uncertain parameters, then coefficient matching
+    constraints are added. Note that in some (rare?) cases,
+    coefficient matching constraints are restrictive.
+
+    Otherwise, the constraint is cast to two second-stage
+    inequality constraints, each of which is assigned a separation
+    priority equal to ``DEFAULT_SEPARATION_PRIORITY``.
+
+    The original constraint is removed from the model.
+
+    Parameters
+    ----------
+    model_data : ModelData
+        Model data object, with mostly preprocessed working model.
+    config : ConfigDict
+        PyROS solver settings.
+    ss_eq_con : ConstraintData
+        Second-stage equality constraint to be reformulated.
+        Expected to be a member of
+        ``model_data.working_model.second_stage.equality_cons``.
+    ss_eq_con_index : hashable
+        Index of the equality constraint in
+        ``model_data.working_model.second_stage.equality_cons``.
+    ss_var_id_to_dr_expr_map : dict
+        Mapping from object IDs of second-stage variables to
+        corresponding decision rule expressions.
+    uncertain_param_id_to_temp_var_map : dict
+        Mapping from object IDs of effective uncertain parameters
+        to temporary placeholder variables.
+    originally_unfixed_vars : list/ComponentSet of VarData
+        Variables of the working model that were originally
+        unfixed.
+    all_dr_vars_set : ComponentSet
+        A set of all the decision rule variables declared on
+        ``model_data.working_model``.
+
+    Returns
+    -------
+    robust_infeasible : bool
+        True if robust infeasibility was detected through
+        coefficient matching, False otherwise.
+    """
+    robust_infeasible = False
+
+    working_model = model_data.working_model
+    con_expr_after_dr_substitution = replace_expressions(
+        expr=ss_eq_con.body - ss_eq_con.upper, substitution_map=ss_var_id_to_dr_expr_map
+    )
+
+    # substitute temporarily defined vars for uncertain params.
+    # note: this is performed after, rather than along with,
+    # the DR expression substitution, as the DR expressions
+    # contain uncertain params
+    con_expr_after_all_substitutions = replace_expressions(
+        expr=con_expr_after_dr_substitution,
+        substitution_map=uncertain_param_id_to_temp_var_map,
+    )
+
+    # analyze the expression with respect to the
+    # effective uncertain parameters only. thus, only the proxy
+    # variables for the uncertain parameters are unfixed
+    # during the analysis
+    visitor = setup_quadratic_expression_visitor(wrt=originally_unfixed_vars)
+    expr_repn = visitor.walk_expression(con_expr_after_all_substitutions)
+
+    if expr_repn.nonlinear is not None:
+        config.progress_logger.debug(
+            f"Equality constraint {ss_eq_con.name!r} "
+            "is state-variable independent, but cannot be written "
+            "as a polynomial in the uncertain parameters with "
+            "the currently available expression analyzers "
+            "and selected decision rules "
+            f"(decision_rule_order={config.decision_rule_order}). "
+            "We are unable to write a coefficient matching reformulation "
+            "of this constraint."
+            "Recasting to two inequality constraints."
+        )
+
+        # keeping this constraint as an equality is not appropriate,
+        # as it effectively constrains the uncertain parameters
+        # in the separation problems, since the effective DOF
+        # variables and DR variables are fixed.
+        # hence, we reformulate to inequalities
+        for bound_type in [BoundType.LOWER, BoundType.UPPER]:
+            std_con_expr = create_bound_constraint_expr(
+                expr=ss_eq_con.body, bound=ss_eq_con.upper, bound_type=bound_type
+            )
+            new_con_name = f"reform_{bound_type}_bound_from_{ss_eq_con_index}"
+            working_model.second_stage.inequality_cons[new_con_name] = std_con_expr
+            # no custom priorities specified
+            model_data.separation_priority_order[new_con_name] = (
+                model_data.separation_priority_order[ss_eq_con_index]
+            )
+    else:
+        polynomial_repn_coeffs = (
+            [expr_repn.constant]
+            + list(expr_repn.linear.values())
+            + (
+                []
+                if expr_repn.quadratic is None
+                else list(expr_repn.quadratic.values())
+            )
+        )
+        for coeff_idx, coeff_expr in enumerate(polynomial_repn_coeffs):
+            # for robust satisfaction of the original equality
+            # constraint, all polynomial coefficients must be
+            # equal to zero. so for each coefficient,
+            # we either check for trivial robust
+            # feasibility/infeasibility, or add a constraint
+            # restricting the coefficient expression to value 0
+            if isinstance(coeff_expr, tuple(native_types)):
+                # coefficient is a constant;
+                # check value to determine
+                # trivial feasibility/infeasibility
+                robust_infeasible = not math.isclose(
+                    a=coeff_expr,
+                    b=0,
+                    rel_tol=COEFF_MATCH_REL_TOL,
+                    abs_tol=COEFF_MATCH_ABS_TOL,
+                )
+                if robust_infeasible:
+                    config.progress_logger.info(
+                        "PyROS has determined that the model is "
+                        "robust infeasible. "
+                        "One reason for this is that "
+                        f"the equality constraint {ss_eq_con.name!r} "
+                        "cannot be satisfied against all realizations "
+                        "of uncertainty, "
+                        "given the current partitioning into "
+                        "first-stage, second-stage, and state variables. "
+                        "Consider editing this constraint to reference some "
+                        "(additional) second-stage and/or state variable(s)."
+                    )
+
+                    # robust infeasibility found;
+                    # that is sufficient for termination of PyROS.
+                    break
+
+            else:
+                # coefficient is variable-dependent.
+                # add matching constraint
+                new_con_name = f"coeff_matching_{ss_eq_con_index}_coeff_{coeff_idx}"
+                vars_in_coeff_expr = ComponentSet(identify_variables(coeff_expr))
+                has_expr_dr_vars = vars_in_coeff_expr & all_dr_vars_set
+                indexed_con_to_update = (
+                    working_model.first_stage.dr_dependent_equality_cons
+                    if has_expr_dr_vars
+                    else working_model.first_stage.dr_independent_equality_cons
+                )
+                indexed_con_to_update[new_con_name] = coeff_expr == 0
+                new_con = indexed_con_to_update[new_con_name]
+                working_model.first_stage.coefficient_matching_cons.append(new_con)
+
+                dr_dependence_qual = (
+                    f"DR variable-{'in' if has_expr_dr_vars else ''}dependent"
+                )
+                config.progress_logger.debug(
+                    f"Derived from constraint {ss_eq_con.name!r} a "
+                    f"{dr_dependence_qual} coefficient "
+                    f"matching constraint named {new_con_name!r} "
+                    "with expression: \n    "
+                    f"{new_con.expr}."
+                )
+
+    del working_model.second_stage.equality_cons[ss_eq_con_index]
+
+    return robust_infeasible
+
+
 def reformulate_state_var_independent_eq_cons(model_data):
     """
     Reformulate second-stage equality constraints that are
     independent of the state variables.
 
-    The state variable-independent second-stage equality
-    constraints that can be rewritten as polynomials
-    in terms of the uncertain parameters
-    are reformulated to first-stage equalities
-    through matching of the polynomial coefficients.
-    Hence, this reformulation technique is referred to as
-    coefficient matching.
-    In some cases, matching of the coefficients may lead to
-    a certificate of robust infeasibility.
+    The reformulation of every such constraint is as follows:
 
-    All other state variable-independent second-stage equality
-    constraints are recast to pairs of opposing second-stage inequality
-    constraints, as they would otherwise over-constrain the uncertain
-    parameters in the separation subproblems.
+    - If the uncertainty set is discrete, then the constraint,
+      subject to each scenario in the set, is added to the
+      first-stage equality constraints.
+    - Otherwise:
+
+      - If, after substitution of the decision rule expressions
+        for the effective second-stage variables, the constraint
+        expression is a polynomial (of degree up to 2) in the
+        uncertain parameters, then an equality requiring that
+        each coefficient be of value 0 is added to the first-stage
+        equality constraints.
+        In some cases, matching of the coefficients may lead to
+        immediate detection of robust infeasibility.
+      - Otherwise, the constraint is cast to two second-stage
+        inequalities, each of which is assigned a separation
+        priority of ``DEFAULT_SEPARATION_PRIORITY``.
 
     Parameters
     ----------
@@ -2146,11 +2768,14 @@ def reformulate_state_var_independent_eq_cons(model_data):
     effective_second_stage_var_set = ComponentSet(ep.second_stage_variables)
     effective_state_var_set = ComponentSet(ep.state_variables)
     all_vars_set = ComponentSet(working_model.all_variables)
+    all_dr_vars_set = ComponentSet(
+        generate_all_decision_rule_var_data_objects(working_model)
+    )
     originally_unfixed_vars = [var for var in all_vars_set if not var.fixed]
 
     # we will need this to substitute DR expressions for
     # second-stage variables later
-    ssvar_id_to_dr_expr_map = {
+    ss_var_id_to_dr_expr_map = {
         id(ss_var): get_dr_expression(working_model, ss_var)
         for ss_var in effective_second_stage_var_set
     }
@@ -2161,7 +2786,7 @@ def reformulate_state_var_independent_eq_cons(model_data):
     # but the uncertain params are implemented as mutable Param objects
     # so we temporarily define Var components to be briefly substituted
     # for the uncertain parameters as the constraints are analyzed
-    uncertain_params_set = ComponentSet(working_model.uncertain_params)
+    uncertain_params_set = ComponentSet(working_model.effective_uncertain_params)
     working_model.temp_param_vars = temp_param_vars = Var(
         range(len(uncertain_params_set)),
         initialize={
@@ -2176,10 +2801,12 @@ def reformulate_state_var_independent_eq_cons(model_data):
         id(param): var for param, var in uncertain_param_to_temp_var_map.items()
     }
 
+    robust_infeasible = False
+
     # copy the items iterable,
     # as we will be modifying the constituents of the constraint
     # in place
-    working_model.first_stage.coefficient_matching_cons = coefficient_matching_cons = []
+    working_model.first_stage.coefficient_matching_cons = []
     for con_idx, con in list(working_model.second_stage.equality_cons.items()):
         vars_in_con = ComponentSet(identify_variables(con.expr))
         mutable_params_in_con = ComponentSet(identify_mutable_parameters(con.expr))
@@ -2192,128 +2819,60 @@ def reformulate_state_var_independent_eq_cons(model_data):
             uncertain_params_in_con or second_stage_vars_in_con
         )
         if coefficient_matching_applicable:
-            con_expr_after_dr_substitution = replace_expressions(
-                expr=con.body - con.upper, substitution_map=ssvar_id_to_dr_expr_map
-            )
-
-            # substitute temporarily defined vars for uncertain params.
-            # note: this is performed after, rather than along with,
-            # the DR expression substitution, as the DR expressions
-            # contain uncertain params
-            con_expr_after_all_substitutions = replace_expressions(
-                expr=con_expr_after_dr_substitution,
-                substitution_map=uncertain_param_id_to_temp_var_map,
-            )
-
-            # analyze the expression with respect to the
-            # uncertain parameters only. thus, only the proxy
-            # variables for the uncertain parameters are unfixed
-            # during the analysis
-            visitor = setup_quadratic_expression_visitor(wrt=originally_unfixed_vars)
-            expr_repn = visitor.walk_expression(con_expr_after_all_substitutions)
-
-            if expr_repn.nonlinear is not None:
-                config.progress_logger.debug(
-                    f"Equality constraint {con.name!r} "
-                    "is state-variable independent, but cannot be written "
-                    "as a polynomial in the uncertain parameters with "
-                    "the currently available expression analyzers "
-                    "and selected decision rules "
-                    f"(decision_rule_order={config.decision_rule_order}). "
-                    "We are unable to write a coefficient matching reformulation "
-                    "of this constraint."
-                    "Recasting to two inequality constraints."
+            if config.uncertainty_set.geometry.name == "DISCRETE_SCENARIOS":
+                _reformulate_eq_con_scenario_uncertainty(
+                    model_data=model_data,
+                    ss_eq_con=con,
+                    ss_eq_con_index=con_idx,
+                    discrete_set=config.uncertainty_set,
+                    ss_var_id_to_dr_expr_map=ss_var_id_to_dr_expr_map,
+                    all_dr_vars_set=all_dr_vars_set,
                 )
-
-                # keeping this constraint as an equality is not appropriate,
-                # as it effectively constrains the uncertain parameters
-                # in the separation problems, since the effective DOF
-                # variables and DR variables are fixed.
-                # hence, we reformulate to inequalities
-                for bound_type in [BoundType.LOWER, BoundType.UPPER]:
-                    std_con_expr = create_bound_constraint_expr(
-                        expr=con.body, bound=con.upper, bound_type=bound_type
-                    )
-                    new_con_name = f"reform_{bound_type}_bound_from_{con_idx}"
-                    working_model.second_stage.inequality_cons[new_con_name] = (
-                        std_con_expr
-                    )
-                    # no custom priorities specified
-                    model_data.separation_priority_order[new_con_name] = (
-                        DEFAULT_SEPARATION_PRIORITY
-                    )
             else:
-                polynomial_repn_coeffs = (
-                    [expr_repn.constant]
-                    + list(expr_repn.linear.values())
-                    + (
-                        []
-                        if expr_repn.quadratic is None
-                        else list(expr_repn.quadratic.values())
-                    )
+                robust_infeasible = _reformulate_eq_con_continuous_uncertainty(
+                    model_data=model_data,
+                    config=config,
+                    ss_eq_con=con,
+                    ss_eq_con_index=con_idx,
+                    ss_var_id_to_dr_expr_map=ss_var_id_to_dr_expr_map,
+                    uncertain_param_id_to_temp_var_map=(
+                        uncertain_param_id_to_temp_var_map
+                    ),
+                    originally_unfixed_vars=originally_unfixed_vars,
+                    all_dr_vars_set=all_dr_vars_set,
                 )
-                for coeff_idx, coeff_expr in enumerate(polynomial_repn_coeffs):
-                    # for robust satisfaction of the original equality
-                    # constraint, all polynomial coefficients must be
-                    # equal to zero. so for each coefficient,
-                    # we either check for trivial robust
-                    # feasibility/infeasibility, or add a constraint
-                    # restricting the coefficient expression to value 0
-                    if isinstance(coeff_expr, tuple(native_types)):
-                        # coefficient is a constant;
-                        # check value to determine
-                        # trivial feasibility/infeasibility
-                        robust_infeasible = not math.isclose(
-                            a=coeff_expr,
-                            b=0,
-                            rel_tol=COEFF_MATCH_REL_TOL,
-                            abs_tol=COEFF_MATCH_ABS_TOL,
-                        )
-                        if robust_infeasible:
-                            config.progress_logger.info(
-                                "PyROS has determined that the model is "
-                                "robust infeasible. "
-                                "One reason for this is that "
-                                f"the equality constraint {con.name!r} "
-                                "cannot be satisfied against all realizations "
-                                "of uncertainty, "
-                                "given the current partitioning into "
-                                "first-stage, second-stage, and state variables. "
-                                "Consider editing this constraint to reference some "
-                                "(additional) second-stage and/or state variable(s)."
-                            )
-
-                            # robust infeasibility found;
-                            # that is sufficient for termination of PyROS.
-                            return robust_infeasible
-
-                    else:
-                        # coefficient is dependent on model first-stage
-                        # and DR variables. add matching constraint
-                        new_con_name = f"coeff_matching_{con_idx}_coeff_{coeff_idx}"
-                        working_model.first_stage.equality_cons[new_con_name] = (
-                            coeff_expr == 0
-                        )
-                        new_con = working_model.first_stage.equality_cons[new_con_name]
-                        coefficient_matching_cons.append(new_con)
-
-                        config.progress_logger.debug(
-                            f"Derived from constraint {con.name!r} a coefficient "
-                            f"matching constraint named {new_con_name!r} "
-                            "with expression: \n    "
-                            f"{new_con.expr}."
-                        )
-
-            # remove rather than deactivate to facilitate:
-            # - we no longer need this constraint anywhere
-            # - facilitates accurate counting of active constraints
-            del working_model.second_stage.equality_cons[con_idx]
+                if robust_infeasible:
+                    break
+        del model_data.separation_priority_order[con_idx]
 
     # we no longer need these auxiliary components
     working_model.del_component(temp_param_vars)
     working_model.del_component(temp_param_vars.index_set())
 
-    return False
+    return robust_infeasible
+
+
+def get_effective_uncertain_dimensions(model_data):
+    """
+    Determine the positional indices of the effective uncertain
+    parameters, i.e., the uncertain parameters
+    of a model that are not constrained to a single value
+    by the uncertainty set constraints.
+
+    Parameters
+    ----------
+    model_data : ModelData
+        PyROS model data object.
+
+    Returns
+    -------
+    list of int
+        Positional indices of interest.
+    """
+    are_coordinates_fixed = model_data.config.uncertainty_set._is_coordinate_fixed(
+        config=model_data.config
+    )
+    return [idx for idx, is_fixed in enumerate(are_coordinates_fixed) if not is_fixed]
 
 
 def preprocess_model_data(model_data, user_var_partitioning):
@@ -2337,6 +2896,17 @@ def preprocess_model_data(model_data, user_var_partitioning):
     """
     config = model_data.config
     setup_working_model(model_data, user_var_partitioning)
+
+    config.progress_logger.debug(
+        "Establishing the effective(ly) uncertain parameters..."
+    )
+    model_data.working_model.effective_uncertain_dimensions = (
+        get_effective_uncertain_dimensions(model_data)
+    )
+    model_data.working_model.effective_uncertain_params = [
+        model_data.working_model.uncertain_params[idx]
+        for idx in model_data.working_model.effective_uncertain_dimensions
+    ]
 
     # extract as many truly nonadjustable variables as possible
     # from the second-stage and state variables
@@ -2380,10 +2950,14 @@ def preprocess_model_data(model_data, user_var_partitioning):
     )
     robust_infeasible = reformulate_state_var_independent_eq_cons(model_data)
 
+    # we are done looking for separation priorities
+    for priority_sfx in model_data.separation_priority_suffix_finder.all_suffixes:
+        priority_sfx.deactivate()
+
     return robust_infeasible
 
 
-def log_model_statistics(model_data):
+def log_preprocessed_model_statistics(model_data):
     """
     Log statistics for the preprocessed model.
 
@@ -2410,17 +2984,19 @@ def log_model_statistics(model_data):
 
     # uncertain parameters
     num_uncertain_params = len(working_model.uncertain_params)
+    num_eff_uncertain_params = len(working_model.effective_uncertain_params)
 
     # constraints
     num_cons = len(list(working_model.component_data_objects(Constraint, active=True)))
 
     # # equality constraints
     num_eq_cons = (
-        len(working_model.first_stage.equality_cons)
+        len(working_model.first_stage.dr_dependent_equality_cons)
+        + len(working_model.first_stage.dr_independent_equality_cons)
         + len(working_model.second_stage.equality_cons)
         + len(working_model.second_stage.decision_rule_eqns)
     )
-    num_first_stage_eq_cons = len(working_model.first_stage.equality_cons)
+    num_first_stage_eq_cons = len(get_all_first_stage_eq_cons(working_model))
     num_coeff_matching_cons = len(working_model.first_stage.coefficient_matching_cons)
     num_other_first_stage_eqns = num_first_stage_eq_cons - num_coeff_matching_cons
     num_second_stage_eq_cons = len(working_model.second_stage.equality_cons)
@@ -2433,34 +3009,38 @@ def log_model_statistics(model_data):
     num_first_stage_ineq_cons = len(working_model.first_stage.inequality_cons)
     num_second_stage_ineq_cons = len(working_model.second_stage.inequality_cons)
 
-    info_log_func = config.progress_logger.info
+    debug_log_func = config.progress_logger.debug
 
-    IterationLogRecord.log_header_rule(info_log_func)
-    info_log_func("Model Statistics:")
+    debug_log_func("Model Statistics (after preprocessing):")
 
-    info_log_func(f"  Number of variables : {num_vars}")
-    info_log_func(f"    Epigraph variable : {num_epigraph_vars}")
-    info_log_func(f"    First-stage variables : {num_first_stage_vars}")
-    info_log_func(
+    debug_log_func(f"  Number of variables : {num_vars}")
+    debug_log_func(f"    Epigraph variable : {num_epigraph_vars}")
+    debug_log_func(f"    First-stage variables : {num_first_stage_vars}")
+    debug_log_func(
         f"    Second-stage variables : {num_second_stage_vars} "
         f"({num_eff_second_stage_vars} adj.)"
     )
-    info_log_func(
+    debug_log_func(
         f"    State variables : {num_state_vars} " f"({num_eff_state_vars} adj.)"
     )
-    info_log_func(f"    Decision rule variables : {num_dr_vars}")
+    debug_log_func(f"    Decision rule variables : {num_dr_vars}")
 
-    info_log_func(f"  Number of uncertain parameters : {num_uncertain_params}")
+    debug_log_func(
+        f"  Number of uncertain parameters : {num_uncertain_params} "
+        f"({num_eff_uncertain_params} eff.)"
+    )
 
-    info_log_func(f"  Number of constraints : {num_cons}")
-    info_log_func(f"    Equality constraints : {num_eq_cons}")
-    info_log_func(f"      Coefficient matching constraints : {num_coeff_matching_cons}")
-    info_log_func(f"      Other first-stage equations : {num_other_first_stage_eqns}")
-    info_log_func(f"      Second-stage equations : {num_second_stage_eq_cons}")
-    info_log_func(f"      Decision rule equations : {num_dr_eq_cons}")
-    info_log_func(f"    Inequality constraints : {num_ineq_cons}")
-    info_log_func(f"      First-stage inequalities : {num_first_stage_ineq_cons}")
-    info_log_func(f"      Second-stage inequalities : {num_second_stage_ineq_cons}")
+    debug_log_func(f"  Number of constraints : {num_cons}")
+    debug_log_func(f"    Equality constraints : {num_eq_cons}")
+    debug_log_func(
+        f"      Coefficient matching constraints : {num_coeff_matching_cons}"
+    )
+    debug_log_func(f"      Other first-stage equations : {num_other_first_stage_eqns}")
+    debug_log_func(f"      Second-stage equations : {num_second_stage_eq_cons}")
+    debug_log_func(f"      Decision rule equations : {num_dr_eq_cons}")
+    debug_log_func(f"    Inequality constraints : {num_ineq_cons}")
+    debug_log_func(f"      First-stage inequalities : {num_first_stage_ineq_cons}")
+    debug_log_func(f"      Second-stage inequalities : {num_second_stage_ineq_cons}")
 
 
 def add_decision_rule_variables(model_data):
@@ -2498,7 +3078,7 @@ def add_decision_rule_variables(model_data):
     # per effective second-stage variable
     # depends only on the DR order and uncertainty set dimension
     degree = config.decision_rule_order
-    num_uncertain_params = len(model_data.working_model.uncertain_params)
+    num_uncertain_params = len(model_data.working_model.effective_uncertain_params)
     num_dr_vars = sp.special.comb(
         N=num_uncertain_params + degree, k=degree, exact=True, repetition=False
     )
@@ -2536,7 +3116,7 @@ def add_decision_rule_constraints(model_data):
         model_data.working_model.effective_var_partitioning.second_stage_variables
     )
     indexed_dr_var_list = model_data.working_model.first_stage.decision_rule_vars
-    uncertain_params = model_data.working_model.uncertain_params
+    uncertain_params = model_data.working_model.effective_uncertain_params
     degree = config.decision_rule_order
 
     model_data.working_model.second_stage.decision_rule_eqns = decision_rule_eqns = (
@@ -2650,6 +3230,31 @@ def load_final_solution(model_data, master_soln, original_user_var_partitioning)
     )
     for orig_var, master_blk_var in zip(original_model_vars, master_soln_vars):
         orig_var.set_value(master_blk_var.value, skip_validation=True)
+
+
+def write_subproblem(model, fname, config):
+    """
+    Write/export a subproblem to one or more files.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Subproblem to be written/exported.
+    fname : str
+        Base name of the file(s) to be written.
+        Should not include any prefix directories.
+    config : ConfigDict
+        PyROS solver options.
+        A file will be written for each format provided in
+        ``config.subproblem_format_options``,
+        and in the directory ``config.subproblem_file_directory``.
+    """
+    for fmt, io_options in config.subproblem_format_options.items():
+        full_filename = os.path.join(config.subproblem_file_directory, f"{fname}.{fmt}")
+        model.write(filename=full_filename, format=fmt, io_options=io_options)
+        config.progress_logger.warning(
+            f"For debugging, subproblem has been written to the file {full_filename!r}."
+        )
 
 
 def call_solver(model, solver, config, timing_obj, timer_name, err_msg):
@@ -2776,6 +3381,18 @@ class IterationLogRecord:
         found during separation step.
     elapsed_time : float, optional
         Total time elapsed up to the current iteration, in seconds.
+    master_backup_solver : bool
+        True if a backup subordinate optimizer was used to solve the
+        master problem, False otherwise.
+    master_feasibility_success : bool
+        True if the master feasibility problem was solved
+        successfully, False otherwise.
+    separation_backup_local_solver : bool
+        True if a backup subordinate local optimizer was used
+        to solve at least one separation problem, False otherwise.
+    separation_backup_global_solver : bool
+        True if a backup subordinate global optimizer was used
+        to solve at least one separation problem, False otherwise.
 
     Attributes
     ----------
@@ -2815,6 +3432,18 @@ class IterationLogRecord:
         found during separation step.
     elapsed_time : float
         Total time elapsed up to the current iteration, in seconds.
+    master_backup_solver : bool
+        True if a backup subordinate optimizer was used to solve the
+        master problem, False otherwise.
+    master_feasibility_success : bool
+        True if the master feasibility problem was solved
+        successfully, False otherwise.
+    separation_backup_local_solver : bool
+        True if a backup subordinate local optimizer was used
+        to solve at least one separation problem, False otherwise.
+    separation_backup_global_solver : bool
+        True if a backup subordinate global optimizer was used
+        to solve at least one separation problem, False otherwise.
     """
 
     _LINE_LENGTH = 78
@@ -2850,6 +3479,10 @@ class IterationLogRecord:
         num_violated_cons,
         all_sep_problems_solved,
         global_separation,
+        master_backup_solver,
+        master_feasibility_success,
+        separation_backup_local_solver,
+        separation_backup_global_solver,
         max_violation,
         elapsed_time,
     ):
@@ -2863,6 +3496,10 @@ class IterationLogRecord:
         self.num_violated_cons = num_violated_cons
         self.all_sep_problems_solved = all_sep_problems_solved
         self.global_separation = global_separation
+        self.master_backup_solver = master_backup_solver
+        self.master_feasibility_success = master_feasibility_success
+        self.separation_backup_local_solver = separation_backup_local_solver
+        self.separation_backup_global_solver = separation_backup_global_solver
         self.max_violation = max_violation
         self.elapsed_time = elapsed_time
 
@@ -2902,7 +3539,18 @@ class IterationLogRecord:
             if attr_name in ["second_stage_var_shift", "dr_var_shift"]:
                 qual = "*" if not self.dr_polishing_success else ""
             elif attr_name == "num_violated_cons":
-                qual = "+" if not self.all_sep_problems_solved else ""
+                all_solved_qual = "+" if not self.all_sep_problems_solved else ""
+                bkp_qual = (
+                    "^"
+                    if self.separation_backup_local_solver
+                    or self.separation_backup_global_solver
+                    else ""
+                )
+                qual = all_solved_qual + bkp_qual
+            elif attr_name == "first_stage_var_shift":
+                qual = "*" if not self.master_feasibility_success else ""
+            elif attr_name == "objective":
+                qual = "^" if self.master_backup_solver else ""
             elif attr_name == "max_violation":
                 qual = "g" if self.global_separation else ""
             else:

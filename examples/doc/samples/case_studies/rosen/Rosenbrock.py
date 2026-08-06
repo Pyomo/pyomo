@@ -1,22 +1,20 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 # @intro:
-from pyomo.core import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 # @:intro
 # @vars:
-model.x = Var(initialize=1.5)
-model.y = Var(initialize=1.5)
+model.x = pyo.Var(initialize=1.5)
+model.y = pyo.Var(initialize=1.5)
 
 
 # @:vars
@@ -25,5 +23,5 @@ def rosenbrock(amodel):
     return (1.0 - amodel.x) ** 2 + 100.0 * (amodel.y - amodel.x**2) ** 2
 
 
-model.obj = Objective(rule=rosenbrock, sense=minimize)
+model.obj = pyo.Objective(rule=rosenbrock, sense=pyo.minimize)
 # @:obj

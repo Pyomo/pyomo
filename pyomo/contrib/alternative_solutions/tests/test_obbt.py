@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import math
 
@@ -16,7 +14,7 @@ from pyomo.common.dependencies import numpy as numpy, numpy_available
 if numpy_available:
     from numpy.testing import assert_array_almost_equal
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo.common import unittest
 
 import pyomo.opt
@@ -236,7 +234,7 @@ class TestOBBTUnit:
         Check that code catches cases where the problem is infeasible.
         """
         m = tc.get_2d_diamond_problem()
-        m.infeasible_constraint = pe.Constraint(expr=m.x >= 10)
+        m.infeasible_constraint = pyo.Constraint(expr=m.x >= 10)
         with unittest.pytest.raises(Exception):
             obbt_analysis_bounds_and_solutions(m, solver=mip_solver)
 

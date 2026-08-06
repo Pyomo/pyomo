@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 #
 # Unit Tests for pyomo.opt.base.convert
 #
@@ -37,7 +35,7 @@ currdir = this_file_dir()
 deleteFiles = True
 
 
-class MockArg(object):
+class MockArg:
     def __init__(self):
         pass
 
@@ -119,9 +117,10 @@ class Test(unittest.TestCase):
             (join(currdir, "test3.mod"),), None, [ProblemFormat.cpxlp]
         )
         self.assertTrue(ans[0][0].endswith("glpsol.lp"))
-        with open(ans[0][0], 'r') as f1, open(
-            join(currdir, "test2_convert.lp"), 'r'
-        ) as f2:
+        with (
+            open(ans[0][0], 'r') as f1,
+            open(join(currdir, "test2_convert.lp"), 'r') as f2,
+        ):
             for line1, line2 in zip_longest(f1, f2):
                 if 'Problem' in line1:
                     continue
@@ -136,9 +135,10 @@ class Test(unittest.TestCase):
             [ProblemFormat.cpxlp],
         )
         self.assertTrue(ans[0][0].endswith("glpsol.lp"))
-        with open(ans[0][0], 'r') as f1, open(
-            join(currdir, "test3_convert.lp"), 'r'
-        ) as f2:
+        with (
+            open(ans[0][0], 'r') as f1,
+            open(join(currdir, "test3_convert.lp"), 'r') as f2,
+        ):
             for line1, line2 in zip_longest(f1, f2):
                 if 'Problem' in line1:
                     continue

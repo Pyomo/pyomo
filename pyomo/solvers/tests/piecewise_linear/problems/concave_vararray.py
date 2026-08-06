@@ -1,20 +1,18 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 r"""
        / 9x+20 , -5 <= x <= -4
        | 7x+12 , -4 <= x <= -3
        | 5x+6  , -3 <= x <= -2
        | 3x+2  , -2 <= x <= -1
-f(x) = | 1     , -1 <= x <=  1 
+f(x) = | 1     , -1 <= x <=  1
        | -3x+2 ,  1 <= x <=  2
        | -5x+6 ,  2 <= x <=  3
        \ -7x+12,  3 <= x <=  4

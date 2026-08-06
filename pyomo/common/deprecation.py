@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 """This module provides utilities for deprecating functionality.
 
@@ -34,6 +32,18 @@ from pyomo.common.errors import DeveloperError
 from pyomo.common.flags import NOTSET, in_testing_environment, building_documentation
 
 _doc_flag = '.. deprecated::'
+
+
+def _autosummary_doctest_setup():
+    """This function gets called to setup the doctest environment before
+    running any autosummary doctests in this module.
+    """
+
+    # Ensure that all logged messages are sent to stdout
+    # (so they show up in the doctest output and can be tested)
+    import pyomo.common.log as _log
+
+    _log.pyomo_handler.__class__ = _log.StdoutHandler
 
 
 def default_deprecation_msg(obj, user_msg, version, remove_in):
@@ -157,7 +167,7 @@ def _find_calling_frame(module_offset):
 def deprecation_warning(
     msg, logger=None, version=None, remove_in=None, calling_frame=None
 ):
-    """Standardized formatter for deprecation warnings
+    """Standardized function for formatting and emitting deprecation warnings.
 
     This is a standardized routine for formatting deprecation warnings
     so that things look consistent and "nice".
@@ -457,7 +467,7 @@ class RenamedClass(type):
     Examples
     --------
     >>> from pyomo.common.deprecation import RenamedClass
-    >>> class NewClass(object):
+    >>> class NewClass:
     ...     pass
     >>> class OldClass(metaclass=RenamedClass):
     ...     __renamed__new_class__ = NewClass

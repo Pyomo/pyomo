@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 # TODO: this import is for historical backwards compatibility and should
 # probably be removed
@@ -38,7 +36,7 @@ from pyomo.core.expr.boolean_value import (
 from pyomo.core.base.component import name, Component, ModelComponentFactory
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.config import PyomoOptions
-from pyomo.core.base.enums import SortComponents, TraversalStrategy
+from pyomo.core.base.enums import SortComponents, TraversalStrategy, VarCollector
 from pyomo.core.base.label import (
     CuidLabeler,
     CounterLabeler,

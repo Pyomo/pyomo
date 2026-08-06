@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 import pyomo.common.unittest as unittest
 import pyomo.contrib.piecewise.tests.common_tests as ct
@@ -175,6 +173,9 @@ class TestTransformPiecewiseModelToIncrementalMIP(unittest.TestCase):
             'contrib.piecewise.incremental',
             make_log_x_model(simplices=self.ordered_simplices),
         )
+
+    def test_single_segment_no_disjunction(self):
+        ct.check_single_segment_no_disjunction(self, 'contrib.piecewise.incremental')
 
     @unittest.skipUnless(SolverFactory('gurobi').available(), 'Gurobi is not available')
     @unittest.skipUnless(SolverFactory('gurobi').license_is_valid(), 'No license')

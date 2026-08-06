@@ -1,45 +1,43 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 #
 # Abstract Knapsack Problem
 #
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
-model.ITEMS = Set()
+model.ITEMS = pyo.Set()
 
-model.v = Param(model.ITEMS, within=PositiveReals)
+model.v = pyo.Param(model.ITEMS, within=pyo.PositiveReals)
 
-model.w = Param(model.ITEMS, within=PositiveReals)
+model.w = pyo.Param(model.ITEMS, within=pyo.PositiveReals)
 
-model.limit = Param(within=PositiveReals)
+model.limit = pyo.Param(within=pyo.PositiveReals)
 
-model.x = Var(model.ITEMS, within=Binary)
+model.x = pyo.Var(model.ITEMS, within=pyo.Binary)
 
 
 def value_rule(model):
     return sum(model.v[i] * model.x[i] for i in model.ITEMS)
 
 
-model.value = Objective(sense=maximize, rule=value_rule)
+model.value = pyo.Objective(sense=pyo.maximize, rule=value_rule)
 
 
 def weight_rule(model):
     return sum(model.w[i] * model.x[i] for i in model.ITEMS) <= model.limit
 
 
-model.weight = Constraint(rule=weight_rule)
+model.weight = pyo.Constraint(rule=weight_rule)
 
 
 if __name__ == '__main__':

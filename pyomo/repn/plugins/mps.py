@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 #
 # Problem Writer for (Free) MPS Format Files
@@ -725,15 +723,13 @@ class ProblemWriter_mps(AbstractProblemWriter):
                         % (var1_label, var2_label, _no_negative_zero(coef * 2))
                     )
                 else:
-                    # the matrix needs to be symmetric so split
-                    # the coefficient (but remember it is divided by 2)
+                    # The Q matrix is symmetric (but remember it is divided by 2).
+                    # For the QUADOBJ section we output only the upper (or lower)
+                    # triangle of the Q matrix, so a single element represents a pair
+                    # of non-zero elements.
                     output_file.write(
                         column_template
                         % (var1_label, var2_label, _no_negative_zero(coef))
-                    )
-                    output_file.write(
-                        column_template
-                        % (var2_label, var1_label, _no_negative_zero(coef))
                     )
 
         #

@@ -1,19 +1,16 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 """
 Test methods for construction and solution of master problem
 objects.
 """
-
 
 import logging
 import time
@@ -27,6 +24,7 @@ from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.environ import SolverFactory
 from pyomo.opt import TerminationCondition
 
+from pyomo.contrib.pyros.uncertainty_sets import BoxSet
 from pyomo.contrib.pyros.master_problem_methods import (
     add_scenario_block_to_master_problem,
     construct_initial_master_problem,
@@ -38,13 +36,13 @@ from pyomo.contrib.pyros.master_problem_methods import (
 from pyomo.contrib.pyros.util import (
     ModelData,
     preprocess_model_data,
+    get_all_first_stage_eq_cons,
     ObjectiveType,
     time_code,
     TimingData,
     VariablePartitioning,
     pyrosTerminationCondition,
 )
-
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Packages numpy and scipy must both be available.")
@@ -78,6 +76,7 @@ def build_simple_model_data(objective_focus="worst_case", decision_rule_order=1)
         progress_logger=logger,
         nominal_uncertain_param_vals=[0.4],
         separation_priority_order=dict(),
+        uncertainty_set=BoxSet([[1, 2]]),
     )
     model_data = ModelData(original_model=m, timing=TimingData(), config=config)
     user_var_partitioning = VariablePartitioning(
@@ -193,8 +192,8 @@ class TestConstructMasterProblem(unittest.TestCase):
             )
 
         nadj_eq_con_zip = zip(
-            master_model.scenarios[0, 0].first_stage.equality_cons.values(),
-            master_model.scenarios[0, 1].first_stage.equality_cons.values(),
+            get_all_first_stage_eq_cons(master_model.scenarios[0, 0]),
+            get_all_first_stage_eq_cons(master_model.scenarios[0, 1]),
         )
         for eq_con_00, eq_con_01 in nadj_eq_con_zip:
             self.assertIsNot(

@@ -1,20 +1,17 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
-import enum
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.numeric_types import native_types
+from pyomo.common.modeling import NOTSET
 from pyomo.core.pyomoobject import PyomoObject
-from pyomo.core.expr.expr_common import OperatorAssociativity
+from pyomo.core.expr.expr_common import OperatorAssociativity, _type_check_exception_arg
 
 visitor, _ = attempt_import('pyomo.core.expr.visitor')
 
@@ -100,7 +97,7 @@ class ExpressionBase(PyomoObject):
             f"Derived expression ({self.__class__}) failed to implement args()"
         )
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Evaluate the value of the expression tree.
 
         Parameters
@@ -115,6 +112,7 @@ class ExpressionBase(PyomoObject):
         The value of the expression or :const:`None`.
 
         """
+        exception = _type_check_exception_arg(self, exception)
         return visitor.evaluate_expression(self, exception)
 
     def __str__(self):
@@ -394,7 +392,7 @@ class ExpressionBase(PyomoObject):
         )
 
 
-class NPV_Mixin(object):
+class NPV_Mixin:
     __slots__ = ()
 
     def is_potentially_variable(self):
@@ -426,7 +424,7 @@ class NPV_Mixin(object):
         return cls[0]
 
 
-class ExpressionArgs_Mixin(object):
+class ExpressionArgs_Mixin:
     __slots__ = ('_args_',)
 
     def __init__(self, args):

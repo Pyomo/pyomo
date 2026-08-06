@@ -1,13 +1,11 @@
-#  ___________________________________________________________________________
+# ____________________________________________________________________________________
 #
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+# Pyomo: Python Optimization Modeling Objects
+# Copyright (c) 2008-2026 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and Engineering
+# Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
+# software.  This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________________
 
 ###NOTE: as of May 16, this will not even come close to running. DLW
 ### and it is "wrong" in a lot of places.
@@ -17,6 +15,7 @@
 David L. Woodruff and Mingye Yang, Spring 2018
 Code snippets for scripts.rst in testable form
 """
+
 import pyomo.environ as pyo
 
 instance = pyo.ConcreteModel()
@@ -56,7 +55,7 @@ instance.y.value = 2
 instance.y.fixed = True
 # @Equivalent_form_of_instance.x.fix(2)
 
-model = ConcreteModel()
+model = pyo.ConcreteModel()
 model.obj1 = pyo.Objective(expr=0)
 model.obj2 = pyo.Objective(expr=0)
 
