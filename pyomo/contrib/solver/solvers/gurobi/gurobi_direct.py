@@ -8,6 +8,7 @@
 # ____________________________________________________________________________________
 
 import operator
+from typing import Any
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.shutdown import python_is_shutting_down
@@ -20,7 +21,6 @@ from pyomo.contrib.solver.common.util import (
     NoSolutionError,
     IncompatibleModelError,
 )
-from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 from .gurobi_direct_base import (
     GurobiDirectBase,
     gurobipy,
@@ -32,8 +32,10 @@ logger = logging.getLogger(__name__)
 
 
 class GurobiDirectSolutionLoader(GurobiDirectSolutionLoaderBase):
-    def __init__(self, solver_model, pyomo_vars, gurobi_vars, con_map) -> None:
-        super().__init__(solver_model)
+    def __init__(
+        self, solver_model, pyomo_model, pyomo_vars, gurobi_vars, con_map
+    ) -> None:
+        super().__init__(solver_model, pyomo_model)
         self._pyomo_vars = pyomo_vars
         self._gurobi_vars = gurobi_vars
         self._con_map = con_map
@@ -58,6 +60,7 @@ class GurobiDirectSolutionLoader(GurobiDirectSolutionLoaderBase):
             # explicitly release the model
             self._solver_model.dispose()
             self._solver_model = None
+            self._pyomo_model = None
 
 
 class GurobiDirect(GurobiDirectBase):
@@ -145,6 +148,7 @@ class GurobiDirect(GurobiDirectBase):
         timer.stop('create maps')
         solution_loader = GurobiDirectSolutionLoader(
             solver_model=gurobi_model,
+            pyomo_model=pyomo_model,
             pyomo_vars=self._pyomo_vars,
             gurobi_vars=self._gurobi_vars,
             con_map=con_map,

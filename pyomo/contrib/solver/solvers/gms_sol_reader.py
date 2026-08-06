@@ -8,7 +8,7 @@
 # ____________________________________________________________________________________
 
 
-from typing import Dict, Any, List, Sequence, Optional, Mapping, NoReturn
+from typing import Any, Sequence, Optional, Mapping, NoReturn
 
 from pyomo.core.base import Var
 from pyomo.core.base.constraint import ConstraintData
@@ -16,7 +16,7 @@ from pyomo.core.base.var import VarData
 from pyomo.common.collections import ComponentMap
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.gams_writer_v2 import GAMSWriterInfo
-from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
+from pyomo.contrib.solver.common.solution_loader import SolutionLoader
 from pyomo.contrib.solver.common.util import (
     NoDualsError,
     NoSolutionError,
@@ -24,31 +24,27 @@ from pyomo.contrib.solver.common.util import (
 )
 
 
-class GDXFileData:
-    """
-    Defines the data types found within a .gdx file
-    """
-
-    def __init__(self) -> None:
-        self.primals: List[float] = []
-        self.duals: List[float] = []
-        self.var_suffixes: Dict[str, Dict[int, Any]] = {}
-        self.con_suffixes: Dict[str, Dict[Any]] = {}
-        self.obj_suffixes: Dict[str, Dict[int, Any]] = {}
-        self.problem_suffixes: Dict[str, List[Any]] = {}
-        self.other: List[str] = []
-
-
-class GMSSolutionLoader(SolutionLoaderBase):
+class GMSSolutionLoader(SolutionLoader):
     """
     Loader for solvers that create .gms files (e.g., gams)
     """
 
-    def __init__(self, gdx_data: GDXFileData, gms_info: GAMSWriterInfo) -> None:
+    def __init__(
+        self,
+        pyomo_model,
+        gdx_data: dict[str, tuple[float, float]],
+        gms_info: GAMSWriterInfo,
+    ) -> None:
         self._gdx_data = gdx_data
         self._gms_info = gms_info
+        self._pyomo_model = pyomo_model
 
-    def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> NoReturn:
+    def get_number_of_solutions(self) -> int:
+        if self._gms_info is None:
+            return 0
+        return 1
+
+    def load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> None:
         if self._gms_info is None:
             raise NoSolutionError()
         if self._gdx_data is None:
@@ -60,7 +56,7 @@ class GMSSolutionLoader(SolutionLoaderBase):
 
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
-    def get_primals(
+    def get_vars(
         self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
         if self._gms_info is None:
@@ -83,7 +79,7 @@ class GMSSolutionLoader(SolutionLoaderBase):
 
     def get_duals(
         self, cons_to_load: Optional[Sequence[ConstraintData]] = None
-    ) -> Dict[ConstraintData, float]:
+    ) -> dict[ConstraintData, float]:
         if self._gms_info is None:
             raise NoDualsError()
         if self._gdx_data is None:

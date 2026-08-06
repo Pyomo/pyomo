@@ -8,11 +8,13 @@
 # ____________________________________________________________________________________
 
 import io
+import re
 
 import pyomo.environ as pyo
 from pyomo.common import unittest
 from pyomo.common.collections import ComponentMap
 from pyomo.common.fileutils import this_file_dir
+from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.solver.solvers.asl_sol_reader import (
     ASLSolFileSolutionLoader,
     ASLSolFileData,
@@ -437,7 +439,17 @@ objno 0""")
 class TestSolFileSolutionLoader(unittest.TestCase):
 
     def test_member_list(self):
-        expected_list = ['load_vars', 'get_primals', 'get_duals', 'get_reduced_costs']
+        expected_list = [
+            'load_vars',
+            'get_vars',
+            'get_duals',
+            'get_reduced_costs',
+            'get_number_of_solutions',
+            'get_solution_ids',
+            'load_import_suffixes',
+            'load_solution',
+            'solution',
+        ]
         method_list = [
             method
             for method in dir(ASLSolFileSolutionLoader)
@@ -453,7 +465,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         nl_info = NLWriterInfo(var=[m.x, m.y[1], m.y[3]])
         sol_data = ASLSolFileData()
         sol_data.primals = [3, 7, 5]
-        loader = ASLSolFileSolutionLoader(sol_data, nl_info)
+        loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
 
         loader.load_vars()
         self.assertEqual(m.x.value, 3)
@@ -492,7 +504,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         )
         sol_data = ASLSolFileData()
         sol_data.primals = []
-        loader = ASLSolFileSolutionLoader(sol_data, nl_info)
+        loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
 
         loader.load_vars()
         self.assertEqual(m.x.value, None)
@@ -500,7 +512,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         self.assertEqual(m.y[2].value, 4)
         self.assertEqual(m.y[3].value, 1.5)
 
-    def test_get_primals(self):
+    def test_get_vars(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
         m.y = pyo.Var([1, 2, 3])
@@ -508,10 +520,10 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         nl_info = NLWriterInfo(var=[m.x, m.y[1], m.y[3]])
         sol_data = ASLSolFileData()
         sol_data.primals = [3, 7, 5]
-        loader = ASLSolFileSolutionLoader(sol_data, nl_info)
+        loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
 
         self.assertEqual(
-            loader.get_primals(), ComponentMap([(m.x, 3), (m.y[1], 7), (m.y[3], 5)])
+            loader.get_vars(), ComponentMap([(m.x, 3), (m.y[1], 7), (m.y[3], 5)])
         )
         self.assertEqual(m.x.value, None)
         self.assertEqual(m.y[1].value, None)
@@ -520,7 +532,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
 
         sol_data.primals = [13, 17, 15]
         self.assertEqual(
-            loader.get_primals(vars_to_load=[m.y[3], m.x]),
+            loader.get_vars(vars_to_load=[m.y[3], m.x]),
             ComponentMap([(m.x, 13), (m.y[3], 15)]),
         )
         self.assertEqual(m.x.value, None)
@@ -530,8 +542,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
 
         nl_info.scaling = ScalingFactors([1, 5, 10], [], [])
         self.assertEqual(
-            loader.get_primals(),
-            ComponentMap([(m.x, 13), (m.y[1], 3.4), (m.y[3], 1.5)]),
+            loader.get_vars(), ComponentMap([(m.x, 13), (m.y[1], 3.4), (m.y[3], 1.5)])
         )
         self.assertEqual(m.x.value, None)
         self.assertEqual(m.y[1].value, None)
@@ -540,7 +551,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
 
         nl_info.eliminated_vars = [(m.y[2], 2 * m.y[3] + 1)]
         self.assertEqual(
-            loader.get_primals(),
+            loader.get_vars(),
             ComponentMap([(m.x, 13), (m.y[1], 3.4), (m.y[2], 4), (m.y[3], 1.5)]),
         )
         self.assertEqual(m.x.value, None)
@@ -548,7 +559,7 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         self.assertEqual(m.y[2].value, None)
         self.assertEqual(m.y[3].value, None)
 
-    def test_get_primals_empty_model(self):
+    def test_get_vars_empty_model(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
         m.y = pyo.Var([1, 2, 3])
@@ -558,12 +569,138 @@ class TestSolFileSolutionLoader(unittest.TestCase):
         )
         sol_data = ASLSolFileData()
         sol_data.primals = []
-        loader = ASLSolFileSolutionLoader(sol_data, nl_info)
+        loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
 
-        self.assertEqual(
-            loader.get_primals(), ComponentMap([(m.y[2], 4), (m.y[3], 1.5)])
-        )
+        self.assertEqual(loader.get_vars(), ComponentMap([(m.y[2], 4), (m.y[3], 1.5)]))
         self.assertEqual(m.x.value, None)
         self.assertEqual(m.y[1].value, None)
         self.assertEqual(m.y[2].value, None)
         self.assertEqual(m.y[3].value, None)
+
+    def test_suffixes(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.c = pyo.Constraint(expr=m.x == 1)
+        m.obj = pyo.Objective(expr=m.x)
+        m.test_var_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_con_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_obj_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_problem_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+
+        m.test_var_suffix_off = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_con_suffix_off = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_obj_suffix_off = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_problem_suffix_off = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+
+        m.test_var_suffix_off.deactivate()
+        m.test_con_suffix_off.deactivate()
+        m.test_obj_suffix_off.deactivate()
+        m.test_problem_suffix_off.deactivate()
+
+        nl_info = NLWriterInfo(var=[m.x], con=[m.c], obj=[m.obj])
+
+        sol_data = ASLSolFileData()
+        sol_data.var_suffixes = {
+            'test_var_suffix': {0: 1.1},
+            'test_var_suffix_off': {0: 1.0},
+        }
+        sol_data.con_suffixes = {
+            'test_con_suffix': {0: 2.2},
+            'test_con_suffix_off': {0: 2.0},
+        }
+        sol_data.obj_suffixes = {
+            'test_obj_suffix': {0: 3.3},
+            'test_obj_suffix_off': {0: 3.0},
+        }
+        sol_data.problem_suffixes = {
+            'test_problem_suffix': 4.4,
+            'test_problem_suffix_off': 4.0,
+        }
+
+        loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
+        loader.load_import_suffixes()
+
+        self.assertEqual(
+            ComponentMap(m.test_var_suffix.items()), ComponentMap([(m.x, 1.1)])
+        )
+        self.assertEqual(
+            ComponentMap(m.test_con_suffix.items()), ComponentMap([(m.c, 2.2)])
+        )
+        self.assertEqual(
+            ComponentMap(m.test_obj_suffix.items()), ComponentMap([(m.obj, 3.3)])
+        )
+        self.assertEqual(
+            ComponentMap(m.test_problem_suffix.items()), ComponentMap([(None, 4.4)])
+        )
+        self.assertEqual(
+            ComponentMap(m.test_problem_suffix_off.items()), ComponentMap()
+        )
+        self.assertEqual(ComponentMap(m.test_var_suffix_off.items()), ComponentMap())
+        self.assertEqual(ComponentMap(m.test_con_suffix_off.items()), ComponentMap())
+        self.assertEqual(ComponentMap(m.test_obj_suffix_off.items()), ComponentMap())
+        self.assertEqual(
+            ComponentMap(m.test_problem_suffix_off.items()), ComponentMap()
+        )
+
+    def test_suffixes_scaling_error(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.c = pyo.Constraint(expr=m.x == 1)
+        m.obj = pyo.Objective(expr=m.x)
+        m.test_var_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_con_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_obj_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_problem_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+
+        nl_info = NLWriterInfo(var=[m.x], con=[m.c], obj=[m.obj])
+        nl_info.scaling = ScalingFactors([2], [3], [4])
+
+        sol_data = ASLSolFileData()
+        sol_data.var_suffixes = {'test_var_suffix': {0: 1.1}}
+        sol_data.con_suffixes = {'test_con_suffix': {0: 2.2}}
+        sol_data.obj_suffixes = {'test_obj_suffix': {0: 3.3}}
+        sol_data.problem_suffixes = {'test_problem_suffix': 4.4}
+
+        loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
+
+        with LoggingIntercept() as LOG:
+            loader.load_import_suffixes()
+        self.assertEqual(
+            LOG.getvalue(),
+            "Suffixes ('test_var_suffix', 'test_con_suffix', 'test_obj_suffix') "
+            "may not be correct when the model has been scaled.  "
+            "Turn scaling off in the NL writer "
+            "(solver.config.writer_config.scale_model=False) to be safe.\n",
+        )
+
+    def test_suffixes_eliminated_vars_error(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.c = pyo.Constraint(expr=m.x == 1)
+        m.obj = pyo.Objective(expr=m.x)
+        m.test_var_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_con_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_obj_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.test_problem_suffix = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+
+        nl_info = NLWriterInfo(var=[m.x], con=[m.c], obj=[m.obj])
+        nl_info.eliminated_vars = [(m.y, 2 * m.x)]
+
+        sol_data = ASLSolFileData()
+        sol_data.var_suffixes = {'test_var_suffix': {0: 1.1}}
+        sol_data.con_suffixes = {'test_con_suffix': {0: 2.2}}
+        sol_data.obj_suffixes = {'test_obj_suffix': {0: 3.3}}
+        sol_data.problem_suffixes = {'test_problem_suffix': 4.4}
+
+        loader = ASLSolFileSolutionLoader(sol_data, nl_info, m)
+
+        with LoggingIntercept() as LOG:
+            loader.load_import_suffixes()
+        self.assertEqual(
+            LOG.getvalue(),
+            "Suffixes ('test_var_suffix', 'test_con_suffix') may not be correct "
+            "when variables have been presolved from the model.  "
+            "Turn presolve off in the NL writer "
+            "(solver.config.writer_config.linear_presolve=False) to be safe.\n",
+        )

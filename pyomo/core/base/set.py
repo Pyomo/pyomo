@@ -714,7 +714,7 @@ class SetData(ComponentData):
         # randomly removing elements from the list; however, since we
         # do it by enumerating over ranges, using set() would make this
         # routine nondeterministic.  Not a huge issue for the result,
-        # but problemmatic for code coverage.
+        # but problematic for code coverage.
         ranges = list(self.ranges())
         if len(ranges) == 1:
             try:
@@ -808,7 +808,7 @@ class SetData(ComponentData):
         # randomly removing elements from the list; however, since we
         # do it by enumerating over ranges, using set() would make this
         # routine nondeterministic.  Not a hoge issue for the result,
-        # but problemmatic for code coverage.
+        # but problematic for code coverage.
         #
         # Note: We do not need to trap non-NumericRange objects:
         # RangeProduct and AnyRange will be caught by the dimen test in
@@ -2632,15 +2632,17 @@ class SetOf(SetData, Component):
     def dimen(self):
         if isinstance(self._ref, SetData):
             return self._ref.dimen
-        _iter = iter(self)
+        _iter = iter(self._ref)
         try:
             x = next(_iter)
             if type(x) is tuple:
                 ans = len(x)
             else:
                 ans = 1
-        except:
-            return 0
+        except StopIteration:
+            # The referenced object is empty, so we can't infer / verify
+            # the dimensionality.
+            return UnknownSetDimen
         for x in _iter:
             _this = len(x) if type(x) is tuple else 1
             if _this != ans:

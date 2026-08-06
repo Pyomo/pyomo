@@ -27,9 +27,6 @@ if scipy_available:
         BadExperiment,
         RooneyBieglerExperimentFlag,
     )
-    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
-        RooneyBieglerExperiment,
-    )
 
 from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
 from pyomo.opt import SolverFactory
@@ -95,7 +92,7 @@ class TestDoEErrors(unittest.TestCase):
             # Experiment provided as None
             DoE_args = get_standard_args(None, fd_method, obj_used, flag_val)
 
-            doe_obj = DesignOfExperiments(**DoE_args)
+            DesignOfExperiments(**DoE_args)
 
     def test_reactor_check_no_get_labeled_model(self):
         fd_method = "central"
@@ -110,7 +107,7 @@ class TestDoEErrors(unittest.TestCase):
         ):
             DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
 
-            doe_obj = DesignOfExperiments(**DoE_args)
+            DesignOfExperiments(**DoE_args)
 
     def test_reactor_check_no_experiment_outputs(self):
         fd_method = "central"
@@ -780,6 +777,25 @@ class TestDoEErrors(unittest.TestCase):
             "objective_option='trace' currently only implemented with ``_Cholesky option=True``.",
         ):
             doe_obj.create_objective_function()
+
+    def test_invalid_determinant_without_cholesky(self):
+        fd_method = "central"
+        obj_used = "determinant"
+
+        experiment = get_rooney_biegler_experiment_flag()
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=None)
+        DoE_args["_Cholesky_option"] = False
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        # The explicit determinant formulation needs the full FIM, so we keep
+        # this regression test focused on the early validation guard.
+        with self.assertRaisesRegex(
+            ValueError,
+            "Cannot compute determinant with explicit formula if only_compute_fim_lower is True.",
+        ):
+            doe_obj.create_doe_model()
 
 
 if __name__ == "__main__":

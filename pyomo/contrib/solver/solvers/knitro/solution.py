@@ -8,9 +8,9 @@
 # ____________________________________________________________________________________
 
 from collections.abc import Mapping, Sequence
-from typing import Protocol
+from typing import Any, Protocol
 
-from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
+from pyomo.contrib.solver.common.solution_loader import SolutionLoader
 from pyomo.contrib.solver.solvers.knitro.typing import ItemType, ValueType
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.var import VarData
@@ -30,7 +30,7 @@ class SolutionProvider(Protocol):
     ) -> Mapping[ItemType, float]: ...
 
 
-class SolutionLoader(SolutionLoaderBase):
+class KnitroSolutionLoader(SolutionLoader):
     _provider: SolutionProvider
     has_primals: bool
     has_reduced_costs: bool
@@ -52,10 +52,6 @@ class SolutionLoader(SolutionLoaderBase):
 
     def get_number_of_solutions(self) -> int:
         return self._provider.get_num_solutions()
-
-    # TODO: remove this when the solution loader is fixed.
-    def get_primals(self, vars_to_load=None):
-        return self.get_vars(vars_to_load)
 
     def get_vars(
         self,

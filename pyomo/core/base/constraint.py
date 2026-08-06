@@ -15,7 +15,11 @@ from pyomo.common.pyomo_typing import overload
 from typing import Union, Type
 
 from pyomo.common.deprecation import RenamedClass, deprecated
-from pyomo.common.errors import DeveloperError, TemplateExpressionError
+from pyomo.common.errors import (
+    DeveloperError,
+    InvalidConstraintError,
+    TemplateExpressionError,
+)
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
@@ -219,9 +223,9 @@ class ConstraintData(ActiveComponentData):
                 and lb.is_potentially_variable()
                 and not lb.is_fixed()
             ):
-                raise ValueError(
+                raise InvalidConstraintError(
                     f"Constraint '{self.name}' is a Ranged Inequality with a "
-                    "variable lower bound.  Cannot normalize the "
+                    "variable lower bound.  Cannot standardize the "
                     "constraint or send it to a solver."
                 )
             if (
@@ -229,9 +233,9 @@ class ConstraintData(ActiveComponentData):
                 and ub.is_potentially_variable()
                 and not ub.is_fixed()
             ):
-                raise ValueError(
+                raise InvalidConstraintError(
                     f"Constraint '{self.name}' is a Ranged Inequality with a "
-                    "variable upper bound.  Cannot normalize the "
+                    "variable upper bound.  Cannot standardize the "
                     "constraint or send it to a solver."
                 )
         elif expr is None:
@@ -432,7 +436,7 @@ class ConstraintData(ActiveComponentData):
             raise ValueError(_rule_returned_none_error % (self.name,))
 
         elif expr.__class__ is bool:
-            raise ValueError(
+            raise InvalidConstraintError(
                 "Invalid constraint expression. The constraint "
                 "expression resolved to a trivial Boolean (%s) "
                 "instead of a Pyomo object. Please modify your "
