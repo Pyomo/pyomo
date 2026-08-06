@@ -18,6 +18,8 @@ from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
 import random
 
+from pyomo.gdp import Disjunct
+
 from pyomo.opt import check_available_solvers
 from pyomo.environ import (
     ConcreteModel,
@@ -86,6 +88,26 @@ class TestAddSlacks(unittest.TestCase):
         self.assertEqual(xblock._slack_minus_rule2.bounds, (0, None))
         self.assertEqual(xblock._slack_plus_rule2.bounds, (0, None))
         self.assertEqual(xblock._slack_plus_rule3.bounds, (0, None))
+
+    def test_mapping_api(self):
+        m = self.makeModel()
+        trans = TransformationFactory('core.add_slack_variables')
+        trans.apply_to(m)
+
+        slacks = trans.get_slack_variables(m, m.rule1)
+        self.assertEqual(len(slacks), 1)
+        slack = slacks[0]
+        self.assertIs(m.rule1, trans.get_relaxed_constraint(m, slack))
+
+        slacks = trans.get_slack_variables(m, m.rule2)
+        self.assertEqual(len(slacks), 2)
+        self.assertIs(m.rule2, trans.get_relaxed_constraint(m, slacks[0]))
+        self.assertIs(m.rule2, trans.get_relaxed_constraint(m, slacks[1]))
+
+        slacks = trans.get_slack_variables(m, m.rule3)
+        self.assertEqual(len(slacks), 1)
+        slack = slacks[0]
+        self.assertIs(m.rule3, trans.get_relaxed_constraint(m, slack))
 
     # wrapping this as a method because I use it again later when I test
     # targets
@@ -179,6 +201,17 @@ class TestAddSlacks(unittest.TestCase):
                 ]
             ),
         )
+
+    def test_no_objective_change(self):
+        m = self.makeModel()
+        TransformationFactory('core.add_slack_variables').apply_to(
+            m, add_slack_objective=False
+        )
+
+        self.assertTrue(m.obj.active)
+        transBlock = m.component("_core_add_slack_variables")
+        obj = transBlock.component("_slack_objective")
+        self.assertIsNone(obj)
 
     def test_badModel_err(self):
         model = ConcreteModel()
@@ -348,6 +381,30 @@ class TestAddSlacks(unittest.TestCase):
             targets=[m.rule1, m.x],
         )
 
+    def test_error_for_mapping_untransformed_constraint(self):
+        m = self.makeModel()
+        trans = TransformationFactory('core.add_slack_variables')
+        trans.apply_to(m, targets=[m.rule1])
+        with self.assertRaisesRegex(
+            ValueError,
+            f"It does not appear that {m.rule2.name} is a constraint "
+            f"on model {m.name} that was relaxed by the "
+            f"'core.add_slack_variables' transformation.",
+        ):
+            cons = trans.get_slack_variables(m, m.rule2)
+
+    def test_error_for_mapping_non_slack_variables(self):
+        m = self.makeModel()
+        trans = TransformationFactory('core.add_slack_variables')
+        trans.apply_to(m)
+        with self.assertRaisesRegex(
+            ValueError,
+            f"It does not appear that {m.x} is a slack variable "
+            f"created by applying the 'core.add_slack_variables' transformation "
+            f"to model {m.name}.",
+        ):
+            cons = trans.get_relaxed_constraint(m, m.x)
+
     def test_deprecation_warning_for_cuid_target(self):
         m = self.makeModel()
         out = StringIO()
@@ -435,6 +492,25 @@ class TestAddSlacks(unittest.TestCase):
         self.assertEqual(c.body.arg(1).arg(0), -1)
         self.assertIs(c.body.arg(1).arg(1), transBlock._slack_minus_rule4)
 
+    def test_gdp_error(self):
+        m = self.makeModel()
+        m.disj = Disjunct()
+
+        with self.assertRaisesRegex(
+            ValueError,
+            r"The model \('unknown'\) contains the following active components that the "
+            r"'core.add_slack_variables' transformation does not know how to process:"
+            + "\n\t"
+            + r"\<class 'pyomo.gdp.disjunct.Disjunct'\>:"
+            + "\n\t\t"
+            + r"disj"
+            + "\n"
+            + r"If these components are Block-like "
+            r"\(e.g., Disjuncts\) and the intent is to add slacks on them, call "
+            r"the transformation on them directly.",
+        ):
+            TransformationFactory('core.add_slack_variables').apply_to(m)
+
 
 class TestAddSlacks_IndexedConstraints(unittest.TestCase):
     @staticmethod
@@ -451,6 +527,43 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m.rule2 = Constraint(expr=m.y <= 6)
         m.obj = Objective(expr=sum(m.x[s] for s in m.S) - m.y)
         return m
+
+    def test_mapping_api(self):
+        m = self.makeModel()
+        trans = TransformationFactory('core.add_slack_variables')
+        trans.apply_to(m)
+
+        for i in m.S:
+            slacks = trans.get_slack_variables(m, m.rule1[i])
+            self.assertEqual(len(slacks), 1)
+            slack = slacks[0]
+            self.assertIs(m.rule1[i], trans.get_relaxed_constraint(m, slack))
+
+        slacks = trans.get_slack_variables(m, m.rule2)
+        self.assertEqual(len(slacks), 1)
+        self.assertIs(m.rule2, trans.get_relaxed_constraint(m, slacks[0]))
+
+    def test_summation_of_slacks_api(self):
+        m = self.makeModel()
+        m.rule2.deactivate()
+        trans = TransformationFactory('core.add_slack_variables')
+        trans.apply_to(m)
+
+        assertExpressionsEqual(
+            self,
+            trans.get_summed_slacks_expr(m),
+            sum(trans.get_slack_variables(m, m.rule1[i])[0] for i in m.S),
+        )
+
+    def test_summation_of_slacks_error(self):
+        m = self.makeModel()
+        trans = TransformationFactory('core.add_slack_variables')
+        with self.assertRaisesRegex(
+            ValueError,
+            "It does not appear that unknown is a model that was transformed "
+            "by the 'core.add_slack_variables' transformation.",
+        ):
+            trans.get_summed_slacks_expr(m)
 
     def checkSlackVars_indexedtarget(self, transBlock):
         self.assertIsInstance(transBlock.component("_slack_plus_rule1[1]"), Var)

@@ -1,3 +1,5 @@
+.. _development_principles:
+
 Development Principles
 ======================
 
@@ -7,6 +9,10 @@ those principles to the best of our ability, for users and potential
 contributors alike. Please also review Pyomo's recent publication
 on the history of its development for a holistic view into the changes
 of these principles over time [MHJ+25]_.
+
+.. contents::
+   :depth: 2
+   :local:
 
 Backwards Compatibility
 -----------------------

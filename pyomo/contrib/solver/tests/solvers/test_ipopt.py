@@ -17,7 +17,7 @@ from contextlib import contextmanager
 import pyomo.environ as pyo
 from pyomo.common.fileutils import ExecutableData
 from pyomo.common.config import ConfigDict, ADVANCED_OPTION
-from pyomo.common.errors import ApplicationError, MouseTrap
+from pyomo.common.errors import ApplicationError
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
 from pyomo.common.timing import HierarchicalTimer
@@ -89,19 +89,46 @@ class TestIpoptSolverConfig(unittest.TestCase):
 class TestIpoptSolutionLoader(unittest.TestCase):
     def test_get_reduced_costs_error(self):
         loader = ipopt.IpoptSolutionLoader(
-            ipopt.ASLSolFileData(), NLWriterInfo(eliminated_vars=[1])
+            ipopt.ASLSolFileData(), NLWriterInfo(eliminated_vars=[1]), None
         )
-        with self.assertRaisesRegex(
-            MouseTrap, "Complete reduced costs are not available"
-        ):
+        with LoggingIntercept() as LOG:
             loader.get_reduced_costs()
+        self.assertEqual(
+            LOG.getvalue(),
+            "Reduced costs may not be correct when variables have been "
+            "presolved from the model.  Turn presolve off "
+            "(solver.config.writer_config.linear_presolve=False) to be safe.\n",
+        )
 
     def test_get_duals_error(self):
         loader = ipopt.IpoptSolutionLoader(
-            ipopt.ASLSolFileData(), NLWriterInfo(eliminated_vars=[1])
+            ipopt.ASLSolFileData(), NLWriterInfo(eliminated_vars=[1]), None
         )
-        with self.assertRaisesRegex(MouseTrap, "Complete duals are not available"):
+        with LoggingIntercept() as LOG:
             loader.get_duals()
+        self.assertEqual(
+            LOG.getvalue(),
+            "Duals may not be correct when variables have been "
+            "presolved from the model.  Turn presolve off "
+            "(solver.config.writer_config.linear_presolve=False) to be safe.\n",
+        )
+
+    def test_num_solutions(self):
+        asl_data = ipopt.ASLSolFileData()
+        nl_info = NLWriterInfo()
+
+        loader = ipopt.IpoptSolutionLoader(asl_data, nl_info, None)
+        self.assertEqual(loader.get_number_of_solutions(), 0)
+        self.assertEqual(loader.get_solution_ids(), [])
+
+        nl_info.eliminated_vars.append(1)
+        self.assertEqual(loader.get_number_of_solutions(), 1)
+        self.assertEqual(loader.get_solution_ids(), [None])
+
+        nl_info.eliminated_vars.pop()
+        asl_data.primals = [0]
+        self.assertEqual(loader.get_number_of_solutions(), 1)
+        self.assertEqual(loader.get_solution_ids(), [None])
 
 
 @unittest.pytest.mark.solver("ipopt")
@@ -1698,6 +1725,8 @@ else:
         del results.timing_info.start_timestamp
         del results.extra_info.base_file_name
         self.assertIsNotNone(results.solution_loader)
+        self.assertEqual(results.solution_loader.get_number_of_solutions(), 1)
+        self.assertEqual(results.solution_loader.get_solution_ids(), [None])
         del results.solution_loader
         self.assertEqual(
             {
@@ -2029,6 +2058,7 @@ class TestIpopt(unittest.TestCase):
         m.x.lb = 0.6
         m.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
         m.rc = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.ipopt_zL_out = pyo.Suffix(direction=pyo.Suffix.IMPORT)
         m.c = pyo.Constraint(expr=m.x == 2 * m.y)
 
         solver = ipopt.Ipopt()
@@ -2042,6 +2072,9 @@ class TestIpopt(unittest.TestCase):
         self.assertEqual(len(m.rc), 2)
         self.assertAlmostEqual(m.rc[m.x], 7.6, delta=1e-5)
         self.assertEqual(m.rc[m.y], 0)
+        # Note that ipopt_zL_out is the raw (unscaled) result from ipopt
+        self.assertEqual(len(m.ipopt_zL_out), 1)
+        self.assertAlmostEqual(m.ipopt_zL_out[m.x], 7.6, delta=1e-5)
 
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
         m.scaling_factor[m.obj] = 10
@@ -2060,6 +2093,9 @@ class TestIpopt(unittest.TestCase):
         self.assertEqual(len(m.rc), 2)
         self.assertAlmostEqual(m.rc[m.x], 7.6, delta=1e-5)
         self.assertEqual(m.rc[m.y], 0)
+        # Note that ipopt_zL_out is the raw (unscaled) result from ipopt
+        self.assertEqual(len(m.ipopt_zL_out), 1)
+        self.assertAlmostEqual(m.ipopt_zL_out[m.x], 7.6 * 10 / 7, delta=1e-5)
 
         m.x.lb = None
         m.y.ub = 0.25

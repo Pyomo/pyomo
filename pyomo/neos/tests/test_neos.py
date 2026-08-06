@@ -223,6 +223,9 @@ class RunAllNEOSSolvers:
     def test_conopt(self):
         self._run('conopt')
 
+    def test_copt(self):
+        self._run('copt')
+
     def test_couenne(self):
         self._run('couenne')
 
@@ -278,8 +281,9 @@ class RunAllNEOSSolvers:
     # [24 Apr 25]: it appears to be there but causes timeouts
     # [29 Apr 25]: JK, it has been removed again
     # [21 Apr 26]: it is ALIVE again
-    def test_octeract(self):
-        self._run('octeract')
+    # [28 Apr 26]: It lasted longer than last time but alas is gone again
+    # def test_octeract(self):
+    #     self._run('octeract')
 
     def test_ooqp(self):
         if self.sense == pyo.maximize:

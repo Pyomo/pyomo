@@ -118,11 +118,14 @@ class ApplicationError(Exception):
 
 
 class PyomoException(Exception):
-    """
-    Exception class for other Pyomo exceptions to inherit from,
-    allowing Pyomo exceptions to be caught in a general way
-    (e.g., in other applications that use Pyomo).
-    Subclasses can define a class-level `default_message` attribute.
+    """General base class for Pyomo exceptions.
+
+    This allows Pyomo exceptions to be caught in a general way (e.g., in
+    other applications that use Pyomo).
+
+    Subclasses can define a class-level `default_message` attribute that
+    is used if no other message/arguments are provided.
+
     """
 
     def __init__(self, *args):
@@ -159,10 +162,37 @@ class DeveloperError(PyomoException, NotImplementedError):
 
 
 class InfeasibleConstraintException(PyomoException):
+    """Exception raised by Pyomo transformations or solver interfaces
+    to indicate that an infeasible constraint has been identified
+    (e.g. in the course of range reduction).
+
     """
-    Exception class used by Pyomo transformations to indicate
-    that an infeasible constraint has been identified (e.g. in
-    the course of range reduction).
+
+
+class InvalidExpressionError(PyomoException, ValueError):
+    """Exception raised for expressions that cannot be represented or emitted.
+
+    Pyomo will raise this exception when:
+
+      - Compiling an expression that cannot be expressed / written in the
+        target format or interface.
+
+    See also the derived :class:`InvalidConstraintError`.
+    """
+
+
+class InvalidConstraintError(InvalidExpressionError):
+    """Exception raised for constraints that cannot be represented or emitted.
+
+    Pyomo will raise this exception when:
+
+      - Creating a constraint with a trivial (Boolean) expression.
+      - Creating a constraint from an incorrectly structured tuple.
+      - Compiling a ranged constraint (``lb <= body <= ub``) where
+        either ``lb`` or ``ub`` are variable expressions.
+      - Compiling a constraint that cannot be expressed / written in the
+        target format or interface.
+
     """
 
 

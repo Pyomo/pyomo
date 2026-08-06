@@ -12,10 +12,12 @@ Functionality in parmest includes:
 
 * Model-based parameter estimation using experimental data
 * Covariance matrix estimation
-* Bootstrap resampling for parameter estimation
+* Bootstrap resampling for uncertainty quantification
 * Confidence regions based on single or multi-variate distributions
-* Likelihood ratio
+* Likelihood ratio test
 * Leave-N-out cross validation
+* Regularization for objective function improvement
+* Multi-start initialization optimization
 * Parallel processing
 
 Background
@@ -30,14 +32,13 @@ a vector, :math:`\boldsymbol{\theta}`, to use in the functional form
     \boldsymbol{\varepsilon}_i \quad \forall \; i \in \{1, \ldots, n\}
 
 where :math:`\boldsymbol{y}_{i} \in \mathbb{R}^m` are observations of the measured or output variables,
-:math:`\boldsymbol{f}` is the model function, :math:`\boldsymbol{x}_{i} \in \mathbb{R}^{q}` are the decision
+:math:`\boldsymbol{f(\cdot)}` is the model function, :math:`\boldsymbol{x}_{i} \in \mathbb{R}^{q}` are the decision
 or input variables, :math:`\boldsymbol{\theta} \in \mathbb{R}^p` are the model parameters,
 :math:`\boldsymbol{\varepsilon}_{i} \in \mathbb{R}^m` are measurement errors, and :math:`n` is the number of
 experiments.
 
-The following least squares objective can be used to estimate parameter
-values assuming Gaussian independent and identically distributed measurement
-errors:
+The following least squares objective can be used to estimate model parameters
+from data assuming that the measurement errors follow a Gaussian distribution:
 
 .. math::
 
@@ -47,6 +48,9 @@ where :math:`g(\boldsymbol{x}, \boldsymbol{y};\boldsymbol{\theta})` can be:
 
 1. Sum of squared errors
 
+   If the measurement errors (which are assumed to follow a Gaussian distribution) are independent
+   and identically distributed, the objective function can be defined as the sum of squared errors
+
     .. math::
 
        g(\boldsymbol{x}, \boldsymbol{y};\boldsymbol{\theta}) =
@@ -55,6 +59,10 @@ where :math:`g(\boldsymbol{x}, \boldsymbol{y};\boldsymbol{\theta})` can be:
 
 2. Weighted sum of squared errors
 
+   When the measurement errors are correlated and their covariance
+   matrix, :math:`\boldsymbol{\Sigma}_{\boldsymbol{y}}`, is known a priori, the objective
+   function is defined as the weighted sum of squared errors
+
     .. math::
 
        g(\boldsymbol{x}, \boldsymbol{y};\boldsymbol{\theta}) =
@@ -62,9 +70,7 @@ where :math:`g(\boldsymbol{x}, \boldsymbol{y};\boldsymbol{\theta})` can be:
         \right)^\text{T} \boldsymbol{\Sigma}_{\boldsymbol{y}}^{-1} \left(\boldsymbol{y}_{i} -
         \boldsymbol{f}(\boldsymbol{x}_{i};\boldsymbol{\theta})\right)
 
-where :math:`\boldsymbol{\Sigma}_{\boldsymbol{y}}` is the measurement error covariance matrix containing the
-standard deviation of the measurement errors of :math:`\boldsymbol{y}`. Custom objectives can also be defined
-for parameter estimation.
+Custom objectives can also be defined for parameter estimation.
 
 In the applications of interest to us, the function :math:`g(\cdot)` is
 usually defined as an optimization problem with a large number of

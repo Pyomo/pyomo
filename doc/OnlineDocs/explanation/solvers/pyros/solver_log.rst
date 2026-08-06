@@ -26,10 +26,10 @@ your console output will, by default, look like this:
    :linenos:
 
    ==============================================================================
-   PyROS: The Pyomo Robust Optimization Solver, v1.3.11.
-          Pyomo version: 6.9.5
+   PyROS: The Pyomo Robust Optimization Solver, v1.3.15.
+          Pyomo version: 6.10.1
           Commit hash: unknown
-          Invoked at UTC 2025-10-18T00:00:00.000000+00:00
+          Invoked at UTC 2026-06-05T00:00:00.000000+00:00
    
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)
@@ -37,17 +37,18 @@ your console output will, by default, look like this:
    (2) Sandia National Laboratories, Center for Computing Research
    
    The developers gratefully acknowledge support from the U.S. Department
-   of Energy's Institute for the Design of Advanced Energy Systems (IDAES).
+   of Energy's Institute for the Design of Advanced Energy Systems (IDAES)
+   and Carbon Capture Simulation for Industry Impact (CCSI2) projects.
    ==============================================================================
-   ================================= DISCLAIMER =================================
-   PyROS is currently under active development. 
    Please provide feedback and/or report any issues by creating a ticket at
    https://github.com/Pyomo/pyomo/issues/new/choose
    ==============================================================================
    User-provided solver options:
+    tee=False
     objective_focus=<ObjectiveType.worst_case: 1>
     decision_rule_order=1
     solve_master_globally=True
+    bypass_local_separation=False
    ------------------------------------------------------------------------------
    Model Statistics (before preprocessing):
      Number of variables : 4
@@ -60,21 +61,23 @@ your console output will, by default, look like this:
        Inequality constraints : 2
    ------------------------------------------------------------------------------
    Preprocessing...
-   Done preprocessing; required wall time of 0.004s.
+   Done preprocessing; required wall time of 0.003s.
    ------------------------------------------------------------------------------
    Itn  Objective    1-Stg Shift  2-Stg Shift  #CViol  Max Viol     Wall Time (s)
    ------------------------------------------------------------------------------
-   0     5.4079e+03  -            -            3       7.9226e+00   0.209        
-   1     5.4079e+03  6.0451e-10   1.0717e-10   2       1.0250e-01   0.476        
-   2     6.5403e+03  1.0018e-01   7.4564e-03   1       1.0249e-02   0.786        
-   3     6.5403e+03  1.9372e-16   2.0321e-05   2       8.7074e-03   1.132        
-   4     6.5403e+03  0.0000e+00   2.0311e-05   0       1.2310e-06g  1.956        
+   0     5.4079e+03  -            -            3       4.6876e+02   0.185        
+   1     5.4079e+03  6.0451e-10   1.0717e-10   2       6.1500e+01   0.496        
+   2     6.5403e+03  1.0018e-01   7.4564e-03   1       1.7142e-03   0.804        
+   3     6.5403e+03  1.9372e-16   3.6832e-06   2       2.7964e-01   1.136        
+   4     6.5403e+03  0.0000e+00   3.8115e-06   1       1.7141e-03   1.465        
+   5     6.5403e+03  0.0000e+00   8.4872e-03   1       4.7920e-01   1.855        
+   6     6.5403e+03  0.0000e+00   2.0736e-04   0       1.3594e-06g  2.756        
    ------------------------------------------------------------------------------
    Robust optimal solution identified.
    ------------------------------------------------------------------------------
    Termination stats:
-    Iterations            : 5
-    Solve time (wall s)   : 1.956
+    Iterations            : 7
+    Solve time (wall s)   : 2.756
     Final objective value : 6.5403e+03
     Termination condition : pyrosTerminationCondition.robust_optimal
    ------------------------------------------------------------------------------
@@ -87,32 +90,32 @@ Observe that the log contains the following information
 (listed in order of appearance):
 
 
-* **Introductory information and disclaimer** (lines 1--19):
+* **Introductory information** (lines 1--18):
   Includes the version number, author
   information, (UTC) time at which the solver was invoked,
   and, if available, information on the local Git branch and
   commit hash.
-* **Summary of solver options** (lines 20--24): Enumeration of
+* **Summary of solver options** (lines 19--25): Enumeration of
   specifications for optional arguments to the solver.
-* **Model component statistics** (lines 25--34):
+* **Model component statistics** (lines 26--35):
   Breakdown of component statistics for the user-provided model
   and variable selection (before preprocessing).
-* **Preprocessing information** (lines 35--37):
+* **Preprocessing information** (lines 36--38):
   Wall time required for preprocessing
   the deterministic model and associated components,
   i.e., standardizing model components and adding the decision rule
   variables and equations.
-* **Iteration log table** (lines 38--45):
+* **Iteration log table** (lines 39--48):
   Summary information on the problem iterates and subproblem outcomes.
   The constituent columns are defined in detail in
   :ref:`the table that follows <table-iteration-log-columns>`.
-* **Termination message** (lines 46--47): One-line message briefly summarizing
+* **Termination message** (lines 49--50): One-line message briefly summarizing
   the reason the solver has terminated.
-* **Final result** (lines 48--53):
+* **Final result** (lines 51--56):
   A printout of the
   :class:`~pyomo.contrib.pyros.solve_data.ROSolveResults`
   object that is finally returned.
-* **Exit message** (lines 54--55): Confirmation that the
+* **Exit message** (lines 57--58): Confirmation that the
   solver has been exited properly.
 
 The iteration log table is designed to provide, in a concise manner,

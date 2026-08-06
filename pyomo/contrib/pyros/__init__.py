@@ -20,4 +20,5 @@ from pyomo.contrib.pyros.uncertainty_sets import (
     BoxSet,
     IntersectionSet,
     AxisAlignedEllipsoidalSet,
+    CartesianProductSet,
 )
