@@ -36,7 +36,12 @@ def _initialize_with_multistart_solver(
     logger.info('fixed variables with equal bounds')
 
     multistart_solver.config.seed = seed
+    multistart_solver.config.load_solutions = False
+    multistart_solver.config.raise_exception_on_nonoptimal_result = False
+
     res = multistart_solver.solve(nlp)
     logger.info('Finished multistart optimization iterations.')
+    if res.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
+        res.solution_loader.load_vars()
 
     return res

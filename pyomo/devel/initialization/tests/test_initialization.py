@@ -16,7 +16,7 @@ from pyomo.devel.initialization.examples.init_polynomial_ex import (
     lp_init_ex,
     pwl_init_ex,
     global_init_ex,
-    multistart_init_ex
+    multistart_init_ex,
 )
 from pyomo.common import unittest
 from pyomo.common.dependencies import scipy_available
@@ -90,7 +90,7 @@ class TestExamples(unittest.TestCase):
         stat, x = lp_init_ex()
         self.assertEqual(stat, SolutionStatus.optimal)
         self.assertAlmostEqual(x, -9.920159607881597)
-        
+
 
 class TestInit(unittest.TestCase):
     @unittest.skipUnless(highs.available(), 'highs is not available')
@@ -236,7 +236,6 @@ class TestInit(unittest.TestCase):
 
 if __name__ == '__main__':
 
-    
     import logging
 
     logging.basicConfig(level=logging.INFO)
