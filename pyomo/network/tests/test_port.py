@@ -561,13 +561,15 @@ class TestPort(unittest.TestCase):
         m.p1.add(m.x)
         m.p2 = Port()
         m.p2.add(m.y)
-        m.p1.connect_to(m.p2)
-
+        created_arc=m.p1.connect_to(m.p2)
+        #test name creation
+        created_arc_custom_name=m.p1.connect_to(m.p2, arc_name='custom_name')
         self.assertIs(m.p1.x, m.x)
         self.assertIs(m.p2.y, m.y)
         assert m.find_component('p1_to_p2') is not None
-        assert m.p1.get_connections() is m.find_component('p1_to_p2')
-        assert m.p2.get_connections() is None
+        assert created_arc is m.find_component('p1_to_p2')
+        assert m.find_component('custom_name') is not None
+        assert created_arc_custom_name is m.find_component('custom_name')
 
     def test_auto_connect_with_block(self):
         m = ConcreteModel()
@@ -579,15 +581,18 @@ class TestPort(unittest.TestCase):
         m.block_a.p1.add(m.block_a.x)
         m.block_b.p2 = Port()
         m.block_b.p2.add(m.block_b.y)
-        m.block_a.p1.connect_to(m.block_b.p2)
+        created_arc = m.block_a.p1.connect_to(m.block_b.p2)
+        # test creation on diff block
+        created_arc_2 = m.block_a.p1.connect_to(m.block_b.p2, block=m.block_b)
 
         self.assertIs(m.block_a.p1.x, m.block_a.x)
         self.assertIs(m.block_b.p2.y, m.block_b.y)
-        assert m.block_a.find_component('block_a_p1_to_block_b_p2') is not None
-        assert m.block_a.p1.get_connections() is m.block_a.find_component(
-            'block_a_p1_to_block_b_p2'
-        )
-        assert m.block_b.p2.get_connections() is None
+        assert m.block_a.find_component('block_a_p1_to_block_b_p2') is not None        
+        assert m.block_b.find_component('block_a_p1_to_block_b_p2') is not None
+
+        assert created_arc is m.block_a.find_component('block_a_p1_to_block_b_p2')
+        assert created_arc_2 is m.block_b.find_component('block_a_p1_to_block_b_p2')
+        assert created_arc is not created_arc_2 # verify these are different objects
 
     def test_auto_connect_with_indexed_block(self):
         m = ConcreteModel()
@@ -598,16 +603,12 @@ class TestPort(unittest.TestCase):
         m.block[1].p1.add(m.block[1].x)
         m.block[2].p2 = Port()
         m.block[2].p2.add(m.block[2].y)
-        m.block[1].p1.connect_to(m.block[2].p2)
+        created_arc =  m.block[1].p1.connect_to(m.block[2].p2)
 
         self.assertIs(m.block[1].p1.x, m.block[1].x)
         self.assertIs(m.block[2].p2.y, m.block[2].y)
         assert m.block[1].find_component('block_1_p1_to_block_2_p2') is not None
-
-        assert m.block[1].p1.get_connections() is m.block[1].find_component(
-            'block_1_p1_to_block_2_p2'
-        )
-        assert m.block[2].p2.get_connections() is None
+        assert created_arc is m.block[1].find_component('block_1_p1_to_block_2_p2')
 
 
 if __name__ == "__main__":
