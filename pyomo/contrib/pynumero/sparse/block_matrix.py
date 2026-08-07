@@ -761,7 +761,7 @@ class BlockMatrix(BaseBlockMatrix):
 
     def copy_structure(self):
         """
-        Makes a copy of the structure of this BlockMatrix. This proivides a
+        Makes a copy of the structure of this BlockMatrix. This provides a
         light-weighted copy of each block in this BlockMatrix. The blocks in the
         resulting matrix have the same shape as in the original matrices but not
         the same number of nonzeros.

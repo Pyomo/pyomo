@@ -277,7 +277,7 @@ class TestPyROSSolveCardinalitySet(unittest.TestCase):
         m.ineq_con = Constraint(expr=m.x >= m.q[0] + m.q[1] - m.q[2] - m.q[3])
 
         cset = CardinalitySet(
-            origin=[1] * 4, positive_deviation=[1, 0, 2, 0.5], gamma=2
+            origin=[1] * 4, gamma=2, positive_deviation=[1, 0, 2, 0.5]
         )
         res = SolverFactory("pyros").solve(
             model=m,
@@ -545,7 +545,7 @@ class TestPyROSSolveCartesianProductSet(unittest.TestCase):
                 FactorModelSet(
                     origin=[0, 0], number_of_factors=1, beta=1, psi_mat=[[1], [3]]
                 ),
-                CardinalitySet(origin=[0], positive_deviation=[0.5], gamma=1),
+                CardinalitySet(origin=[0], gamma=1, positive_deviation=[0.5]),
             ]
         )
         results = SolverFactory("pyros").solve(
@@ -3979,7 +3979,7 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
         # check number of lines is as expected
         self.assertEqual(
             len(intro_msg_lines),
-            14,
+            15,
             msg=(
                 "PyROS solver introductory message does not contain"
                 "the expected number of lines."
@@ -3993,16 +3993,17 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
         # check regex main text
         self.assertRegex(
             " ".join(intro_msg_lines[1:-1]),
-            r"PyROS: The Pyomo Robust Optimization Solver, v.* \(IDAES\)\.",
+            r"PyROS: The Pyomo Robust Optimization Solver, v.* \(CCSI2\) "
+            r"projects\.",
         )
 
-    def test_log_disclaimer(self):
+    def test_log_feedback_ref(self):
         """
-        Test logging of PyROS solver disclaimer messages.
+        Test logging of PyROS solver guidance on providing feedback.
         """
         pyros_solver = SolverFactory("pyros")
         with LoggingIntercept(level=logging.INFO) as LOG:
-            pyros_solver._log_disclaimer(logger=logger, level=logging.INFO)
+            pyros_solver._log_feedback_guidance(logger=logger, level=logging.INFO)
 
         disclaimer_msgs = LOG.getvalue()
 
@@ -4012,23 +4013,21 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
         # check number of lines is as expected
         self.assertEqual(
             len(disclaimer_msg_lines),
-            5,
+            3,
             msg=(
-                "PyROS solver disclaimer message does not contain"
+                "PyROS solver disclaimer message does not contain "
                 "the expected number of lines."
             ),
         )
 
         # regex first line of disclaimer section
-        self.assertRegex(disclaimer_msg_lines[0], r"=.* DISCLAIMER .*=")
         # check last line of disclaimer section
-        self.assertEqual(disclaimer_msg_lines[-1], "=" * 78)
-
         # check regex main text
         self.assertRegex(
-            " ".join(disclaimer_msg_lines[1:-1]),
-            r"PyROS is currently under active development.*ticket at.*",
+            " ".join(disclaimer_msg_lines[0:-1]),
+            r"Please provide feedback.*ticket at.*",
         )
+        self.assertEqual(disclaimer_msg_lines[-1], "=" * 78)
 
 
 class UnavailableSolver:

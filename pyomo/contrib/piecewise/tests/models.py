@@ -45,7 +45,7 @@ def make_log_x_model(simplices=default_simplices):
     m.x1 = Var(bounds=(0, 3))
     m.x2 = Var(bounds=(1, 7))
 
-    ## apprximates paraboloid x1**2 + x2**2
+    ## approximates paraboloid x1**2 + x2**2
     def g1(x1, x2):
         return 3 * x1 + 5 * x2 - 4
 
@@ -70,5 +70,21 @@ def make_log_x_model(simplices=default_simplices):
             return (1, m.x1, 2)
 
     m.indexed_c = Constraint([0, 1], rule=c_rule)
+
+    return m
+
+
+def make_single_segment_log_x_model():
+    m = ConcreteModel()
+    m.x = Var(bounds=(1, 10))
+    m.pw_log = PiecewiseLinearFunction(points=[1, 10], function=log)
+
+    def f1(x):
+        return (log(10) / 9) * x - log(10) / 9
+
+    m.f1 = f1
+
+    m.log_expr = m.pw_log(m.x)
+    m.obj = Objective(expr=m.log_expr)
 
     return m

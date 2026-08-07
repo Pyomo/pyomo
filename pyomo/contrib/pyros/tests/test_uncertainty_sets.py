@@ -22,11 +22,11 @@ from pyomo.common.dependencies import (
     scipy as sp,
     scipy_available,
 )
-
-from pyomo.environ import SolverFactory
+from pyomo.common.tee import LoggingIntercept
 from pyomo.core.base import ConcreteModel, Param, Var, minimize, UnitInterval
 from pyomo.core.expr import RangedExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
+from pyomo.environ import SolverFactory
 
 from pyomo.contrib.pyros.uncertainty_sets import (
     AxisAlignedEllipsoidalSet,
@@ -1462,7 +1462,7 @@ class TestIntersectionSet(unittest.TestCase):
             set2=FactorModelSet(
                 origin=[0, 0], number_of_factors=2, beta=0.75, psi_mat=[[1, 1], [1, 2]]
             ),
-            set3=CardinalitySet([-0.5, -0.5], [2, 2], 2, [1.5, 0]),
+            set3=CardinalitySet([-0.5, -0.5], 2, [2, 2], [1.5, 0]),
             # ellipsoid. this is enclosed in all the other sets
             set4=AxisAlignedEllipsoidalSet([0, 0], [0.25, 0.25]),
         )
@@ -1570,7 +1570,7 @@ class TestIntersectionSet(unittest.TestCase):
                 origin=[0, 0], number_of_factors=2, beta=0.75, psi_mat=[[1, 1], [1, 2]]
             ),
             # another origin-centered square
-            set3=CardinalitySet([-0.5, -0.5], [2, 2], 2),
+            set3=CardinalitySet([-0.5, -0.5], 2, [2, 2]),
             # ellipsoid. this is enclosed in all the other sets
             set4=AxisAlignedEllipsoidalSet([0, 0], [0.25, 0.25]),
         )
@@ -1593,7 +1593,7 @@ class TestIntersectionSet(unittest.TestCase):
             set2=FactorModelSet(
                 origin=[0, 0], number_of_factors=2, beta=0.75, psi_mat=[[1, 1], [1, 2]]
             ),
-            set3=CardinalitySet([-0.5, -0.5], [2, 2], 2),
+            set3=CardinalitySet([-0.5, -0.5], 2, [2, 2]),
             # ellipsoid. this is enclosed in all the other sets
             set4=AxisAlignedEllipsoidalSet([0, 0], [0.25, 0.25]),
         )
@@ -1620,7 +1620,7 @@ class TestIntersectionSet(unittest.TestCase):
             set2=FactorModelSet(
                 origin=[0, 0], number_of_factors=2, beta=0.75, psi_mat=[[1, 1], [1, 2]]
             ),
-            set3=CardinalitySet([-0.5, -0.5], [2, 2], 2),
+            set3=CardinalitySet([-0.5, -0.5], 2, [2, 2]),
             # ellipsoid. this is enclosed in all the other sets
             set4=AxisAlignedEllipsoidalSet([0, 0], [0.25, 0.25]),
         )
@@ -1705,7 +1705,7 @@ class TestIntersectionSet(unittest.TestCase):
             set1=FactorModelSet(
                 origin=[0, 0], psi_mat=np.eye(2), beta=0.2, number_of_factors=2
             ),
-            set2=CardinalitySet(origin=[0, 0], positive_deviation=[0.8, 0.8], gamma=1),
+            set2=CardinalitySet(origin=[0, 0], gamma=1, positive_deviation=[0.8, 0.8]),
         )
 
         self.assertIs(iset.geometry, Geometry.LINEAR)
@@ -1831,12 +1831,12 @@ class TestCardinalitySet(unittest.TestCase):
         when bounds are appropriate.
         """
         # valid inputs
-        cset = CardinalitySet(origin=[0, 0], positive_deviation=[1, 3], gamma=2)
+        cset = CardinalitySet(origin=[0, 0], gamma=2, positive_deviation=[1, 3])
 
         # check attributes are as expected
         np.testing.assert_allclose(cset.origin, [0, 0])
-        np.testing.assert_allclose(cset.positive_deviation, [1, 3])
         np.testing.assert_allclose(cset.gamma, 2)
+        np.testing.assert_allclose(cset.positive_deviation, [1, 3])
 
         # check defined attributes/methods inherited from base class
         self.assertIs(cset.geometry, Geometry.LINEAR)
@@ -1849,15 +1849,64 @@ class TestCardinalitySet(unittest.TestCase):
 
         # update the set
         cset.origin = [1, 2]
-        cset.positive_deviation = [3, 0]
         cset.gamma = 0.5
+        cset.positive_deviation = [3, 0]
         cset.negative_deviation = [0, -1.5]
 
         # check updates work
         np.testing.assert_allclose(cset.origin, [1, 2])
-        np.testing.assert_allclose(cset.positive_deviation, [3, 0])
         np.testing.assert_allclose(cset.gamma, 0.5)
+        np.testing.assert_allclose(cset.positive_deviation, [3, 0])
         np.testing.assert_equal(cset.negative_deviation, [0, -1.5])
+
+    def test_cardinality_constructor_args_order(self):
+        """
+        Check that `CardinalitySet` constructor allows
+        for `positive_deviation` and `gamma` to be swapped,
+        for backward compatibility.
+        """
+        with LoggingIntercept(level=logging.WARNING) as LOG:
+            # since the second positional argument `gamma`
+            # is not a scalar, it is swapped with the third
+            # positional argument `positive_deviation`
+            cset = CardinalitySet([0, 0], [1, 3], 2)
+        self.assertRegex(LOG.getvalue(), r"DEPRECATED.*Order.*arguments.*`gamma`")
+        np.testing.assert_allclose(cset.origin, [0, 0])
+        np.testing.assert_allclose(cset.gamma, 2)
+        np.testing.assert_allclose(cset.positive_deviation, [1, 3])
+        np.testing.assert_allclose(cset.negative_deviation, [0, 0])
+
+        with LoggingIntercept(level=logging.WARNING) as LOG2:
+            # since the keyword argument `gamma` is not a scalar, it
+            # is swapped with the keyword argument `positive_deviation`
+            cset2 = CardinalitySet(origin=[0, 0], gamma=[1, 3], positive_deviation=2)
+        self.assertRegex(LOG2.getvalue(), r"DEPRECATED.*Order.*arguments.*`gamma`")
+        np.testing.assert_allclose(cset2.origin, [0, 0])
+        np.testing.assert_allclose(cset2.gamma, 2)
+        np.testing.assert_allclose(cset2.positive_deviation, [1, 3])
+        np.testing.assert_allclose(cset2.negative_deviation, [0, 0])
+
+        type_exc_str = r"Argument `gamma` is not a valid numeric type.*str"
+        with (
+            self.assertRaisesRegex(TypeError, type_exc_str),
+            LoggingIntercept(level=logging.WARNING) as LOG3,
+        ):
+            # here second positional argument `gamma` is not a scalar,
+            # so arguments `gamma` and `positive_deviation` are swapped
+            CardinalitySet([0, 0], [1, 2], "test")
+        self.assertRegex(LOG3.getvalue(), r"DEPRECATED.*Order.*arguments.*`gamma`")
+
+        exc_str = r"Argument `positive_deviation` must be a 1-dimensional.*0 dimensions"
+        with (
+            self.assertRaisesRegex(ValueError, exc_str),
+            LoggingIntercept(level=logging.WARNING) as LOG4,
+        ):
+            # here `gamma` is the 0D array and therefore not a scalar,
+            # so it is swapped with `positive_deviation`,
+            # and an exception should be raised
+            # due to the type mismatch
+            CardinalitySet([0, 0], np.array(2), 2)
+        self.assertRegex(LOG4.getvalue(), r"DEPRECATED.*Order.*arguments.*`gamma`")
 
     def test_error_on_cardinality_set_dim_change(self):
         """
@@ -1866,7 +1915,7 @@ class TestCardinalitySet(unittest.TestCase):
         set dimension (i.e. number of entries of `origin`).
         """
         # construct a valid cardinality-constrained set
-        cset = CardinalitySet(origin=[0, 0], positive_deviation=[1, 1], gamma=2)
+        cset = CardinalitySet(origin=[0, 0], gamma=2, positive_deviation=[1, 1])
 
         exc_str = r"Attempting to set.*dimension 2 to value of dimension 3"
 
@@ -1883,7 +1932,7 @@ class TestCardinalitySet(unittest.TestCase):
         Test method for setting up constraints works correctly.
         """
         m = ConcreteModel()
-        cset = CardinalitySet([-0.5, 1, 2], [2.5, 3, 0], 1.5, [1.5, 0, 1])
+        cset = CardinalitySet([-0.5, 1, 2], 1.5, [2.5, 3, 0], [1.5, 0, 1])
         uq = cset.set_as_constraint(uncertain_params=None, block=m)
 
         self.assertEqual(len(uq.uncertainty_cons), 4)
@@ -1927,7 +1976,7 @@ class TestCardinalitySet(unittest.TestCase):
         """
         m = ConcreteModel()
         m.v1 = Var(initialize=0)
-        cset = CardinalitySet([-0.5, 1, 2], [2.5, 3, 0], 1.5)
+        cset = CardinalitySet([-0.5, 1, 2], 1.5, [2.5, 3, 0])
         with self.assertRaisesRegex(ValueError, ".*dimension"):
             cset.set_as_constraint(uncertain_params=[m.v1], block=m)
 
@@ -1938,7 +1987,7 @@ class TestCardinalitySet(unittest.TestCase):
         """
         m = ConcreteModel()
         m.p1 = Param([0, 1, 2], initialize=0, mutable=True)
-        cset = CardinalitySet([-0.5, 1, 2], [2.5, 3, 0], 1.5)
+        cset = CardinalitySet([-0.5, 1, 2], 1.5, [2.5, 3, 0])
         with self.assertRaisesRegex(TypeError, ".*valid component type"):
             cset.set_as_constraint(uncertain_params=[m.p1[0], m.p1[1]], block=m)
 
@@ -1948,8 +1997,8 @@ class TestCardinalitySet(unittest.TestCase):
     def test_point_in_set(self):
         cset = CardinalitySet(
             origin=[-0.5, 1, 2, 0],
-            positive_deviation=[2.5, 3, 0, 0],
             gamma=1.5,
+            positive_deviation=[2.5, 3, 0, 0],
             negative_deviation=[1.5, 0, 0, 3],
         )
 
@@ -1992,8 +2041,8 @@ class TestCardinalitySet(unittest.TestCase):
         """
         cset = CardinalitySet(
             origin=[-0.5, 1, 2, 0],
-            positive_deviation=[2.5, 3, 0, 0],
             gamma=1.5,
+            positive_deviation=[2.5, 3, 0, 0],
             negative_deviation=[1.5, 0, 0, 3],
         )
         computed_bounds = cset._compute_exact_parameter_bounds(SolverFactory("baron"))
@@ -2004,7 +2053,7 @@ class TestCardinalitySet(unittest.TestCase):
         m = ConcreteModel()
         m.uncertain_param_vars = Var([0, 1, 2], initialize=0)
         cset = CardinalitySet(
-            origin=[-0.5, 1, 2], positive_deviation=[2.5, 3, 0], gamma=1.5
+            origin=[-0.5, 1, 2], gamma=1.5, positive_deviation=[2.5, 3, 0]
         )
 
         cset._add_bounds_on_uncertain_parameters(
@@ -2022,7 +2071,7 @@ class TestCardinalitySet(unittest.TestCase):
 
         # construct a valid cardinality-constrained set
         cardinality_set = CardinalitySet(
-            origin=[0.0, 0.0], positive_deviation=[1.0, 1.0], gamma=2
+            origin=[0.0, 0.0], gamma=2, positive_deviation=[1.0, 1.0]
         )
 
         # validate raises no issues on valid set
@@ -2036,7 +2085,7 @@ class TestCardinalitySet(unittest.TestCase):
 
         # construct a valid cardinality-constrained set
         cardinality_set = CardinalitySet(
-            origin=[0.0, 0.0], positive_deviation=[1.0, 1.0], gamma=2
+            origin=[0.0, 0.0], gamma=2, positive_deviation=[1.0, 1.0]
         )
 
         # check when values are not finite
@@ -2063,7 +2112,7 @@ class TestCardinalitySet(unittest.TestCase):
 
         # construct a valid cardinality-constrained set
         cardinality_set = CardinalitySet(
-            origin=[0.0, 0.0], positive_deviation=[1.0, 1.0], gamma=2
+            origin=[0.0, 0.0], gamma=2, positive_deviation=[1.0, 1.0]
         )
 
         # positive_deviation has negative entries
@@ -2086,7 +2135,7 @@ class TestCardinalitySet(unittest.TestCase):
 
         # construct a valid cardinality-constrained set
         cardinality_set = CardinalitySet(
-            origin=[0.0, 0.0], positive_deviation=[1.0, 1.0], gamma=2
+            origin=[0.0, 0.0], gamma=2, positive_deviation=[1.0, 1.0]
         )
 
         # check when gamma is invalid
@@ -2113,7 +2162,7 @@ class TestCardinalitySet(unittest.TestCase):
         cardinality-constrained set.
         """
         cardinality_set = CardinalitySet(
-            origin=[0, 0], positive_deviation=[1, 1], gamma=2
+            origin=[0, 0], gamma=2, positive_deviation=[1, 1]
         )
         bounded_and_nonempty_check(self, cardinality_set)
 
@@ -2122,7 +2171,7 @@ class TestCardinalitySet(unittest.TestCase):
         Test method for checking whether there are coordinates
         constrained to a single value.
         """
-        cset = CardinalitySet(origin=np.zeros(3), positive_deviation=[1, 1, 0], gamma=1)
+        cset = CardinalitySet(origin=np.zeros(3), gamma=1, positive_deviation=[1, 1, 0])
         self.assertEqual(
             cset._is_coordinate_fixed(config=Bunch()), [False, False, True]
         )
@@ -3304,7 +3353,7 @@ class TestCartesianProductSet(unittest.TestCase):
                 FactorModelSet(
                     origin=[0, 1], number_of_factors=1, beta=0.75, psi_mat=[[1], [3]]
                 ),
-                CardinalitySet([-0.5, -0.5], [2, 2], 2),
+                CardinalitySet([-0.5, -0.5], 2, [2, 2]),
                 AxisAlignedEllipsoidalSet([0, 0, 0], [0.25, 0.25, 0.25]),
             ]
         )
@@ -3412,7 +3461,7 @@ class TestCartesianProductSet(unittest.TestCase):
                     beta=0.75,
                     psi_mat=[[1, 1], [1, 2]],
                 ),
-                CardinalitySet([-0.5, -0.5], [2, 2], 2),
+                CardinalitySet([-0.5, -0.5], 2, [2, 2]),
                 AxisAlignedEllipsoidalSet([0, 0, 1], [0.25, 0.8, 0.25]),
             ]
         )
@@ -3481,7 +3530,7 @@ class TestCartesianProductSet(unittest.TestCase):
         cpset = CartesianProductSet(
             [
                 BoxSet([(-0.5, 0.5)]),
-                CardinalitySet([-0.5, -0.5], [2, 2], 2),
+                CardinalitySet([-0.5, -0.5], 2, [2, 2]),
                 AxisAlignedEllipsoidalSet([0, 0, 1], [0.25, 0.8, 0.25]),
             ]
         )
@@ -3572,7 +3621,7 @@ class TestCartesianProductSet(unittest.TestCase):
         cpset = CartesianProductSet(
             [
                 BoxSet([(-0.5, 0.5)]),
-                CardinalitySet([-0.5, -0.5], [2, 2], 2),
+                CardinalitySet([-0.5, -0.5], 2, [2, 2]),
                 AxisAlignedEllipsoidalSet([0, 0, 1], [0.25, 0.8, 0.25]),
             ]
         )
@@ -3694,7 +3743,7 @@ class TestCartesianProductSet(unittest.TestCase):
                 FactorModelSet(
                     origin=[0, 1], number_of_factors=1, beta=0.75, psi_mat=[[1], [4]]
                 ),
-                CardinalitySet([-0.5, -0.5], [2, 2], 1, [1.5, 0]),
+                CardinalitySet([-0.5, -0.5], 1, [2, 2], [1.5, 0]),
                 AxisAlignedEllipsoidalSet([0, 0, 0], [0.25, 0.25, 0.25]),
             ]
         )
