@@ -104,7 +104,8 @@ class _IISBase(abc.ABC):
 
 class CplexConflict(_IISBase):
     def compute(self):
-        self._solver._solver_model.conflict.refine()
+        _conflict = self._solver._solver_model.conflict
+        _conflict.refine(_conflict.all_constraints())
 
     def write(self, file_name):
         self._solver._solver_model.conflict.write(file_name)

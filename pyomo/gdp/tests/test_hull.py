@@ -12,6 +12,7 @@ import re
 import sys
 import random
 from io import StringIO
+import math
 
 import pyomo.common.unittest as unittest
 import unittest.mock as mock
@@ -30,6 +31,23 @@ from pyomo.environ import (
     ComponentMap,
     value,
     log,
+    log10,
+    sqrt,
+    asin,
+    acos,
+    acosh,
+    atanh,
+    tan,
+    ceil,
+    floor,
+    sin,
+    exp,
+    cos,
+    sinh,
+    cosh,
+    tanh,
+    atan,
+    asinh,
     ConcreteModel,
     Any,
     Suffix,
@@ -38,6 +56,8 @@ from pyomo.environ import (
     Param,
     Objective,
     TerminationCondition,
+    SortComponents,
+    ConstraintList,
     NonNegativeReals,
 )
 from pyomo.core.expr.compare import (
@@ -56,6 +76,7 @@ from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 import pyomo.gdp.plugins.hull as hull_module
 import pyomo.gdp.tests.models as models
 import pyomo.gdp.tests.common_tests as ct
+from pyomo.gdp.plugins.hull import _WellDefinedConstraintGenerator
 
 currdir = this_file_dir()
 
@@ -2260,6 +2281,7 @@ class TestErrors(unittest.TestCase):
         relaxed_xor = hull.get_transformed_constraints(
             m.disjunction_disjuncts[0].nestedDisjunction.algebraic_constraint
         )
+
         self.assertEqual(len(relaxed_xor), 1)
         relaxed_xor = relaxed_xor[0]
         repn = generate_standard_repn(relaxed_xor.body)
@@ -2666,10 +2688,7 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         c = cons[0]
         # hull transformation of z1 >= 1
         assertExpressionsStructurallyEqual(
-            self,
-            c.expr,
-            dis_z1 - (1 - m.d[1].binary_indicator_var) * 0
-            >= m.d[1].binary_indicator_var,
+            self, c.expr, dis_z1 >= m.d[1].binary_indicator_var
         )
 
         # then d[4]:
@@ -2839,10 +2858,7 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         self.assertEqual(len(cons), 1)
         cons = cons[0]
         assertExpressionsStructurallyEqual(
-            self,
-            cons.expr,
-            1 - z3d - (2 - (z1d + z2d)) - (1 - m.d[4].binary_indicator_var) * (-1)
-            <= 0 * m.d[4].binary_indicator_var,
+            self, cons.expr, -z3d + z1d + z2d <= m.d[4].binary_indicator_var
         )
 
         # hull transformation of z3 >= 1
@@ -2852,9 +2868,7 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         self.assertEqual(len(cons), 1)
         cons = cons[0]
         assertExpressionsStructurallyEqual(
-            self,
-            cons.expr,
-            z3d - (1 - m.d[4].binary_indicator_var) * 0 >= m.d[4].binary_indicator_var,
+            self, cons.expr, z3d >= m.d[4].binary_indicator_var
         )
 
         self.assertFalse(m.bwahaha.active)
@@ -2889,6 +2903,137 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
             sys.setrecursionlimit(rl)
 
 
+class DomainRestrictionTest(unittest.TestCase):
+    def test_no_nonlinear(self):
+        m = models.makeTwoTermDisj()
+        TransformationFactory('gdp.hull').apply_to(m)
+
+        m_pts = TransformationFactory('gdp.hull').get_well_defined_points_map(m)
+        # both points have zero offset
+        self.assertEqual(m_pts[m.disjunction][m.a], 0)
+        self.assertEqual(m_pts[m.disjunction][m.x], 0)
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_simple_case(self):
+        m = models.makeTwoTermDisj()
+        m.d[0].nonlinear = Constraint(expr=log(m.x - 1) >= 0)
+        m2 = m.clone()
+        TransformationFactory('gdp.hull').apply_to(m)
+
+        m_pts = TransformationFactory('gdp.hull').get_well_defined_points_map(m)
+        # x gets a nonzero offset; a does not (but it might by chance)
+        self.assertNotEqual(m_pts[m.disjunction][m.x], 0)
+        # using the recorded map is the same thing as the process that
+        # created that map
+        TransformationFactory('gdp.hull').apply_to(m2, well_defined_points=m_pts)
+        # The two blocks have (value) identical contents
+        for c1, c2 in zip(
+            m.component_data_objects(Constraint, sort=SortComponents.deterministic),
+            m2.component_data_objects(Constraint, sort=SortComponents.deterministic),
+        ):
+            assertExpressionsStructurallyEqual(self, c1.expr, c2.expr)
+
+    def test_well_defined_pts_no_gurobi(self):
+        m = models.makeTwoTermDisj()
+        m.d[0].nonlinear = Constraint(expr=log(m.x - 1) >= 0)
+        TransformationFactory('gdp.hull').apply_to(
+            m, well_defined_points={m.disjunction: ComponentMap([(m.x, 2), (m.a, 0)])}
+        )
+        m_pts = TransformationFactory('gdp.hull').get_well_defined_points_map(m)
+        # x gets a nonzero offset; a does not
+        self.assertNotEqual(m_pts[m.disjunction][m.x], 0)
+        self.assertEqual(m_pts[m.disjunction][m.a], 0)
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_handle_fixed_disagg(self):
+        m = models.makeTwoTermDisj()
+        m.d[0].nonlinear = Constraint(expr=log(m.x - 1) >= 0)
+        m.x.fix(2)
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m, assume_fixed_vars_permanent=False)
+        self.assertIn(m.x, hull.get_well_defined_points_map(m)[m.disjunction])
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_handle_fixed_no_disagg(self):
+        m = models.makeTwoTermDisj()
+        m.d[0].nonlinear = Constraint(expr=log(m.x - 1) >= 0)
+        m.x.fix(2)
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m, assume_fixed_vars_permanent=True)
+        self.assertNotIn(m.x, hull.get_well_defined_points_map(m)[m.disjunction])
+        # transformed nonlinear constraint is trivial here
+        assertExpressionsEqual(
+            self,
+            m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+            .transformedConstraints['nonlinear_1', 'lb']
+            .body,
+            0.0 * m.d[0].binary_indicator_var,
+        )
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_no_good_point(self):
+        m = models.makeTwoTermDisj()
+        m.d[0].nonlinear = Constraint(expr=log(-((m.x) ** 2) - 1) >= 0)
+        self.assertRaisesRegex(
+            GDP_Error,
+            "Unable to find a well-defined point on disjunction .*",
+            TransformationFactory('gdp.hull').apply_to,
+            m,
+        )
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_various_nonlinear(self):
+        m = models.makeTwoTermDisj()
+        m.y = Var(bounds=(-5, 5))
+        m.d[0].log = Constraint(expr=log(m.a + 1) >= 0)
+        m.d[0].pow = Constraint(expr=m.y ** (-0.5) >= 0)
+        m.d[0].div = Constraint(expr=1 / (m.x) >= 0)
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
+        m_pts = hull.get_well_defined_points_map(m)
+        self.assertNotEqual(m_pts[m.disjunction][m.x], 0)
+        self.assertNotEqual(m_pts[m.disjunction][m.y], 0)
+
+    # Ensure proper cleanup on error exit of the base point heuristic
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_error_exit(self):
+        m = models.makeTwoTermDisj()
+        m.y = Var(bounds=(-5, 5))
+        m.y.set_value(-1)
+        m.y.fix()
+        # these cannot both be well-defined
+        m.d[0].log = Constraint(expr=log(m.a + 1) >= 0)
+        m.d[0].log2 = Constraint(expr=log(-m.a - 2) >= 0)
+        m.d[0].pow = Constraint(expr=m.y ** (-0.5) >= 0)
+        m.d[0].div = Constraint(expr=1 / (m.x) >= 0)
+        hull = TransformationFactory('gdp.hull')
+        self.assertRaises(GDP_Error, lambda: hull.apply_to(m))
+        self.assertEqual(value(m.y), -1)
+        self.assertTrue(m.y.fixed)
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_ignoring_bounds(self):
+        # These should work without throwing and restore the bounds
+        # afterwards
+        m = ConcreteModel()
+        m.x = Var(bounds=(2.9, 4))
+        m.y = Var(bounds=(-10, 10))
+        m.z = Var(bounds=(-3, -1))
+        # Possible to find a well-defined point, but not while keeping x in its bounds
+        m.d1 = Disjunct()
+        m.d1.c1 = Constraint(expr=log(1 - (m.x - 2) ** 2 - m.y**2) >= 1)
+        m.d1.c2 = Constraint(expr=1 / m.z <= 1)
+        m.d2 = Disjunct()
+        m.d2.c3 = Constraint(expr=log(1 - (m.x - 2) ** 2 - (m.y - 1) ** 2) >= 1)
+        m.d = Disjunction(expr=[m.d1, m.d2])
+        TransformationFactory('gdp.hull').apply_to(m)
+        m_pts = TransformationFactory('gdp.hull').get_well_defined_points_map(m)
+        self.assertNotEqual(m_pts, {})
+        self.assertEqual(m.x.bounds, (2.9, 4))
+        self.assertEqual(m.y.bounds, (-10, 10))
+        self.assertEqual(m.z.bounds, (-3, -1))
+
+
 @unittest.skipUnless(gurobi_available, "Gurobi is not available")
 class NestedDisjunctsInFlatGDP(unittest.TestCase):
     """
@@ -2897,6 +3042,128 @@ class NestedDisjunctsInFlatGDP(unittest.TestCase):
 
     def test_declare_disjuncts_in_disjunction_rule(self):
         ct.check_nested_disjuncts_in_flat_gdp(self, 'hull')
+
+
+class WellDefinedConstraintWalkerTest(unittest.TestCase):
+    def test_many_constraints(self):
+        m = models.makeTwoTermDisj()
+        m.hard = Constraint(expr=1 / (log(atanh(m.x))) >= 0)
+        m.several = Constraint(
+            expr=log(m.x + 1)
+            + log10(m.x + 2)
+            + sqrt(m.x + 3)
+            + asin(m.x + 4)
+            + acos(m.x + 5)
+            + tan(m.x + 6)
+            + acosh(m.x + 7)
+            + atanh(m.x + 8)
+            # no constraints added by these
+            + abs(m.x)
+            + ceil(m.x)
+            + floor(m.x)
+            + exp(m.x)
+            + sin(m.x)
+            + cos(m.x)
+            + sinh(m.x)
+            + cosh(m.x)
+            + tanh(m.x)
+            + atan(m.x)
+            + asinh(m.x)
+            >= 0
+        )
+        m.cons = ConstraintList()
+        walker = _WellDefinedConstraintGenerator(cons_list=m.cons)
+        walker.walk_expression(m.hard.body)
+        walker.walk_expression(m.several.body)
+        walker_eps = 1e-4
+        self.assertEqual(len(m.cons), 16)
+        for con, expected_con in zip(
+            m.cons.values(),
+            [
+                m.x >= -1 + walker_eps,
+                m.x <= 1 - walker_eps,
+                atanh(m.x) >= walker_eps,
+                log(atanh(m.x)) >= walker_eps,
+                m.x + 1 >= walker_eps,
+                m.x + 2 >= walker_eps,
+                m.x + 3 >= 0,
+                m.x + 4 >= -1,
+                m.x + 4 <= 1,
+                m.x + 5 >= -1,
+                m.x + 5 <= 1,
+                m.x + 6 >= -(math.pi / 2) + walker_eps,
+                m.x + 6 <= (math.pi / 2) - walker_eps,
+                m.x + 7 >= 1,
+                m.x + 8 >= -1 + walker_eps,
+                m.x + 8 <= 1 - walker_eps,
+            ],
+        ):
+            assertExpressionsStructurallyEqual(self, con.expr, expected_con)
+
+
+class TestGeneralizedLocalVars(unittest.TestCase):
+    # Here m.a appears on both disjuncts of m.disjunction and nowhere
+    # else; it is suitable for declaration as LocalVars in which case it
+    # becomes generalized local. To use this functionality the LocalVars
+    # suffix should be used with keys for both disjuncts in which m.a
+    # appears. m.x on the other hand is properly local
+    def makeThreeTermDisj(self):
+        m = ConcreteModel()
+        m.a = Var(bounds=(2, 7))
+        m.x = Var(bounds=(4, 9))
+
+        def d_rule(disjunct, flag):
+            m = disjunct.model()
+            if flag == 2:
+                pass
+            elif flag == 1:
+                disjunct.c1 = Constraint(expr=m.a == 0)
+                disjunct.c2 = Constraint(expr=m.x <= 7)
+            else:
+                disjunct.c = Constraint(expr=m.a >= 5)
+
+        m.d = Disjunct([0, 1, 2], rule=d_rule)
+        m.disjunction = Disjunction(expr=[m.d[0], m.d[1], m.d[2]])
+        return m
+
+    def test_generalized_localvars(self):
+        # Normal case: both variables are disagreggated whenever they appear
+        # Total 10 variables: a, x, three binary indicators, two fallback vars,
+        # two disaggregated a, one disaggregated x
+        m = self.makeThreeTermDisj()
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
+        self.assertEqual(len(list(m.component_data_objects(Var))), 10)
+
+        # True localvars (for x): eliminate its disaggregated version and one fallback var
+        # Total 8 variables
+        m = self.makeThreeTermDisj()
+        m.d[1].LocalVars = Suffix(direction=Suffix.LOCAL)
+        m.d[1].LocalVars[m.d[1]] = [m.x]
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
+        self.assertEqual(len(list(m.component_data_objects(Var))), 8)
+
+        # Generalized localvars (for a): eliminate the fallback variable only
+        m = self.makeThreeTermDisj()
+        m.d[1].LocalVars = Suffix(direction=Suffix.LOCAL)
+        m.d[0].LocalVars = Suffix(direction=Suffix.LOCAL)
+        m.d[0].LocalVars[m.d[0]] = [m.a]
+        m.d[1].LocalVars[m.d[1]] = [m.a]
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
+        self.assertEqual(len(list(m.component_data_objects(Var))), 9)
+
+        # Both localvars: eliminate both fallbacks and the disaggregated
+        # version of x, but not those of a
+        m = self.makeThreeTermDisj()
+        m.d[1].LocalVars = Suffix(direction=Suffix.LOCAL)
+        m.d[0].LocalVars = Suffix(direction=Suffix.LOCAL)
+        m.d[0].LocalVars[m.d[0]] = [m.a]
+        m.d[1].LocalVars[m.d[1]] = [m.x, m.a]
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
+        self.assertEqual(len(list(m.component_data_objects(Var))), 7)
 
 
 class TestExactHullQuadratic(unittest.TestCase):

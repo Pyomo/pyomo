@@ -589,7 +589,7 @@ def complex_number_error(value, visitor, expr, node=""):
 
 
 def categorize_valid_components(
-    model, active=True, sort=None, valid=set(), targets=set()
+    model, active=True, sort=None, valid=None, targets=None
 ):
     """Walk model and check for valid component types
 
@@ -633,6 +633,11 @@ def categorize_valid_components(
         list of component data objects found on the model.
 
     """
+    if valid is None:
+        valid = set()
+    if targets is None:
+        targets = set()
+
     assert active in (True, None)
     # Note: we assume every target component is valid but that we expect
     # there to be far mode valid components than target components.

@@ -16,6 +16,7 @@ doc = {
     'bonmin': 'Deterministic local MINLP solver',
     'cbc': 'MILP solver',
     'conopt': 'Feasible path NLP solver',
+    'copt': 'MILP solver',
     'couenne': 'Deterministic global MINLP solver',
     'cplex': 'MILP solver',
     'fico-xpress': 'MILP solver',

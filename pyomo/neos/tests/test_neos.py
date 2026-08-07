@@ -223,6 +223,9 @@ class RunAllNEOSSolvers:
     def test_conopt(self):
         self._run('conopt')
 
+    def test_copt(self):
+        self._run('copt')
+
     def test_couenne(self):
         self._run('couenne')
 

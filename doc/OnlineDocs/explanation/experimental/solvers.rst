@@ -45,6 +45,9 @@ with existing interfaces).
    * - Ipopt
      - ``ipopt``
      - ``ipopt_v2``
+   * - GAMS
+     - ``gams``
+     - ``gams_v2``
    * - Gurobi (persistent)
      - ``gurobi_persistent``
      - ``gurobi_persistent_v2``
@@ -57,9 +60,12 @@ with existing interfaces).
    * - KNITRO
      - ``knitro_direct``
      - ``knitro_direct``
-   * - GAMS
-     - ``gams``
-     - ``gams_v2``
+   * - SCIP (direct)
+     - ``scip_direct``
+     - ``scip_direct``
+   * - SCIP (persistent)
+     - ``scip_persistent``
+     - ``scip_persistent``
 
 Using the new interfaces through the legacy interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
