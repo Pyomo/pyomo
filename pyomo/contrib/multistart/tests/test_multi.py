@@ -13,6 +13,7 @@ from itertools import product
 from io import StringIO
 
 import pyomo.common.unittest as unittest
+from pyomo.common.dependencies import attempt_import
 from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.multistart.high_conf_stop import should_stop
 from pyomo.contrib.multistart.reinit import strategies
@@ -28,6 +29,9 @@ from pyomo.environ import (
 )
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.util import NoOptimalSolutionError
+
+parameterized, param_available = attempt_import('parameterized')
+parameterized = parameterized.parameterized
 
 
 @unittest.skipIf(not SolverFactory('ipopt').available(), "IPOPT not available")
@@ -95,6 +99,8 @@ class MultistartTests(unittest.TestCase):
                 "variable x with bounds (0, None).",
                 output.getvalue().strip(),
             )
+        with self.assertRaises(ValueError):
+            SolverFactory('multistart').solve(m, strategy="rand_vector")
 
     def test_var_value_None(self):
         m = ConcreteModel()
@@ -141,6 +147,13 @@ class MultistartTests(unittest.TestCase):
         m.o2 = Objective(expr=m.x)
         with self.assertRaisesRegex(RuntimeError, "multiple active objectives"):
             SolverFactory('multistart').solve(m)
+
+    def test_unsupported_sampling_method(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 1))
+        m.obj = Objective(expr=m.x)
+        with self.assertRaises(ValueError):
+            SolverFactory('multistart').solve(m, sampling_method="dummy")
 
 
 def build_model():

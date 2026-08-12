@@ -166,8 +166,7 @@ class MultistartConfig(SolverConfig):
             ConfigValue(
                 default="latin_hypercube",
                 description="Method for sampling random starting points for reinitialization step. "
-                "Supported options are 'random_uniform', 'latin_hypercube', and 'sobol_sampling'. "
-                "Only utilized when config.strategy is 'rand_vector'.",
+                "Supported options are 'random_uniform', 'latin_hypercube', and 'sobol_sampling'. ",
             ),
         )
         self.seed = self.declare(
@@ -312,7 +311,6 @@ class MultiStart(SolverBase):
         best_objective = float('inf') * obj_sign
         results.feasible_solution_list = []
 
-        timer.start('initial_solve')
         # create temporary variable list for value transfer
         tmp_var_list_name = unique_component_name(model, "_vars_list")
         setattr(
@@ -331,13 +329,18 @@ class MultiStart(SolverBase):
                     )
                 ),
             )
+
+        num_iter = 0
+        timer.start('initial_solve')
+        logger.info(f"Running initial solve. Iteration: {num_iter}\n")
         best_result = result = solver.solve(model, **config.subsolver_args)
+        logger.info(
+            f'solved NLP: {result.solution_status}, {result.termination_condition}'
+        )
+
         # Check the solution status before loading variables into the model.
         if result.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
             results.feasible_solution_list.append(result)
-            logger.info(
-                f'solved NLP: {result.solution_status}, {result.termination_condition}'
-            )
 
         if result.solution_status is SolutionStatus.optimal:
             if obj is not None:
@@ -346,7 +349,6 @@ class MultiStart(SolverBase):
                 objectives.append(obj_val)
         timer.stop('initial_solve')
 
-        num_iter = 0
         max_iter = config.iterations
         # if HCS rule is specified, reinitialize completely randomly until
         # rule specifies stopping
@@ -372,26 +374,24 @@ class MultiStart(SolverBase):
                 break
 
             num_iter += 1
-            logger.info(f"num_iter: {num_iter}\n")
+            logger.info(f"Iteration: {num_iter}\n")
 
             # at first iteration, solve the originally passed model
             m = model
             reinitialize_variables(m, config, sampler)
             result = solver.solve(m, **config.subsolver_args)
-            # if config.load_solutions:
+            logger.info(
+                f'solved NLP: {result.solution_status}, {result.termination_condition}'
+            )
             # Check the solution status before loading variables into the model.
             if result.solution_status in {
                 SolutionStatus.feasible,
                 SolutionStatus.optimal,
             }:
-                logger.info(
-                    f'solved NLP: {result.solution_status}, {result.termination_condition}'
-                )
                 results.feasible_solution_list.append(result)
                 # If we are looking for the first feasible solution, then return immediately
                 if config.break_on_solution:
                     best_result = result
-                    # timer.stop(f"timer_iter_{num_iter}")
                     break
 
             if result.solution_status is SolutionStatus.optimal:
@@ -450,15 +450,9 @@ class MultiStart(SolverBase):
 # Sampling class to organize and configure random samplers
 class SamplingManager:
     def __init__(self, method="lhs", rng=None, seed=None):
-        aliases = {
-            "random_uniform": "uniform",
-            "uniform": "uniform",
-            "latin_hypercube": "lhs",
-            "lhs": "lhs",
-            "sobol_sampling": "sobol",
-            "sobol": "sobol",
-        }
-        self.method = aliases[method.lower()]
+
+        self.method = method
+        self._check_method()
 
         self.seed = seed
 
@@ -470,16 +464,32 @@ class SamplingManager:
 
         self.qmc_sampler = None
 
+    def _check_method(self):
+        # Define accepted method names.
+        aliases = {
+            "random_uniform": "uniform",
+            "uniform": "uniform",
+            "latin_hypercube": "lhs",
+            "lhs": "lhs",
+            "sobol_sampling": "sobol",
+            "sobol": "sobol",
+        }
+        if self.method in aliases.keys():
+            self.method = aliases[self.method.lower()]
+        else:
+            raise ValueError(
+                f"Unknown sampling method '{self.method}'."
+                "Supported methods: random_uniform, latin_hypercube, "
+                "or sobol_sampling."
+            )
+
     def _ensure_qmc(self, dim):
         if self.qmc_sampler is not None:
             return
-
         if self.method == "lhs":
             self.qmc_sampler = stats.qmc.LatinHypercube(d=dim, rng=self.rng)
         elif self.method == "sobol":
             self.qmc_sampler = stats.qmc.Sobol(d=dim, scramble=True, seed=self.rng)
-        else:
-            raise ValueError(f"QMC sampler not valid for method '{self.method}'")
 
     def sample_scalar(self, lower, upper):
         if self.method == "uniform":
@@ -489,8 +499,6 @@ class SamplingManager:
             self._ensure_qmc(dim=1)
             x = self.qmc_sampler.random(n=1)  # shape (1, d)
             return stats.qmc.scale(x, lower, upper).item()
-
-        raise ValueError(f"Unknown sampling method '{self.method}'")
 
     def sample_vector(self, lower, upper):
         """Vector sample for uniform/lhs/sobol over all vars at once."""
@@ -504,5 +512,3 @@ class SamplingManager:
             self._ensure_qmc(dim=len(lower))
             x = self.qmc_sampler.random(n=1)  # shape (1, d)
             return stats.qmc.scale(x, lower, upper)[0]
-
-        raise ValueError(f"Unknown sampling method '{self.method}'")

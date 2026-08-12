@@ -130,6 +130,7 @@ sos_solvers = [
     ('scip_direct', ScipDirect),
     ('scip_persistent', ScipPersistent),
 ]
+meta_solvers = [('multistart', MultiStart)]
 
 
 def _load_tests(solver_list):
