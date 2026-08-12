@@ -46,7 +46,6 @@ from pyomo.contrib.solver.common.util import (
 from pyomo.util.vars_from_expressions import get_vars_from_components
 
 from pyomo.common.dependencies.scipy import stats
-from pyomo.common.dependencies import numpy as np
 from pyomo.core.staleflag import StaleFlagManager
 
 logger = logging.getLogger('pyomo.contrib.multistart')
