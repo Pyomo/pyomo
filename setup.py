@@ -215,7 +215,6 @@ setup_kwargs = dict(
             'scipy',  # Needed by autodoc for pynumero
         ],
         'optional': [
-            'dill',  # No direct use, but improves lambda pickle
             'ipython',  # contrib.viewer
             'linear-tree; python_version<"3.14"',  # contrib.piecewise
             # FIXME: This is a temporary pin that should be removed
@@ -253,6 +252,7 @@ setup_kwargs = dict(
             # install on PyPy (binary wheels are not available), so we
             # will only "require" them on other (CPython) platforms:
             'casadi; implementation_name!="pypy"',  # dae
+            'dill; implementation_name!="pypy"',  # No direct use, but improves lambda pickle
             'numdifftools; implementation_name!="pypy"',  # pynumero
             'pandas; implementation_name!="pypy"',
             'seaborn; implementation_name!="pypy"',  # parmest.graphics
