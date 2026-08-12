@@ -48,6 +48,3 @@ class PiecewiseLinearExpression(NumericExpression):
 
     def _to_string(self, values, verbose, smap):
         return "%s(%s)" % (str(self.pw_linear_function), ', '.join(values))
-
-    def polynomial_degree(self):
-        return None
