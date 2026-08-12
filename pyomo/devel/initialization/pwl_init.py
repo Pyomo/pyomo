@@ -262,6 +262,7 @@ def _initialize_with_piecewise_linear_approximation(
     mip_solver: SolverBase,
     nlp_solver: SolverBase,
     default_bound=1.0e8,
+    num_initial_points=2,
     max_iter=100,
     num_cons_to_refine_per_iter=5,
     aggressive_substitution=True,
@@ -297,7 +298,7 @@ def _initialize_with_piecewise_linear_approximation(
 
     # build the PWL approximation
     trans = pyo.TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
-    trans.apply_to(pwl, num_points=2, additively_decompose=False)
+    trans.apply_to(pwl, num_points=num_initial_points, additively_decompose=False)
     logger.info('replaced nonlinear expressions with piecewise linear expressions')
 
     """
@@ -311,6 +312,7 @@ def _initialize_with_piecewise_linear_approximation(
     pwl_expr_to_con_map = _get_pwl_constraints(pwl)
     solved = False
     last_nlp_res = None
+
     for _iter in range(max_iter):
         logger.info(f'PWL initialization: iter {_iter}')
 
