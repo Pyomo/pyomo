@@ -174,6 +174,9 @@ class TestTransformPiecewiseModelToIncrementalMIP(unittest.TestCase):
             make_log_x_model(simplices=self.ordered_simplices),
         )
 
+    def test_single_segment_no_disjunction(self):
+        ct.check_single_segment_no_disjunction(self, 'contrib.piecewise.incremental')
+
     @unittest.skipUnless(SolverFactory('gurobi').available(), 'Gurobi is not available')
     @unittest.skipUnless(SolverFactory('gurobi').license_is_valid(), 'No license')
     def test_solve_log_model(self):

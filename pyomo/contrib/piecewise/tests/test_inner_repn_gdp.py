@@ -106,6 +106,9 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
             self, 'contrib.piecewise.inner_repn_gdp'
         )
 
+    def test_single_segment_no_disjunction(self):
+        ct.check_single_segment_no_disjunction(self, 'contrib.piecewise.inner_repn_gdp')
+
     @unittest.skipUnless(SolverFactory('gurobi').available(), 'Gurobi is not available')
     @unittest.skipUnless(SolverFactory('gurobi').license_is_valid(), 'No license')
     def test_solve_disaggregated_convex_combo_model(self):
