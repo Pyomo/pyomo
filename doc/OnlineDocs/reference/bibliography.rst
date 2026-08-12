@@ -167,6 +167,11 @@ Bibliography
    1032–1037. 2003. DOI `10.1016/S1570-7946(03)80444-3
    <https://doi.org/10.1016/S1570-7946(03)80444-3>`_
 
+.. [SIS+26] J. A. F. Sherman, N. M. Isenberg, J. D. Siirola,
+   and C. E. Gounaris. "PyROS: The Pyomo Robust Optimization Solver".
+   Optimization Online, Preprint. 2026.
+   https://optimization-online.org/2026/06/pyros-the-pyomo-robust-optimization-solver/
+
 .. [TG15] F. Trespalacios and I. E. Grossmann. "Improved Big-M
    reformulation for generalized disjunctive programs", *Computers and
    Chemical Engineering*, 76, 98–103. 2015.  DOI
