@@ -448,7 +448,7 @@ class MultiStart(SolverBase):
 
 # Sampling class to organize and configure random samplers
 class SamplingManager:
-    def __init__(self, method="lhs", rng=None, seed=None):
+    def __init__(self, method="uniform", rng=None, seed=None):
 
         self.method = method
         self._check_method()

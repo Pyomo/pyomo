@@ -13,7 +13,7 @@ from itertools import product
 from io import StringIO
 
 import pyomo.common.unittest as unittest
-from pyomo.common.dependencies import attempt_import, scipy_available
+from pyomo.common.dependencies import attempt_import, numpy_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.multistart.high_conf_stop import should_stop
 from pyomo.contrib.multistart.reinit import strategies
@@ -34,7 +34,7 @@ parameterized, param_available = attempt_import('parameterized')
 parameterized = parameterized.parameterized
 
 
-@unittest.skipIf(not scipy_available, "Scipy not available")
+@unittest.skipIf(not numpy_available, "Numpy not available")
 @unittest.skipIf(not SolverFactory('ipopt').available(), "IPOPT not available")
 class MultistartTests(unittest.TestCase):
     """
