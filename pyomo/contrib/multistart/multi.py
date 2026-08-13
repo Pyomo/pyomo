@@ -91,7 +91,7 @@ class MultistartConfig(SolverConfig):
             ConfigValue(
                 default="ipopt",
                 description="solver to use, defaults to ipopt"
-                "Should also be able to accept solver objects. In progress",
+                "Accepts solver names as string or solver objects.",
             ),
         )
         self.subsolver_args = self.declare(
@@ -475,7 +475,7 @@ class MultiStart(SolverBase):
         results.timing_info.wall_time = default_timer() - start_time
         return results
 
-    def _update_subsolver_timelimit(self, iteration, config, timer):
+    def _update_solver_timelimits(self, iteration, config, timer):
 
         if config.subsolver_args["time_limit"] == None:
             return
@@ -483,11 +483,19 @@ class MultiStart(SolverBase):
         # Get elapsed time from last timer
         if iteration == 0:
             last_timer = timer._get_timer('initial_solve')
+        else:
+            last_timer = timer._get_timer(f"timer_iter_{iteration}")
         elapsed_time = default_timer() - last_timer
 
         # Take elapsed time off of time_limit for subsolver
-        updated_time_limit = config.subsolver_args["time_limit"] - elapsed_time
-        config.subsolver_args["time_limit"] = updated_time_limit
+        solver_time_limit = config.time_limit - elapsed_time
+        subsolver_time_limit = config.subsolver_args["time_limit"] - elapsed_time
+
+        # Set new timelimits
+        config.time_limit = max(solver_time_limit, 0)
+        config.subsolver_args["time_limit"] = max(subsolver_time_limit, 1e-6)
+
+
 
     def __enter__(self):
         return self
@@ -498,7 +506,7 @@ class MultiStart(SolverBase):
 
 # Sampling class to organize and configure random samplers
 class SamplingManager:
-    def __init__(self, method="uniform", rng=None, seed=None):
+    def __init__(self, method, rng=None, seed=None):
 
         self.method = method
         self._check_method()
