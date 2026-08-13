@@ -47,6 +47,13 @@ from pyomo.contrib.viewer.ui_data import UIData
 from pyomo.common.dependencies import DeferredImportError
 from pyomo.core.base.units_container import pint_available
 
+class Fake_numpy:
+    class float64(float):
+        pass
+
+    class int64(int):
+        pass
+
 
 @unittest.skipIf(not pint_available, "Pyomo units are not available")
 class TestDataModelItem(unittest.TestCase):
@@ -66,6 +73,8 @@ class TestDataModelItem(unittest.TestCase):
         m.b1.e3 = Expression(expr=m.x[3] * m.x[1])
         m.b1.e4 = Expression(expr=log(m.x[2]))
         m.b1.e5 = Expression(expr=log(m.x[2] - 2))
+        m.b1.e6 = Expression(expr=Fake_numpy.float64(3.2))
+        m.b1.e7 = Expression(expr=Fake_numpy.int64(3))
 
         def blackbox(a, b):
             return sin(a - b)
@@ -124,6 +133,24 @@ class TestDataModelItem(unittest.TestCase):
         )
         cdi.ui_data.calculate_expressions()
         self.assertIsNone(cdi.get("value"))
+
+    def test_expr_calc_numpy_float(self):
+        cdi = ComponentDataItem(
+            parent=None, ui_data=UIData(model=self.m), o=self.m.b1.e6
+        )
+        cdi.ui_data.calculate_expressions()
+        self.assertIsInstance(pyo.value(self.m.b1.e6), Fake_numpy.float64)
+        self.assertAlmostEqual(cdi.get("value"), 3.2)
+        self.assertNotIsInstance(cdi.get("value"), Fake_numpy.float64)
+
+    def test_expr_calc_numpy_int(self):
+        cdi = ComponentDataItem(
+            parent=None, ui_data=UIData(model=self.m), o=self.m.b1.e7
+        )
+        cdi.ui_data.calculate_expressions()
+        self.assertIsInstance(pyo.value(self.m.b1.e7), Fake_numpy.int64)
+        self.assertEqual(cdi.get("value"), 3)
+        self.assertNotIsInstance(cdi.get("value"), Fake_numpy.int64)
 
     def test_expr_calc_value_None(self):
         cdi = ComponentDataItem(
