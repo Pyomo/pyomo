@@ -163,7 +163,7 @@ class MultistartConfig(SolverConfig):
         self.sampling_method = self.declare(
             "sampling_method",
             ConfigValue(
-                default="latin_hypercube",
+                default="random_uniform",
                 description="Method for sampling random starting points for reinitialization step. "
                 "Supported options are 'random_uniform', 'latin_hypercube', and 'sobol_sampling'. ",
             ),
@@ -203,6 +203,12 @@ class MultiStartResults(Results):
         )
         self.feasible_solution_list: Optional[list] = self.declare(
             'feasible_solution_list',
+            ConfigValue(
+                description="Object for loading the solution back into the model."
+            ),
+        )
+        self.feasible_iter_list: Optional[list] = self.declare(
+            'feasible_iter_list',
             ConfigValue(
                 description="Object for loading the solution back into the model."
             ),
@@ -267,24 +273,38 @@ class MultiStart(SolverBase):
 
         # Allocate the results object so we can populate it as we go
         results = MultiStartResults()
+        results.solver_name = self.name
+        results.solver_version = self.version()
         results.timing_info.start_timestamp = datetime.datetime.now(
             datetime.timezone.utc
         )
-        # As we are about to run a solver, update the stale flag
-        StaleFlagManager.mark_all_as_stale()
+
+        if config.time_limit == 0:
+            results.termination_condition = TerminationCondition.maxTimeLimit
+            results.solution_status = SolutionStatus.noSolution
+            logger.warning(
+                "Time limit set to 0 seconds. Multistart solver did not run."
+            )
+            return results
 
         # Create centralized sampler once
         sampler = SamplingManager(
             method=config.sampling_method, rng=config.rng, seed=config.seed
         )
 
-        # Set sub-solver options
+        # Define solver using either string input or provided solver object
+        if type(config.subsolver) == str:
+            solver = SolverFactory(config.subsolver)
+
+        else:
+            solver = config.subsolver
+
+        # Set specific sub-solver options
+        # if config.subsolver_args is None:
         config.subsolver_args["load_solutions"] = False
         config.subsolver_args["raise_exception_on_nonoptimal_result"] = False
+        # if config.time_limit is not None:
         config.subsolver_args["time_limit"] = config.time_limit
-        config.subsolver_args["tee"] = config.tee
-
-        solver = SolverFactory(config.subsolver)
 
         # Model sense
         objectives = list(model.component_data_objects(Objective, active=True))
@@ -309,6 +329,10 @@ class MultiStart(SolverBase):
         best_result = None
         best_objective = float('inf') * obj_sign
         results.feasible_solution_list = []
+        results.feasible_iter_list = []
+
+        # As we are about to run a solver, update the stale flag
+        StaleFlagManager.mark_all_as_stale()
 
         # create temporary variable list for value transfer
         tmp_var_list_name = unique_component_name(model, "_vars_list")
@@ -340,6 +364,7 @@ class MultiStart(SolverBase):
         # Check the solution status before loading variables into the model.
         if result.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
             results.feasible_solution_list.append(result)
+            results.feasible_iter_list.append(num_iter)
 
         if result.solution_status is SolutionStatus.optimal:
             if obj is not None:
@@ -361,7 +386,8 @@ class MultiStart(SolverBase):
 
         timer.start('iterative_solves')
         while num_iter < max_iter:
-            # timer.start(f"timer_iter_{num_iter}")
+            num_iter += 1
+            timer.start(f"timer_iter_{num_iter}")
             if using_HCS and should_stop(
                 objectives,
                 config.stopping_mass,
@@ -369,10 +395,9 @@ class MultiStart(SolverBase):
                 config.HCS_tolerance,
             ):
                 HCS_completed = True
-                # timer.stop(f"timer_iter_{num_iter}")
+                timer.stop(f"timer_iter_{num_iter}")
                 break
 
-            num_iter += 1
             logger.info(f"Iteration: {num_iter}\n")
 
             # at first iteration, solve the originally passed model
@@ -388,9 +413,11 @@ class MultiStart(SolverBase):
                 SolutionStatus.optimal,
             }:
                 results.feasible_solution_list.append(result)
+                results.feasible_iter_list.append(num_iter)
                 # If we are looking for the first feasible solution, then return immediately
                 if config.break_on_solution:
                     best_result = result
+                    timer.stop(f"timer_iter_{num_iter}")
                     break
 
             if result.solution_status is SolutionStatus.optimal:
@@ -401,7 +428,7 @@ class MultiStart(SolverBase):
                         # objective has improved
                         best_objective = obj_val
                         best_result = result
-            # timer.stop(f"timer_iter_{num_iter}")
+            timer.stop(f"timer_iter_{num_iter}")
 
         timer.stop('iterative_solves')
         delattr(model, tmp_var_list_name)
@@ -420,8 +447,19 @@ class MultiStart(SolverBase):
         ):
             raise NoOptimalSolutionError()
 
+        # Check termination condition for ipopt-specific outputs
+        if str(
+            best_result.solver_name
+        ) == "ipopt" and best_result.termination_condition in {
+            TerminationCondition.locallyInfeasible,
+            TerminationCondition.unbounded,
+            TerminationCondition.provenInfeasible,
+        }:
+            results.termination_condition = TerminationCondition.infeasibleOrUnbounded
+        else:
+            results.termination_condition = best_result.termination_condition
+
         results.solution_loader = best_result.solution_loader
-        results.termination_condition = best_result.termination_condition
         results.solution_status = best_result.solution_status
         results.incumbent_objective = best_result.incumbent_objective
         results.solver_log = best_result.solver_log
@@ -432,12 +470,24 @@ class MultiStart(SolverBase):
 
             results.solution_loader.load_solution()
 
-        results.solver_name = self.name
-        results.solver_version = self.version()
         results.solver_config = config
         results.timing_info.timer = timer
         results.timing_info.wall_time = default_timer() - start_time
         return results
+
+    def _update_subsolver_timelimit(self, iteration, config, timer):
+
+        if config.subsolver_args["time_limit"] == None:
+            return
+
+        # Get elapsed time from last timer
+        if iteration == 0:
+            last_timer = timer._get_timer('initial_solve')
+        elapsed_time = default_timer() - last_timer
+
+        # Take elapsed time off of time_limit for subsolver
+        updated_time_limit = config.subsolver_args["time_limit"] - elapsed_time
+        config.subsolver_args["time_limit"] = updated_time_limit
 
     def __enter__(self):
         return self

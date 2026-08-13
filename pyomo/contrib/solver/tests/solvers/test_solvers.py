@@ -1154,7 +1154,7 @@ class TestSolvers(unittest.TestCase):
         opt.config.load_solutions = False
         res = opt.solve(m)
         self.assertNotEqual(res.solution_status, SolutionStatus.optimal)
-        if isinstance(opt, Ipopt) or isinstance(opt, MultiStart):
+        if isinstance(opt, Ipopt):
             acceptable_termination_conditions = {
                 TerminationCondition.locallyInfeasible,
                 TerminationCondition.unbounded,
@@ -1233,7 +1233,7 @@ class TestSolvers(unittest.TestCase):
         opt.config.load_solutions = False
         res = opt.solve(m)
         self.assertNotEqual(res.solution_status, SolutionStatus.optimal)
-        if isinstance(opt, Ipopt) or isinstance(opt, MultiStart):
+        if isinstance(opt, Ipopt):
             acceptable_termination_conditions = {
                 TerminationCondition.locallyInfeasible,
                 TerminationCondition.unbounded,
@@ -1913,7 +1913,7 @@ class TestSolvers(unittest.TestCase):
                 constant=0,
             )
             m.c2[t] = expr == 1
-        if isinstance(opt, Ipopt) or isinstance(opt, MultiStart):
+        if isinstance(opt, Ipopt):
             opt.config.time_limit = 1e-6
         else:
             opt.config.time_limit = 0
