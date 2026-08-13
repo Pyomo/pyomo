@@ -147,7 +147,8 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         # Set up augmented penalty objective
         discrete_objective.deactivate()
         # placeholder for OA objective
-        discrete_problem_util_block.oa_obj = Objective(sense=minimize)
+        discrete_problem_util_block.oa_obj = Objective()
+        discrete_problem_util_block.oa_obj.sense = discrete_objective.sense
 
         return discrete_objective
 
