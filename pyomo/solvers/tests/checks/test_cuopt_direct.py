@@ -24,7 +24,6 @@ from pyomo.environ import (
     Binary,
 )
 import pytest
-from pyomo.common.dependencies import attempt_import
 from pyomo.opt import check_available_solvers
 from pyomo.common.tee import capture_output
 from pyomo.common.tempfiles import TempfileManager

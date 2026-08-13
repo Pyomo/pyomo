@@ -77,6 +77,21 @@ def _try_nlp_solve(nlp: BlockData, nlp_solver: SolverBase):
     return res
 
 
+def _retry_nlp_solve(nlp: BlockData, nlp_solver: SolverBase):
+    # retry to solve the original nlp after using an initialization method
+    nlp_res = nlp_solver.solve(
+        nlp, load_solutions=False, raise_exception_on_nonoptimal_result=False
+    )
+    logger.info(f're-solved NLP with {nlp_solver.name}: {nlp_res.solution_status}, \
+              {nlp_res.termination_condition}')
+    if nlp_res.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
+        nlp_res.solution_loader.load_vars()
+    else:
+        logger.warning('initialization did not find feasible solution')
+
+    return nlp_res
+
+
 def initialize_with_piecewise_linear_approximation(
     nlp: BlockData,
     nlp_solver: SolverBase | None = None,
@@ -138,7 +153,7 @@ def initialize_with_piecewise_linear_approximation(
             return res
 
     if mip_solver is None:
-        mip_solver = _get_solver('gurobi_persistent', 'MILP solver')
+        mip_solver = _get_solver('highs', 'MILP solver')
 
     orig_var_data = _setup(nlp)
 
@@ -156,7 +171,9 @@ def initialize_with_piecewise_linear_approximation(
     finally:
         _cleanup(orig_var_data)
 
-    return res
+    nlp_res = _retry_nlp_solve(nlp, nlp_solver)
+
+    return nlp_res
 
 
 def initialize_with_LP_approximation(
@@ -223,7 +240,7 @@ def initialize_with_LP_approximation(
     orig_var_data = _setup(nlp)
 
     if lp_solver is None:
-        lp_solver = _get_solver('gurobi_persistent', 'LP solver')
+        lp_solver = _get_solver('highs', 'LP solver')
 
     try:
         res = _initialize_with_LP_approximation(
@@ -239,7 +256,9 @@ def initialize_with_LP_approximation(
     finally:
         _cleanup(orig_var_data)
 
-    return res
+    nlp_res = _retry_nlp_solve(nlp, nlp_solver)
+
+    return nlp_res
 
 
 def initialize_with_global_opt(
@@ -284,7 +303,7 @@ def initialize_with_global_opt(
     orig_var_data = _setup(nlp)
 
     if global_solver is None:
-        global_solver = _get_solver('gurobi_direct_minlp', 'global NLP solver')
+        global_solver = _get_solver('scip_direct', 'global NLP solver')
 
     try:
         res = _initialize_with_global_solver(
@@ -293,4 +312,6 @@ def initialize_with_global_opt(
     finally:
         _cleanup(orig_var_data)
 
-    return res
+    nlp_res = _retry_nlp_solve(nlp, nlp_solver)
+
+    return nlp_res
