@@ -34,7 +34,7 @@ parameterized, param_available = attempt_import('parameterized')
 parameterized = parameterized.parameterized
 
 
-@unittest.skipif(not scipy_available)
+@unittest.skipIf(not scipy_available, "Scipy not available")
 @unittest.skipIf(not SolverFactory('ipopt').available(), "IPOPT not available")
 class MultistartTests(unittest.TestCase):
     """
