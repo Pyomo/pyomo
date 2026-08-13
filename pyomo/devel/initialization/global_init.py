@@ -41,12 +41,14 @@ def _initialize_with_global_solver(
 
     res = global_solver.solve(
         nlp,
-        load_solutions=True,
+        load_solutions=False,
         raise_exception_on_nonoptimal_result=False,
         solver_options=opts,
     )
     logger.info(
         f'solved NLP with {global_solver.name}: {res.solution_status}, {res.termination_condition}'
     )
+    if res.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
+        res.solution_loader.load_vars()
 
     return res

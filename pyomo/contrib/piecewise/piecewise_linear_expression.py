@@ -43,8 +43,8 @@ class PiecewiseLinearExpression(NumericExpression):
     def create_node_with_local_data(self, args):
         return self.__class__(args, pw_linear_function=self.pw_linear_function)
 
+    def _apply_operation(self, values):
+        return self.pw_linear_function(*values)
+
     def _to_string(self, values, verbose, smap):
         return "%s(%s)" % (str(self.pw_linear_function), ', '.join(values))
-
-    def polynomial_degree(self):
-        return None

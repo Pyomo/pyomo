@@ -214,8 +214,10 @@ def _initialize_with_LP_approximation(
 
     # solve the LP
     lp_res = lp_solver.solve(
-        lp, load_solutions=True, raise_exception_on_nonoptimal_result=False
+        lp, load_solutions=False, raise_exception_on_nonoptimal_result=False
     )
     logger.info(f'solved LP: {lp_res.solution_status}, {lp_res.termination_condition}')
+    if lp_res.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
+        lp_res.solution_loader.load_vars()
 
     return lp_res
