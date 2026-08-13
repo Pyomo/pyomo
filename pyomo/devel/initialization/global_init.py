@@ -31,24 +31,24 @@ def _initialize_with_global_solver(
             'interfaces, so the global solvers are limited to ScipDirect, '
             'ScipPersistent, and GurobiDirectMINLP.'
         )
+    # Check if time limit is provided for global solver
+    if global_solver.config.time_limit is None:
+        logger.warning(
+            'No time limit set for global optimizer. '
+            'For a large model, this may take a long time. '
+            'Consider setting a time limit using global_solver.config.time_limit.'
+        )
+
     res = global_solver.solve(
         nlp,
-        load_solutions=True,
+        load_solutions=False,
         raise_exception_on_nonoptimal_result=False,
         solver_options=opts,
     )
     logger.info(
         f'solved NLP with {global_solver.name}: {res.solution_status}, {res.termination_condition}'
     )
-    res = nlp_solver.solve(
-        nlp, load_solutions=False, raise_exception_on_nonoptimal_result=False
-    )
-    logger.info(
-        f'solved NLP with {nlp_solver.name}: {res.solution_status}, {res.termination_condition}'
-    )
     if res.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
         res.solution_loader.load_vars()
-    else:
-        logger.warning('initialization was not successful via global optimization')
 
     return res
