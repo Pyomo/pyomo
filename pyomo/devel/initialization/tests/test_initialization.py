@@ -196,6 +196,8 @@ class TestInit(unittest.TestCase):
                 25: ([-9.91992877683681], 1e-6, 1e-6),
                 26: ([-9.920038488200985], 1e-6, 1e-6),
                 27: ([-9.920096055464825], 1e-6, 1e-6),
+                # For new second solve, repeat last value.
+                28: ([-9.920096055464825], 1e-6, 1e-6),
             },
         )
         mip_solver = SolverFactory('highs')
@@ -231,4 +233,3 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=logging.INFO)
     t = TestInit()
-    t.test_pwl_init()
