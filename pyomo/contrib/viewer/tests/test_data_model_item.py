@@ -47,6 +47,7 @@ from pyomo.contrib.viewer.ui_data import UIData
 from pyomo.common.dependencies import DeferredImportError
 from pyomo.core.base.units_container import pint_available
 
+
 class Fake_numpy:
     class float64(float):
         pass
