@@ -36,6 +36,10 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
     """
 
     CONFIG = _get_MindtPy_OA_config()
+    # OA linearizes the nonlinear constraints at trial points, which is only a
+    # valid relaxation when the model is convex, so its dual bound is not
+    # rigorous for nonconvex models.
+    _crossed_bounds_are_certified = False
 
     def check_config(self):
         config = self.config

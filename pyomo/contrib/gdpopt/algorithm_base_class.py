@@ -14,6 +14,9 @@ from pyomo.common.config import ConfigBlock
 from pyomo.common.errors import DeveloperError
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdpopt.config_options import _add_common_configs
+from pyomo.contrib.gdpopt.nonrigorous_bounds import (
+    model_may_have_nonrigorous_dual_bound,
+)
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_util_block,
     add_disjunct_list,
@@ -361,7 +364,15 @@ class _GDPoptAlgorithm:
             self._update_bounds(dual=float('-inf'))
 
     def _problem_may_have_nonrigorous_dual_bound(self, model):
-        return False
+        """Return True if this algorithm's dual bound for `model` may not be rigorous.
+
+        Algorithms whose crossed bounds are certified build a valid relaxation for
+        any model, so their dual bounds are always rigorous. For the others, the
+        dual bound is only rigorous when the model can be certified convex.
+        """
+        if self._crossed_bounds_are_certified:
+            return False
+        return model_may_have_nonrigorous_dual_bound(model)
 
     def _update_primal_bound_to_unbounded(self, config):
         if self.objective_sense == minimize:

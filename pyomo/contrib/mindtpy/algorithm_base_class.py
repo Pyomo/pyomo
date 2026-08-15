@@ -55,6 +55,9 @@ from pyomo.contrib.gdpopt.util import (
 from pyomo.contrib.gdpopt.solve_discrete_problem import (
     distinguish_mip_infeasible_or_unbounded,
 )
+from pyomo.contrib.gdpopt.nonrigorous_bounds import (
+    model_may_have_nonrigorous_dual_bound,
+)
 from pyomo.contrib.mindtpy.util import (
     generate_norm1_objective_function,
     generate_norm2sq_objective_function,
@@ -84,7 +87,19 @@ egb, egb_available = attempt_import(
 
 
 class _MindtPyAlgorithm:
+    # Whether this algorithm's dual bound is a rigorous bound for any model it
+    # accepts. Algorithms that relax the nonlinear constraints with McCormick
+    # envelopes (GOA) build a valid relaxation of nonconvex problems and so are
+    # certified. Algorithms that linearize at trial points (OA, ECP) only produce
+    # a valid relaxation when the model is convex, so they set this to False and
+    # the model structure is checked before crossed bounds are trusted.
     _crossed_bounds_are_certified = True
+
+    def _problem_may_have_nonrigorous_dual_bound(self, model):
+        """Return True if this algorithm's dual bound for `model` may not be rigorous."""
+        if self._crossed_bounds_are_certified:
+            return False
+        return model_may_have_nonrigorous_dual_bound(model)
 
     def __init__(self, **kwds):
         """
@@ -107,6 +122,7 @@ class _MindtPyAlgorithm:
         self.curr_int_sol = []
         self.should_terminate = False
         self._nonrigorous_crossed_bounds = False
+        self._nonrigorous_dual_bound_possible = False
         self.integer_list = []
         # Dictionary {integer solution (tuple): [cuts begin index, cuts end index] (list)}
         self.integer_solution_to_cuts_index = dict()
@@ -3043,6 +3059,7 @@ class _MindtPyAlgorithm:
         )
         config.set_value(kwds)
         self._nonrigorous_crossed_bounds = False
+        self._nonrigorous_dual_bound_possible = False
         self.set_up_logger()
         new_logging_level = logging.INFO if config.tee else None
         with lower_logger_level_to(config.logger, new_logging_level):
@@ -3069,6 +3086,9 @@ class _MindtPyAlgorithm:
                 setup_results_object(self.results, self.original_model, config)
                 self.results.problem.number_of_objectives = (
                     self._original_model_num_active_objectives
+                )
+                self._nonrigorous_dual_bound_possible = (
+                    self._problem_may_have_nonrigorous_dual_bound(self.original_model)
                 )
 
                 # Validate the model to ensure that MindtPy is able to solve it.
@@ -3360,7 +3380,11 @@ class _MindtPyAlgorithm:
 
     def bounds_converged(self):
         # Check bound convergence
-        if self.abs_gap < 0 and not self._crossed_bounds_are_certified:
+        if (
+            self.abs_gap < 0
+            and not self._crossed_bounds_are_certified
+            and self._nonrigorous_dual_bound_possible
+        ):
             self._nonrigorous_crossed_bounds = True
             self.config.logger.info(
                 'MindtPy exiting on crossed bounds without a certified dual bound.'

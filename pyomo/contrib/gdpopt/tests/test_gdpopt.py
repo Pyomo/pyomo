@@ -22,7 +22,7 @@ from pyomo.common.collections import Bunch
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
 from pyomo.contrib.gdpopt.gloa import GDP_GLOA_Solver
-import pyomo.contrib.gdpopt.loa as loa_module
+import pyomo.contrib.gdpopt.nonrigorous_bounds as nonrigorous_bounds_module
 from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_util_block,
@@ -160,8 +160,8 @@ class TestGDPoptUnit(unittest.TestCase):
         nonconvex.c = Constraint(expr=nonconvex.x * nonconvex.y <= 1)
         nonconvex.obj = Objective(expr=nonconvex.y)
 
-        original_numpy_available = loa_module.numpy_available
-        loa_module.numpy_available = False
+        original_numpy_available = nonrigorous_bounds_module.numpy_available
+        nonrigorous_bounds_module.numpy_available = False
         try:
             self.assertFalse(
                 GDP_LOA_Solver()._problem_may_have_nonrigorous_dual_bound(convex)
@@ -170,7 +170,7 @@ class TestGDPoptUnit(unittest.TestCase):
                 GDP_LOA_Solver()._problem_may_have_nonrigorous_dual_bound(nonconvex)
             )
         finally:
-            loa_module.numpy_available = original_numpy_available
+            nonrigorous_bounds_module.numpy_available = original_numpy_available
 
     def test_gloa_crossed_bounds_preserve_certified_optimal_behavior(self):
         solver = GDP_GLOA_Solver()
