@@ -32,9 +32,13 @@ from pyomo.environ import (
 from pyomo.gdp import Disjunct, Disjunction
 
 exdir = join(PYOMO_ROOT_DIR, 'examples', 'gdp')
+from pyomo.common.envvar import is_pypy
 
 
 @unittest.skipUnless(z3_available, "Z3 SAT solver is not available.")
+@unittest.skipIf(
+    is_pypy, "satsolver tests stall on pypy; these will no longer be tested."
+)
 class SatSolverTests(unittest.TestCase):
     def test_simple_sat_model(self):
         m = ConcreteModel()

@@ -25,9 +25,6 @@ if not (numpy_available and scipy_available):
 
 if scipy_available:
     from pyomo.contrib.doe import DesignOfExperiments
-    from pyomo.contrib.doe.examples.reactor_example import (
-        ReactorExperiment as FullReactorExperiment,
-    )
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
         RooneyBieglerExperiment,
     )
@@ -98,10 +95,6 @@ def get_FIM_FIMPrior_Q_L(doe_obj=None):
         for j in model.parameter_names
     ]
     sigma_inv = [1 / v for k, v in model.scenario_blocks[0].measurement_error.items()]
-    param_vals = np.array(
-        [[v for k, v in model.scenario_blocks[0].unknown_parameters.items()]]
-    )
-
     FIM_vals_np = np.array(FIM_vals).reshape((n_param, n_param))
     FIM_prior_vals_np = np.array(FIM_prior_vals).reshape((n_param, n_param))
 

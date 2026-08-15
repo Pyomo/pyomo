@@ -127,4 +127,5 @@ We can use the FIM or the covariance matrix to define the design criteria.
     A confidence ellipse is a geometric representation of the uncertainty in parameter
     estimates. It is derived from the covariance matrix :math:`\mathbf{V}`.
 
-In order to solve problems of the above, Pyomo.DoE implements the 2-stage stochastic program. Please see [WD22]_ for details.
+In order to solve problems of the above, Pyomo.DoE implements the
+2-stage stochastic program. Please see [PyomoDOE-paper]_ for details.

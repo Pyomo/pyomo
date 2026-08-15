@@ -249,3 +249,30 @@ class SolverAPIVersion(NamedIntEnum):
 
 minimize = ObjectiveSense.minimize
 maximize = ObjectiveSense.maximize
+
+
+class CaptureOutputMode(IntEnum):
+    """Enum to override the default behavior of the :class:`capture_output`
+    context manager.
+
+    This enum provides options for overriding the behavior of the
+    :class:`capture_output` context manager through the
+    :attr:`~pyomo.common.tee.OVERRIDE_CAPTURE_OUTPUT` flag.
+
+    """
+
+    #: Setting this mode will cause :class:`capture_output` to be a noop
+    DISABLE = 0
+    #: :class:`capture_output` will capture the standard ``sys.stdout`` /
+    #: ``sys.stderr`` streams
+    ENABLE_STREAM_CAPTURE = 1
+    #: :class:`capture_output` will capture the file descriptors that
+    #: underlie the standard ``sys.stdout`` / ``sys.stderr`` streams
+    ENABLE_FD_CAPTURE = 2
+    #: This is :class:`capture_output`'s normal operation (all capturing is enabled)
+    NORMAL = 3
+    #: :class:`capture_output` will capture the standard ``sys.stdout`` /
+    #: ``sys.stderr`` streams, but will not attempt to capture their raw
+    #: file descriptors (regardless of the value of `capture_fd`) [alias
+    #: of ENABLE_STREAM_CAPTURE]
+    DISABLE_FD_CAPTURE = 1

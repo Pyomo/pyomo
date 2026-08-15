@@ -69,6 +69,15 @@ if numpy_available:
 
 
 def get_numerical_derivative(grey_box_object=None):
+    """
+    Compute finite-difference first derivatives of the selected DoE objective.
+
+    Parameters
+    ----------
+    grey_box_object : FIMExternalGreyBox
+        Grey-box objective wrapper that provides the current FIM and objective
+        type (trace, determinant, minimum-eigenvalue, or condition-number).
+    """
     # Internal import to avoid circular imports
     from pyomo.contrib.doe import ObjectiveLib
 
@@ -120,6 +129,19 @@ def get_numerical_derivative(grey_box_object=None):
 
 
 def get_numerical_second_derivative(grey_box_object=None, return_reduced=True):
+    """
+    Compute finite-difference second derivatives for Hessian validation.
+
+    Parameters
+    ----------
+    grey_box_object : FIMExternalGreyBox
+        Grey-box objective wrapper that provides the current FIM and objective
+        type.
+    return_reduced : bool, optional
+        If True, return the 10x10 reduced upper-triangular Hessian form used by
+        the external grey-box interface for a 4-parameter case; otherwise
+        return the full 4-D derivative tensor.
+    """
     # Internal import to avoid circular imports
     from pyomo.contrib.doe import ObjectiveLib
 
@@ -243,6 +265,18 @@ def get_numerical_second_derivative(grey_box_object=None, return_reduced=True):
 
 
 def get_standard_args(experiment, fd_method, obj_used):
+    """
+    Build common DesignOfExperiments keyword arguments used in this test module.
+
+    Parameters
+    ----------
+    experiment : object
+        Experiment fixture implementing ``get_labeled_model``.
+    fd_method : str
+        Finite-difference mode passed to DoE (for example, "central").
+    obj_used : str
+        Objective option name (for example, "trace" or "determinant").
+    """
     args = {}
     args['experiment'] = experiment
     args['fd_formula'] = fd_method
@@ -279,6 +313,14 @@ def get_standard_args(experiment, fd_method, obj_used):
 
 
 def make_greybox_and_doe_objects(objective_option):
+    """
+    Create reactor-based DoE and grey-box objects for derivative/build tests.
+
+    Parameters
+    ----------
+    objective_option : str
+        Objective option to validate with the grey-box wrapper.
+    """
     fd_method = "central"
     obj_used = objective_option
 
@@ -299,6 +341,14 @@ def make_greybox_and_doe_objects(objective_option):
 
 
 def make_greybox_and_doe_objects_rooney_biegler(objective_option):
+    """
+    Create Rooney-Biegler DoE/grey-box objects with a data-driven prior FIM.
+
+    Parameters
+    ----------
+    objective_option : str
+        Objective option to validate and/or solve in grey-box mode.
+    """
     fd_method = "central"
     obj_used = objective_option
 
@@ -376,7 +426,7 @@ if (
         cyipopt_call_working = not (
             bad_message in doe_object.results["Termination Message"]
         )
-    except:
+    except Exception:
         cyipopt_call_working = False
 
 
@@ -389,12 +439,13 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     # set the inputs for the
     # Grey Box object
     def test_set_inputs(self):
+        """Verify grey-box packed inputs reconstruct the full symmetric FIM."""
         objective_option = "trace"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
         )
 
-        # Set input values to the random testing matrix
+        # Set input values to the random testing matrix (upper triangular part)
         grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
 
         # Grab the values from get_FIM
@@ -402,9 +453,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         self.assertTrue(np.all(np.isclose(grey_box_FIM, testing_matrix)))
 
-    # Testing that getting the
-    # input names works properly
     def test_input_names(self):
+        """Verify grey-box input names follow the expected packed triangular order."""
         objective_option = "trace"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -432,10 +482,17 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     # Testing that getting the
     # output names works properly
     def test_output_names(self):
+        """Verify output labels for all supported grey-box objective variants."""
         # Need to test for each objective type
         # A-opt
         objective_option = "trace"
         doe_obj_A, grey_box_object_A = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # Pseudo A-opt
+        objective_option = "pseudo_trace"
+        doe_obj_P, grey_box_object_P = make_greybox_and_doe_objects(
             objective_option=objective_option
         )
 
@@ -460,11 +517,12 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Hard-coded names of the outputs
         # There is one element per
         # objective type
-        output_names = ['A-opt', 'log-D-opt', 'E-opt', 'ME-opt']
+        output_names = ['A-opt', 'pseudo-A-opt', 'log-D-opt', 'E-opt', 'ME-opt']
 
         # Grabbing input names from grey box object
         output_names_gb = []
         output_names_gb.extend(grey_box_object_A.output_names())
+        output_names_gb.extend(grey_box_object_P.output_names())
         output_names_gb.extend(grey_box_object_D.output_names())
         output_names_gb.extend(grey_box_object_E.output_names())
         output_names_gb.extend(grey_box_object_ME.output_names())
@@ -473,6 +531,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
     # Testing output computation
     def test_outputs_A_opt(self):
+        """Check A-opt output equals trace of inverse FIM."""
         objective_option = "trace"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -487,7 +546,24 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         self.assertTrue(np.isclose(grey_box_A_opt, A_opt))
 
+    def test_outputs_pseudo_A_opt(self):
+        """Check pseudo-A-opt output equals trace of the FIM itself."""
+        objective_option = "pseudo_trace"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
+
+        grey_box_pseudo_A_opt = grey_box_object.evaluate_outputs()
+
+        pseudo_A_opt = np.trace(testing_matrix)
+
+        self.assertTrue(np.isclose(grey_box_pseudo_A_opt, pseudo_A_opt))
+
     def test_outputs_D_opt(self):
+        """Check D-opt output equals log-determinant of FIM."""
         objective_option = "determinant"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -503,6 +579,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.isclose(grey_box_D_opt, D_opt))
 
     def test_outputs_E_opt(self):
+        """Check E-opt output equals minimum eigenvalue of FIM."""
         objective_option = "minimum_eigenvalue"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -519,6 +596,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.isclose(grey_box_E_opt, E_opt))
 
     def test_outputs_ME_opt(self):
+        """Check ME-opt output equals log condition number of FIM."""
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -536,6 +614,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
     # Testing Jacobian computation
     def test_jacobian_A_opt(self):
+        """Compare A-opt Jacobian against finite-difference derivatives."""
         objective_option = "trace"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -559,7 +638,31 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(jac, jac_FD, rtol=1e-4, atol=1e-4)))
 
+    def test_jacobian_pseudo_A_opt(self):
+        """Pseudo-A-opt is linear, so its Jacobian should be the identity."""
+        objective_option = "pseudo_trace"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
+
+        # Grab the Jacobian values
+        utri_vals_jac = grey_box_object.evaluate_jacobian_outputs().toarray()
+
+        # Recover the Jacobian in Matrix Form
+        jac = np.zeros_like(grey_box_object._get_FIM())
+        jac[np.triu_indices_from(jac)] = utri_vals_jac
+        jac += jac.transpose()
+        jac = jac / 2
+
+        # For pseudo-trace, the objective is trace(FIM), so the full Jacobian
+        # is exactly the identity matrix.
+        self.assertTrue(np.allclose(jac, np.eye(jac.shape[0])))
+
     def test_jacobian_D_opt(self):
+        """Compare D-opt Jacobian against finite-difference derivatives."""
         objective_option = "determinant"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -584,6 +687,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(jac, jac_FD, rtol=1e-4, atol=1e-4)))
 
     def test_jacobian_E_opt(self):
+        """Compare E-opt Jacobian against finite-difference derivatives."""
         objective_option = "minimum_eigenvalue"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -608,6 +712,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(jac, jac_FD, rtol=1e-4, atol=1e-4)))
 
     def test_jacobian_ME_opt(self):
+        """Compare ME-opt Jacobian against finite-difference derivatives."""
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -631,8 +736,29 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(jac, jac_FD, rtol=1e-4, atol=1e-4)))
 
+    def test_hessian_pseudo_A_opt(self):
+        """Pseudo-A-opt is linear, so its Hessian should be identically zero."""
+        objective_option = "pseudo_trace"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
+
+        # Grab the Hessian values
+        hess_vals_from_gb = grey_box_object.evaluate_hessian_outputs().toarray()
+
+        # Recover the Hessian in Matrix Form
+        hess_gb = hess_vals_from_gb
+        hess_gb += hess_gb.transpose() - np.diag(np.diag(hess_gb))
+
+        # Pseudo-trace is linear in the FIM, so the second derivative is zero.
+        self.assertTrue(np.allclose(hess_gb, np.zeros_like(hess_gb)))
+
     # Testing Hessian Computation
     def test_hessian_A_opt(self):
+        """Compare A-opt Hessian against finite-difference second derivatives."""
         objective_option = "trace"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -654,7 +780,31 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
 
+    def test_pseudo_A_opt_greybox_build(self):
+        """Validate pseudo-A-opt grey-box wiring and initialized values."""
+        objective_option = "pseudo_trace"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # Build the greybox objective block on the DoE object
+        doe_obj.create_grey_box_objective_function()
+
+        # Pseudo-trace uses the trace of the FIM itself, so the initial value
+        # should match the current symmetric FIM rather than its inverse.
+        pseudo_A_opt_val = np.trace(testing_matrix + np.eye(4))
+
+        self.assertTrue(hasattr(doe_obj.model.obj_cons, "egb_fim_block"))
+        self.assertIn("pseudo-A-opt", grey_box_object.output_names())
+        self.assertIsInstance(doe_obj.model.objective, pyo.Objective)
+        self.assertEqual(doe_obj.model.objective.sense, pyo.maximize)
+        self.assertAlmostEqual(
+            doe_obj.model.obj_cons.egb_fim_block.outputs["pseudo-A-opt"].value,
+            pseudo_A_opt_val,
+        )
+
     def test_hessian_D_opt(self):
+        """Compare D-opt Hessian against finite-difference second derivatives."""
         objective_option = "determinant"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -677,6 +827,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
 
     def test_hessian_E_opt(self):
+        """Compare E-opt Hessian against finite-difference second derivatives."""
         objective_option = "minimum_eigenvalue"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -699,6 +850,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
 
     def test_hessian_ME_opt(self):
+        """Compare ME-opt Hessian against finite-difference second derivatives."""
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -721,6 +873,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
 
     def test_equality_constraint_names(self):
+        """Confirm the FIM grey-box objective exposes no equality constraints."""
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -734,6 +887,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertListEqual(eq_con_names_gb, [])
 
     def test_evaluate_equality_constraints(self):
+        """Confirm equality-constraint values are ``None`` for this interface."""
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -747,6 +901,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertIsNone(eq_con_vals_gb)
 
     def test_evaluate_jacobian_equality_constraints(self):
+        """Confirm equality-constraint Jacobian is ``None`` for this interface."""
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -761,6 +916,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertIsNone(jac_eq_con_vals_gb)
 
     def test_evaluate_hessian_equality_constraints(self):
+        """Confirm equality-constraint Hessian is ``None`` for this interface."""
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -778,42 +934,27 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     # the DoE problem with grey box is built
     # properly.
     def test_A_opt_greybox_build(self):
+        """Validate A-opt grey-box block wiring and initialized values on DoE model."""
         objective_option = "trace"
-        doe_obj, _ = make_greybox_and_doe_objects(objective_option=objective_option)
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
 
         # Build the greybox objective block
         # on the DoE object
         doe_obj.create_grey_box_objective_function()
 
-        # Check to see if each component exists
-        all_exist = True
-
         # Check output and value
         # FIM Initial will be the prior FIM
         # added with the identity matrix.
         A_opt_val = np.trace(np.linalg.inv(testing_matrix + np.eye(4)))
-
-        try:
-            A_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["A-opt"].value
-        except:
-            A_opt_val_gb = -10.0  # Trace should never be negative
-            all_exist = False
-
-        # Intermediate check for output existence
-        self.assertTrue(all_exist)
+        A_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["A-opt"].value
         self.assertAlmostEqual(A_opt_val, A_opt_val_gb)
 
         # Check inputs and values
-        try:
-            input_values = []
-            for i in _.input_names():
-                input_values.append(doe_obj.model.obj_cons.egb_fim_block.inputs[i]())
-        except:
-            input_values = np.zeros_like(testing_matrix)
-            all_exist = False
-
-        # Final check on existence of inputs
-        self.assertTrue(all_exist)
+        input_values = []
+        for i in grey_box_object.input_names():
+            input_values.append(doe_obj.model.obj_cons.egb_fim_block.inputs[i]())
         # Rebuild the current FIM from the input
         # values taken from the egb_fim_block
         current_FIM = np.zeros_like(testing_matrix)
@@ -823,44 +964,33 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(current_FIM, testing_matrix + np.eye(4))))
 
     def test_D_opt_greybox_build(self):
+        """Validate D-opt grey-box block wiring and initialized values on DoE model."""
         objective_option = "determinant"
-        doe_obj, _ = make_greybox_and_doe_objects(objective_option=objective_option)
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
 
         # Build the greybox objective block
         # on the DoE object
         doe_obj.create_grey_box_objective_function()
 
-        # Check to see if each component exists
-        all_exist = True
+        self.assertTrue(doe_obj.only_compute_fim_lower)
+        self.assertTrue(hasattr(doe_obj.model.obj_cons, "egb_fim_block"))
+        self.assertIn("log-D-opt", list(grey_box_object.output_names()))
+        self.assertIsInstance(doe_obj.model.objective, pyo.Objective)
+        self.assertEqual(doe_obj.model.objective.sense, pyo.maximize)
 
         # Check output and value
         # FIM Initial will be the prior FIM
         # added with the identity matrix.
         D_opt_val = np.log(np.linalg.det(testing_matrix + np.eye(4)))
-
-        try:
-            D_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs[
-                "log-D-opt"
-            ].value
-        except:
-            D_opt_val_gb = -100.0  # Determinant should never be negative beyond -64
-            all_exist = False
-
-        # Intermediate check for output existence
-        self.assertTrue(all_exist)
+        D_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["log-D-opt"].value
         self.assertAlmostEqual(D_opt_val, D_opt_val_gb)
 
         # Check inputs and values
-        try:
-            input_values = []
-            for i in _.input_names():
-                input_values.append(doe_obj.model.obj_cons.egb_fim_block.inputs[i]())
-        except:
-            input_values = np.zeros_like(testing_matrix)
-            all_exist = False
-
-        # Final check on existence of inputs
-        self.assertTrue(all_exist)
+        input_values = []
+        for i in grey_box_object.input_names():
+            input_values.append(doe_obj.model.obj_cons.egb_fim_block.inputs[i]())
         # Rebuild the current FIM from the input
         # values taken from the egb_fim_block
         current_FIM = np.zeros_like(testing_matrix)
@@ -870,43 +1000,28 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(current_FIM, testing_matrix + np.eye(4))))
 
     def test_E_opt_greybox_build(self):
+        """Validate E-opt grey-box block wiring and initialized values on DoE model."""
         objective_option = "minimum_eigenvalue"
-        doe_obj, _ = make_greybox_and_doe_objects(objective_option=objective_option)
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
 
         # Build the greybox objective block
         # on the DoE object
         doe_obj.create_grey_box_objective_function()
-
-        # Check to see if each component exists
-        all_exist = True
 
         # Check output and value
         # FIM Initial will be the prior FIM
         # added with the identity matrix.
         vals, vecs = np.linalg.eig(testing_matrix + np.eye(4))
         E_opt_val = np.min(vals)
-
-        try:
-            E_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["E-opt"].value
-        except:
-            E_opt_val_gb = -10.0  # Determinant should never be negative
-            all_exist = False
-
-        # Intermediate check for output existence
-        self.assertTrue(all_exist)
+        E_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["E-opt"].value
         self.assertAlmostEqual(E_opt_val, E_opt_val_gb)
 
         # Check inputs and values
-        try:
-            input_values = []
-            for i in _.input_names():
-                input_values.append(doe_obj.model.obj_cons.egb_fim_block.inputs[i]())
-        except:
-            input_values = np.zeros_like(testing_matrix)
-            all_exist = False
-
-        # Final check on existence of inputs
-        self.assertTrue(all_exist)
+        input_values = []
+        for i in grey_box_object.input_names():
+            input_values.append(doe_obj.model.obj_cons.egb_fim_block.inputs[i]())
         # Rebuild the current FIM from the input
         # values taken from the egb_fim_block
         current_FIM = np.zeros_like(testing_matrix)
@@ -916,43 +1031,28 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(current_FIM, testing_matrix + np.eye(4))))
 
     def test_ME_opt_greybox_build(self):
+        """Validate ME-opt grey-box block wiring and initialized values on DoE model."""
         objective_option = "condition_number"
-        doe_obj, _ = make_greybox_and_doe_objects(objective_option=objective_option)
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
 
         # Build the greybox objective block
         # on the DoE object
         doe_obj.create_grey_box_objective_function()
-
-        # Check to see if each component exists
-        all_exist = True
 
         # Check output and value
         # FIM Initial will be the prior FIM
         # added with the identity matrix.
         vals, vecs = np.linalg.eig(testing_matrix + np.eye(4))
         ME_opt_val = np.log(np.abs(np.max(vals) / np.min(vals)))
-
-        try:
-            ME_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["ME-opt"].value
-        except:
-            ME_opt_val_gb = -10.0  # Condition number should not be negative
-            all_exist = False
-
-        # Intermediate check for output existence
-        self.assertTrue(all_exist)
+        ME_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["ME-opt"].value
         self.assertAlmostEqual(ME_opt_val, ME_opt_val_gb)
 
         # Check inputs and values
-        try:
-            input_values = []
-            for i in _.input_names():
-                input_values.append(doe_obj.model.obj_cons.egb_fim_block.inputs[i]())
-        except:
-            input_values = np.zeros_like(testing_matrix)
-            all_exist = False
-
-        # Final check on existence of inputs
-        self.assertTrue(all_exist)
+        input_values = []
+        for i in grey_box_object.input_names():
+            input_values.append(doe_obj.model.obj_cons.egb_fim_block.inputs[i]())
         # Rebuild the current FIM from the input
         # values taken from the egb_fim_block
         current_FIM = np.zeros_like(testing_matrix)
@@ -963,13 +1063,15 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
     # Testing all the error messages
     def test_constructor_doe_object_error(self):
+        """Ensure constructor rejects missing DoE object dependencies."""
         with self.assertRaisesRegex(
             ValueError,
             "DoE Object must be provided to build external grey box of the FIM.",
         ):
-            grey_box_object = FIMExternalGreyBox(doe_object=None)
+            FIMExternalGreyBox(doe_object=None)
 
     def test_constructor_objective_lib_error(self):
+        """Ensure constructor rejects unsupported objective option strings."""
         objective_option = "trace"
         doe_object, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -977,11 +1079,12 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError, "'Bad Objective Option' is not a valid ObjectiveLib"
         ):
-            bad_grey_box_object = FIMExternalGreyBox(
+            FIMExternalGreyBox(
                 doe_object=doe_object, objective_option="Bad Objective Option"
             )
 
     def test_output_names_obj_lib_error(self):
+        """Ensure output-name query raises on invalid objective option."""
         objective_option = "trace"
         doe_object, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -995,6 +1098,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             grey_box_object.output_names()
 
     def test_evaluate_outputs_obj_lib_error(self):
+        """Ensure output evaluation raises on invalid objective option."""
         objective_option = "trace"
         doe_object, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -1008,6 +1112,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             grey_box_object.evaluate_outputs()
 
     def test_evaluate_jacobian_outputs_obj_lib_error(self):
+        """Ensure Jacobian evaluation raises on invalid objective option."""
         objective_option = "trace"
         doe_object, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -1021,6 +1126,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             grey_box_object.evaluate_jacobian_outputs()
 
     def test_evaluate_hessian_outputs_obj_lib_error(self):
+        """Ensure Hessian evaluation raises on invalid objective option."""
         objective_option = "trace"
         doe_object, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
@@ -1039,6 +1145,12 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
     )
     def test_solve_D_optimality_log_determinant(self):
+        """
+        Solve Rooney-Biegler D-opt design and verify one known local optimum.
+
+        The assertion accepts either known local design in ``(time, log10(det))``
+        space because the NLP can converge to either basin.
+        """
         # Two locally optimal design points exist
         # (time, optimal objective value)
         # Here, the objective value is
@@ -1080,6 +1192,12 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
     )
     def test_solve_A_optimality_trace_of_inverse(self):
+        """
+        Solve Rooney-Biegler A-opt design and verify one known local optimum.
+
+        The assertion accepts either known local design in ``(time, trace(FIM^-1))``
+        space because the NLP can converge to either basin.
+        """
         # Two locally optimal design points exist
         # (time, optimal objective value)
         # Here, the objective value is
@@ -1120,8 +1238,55 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     @unittest.skipIf(
         not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
     )
+    def test_solve_pseudo_A_optimality_trace(self):
+        """
+        Solve Rooney-Biegler pseudo-A-opt design and verify the expected basin.
+
+        GreyBox exposes pseudo-A-opt as the raw trace(FIM), so this regression
+        ensures the full GreyBox solve path still converges to the same optimum.
+        """
+        objective_option = "pseudo_trace"
+        doe_object, grey_box_object = make_greybox_and_doe_objects_rooney_biegler(
+            objective_option=objective_option
+        )
+
+        # Set to use the grey box objective
+        doe_object.use_grey_box = True
+
+        # Solve the model
+        doe_object.run_doe()
+
+        self.assertEqual(doe_object.results["Solver Status"], "ok")
+
+        optimal_time_val = doe_object.results["Experiment Design"][0]
+        optimal_obj_val = doe_object.model.objective()
+
+        optimal_design_np_array = np.array([optimal_time_val, optimal_obj_val])
+        optimal_experimental_design = np.array([10.00, 812.9024487361])
+
+        self.assertTrue(
+            np.all(
+                np.isclose(optimal_design_np_array, optimal_experimental_design, 1e-1)
+            )
+        )
+        self.assertAlmostEqual(
+            doe_object.results["log10 pseudo A-opt"],
+            np.log10(optimal_obj_val),
+            places=6,
+        )
+
+    @unittest.skipIf(
+        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
+    )
     @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_solve_E_optimality_minimum_eigenvalue(self):
+        """
+        Solve Rooney-Biegler E-opt design and verify one known local optimum.
+
+        The assertion accepts either known local design in
+        ``(time, min_eigenvalue(FIM))`` space because the NLP can converge to
+        either basin.
+        """
         # Two locally optimal design points exist
         # (time, optimal objective value)
         # Here, the objective value is
@@ -1164,6 +1329,13 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     )
     @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_solve_ME_optimality_condition_number(self):
+        """
+        Solve Rooney-Biegler ME-opt design and verify one known local optimum.
+
+        The assertion accepts either known local design in
+        ``(time, log(condition_number(FIM)))`` space because the NLP can
+        converge to either basin.
+        """
         # Two locally optimal design points exist
         # (time, optimal objective value)
         # Here, the objective value is
