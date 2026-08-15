@@ -217,4 +217,4 @@ relocated_module_attribute(
     version='6.10.1.dev0',
 )
 
-del moved_module, relocated_module_attribute, _name
+del moved_module, relocated_module_attribute

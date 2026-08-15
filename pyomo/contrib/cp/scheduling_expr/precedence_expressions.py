@@ -8,14 +8,13 @@
 # ____________________________________________________________________________________
 
 from pyomo.core.expr.logical_expr import BooleanExpression
-from pyomo.contrib.cp.interval_var import IntervalVarData
 
 
 class PrecedenceExpression(BooleanExpression):
     __slots__ = ('_args',)
     PRECEDENCE = None
 
-    def __init__(self, args: tuple(IntervalVarData, IntervalVarData, int)):
+    def __init__(self, args: tuple["IntervalVarData", "IntervalVarData", int]):
         self._args = args
 
     def nargs(self):

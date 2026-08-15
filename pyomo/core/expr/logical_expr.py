@@ -18,6 +18,7 @@ logger = logging.getLogger('pyomo.core')
 
 from pyomo.common.errors import PyomoException, DeveloperError
 from pyomo.common.deprecation import (
+    deprecated,
     deprecation_warning,
     RenamedClass,
     relocated_module_attribute,
