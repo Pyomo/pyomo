@@ -378,19 +378,37 @@ class TestExpressionBoundsWalker(unittest.TestCase):
 
     def test_unknown_classes(self):
         class UnknownNumeric(NumericExpression):
-            pass
+            def __init__(self, args=()):
+                assert len(args) == 0
 
-        class UnknownLogic(BooleanExpression):
             def nargs(self):
                 return 0
 
-        class UnknownOther(ExpressionBase):
             @property
             def args(self):
                 return ()
 
+        class UnknownLogic(BooleanExpression):
+            def __init__(self, args=()):
+                assert len(args) == 0
+
             def nargs(self):
                 return 0
+
+            @property
+            def args(self):
+                return ()
+
+        class UnknownOther(ExpressionBase):
+            def __init__(self, args=()):
+                assert len(args) == 0
+
+            def nargs(self):
+                return 0
+
+            @property
+            def args(self):
+                return ()
 
         visitor = ExpressionBoundsVisitor()
         with LoggingIntercept() as LOG:
