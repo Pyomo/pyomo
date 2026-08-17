@@ -7,10 +7,11 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+from pyomo.core.expr.base import BinaryExpression_Mixin, UnaryExpression_Mixin
 from pyomo.core.expr.logical_expr import BooleanExpression
 
 
-class NoOverlapExpression(BooleanExpression):
+class NoOverlapExpression(UnaryExpression_Mixin, BooleanExpression):
     """
     Expression representing that none of the IntervalVars in a SequenceVar overlap
     (if they are scheduled)
@@ -19,14 +20,13 @@ class NoOverlapExpression(BooleanExpression):
         args (tuple): Child node of type SequenceVar
     """
 
-    def nargs(self):
-        return 1
+    __slots__ = ('_arg',)
 
     def _to_string(self, values, verbose, smap):
         return "no_overlap(%s)" % values[0]
 
 
-class FirstInSequenceExpression(BooleanExpression):
+class FirstInSequenceExpression(BinaryExpression_Mixin, BooleanExpression):
     """
     Expression representing that the specified IntervalVar is the first in the
     sequence specified by SequenceVar (if it is scheduled)
@@ -36,14 +36,13 @@ class FirstInSequenceExpression(BooleanExpression):
                       SequenceVar
     """
 
-    def nargs(self):
-        return 2
+    __slots__ = ('_larg', '_rarg')
 
     def _to_string(self, values, verbose, smap):
         return "first_in(%s, %s)" % (values[0], values[1])
 
 
-class LastInSequenceExpression(BooleanExpression):
+class LastInSequenceExpression(BinaryExpression_Mixin, BooleanExpression):
     """
     Expression representing that the specified IntervalVar is the last in the
     sequence specified by SequenceVar (if it is scheduled)
@@ -52,9 +51,6 @@ class LastInSequenceExpression(BooleanExpression):
         args (tuple): Child nodes, the first of type IntervalVar, the second of type
                       SequenceVar
     """
-
-    def nargs(self):
-        return 2
 
     def _to_string(self, values, verbose, smap):
         return "last_in(%s, %s)" % (values[0], values[1])
@@ -65,13 +61,25 @@ class BeforeInSequenceExpression(BooleanExpression):
     Expression representing that one IntervalVar occurs before another in the
     sequence specified by the given SequenceVar (if both are scheduled)
 
-    args:
-        args (tuple): Child nodes, the IntervalVar that must be before, the
-                      IntervalVar that must be after, and the SequenceVar
+    Parameters
+    ----------
+    args : tuple["IntervalVar", "IntervalVar", "SequenceVar"]
+
+        The child nodes, consisting of the predecessor IntervalVar, the successor
+        IntervalVar, and the SequenceVar
     """
+
+    __slots__ = ('_before', '_after', '_sequence')
+
+    def __init__(self, args):
+        self._before, self._after, self._sequence = args
 
     def nargs(self):
         return 3
+
+    @property
+    def args(self):
+        return self._before, self._after, self._sequence
 
     def _to_string(self, values, verbose, smap):
         return "before_in(%s, %s, %s)" % (values[0], values[1], values[2])
@@ -82,13 +90,26 @@ class PredecessorToExpression(BooleanExpression):
     Expression representing that one IntervalVar is a direct predecessor to another
     in the sequence specified by the given SequenceVar (if both are scheduled)
 
-    args:
-        args (tuple): Child nodes, the predecessor IntervalVar, the successor
-                      IntervalVar, and the SequenceVar
+    Parameters
+    ----------
+    args : tuple["IntervalVar", "IntervalVar", "SequenceVar"]
+
+        The child nodes, consisting of the predecessor IntervalVar, the successor
+        IntervalVar, and the SequenceVar
+
     """
+
+    __slots__ = ('_predessor', '_successor', '_sequence')
+
+    def __init__(self, args):
+        self._predessor, self._successor, self._sequence = args
 
     def nargs(self):
         return 3
+
+    @property
+    def args(self):
+        return self._predessor, self._successor, self._sequence
 
     def _to_string(self, values, verbose, smap):
         return "predecessor_to(%s, %s, %s)" % (values[0], values[1], values[2])

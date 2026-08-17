@@ -348,20 +348,27 @@ class AlwaysIn(BooleanExpression):
             function.
     """
 
-    __slots__ = ()
+    __slots__ = ('_args',)
 
     def __init__(self, args=None, cumul_func=None, bounds=None, times=None):
         if args:
-            if any(arg is not None for arg in {cumul_func, bounds, times}):
+            if any(arg is not None for arg in (cumul_func, bounds, times)):
                 raise ValueError(
                     "Cannot specify both args and any of {cumul_func, bounds, times}"
                 )
+            assert len(args) == 5
             self._args = args
         else:
-            self._args = (cumul_func, bounds[0], bounds[1], times[0], times[1])
+            lb, ub = bounds
+            start, end = times
+            self._args = (cumul_func, lb, ub, start, end)
 
     def nargs(self):
         return 5
+
+    @property
+    def args(self):
+        return self._args
 
     def _to_string(self, values, verbose, smap):
         return "%s.within(bounds=(%s, %s), times=(%s, %s))" % (
