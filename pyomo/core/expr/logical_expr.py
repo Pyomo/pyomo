@@ -361,7 +361,7 @@ class EquivalenceExpression(BinaryExpression_Mixin, BooleanExpression):
 
     """
 
-    __slots__ = ('_larg', '_rarg')
+    __slots__ = ('_l_arg', '_r_arg')
 
     PRECEDENCE = 6
 
@@ -380,7 +380,7 @@ class XorExpression(BinaryExpression_Mixin, BooleanExpression):
     Logical Exclusive OR statement: Y_1 ⊻ Y_2
     """
 
-    __slots__ = ('_larg', '_rarg')
+    __slots__ = ('_l_arg', '_r_arg')
 
     PRECEDENCE = 4
 
@@ -399,7 +399,7 @@ class ImplicationExpression(BinaryExpression_Mixin, BooleanExpression):
     Logical Implication statement: Y_1 --> Y_2.
     """
 
-    __slots__ = ('_larg', '_rarg')
+    __slots__ = ('_l_arg', '_r_arg')
 
     PRECEDENCE = 6
 

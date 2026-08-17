@@ -900,7 +900,7 @@ class PowExpression(BinaryExpression_Mixin, NumericExpression):
         x**y
     """
 
-    __slots__ = ('_larg', '_rarg')
+    __slots__ = ('_l_arg', '_r_arg')
     PRECEDENCE = 2
 
     # "**" is right-to-left associative in Python (so this should
@@ -921,7 +921,7 @@ class PowExpression(BinaryExpression_Mixin, NumericExpression):
             # NOTE: use value before int() so that we don't
             #       run into the disabled __int__ method on
             #       NumericValue
-            exp = value(self._rarg, exception=False)
+            exp = value(self._r_arg, exception=False)
             if exp is None:
                 return None
             if exp == int(exp):
@@ -934,7 +934,7 @@ class PowExpression(BinaryExpression_Mixin, NumericExpression):
     def _is_fixed(self, args):
         if not args[1]:
             return False
-        return args[0] or value(self._rarg, exception=False) == 0
+        return args[0] or value(self._r_arg, exception=False) == 0
 
     def _apply_operation(self, result):
         _l, _r = result
@@ -1012,7 +1012,7 @@ class ProductExpression(BinaryExpression_Mixin, NumericExpression):
         x*y
     """
 
-    __slots__ = ('_larg', '_rarg')
+    __slots__ = ('_l_arg', '_r_arg')
     PRECEDENCE = 4
 
     def _compute_polynomial_degree(self, result):
@@ -1020,9 +1020,9 @@ class ProductExpression(BinaryExpression_Mixin, NumericExpression):
         # overrides a numeric value (and sum() just ignores it - or
         # errors in py3k)
         a, b = result
-        if a == 0 and value(self._larg, exception=False) == 0:
+        if a == 0 and value(self._l_arg, exception=False) == 0:
             return 0
-        if b == 0 and value(self._rarg, exception=False) == 0:
+        if b == 0 and value(self._r_arg, exception=False) == 0:
             return 0
         if a is None or b is None:
             return None
@@ -1037,9 +1037,9 @@ class ProductExpression(BinaryExpression_Mixin, NumericExpression):
         # fixed and has a value of 0, then this expression is fixed
         if all(args):
             return True
-        if args[0] and value(self._larg, exception=False) == 0:
+        if args[0] and value(self._l_arg, exception=False) == 0:
             return True
-        if args[1] and value(self._rarg, exception=False) == 0:
+        if args[1] and value(self._r_arg, exception=False) == 0:
             return True
         return False
 
@@ -1088,7 +1088,7 @@ class DivisionExpression(BinaryExpression_Mixin, NumericExpression):
         x/y
     """
 
-    __slots__ = ('_larg', '_rarg')
+    __slots__ = ('_l_arg', '_r_arg')
     PRECEDENCE = 4
 
     def _compute_polynomial_degree(self, result):
@@ -1287,8 +1287,8 @@ class LinearExpression(SumExpression):
         var = []
         for arg in self.args:
             if arg.__class__ is MonomialTermExpression:
-                coef.append(arg._larg)
-                var.append(arg._rarg)
+                coef.append(arg._l_arg)
+                var.append(arg._r_arg)
             elif arg.__class__ in native_numeric_types:
                 const += arg
             elif not arg.is_potentially_variable():
@@ -1587,28 +1587,28 @@ def _decompose_linear_terms(expr, multiplier=1):
     elif expr.is_variable_type():
         yield (multiplier, expr)
     elif expr.__class__ is MonomialTermExpression:
-        yield (multiplier * expr._larg, expr._rarg)
+        yield (multiplier * expr._l_arg, expr._r_arg)
     elif expr.__class__ is ProductExpression:
         if (
-            expr._larg.__class__ in native_numeric_types
-            or not expr._larg.is_potentially_variable()
+            expr._l_arg.__class__ in native_numeric_types
+            or not expr._l_arg.is_potentially_variable()
         ):
-            yield from _decompose_linear_terms(expr._rarg, multiplier * expr._larg)
+            yield from _decompose_linear_terms(expr._r_arg, multiplier * expr._l_arg)
         elif (
-            expr._rarg.__class__ in native_numeric_types
-            or not expr._rarg.is_potentially_variable()
+            expr._r_arg.__class__ in native_numeric_types
+            or not expr._r_arg.is_potentially_variable()
         ):
-            yield from _decompose_linear_terms(expr._larg, multiplier * expr._rarg)
+            yield from _decompose_linear_terms(expr._l_arg, multiplier * expr._r_arg)
         else:
             raise LinearDecompositionError(
                 "Quadratic terms exist in a product expression."
             )
     elif expr.__class__ is DivisionExpression:
         if (
-            expr._rarg.__class__ in native_numeric_types
-            or not expr._rarg.is_potentially_variable()
+            expr._r_arg.__class__ in native_numeric_types
+            or not expr._r_arg.is_potentially_variable()
         ):
-            yield from _decompose_linear_terms(expr._larg, multiplier / expr._rarg)
+            yield from _decompose_linear_terms(expr._l_arg, multiplier / expr._r_arg)
         else:
             raise LinearDecompositionError("Unexpected nonlinear term (division)")
     elif isinstance(expr, SumExpression):
@@ -2559,7 +2559,7 @@ def _mul_native_var(a, b):
 def _mul_native_monomial(a, b):
     if a in _zero_one_optimizations:
         return b if a else 0
-    return MonomialTermExpression((a * b._larg, b._rarg))
+    return MonomialTermExpression((a * b._l_arg, b._r_arg))
 
 
 def _mul_native_linear(a, b):
@@ -2608,7 +2608,7 @@ def _mul_npv_var(a, b):
 
 
 def _mul_npv_monomial(a, b):
-    return MonomialTermExpression((NPV_ProductExpression((a, b._larg)), b._rarg))
+    return MonomialTermExpression((NPV_ProductExpression((a, b._l_arg)), b._r_arg))
 
 
 def _mul_npv_linear(a, b):
@@ -2671,7 +2671,7 @@ def _mul_param_monomial(a, b):
         a = a.value
         if a in _zero_one_optimizations:
             return b if a else 0
-    return MonomialTermExpression((a * b._larg, b._rarg))
+    return MonomialTermExpression((a * b._l_arg, b._r_arg))
 
 
 def _mul_param_linear(a, b):
@@ -2749,11 +2749,11 @@ def _mul_var_other(a, b):
 def _mul_monomial_native(a, b):
     if b in _zero_one_optimizations:
         return a if b else 0
-    return MonomialTermExpression((a._larg * b, a._rarg))
+    return MonomialTermExpression((a._l_arg * b, a._r_arg))
 
 
 def _mul_monomial_npv(a, b):
-    return MonomialTermExpression((NPV_ProductExpression((a._larg, b)), a._rarg))
+    return MonomialTermExpression((NPV_ProductExpression((a._l_arg, b)), a._r_arg))
 
 
 def _mul_monomial_param(a, b):
@@ -2761,7 +2761,7 @@ def _mul_monomial_param(a, b):
         b = b.value
         if b in _zero_one_optimizations:
             return a if b else 0
-    return MonomialTermExpression((a._larg * b, a._rarg))
+    return MonomialTermExpression((a._l_arg * b, a._r_arg))
 
 
 def _mul_monomial_var(a, b):
@@ -3230,11 +3230,11 @@ def _div_var_other(a, b):
 def _div_monomial_native(a, b):
     if b in _zero_one_optimizations and b:
         return a
-    return MonomialTermExpression((a._larg / b, a._rarg))
+    return MonomialTermExpression((a._l_arg / b, a._r_arg))
 
 
 def _div_monomial_npv(a, b):
-    return MonomialTermExpression((NPV_DivisionExpression((a._larg, b)), a._rarg))
+    return MonomialTermExpression((NPV_DivisionExpression((a._l_arg, b)), a._r_arg))
 
 
 def _div_monomial_param(a, b):
@@ -3242,8 +3242,8 @@ def _div_monomial_param(a, b):
         b = b.value
         if b in _zero_one_optimizations and b:
             return a
-        return MonomialTermExpression((a._larg / b, a._rarg))
-    return MonomialTermExpression((NPV_DivisionExpression((a._larg, b)), a._rarg))
+        return MonomialTermExpression((a._l_arg / b, a._r_arg))
+    return MonomialTermExpression((NPV_DivisionExpression((a._l_arg, b)), a._r_arg))
 
 
 def _div_monomial_var(a, b):

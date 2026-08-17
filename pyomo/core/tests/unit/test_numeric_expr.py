@@ -4061,8 +4061,8 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1(), 50)
             self.assertEqual(expr2(), 50)
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertEqual(id(expr1._larg), id(expr2._larg))
-            self.assertEqual(id(expr1._rarg), id(expr2._rarg))
+            self.assertEqual(id(expr1._l_arg), id(expr2._l_arg))
+            self.assertEqual(id(expr1._r_arg), id(expr2._r_arg))
             self.assertEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             self.assertEqual(id(expr1.arg(1)), id(expr2.arg(1)))
 
@@ -4070,10 +4070,10 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1(), 500)
             self.assertEqual(expr2(), 50)
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._larg), id(expr2._larg))
-            self.assertEqual(id(expr1._rarg), id(expr2._rarg))
-            self.assertEqual(id(expr1.arg(0)._larg), id(expr2._larg))
-            self.assertEqual(id(expr1.arg(0)._rarg), id(expr2._rarg))
+            self.assertNotEqual(id(expr1._l_arg), id(expr2._l_arg))
+            self.assertEqual(id(expr1._r_arg), id(expr2._r_arg))
+            self.assertEqual(id(expr1.arg(0)._l_arg), id(expr2._l_arg))
+            self.assertEqual(id(expr1.arg(0)._r_arg), id(expr2._r_arg))
             self.assertEqual(id(expr1.arg(1)), id(expr2.arg(1)))
             self.assertEqual(id(expr1.arg(0).arg(0)), id(expr2.arg(0)))
             self.assertEqual(id(expr1.arg(0).arg(1)), id(expr2.arg(1)))
@@ -4086,8 +4086,8 @@ class TestCloneExpression(unittest.TestCase):
             # in the sum is a *list*, which will be duplicated by deepcopy.
             # This will cause the two args in the Product to be different.
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertEqual(id(expr1._larg), id(expr2._larg))
-            self.assertNotEqual(id(expr1._rarg), id(expr2._rarg))
+            self.assertEqual(id(expr1._l_arg), id(expr2._l_arg))
+            self.assertNotEqual(id(expr1._r_arg), id(expr2._r_arg))
             self.assertEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             self.assertNotEqual(id(expr1.arg(1)), id(expr2.arg(1)))
             #
@@ -4104,8 +4104,8 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr2(), 0.5)
             self.assertNotEqual(id(expr1), id(expr2))
             # Note: _args are the same because tuples are not copied
-            self.assertEqual(id(expr1._larg), id(expr2._larg))
-            self.assertEqual(id(expr1._rarg), id(expr2._rarg))
+            self.assertEqual(id(expr1._l_arg), id(expr2._l_arg))
+            self.assertEqual(id(expr1._r_arg), id(expr2._r_arg))
             self.assertEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             self.assertEqual(id(expr1.arg(1)), id(expr2.arg(1)))
 
@@ -4113,10 +4113,10 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1(), 0.05)
             self.assertEqual(expr2(), 0.5)
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._larg), id(expr2._larg))
-            self.assertEqual(id(expr1._rarg), id(expr2._rarg))
-            self.assertEqual(id(expr1.arg(0)._larg), id(expr2._larg))
-            self.assertEqual(id(expr1.arg(0)._rarg), id(expr2._rarg))
+            self.assertNotEqual(id(expr1._l_arg), id(expr2._l_arg))
+            self.assertEqual(id(expr1._r_arg), id(expr2._r_arg))
+            self.assertEqual(id(expr1.arg(0)._l_arg), id(expr2._l_arg))
+            self.assertEqual(id(expr1.arg(0)._r_arg), id(expr2._r_arg))
             self.assertEqual(id(expr1.arg(0).arg(0)), id(expr2.arg(0)))
             self.assertEqual(id(expr1.arg(0).arg(1)), id(expr2.arg(1)))
 
@@ -4128,8 +4128,8 @@ class TestCloneExpression(unittest.TestCase):
             # in the sum is a *list*, which will be duplicated by deepcopy.
             # This will cause the two args in the Product to be different.
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertEqual(id(expr1._larg), id(expr2._larg))
-            self.assertNotEqual(id(expr1._rarg), id(expr2._rarg))
+            self.assertEqual(id(expr1._l_arg), id(expr2._l_arg))
+            self.assertNotEqual(id(expr1._r_arg), id(expr2._r_arg))
             self.assertEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             self.assertNotEqual(id(expr1.arg(1)), id(expr2.arg(1)))
             #
@@ -4174,8 +4174,8 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1(), 150)
             self.assertEqual(expr2(), 150)
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._larg), id(expr2._larg))
-            self.assertNotEqual(id(expr1._rarg), id(expr2._rarg))
+            self.assertNotEqual(id(expr1._l_arg), id(expr2._l_arg))
+            self.assertNotEqual(id(expr1._r_arg), id(expr2._r_arg))
             self.assertNotEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             self.assertNotEqual(id(expr1.arg(1)), id(expr2.arg(1)))
             self.assertEqual(expr1.arg(0)(), expr2.arg(0)())
@@ -4214,8 +4214,8 @@ class TestCloneExpression(unittest.TestCase):
             expr2 = expr1.clone()
 
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._larg), id(expr2._larg))
-            self.assertNotEqual(id(expr1._rarg), id(expr2._rarg))
+            self.assertNotEqual(id(expr1._l_arg), id(expr2._l_arg))
+            self.assertNotEqual(id(expr1._r_arg), id(expr2._r_arg))
             self.assertNotEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             self.assertNotEqual(id(expr1.arg(1)), id(expr2.arg(1)))
             self.assertEqual(expr1.arg(0)(), expr2.arg(0)())

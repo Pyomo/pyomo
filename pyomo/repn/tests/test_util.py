@@ -711,7 +711,7 @@ class TestRepnUtils(unittest.TestCase):
         self.assertIn(NewProductExpression, end)
 
         class UnknownExpression(BinaryExpression_Mixin, NumericExpression):
-            __slots__ = ('_larg', '_rarg')
+            __slots__ = ('_l_arg', '_r_arg')
 
         node = UnknownExpression((6, 7))
         with self.assertRaisesRegex(

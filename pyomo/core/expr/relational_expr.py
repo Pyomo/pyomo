@@ -266,11 +266,11 @@ class InequalityExpression(BinaryExpression_Mixin, RelationalExpression):
         strict (bool): a flag that indicates whether the inequality is strict
     """
 
-    __slots__ = ('_larg', '_rarg', '_strict')
+    __slots__ = ('_l_arg', '_r_arg', '_strict')
     PRECEDENCE = 9
 
     def __init__(self, args, strict):
-        self._larg, self._rarg = args
+        self._l_arg, self._r_arg = args
         self._strict = strict
 
     def create_node_with_local_data(self, args):
@@ -447,7 +447,7 @@ class EqualityExpression(BinaryExpression_Mixin, RelationalExpression):
         x == y
     """
 
-    __slots__ = ('_larg', '_rarg')
+    __slots__ = ('_l_arg', '_r_arg')
     PRECEDENCE = 9
 
     def __bool__(self):
@@ -471,7 +471,7 @@ class NotEqualExpression(BinaryExpression_Mixin, RelationalExpression):
         x != y
     """
 
-    __slots__ = ('_larg', '_rarg')
+    __slots__ = ('_l_arg', '_r_arg')
 
     def __bool__(self):
         lhs, rhs = self.args
@@ -636,7 +636,7 @@ def _le_expr(a, b):
 
 
 def _le_expr_ineq(a, b):
-    return RangedExpression((a, b._larg, b._rarg), (False, b._strict))
+    return RangedExpression((a, b._l_arg, b._r_arg), (False, b._strict))
 
 
 def _le_native_ineq(a, b):
@@ -661,11 +661,11 @@ def _le_native_ineq(a, b):
 def _le_param_ineq(a, b):
     if a.is_constant():
         return _le_native_ineq(a.value, b)
-    return RangedExpression((a, b._larg, b._rarg), (False, b._strict))
+    return RangedExpression((a, b._l_arg, b._r_arg), (False, b._strict))
 
 
 def _le_ineq_expr(a, b):
-    return RangedExpression((a._larg, a._rarg, b), (a._strict, False))
+    return RangedExpression((a._l_arg, a._r_arg, b), (a._strict, False))
 
 
 def _le_ineq_native(a, b):
@@ -690,7 +690,7 @@ def _le_ineq_native(a, b):
 def _le_ineq_param(a, b):
     if b.is_constant():
         return _le_ineq_native(a, b.value)
-    return RangedExpression((a._larg, a._rarg, b), (a._strict, False))
+    return RangedExpression((a._l_arg, a._r_arg, b), (a._strict, False))
 
 
 def _le_param_param(a, b):
@@ -772,7 +772,7 @@ def _lt_expr(a, b):
 
 
 def _lt_expr_ineq(a, b):
-    return RangedExpression((a, b._larg, b._rarg), (True, b._strict))
+    return RangedExpression((a, b._l_arg, b._r_arg), (True, b._strict))
 
 
 def _lt_native_ineq(a, b):
@@ -795,11 +795,11 @@ def _lt_native_ineq(a, b):
 def _lt_param_ineq(a, b):
     if a.is_constant():
         return _lt_native_ineq(a.value, b)
-    return RangedExpression((a, b._larg, b._rarg), (True, b._strict))
+    return RangedExpression((a, b._l_arg, b._r_arg), (True, b._strict))
 
 
 def _lt_ineq_expr(a, b):
-    return RangedExpression((a._larg, a._rarg, b), (a._strict, True))
+    return RangedExpression((a._l_arg, a._r_arg, b), (a._strict, True))
 
 
 def _lt_ineq_native(a, b):
@@ -822,7 +822,7 @@ def _lt_ineq_native(a, b):
 def _lt_ineq_param(a, b):
     if b.is_constant():
         return _lt_ineq_native(a, b.value)
-    return RangedExpression((a._larg, a._rarg, b), (a._strict, True))
+    return RangedExpression((a._l_arg, a._r_arg, b), (a._strict, True))
 
 
 def _lt_param_param(a, b):

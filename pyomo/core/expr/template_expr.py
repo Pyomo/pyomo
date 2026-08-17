@@ -229,7 +229,7 @@ class GetAttrExpression(BinaryExpression_Mixin, ExpressionBase):
     Expression to call :func:`__getattr__` on the base object.
     """
 
-    __slots__ = ('_larg', '_rarg')
+    __slots__ = ('_l_arg', '_r_arg')
     PRECEDENCE = 1
 
     def __new__(cls, args=()):

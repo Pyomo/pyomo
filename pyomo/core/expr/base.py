@@ -439,14 +439,14 @@ class BinaryExpression_Mixin:
     __slots__ = ()
 
     def __init__(self, args):
-        self._larg, self._rarg = args
+        self._l_arg, self._r_arg = args
 
     def nargs(self):
         return 2
 
     @property
     def args(self):
-        return self._larg, self._rarg
+        return self._l_arg, self._r_arg
 
 
 class NaryExpression_Mixin:

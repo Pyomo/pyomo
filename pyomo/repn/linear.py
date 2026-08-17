@@ -692,7 +692,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         # The following are performance optimizations for common
         # situations (Monomial terms and Linear expressions)
         #
-        arg1 = child._larg
+        arg1 = child._l_arg
         if arg1.__class__ not in native_types:
             try:
                 arg1 = check_constant(visitor.evaluate(arg1), arg1, visitor)
@@ -700,7 +700,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                 return True, None
 
         ans = visitor.Result()
-        visitor.record_monomial(visitor, ans, arg1, child._rarg),
+        visitor.record_monomial(visitor, ans, arg1, child._r_arg),
         if ans.linear:
             return False, (_LINEAR, ans)
         else:
@@ -714,13 +714,13 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         const = 0
         for arg in child.args:
             if arg.__class__ is MonomialTermExpression:
-                arg1 = arg._larg
+                arg1 = arg._l_arg
                 if arg1.__class__ not in native_types:
                     try:
                         arg1 = check_constant(evaluate(arg1), arg1, visitor)
                     except (ValueError, ArithmeticError):
                         return True, None
-                recorder(visitor, ans, arg1, arg._rarg)
+                recorder(visitor, ans, arg1, arg._r_arg)
             elif arg.__class__ in native_numeric_types:
                 const += arg
             elif arg.is_variable_type():

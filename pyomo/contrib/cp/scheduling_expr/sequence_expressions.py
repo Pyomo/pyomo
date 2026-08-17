@@ -36,7 +36,7 @@ class FirstInSequenceExpression(BinaryExpression_Mixin, BooleanExpression):
                       SequenceVar
     """
 
-    __slots__ = ('_larg', '_rarg')
+    __slots__ = ('_l_arg', '_r_arg')
 
     def _to_string(self, values, verbose, smap):
         return "first_in(%s, %s)" % (values[0], values[1])
@@ -99,17 +99,17 @@ class PredecessorToExpression(BooleanExpression):
 
     """
 
-    __slots__ = ('_predessor', '_successor', '_sequence')
+    __slots__ = ('_predecessor', '_successor', '_sequence')
 
     def __init__(self, args):
-        self._predessor, self._successor, self._sequence = args
+        self._predecessor, self._successor, self._sequence = args
 
     def nargs(self):
         return 3
 
     @property
     def args(self):
-        return self._predessor, self._successor, self._sequence
+        return self._predecessor, self._successor, self._sequence
 
     def _to_string(self, values, verbose, smap):
         return "predecessor_to(%s, %s, %s)" % (values[0], values[1], values[2])
