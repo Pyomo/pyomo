@@ -34,7 +34,6 @@ from pyomo.core.expr.expr_common import (
     _unary_op_dispatcher_type_mapping,
     _binary_op_dispatcher_type_mapping,
     _invalid,
-    _recast_mutable,
     NUMERIC_ARG_TYPE as ARG_TYPE,
 )
 
@@ -1228,26 +1227,20 @@ class LinearExpression(SumExpression):
                     "Cannot specify both args and any of "
                     "{constant, linear_coefs, or linear_vars}"
                 )
-            # unlike other expressions, we expect (require) args to be a list
-            if args.__class__ is not list:
-                args = list(args)
-            self._args = args
         else:
-            self._args = []
+            args = []
             if constant is not None:
                 # Filter 0, but only if it is a native type
                 if constant.__class__ not in native_types or constant:
-                    self._args.append(constant)
+                    args.append(constant)
             if linear_vars is not None:
                 if linear_coefs is None or len(linear_vars) != len(linear_coefs):
                     raise ValueError(
                         f"linear_vars ({tostr(linear_vars)}) is not compatible "
                         f"with linear_coefs ({tostr(linear_coefs)})"
                     )
-                self._args.extend(
-                    map(MonomialTermExpression, zip(linear_coefs, linear_vars))
-                )
-        self._nargs = len(self._args)
+                args.extend(map(MonomialTermExpression, zip(linear_coefs, linear_vars)))
+        super().__init__(args)
 
     def _build_cache(self):
         const = 0
@@ -1329,6 +1322,15 @@ class _MutableSumExpression(SumExpression):
     """
 
     __slots__ = ()
+
+    def resolve_mutable(self):
+        self.make_immutable()
+        if self._nargs > 1:
+            return self
+        elif not self._nargs:
+            return 0
+        else:
+            return self._args[0]
 
     def make_immutable(self):
         self.__class__ = SumExpression
@@ -2138,7 +2140,7 @@ def _iadd_mutablenpvsum_asnumeric(a, b):
 
 
 def _iadd_mutablenpvsum_mutable(a, b):
-    b = _recast_mutable(b)
+    b = b.resolve_mutable()
     return _iadd_mutablenpvsum_dispatcher[b.__class__](a, b)
 
 
@@ -2235,7 +2237,7 @@ def _iadd_mutablelinear_asnumeric(a, b):
 
 
 def _iadd_mutablelinear_mutable(a, b):
-    b = _recast_mutable(b)
+    b = b.resolve_mutable()
     return _iadd_mutablelinear_dispatcher[b.__class__](a, b)
 
 
@@ -2335,7 +2337,7 @@ def _iadd_mutablesum_asnumeric(a, b):
 
 
 def _iadd_mutablesum_mutable(a, b):
-    b = _recast_mutable(b)
+    b = b.resolve_mutable()
     return _iadd_mutablesum_dispatcher[b.__class__](a, b)
 
 
@@ -3691,7 +3693,7 @@ def _fcn_asnumeric(a, name, fcn):
 
 
 def _fcn_mutable(a, name, fcn):
-    a = _recast_mutable(a)
+    a = a.resolve_mutable()
     return _fcn_dispatcher[a.__class__](a, name, fcn)
 
 
@@ -3844,7 +3846,7 @@ def _process_expr_if_arg(arg, kwargs, name):
     # Note that relational expressions get mapped to INVALID
     while _type < ARG_TYPE.INVALID:
         if _type is ARG_TYPE.MUTABLE:
-            arg = _recast_mutable(arg)
+            arg = arg.resolve_mutable()
         elif _type is ARG_TYPE.ASNUMERIC:
             arg = arg.as_numeric()
         else:

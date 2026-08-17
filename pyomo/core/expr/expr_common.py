@@ -102,16 +102,6 @@ def _invalid(*args):
     return NotImplemented
 
 
-def _recast_mutable(expr):
-    expr.make_immutable()
-    if expr._nargs > 1:
-        return expr
-    elif not expr._nargs:
-        return 0
-    else:
-        return expr._args[0]
-
-
 def _unary_op_dispatcher_type_mapping(dispatcher, updates, TYPES=NUMERIC_ARG_TYPE):
     #
     # Special case (wrapping) operators
@@ -121,7 +111,7 @@ def _unary_op_dispatcher_type_mapping(dispatcher, updates, TYPES=NUMERIC_ARG_TYP
         return dispatcher[a.__class__](a)
 
     def _mutable(a):
-        a = _recast_mutable(a)
+        a = a.resolve_mutable()
         return dispatcher[a.__class__](a)
 
     mapping = {
@@ -152,21 +142,21 @@ def _binary_op_dispatcher_type_mapping(dispatcher, updates, TYPES=NUMERIC_ARG_TY
         return dispatcher[a.__class__, b.__class__](a, b)
 
     def _any_mutable(a, b):
-        b = _recast_mutable(b)
+        b = b.resolve_mutable()
         return dispatcher[a.__class__, b.__class__](a, b)
 
     def _mutable_any(a, b):
-        a = _recast_mutable(a)
+        a = a.resolve_mutable()
         return dispatcher[a.__class__, b.__class__](a, b)
 
     def _mutable_mutable(a, b):
         if a is b:
-            # Note: _recast_mutable is an in-place operation: make sure
+            # Note: resolve_mutable is an in-place operation: make sure
             # that we don't call it twice on the same object.
-            a = b = _recast_mutable(a)
+            a = b = a.resolve_mutable()
         else:
-            a = _recast_mutable(a)
-            b = _recast_mutable(b)
+            a = a.resolve_mutable()
+            b = b.resolve_mutable()
         return dispatcher[a.__class__, b.__class__](a, b)
 
     mapping = {}
