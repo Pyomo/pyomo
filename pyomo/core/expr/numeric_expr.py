@@ -45,6 +45,7 @@ from pyomo.core.expr.base import (
     UnaryExpression_Mixin,
     BinaryExpression_Mixin,
     NaryExpression_Mixin,
+    ExtendableNaryExpression_Mixin,
     visitor,
 )
 
@@ -1112,7 +1113,7 @@ class NPV_DivisionExpression(Numeric_NPV_Mixin, DivisionExpression):
     __slots__ = ()
 
 
-class SumExpression(NumericExpression):
+class SumExpression(ExtendableNaryExpression_Mixin, NumericExpression):
     """
     Sum expression::
 
@@ -1128,41 +1129,8 @@ class SumExpression(NumericExpression):
     __slots__ = ('_nargs', '_args')
     PRECEDENCE = 6
 
-    def __init__(self, args):
-        # unlike other expressions, we expect (require) args to be a list
-        if args.__class__ is not list:
-            args = list(args)
-        self._args = args
-        self._nargs = len(args)
-
-    def nargs(self):
-        return self._nargs
-
-    @property
-    def args(self):
-        # We unconditionally make a copy of the args to isolate the user
-        # from future possible updates to the underlying list
-        return self._args[: self._nargs]
-
     def getname(self, *args, **kwds):
         return 'sum'
-
-    def _trunc_append(self, other):
-        _args = self._args
-        if len(_args) > self._nargs:
-            _args = _args[: self._nargs]
-        _args.append(other)
-        return self.__class__(_args)
-
-    def _trunc_extend(self, other):
-        _args = self._args
-        if len(_args) > self._nargs:
-            _args = _args[: self._nargs]
-        if len(other._args) == other._nargs:
-            _args.extend(other._args)
-        else:
-            _args.extend(other._args[: other._nargs])
-        return self.__class__(_args)
 
     def _apply_operation(self, result):
         # Avoid 0 being added to summations by specifying the start

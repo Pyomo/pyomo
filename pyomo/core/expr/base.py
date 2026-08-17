@@ -453,7 +453,10 @@ class NaryExpression_Mixin:
     __slots__ = ()
 
     def __init__(self, args):
-        self._args = args
+        # Note: force the internal data structure to be a tuple (for
+        # immutability).  This is a (nearly-)free call if args is
+        # already a tuple.
+        self._args = tuple(args)
 
     def nargs(self):
         return len(self._args)
@@ -461,6 +464,47 @@ class NaryExpression_Mixin:
     @property
     def args(self):
         return self._args
+
+
+class ExtendableNaryExpression_Mixin:
+    __slots__ = ()
+
+    def __init__(self, args):
+        # unlike other expressions, we expect (require) args to be a list
+        if args.__class__ is not list:
+            args = list(args)
+        self._args = args
+        self._nargs = len(args)
+
+    def nargs(self):
+        return self._nargs
+
+    @property
+    def args(self):
+        # We unconditionally make a copy of the args to isolate the user
+        # from future possible updates to the underlying list
+        return self._args[: self._nargs]
+
+    def _trunc_append(self, other):
+        _args = self._args
+        if len(_args) > self._nargs:
+            _args = _args[: self._nargs]
+        _args.append(other)
+        return self.__class__(_args)
+
+    def _trunc_extend(self, other, wrapper=None):
+        _args = self._args
+        if len(_args) > self._nargs:
+            _args = _args[: self._nargs]
+        if len(other._args) == other._nargs:
+            other_args = other._args
+        else:
+            other_args = other._args[: other._nargs]
+        if wrapper is not None:
+            _args.extend(wrapper(other_args))
+        else:
+            _args.extend(other_args)
+        return self.__class__(_args)
 
 
 class ExpressionArgs_Mixin(metaclass=RenamedClass):
