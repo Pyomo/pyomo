@@ -63,7 +63,7 @@ class SolutionLoader:
 
            results = solver.solve(model)
            results.solution(2).load_vars()
-           results.solution(l2).load_import_suffixes()
+           results.solution(2).load_import_suffixes()
 
         Parameters
         ----------

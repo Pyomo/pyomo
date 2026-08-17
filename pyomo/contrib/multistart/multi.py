@@ -495,8 +495,6 @@ class MultiStart(SolverBase):
         config.time_limit = max(solver_time_limit, 0)
         config.subsolver_args["time_limit"] = max(subsolver_time_limit, 1e-6)
 
-
-
     def __enter__(self):
         return self
 
