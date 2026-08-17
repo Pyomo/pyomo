@@ -413,6 +413,10 @@ class ImplicationExpression(BinaryExpression_Mixin, BooleanExpression):
         return (not result[0]) or result[1]
 
 
+@deprecated(
+    "NaryBooleanExpression is no longer used; see NaryExpression_Mixin",
+    version="6.10.1.dev0",
+)
 class NaryBooleanExpression(BooleanExpression):
     """
     The abstract class for NaryBooleanExpression.
