@@ -8,9 +8,11 @@
 # ____________________________________________________________________________________
 
 
+import logging
 from unittest.mock import MagicMock, patch
 
-from pyomo.opt import TerminationCondition as tc, SolverStatus
+from pyomo.common.collections import Bunch
+from pyomo.opt import SolverResults, TerminationCondition as tc, SolverStatus
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import (
@@ -262,6 +264,108 @@ class _SimpleNamespace:
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             object.__setattr__(self, k, v)
+
+
+def _crossed_bound_solver(solver, nonrigorous_dual_bound_possible):
+    """Set up a solver instance with maximization bounds that have crossed."""
+    solver.config = solver.CONFIG()
+    solver.config.absolute_bound_tolerance = 1e-6
+    solver.config.relative_bound_tolerance = 1e-6
+    solver.config.logger = logging.getLogger(__name__)
+    solver.results = SolverResults()
+    solver.objective_sense = maximize
+    solver.primal_bound = 1011.6577899409375
+    solver.dual_bound = 1000.0
+    solver.best_solution_found = object()
+    solver._nonrigorous_dual_bound_possible = nonrigorous_dual_bound_possible
+    solver.update_gap()
+    return solver
+
+
+def _finalize_result(solver):
+    solver.timing = Bunch(total=0.0)
+    solver.mip_iter = 1
+    solver.nlp_infeasible_counter = 0
+    solver.best_solution_found_time = None
+    solver.primal_integral = 0.0
+    solver.dual_integral = 0.0
+    solver.primal_dual_gap_integral = 0.0
+    solver.update_result()
+
+
+class TestMindtPyCrossedBoundResults(unittest.TestCase):
+    def test_oa_crossed_bounds_are_not_reported_as_global_optimal(self):
+        from pyomo.contrib.mindtpy.outer_approximation import MindtPy_OA_Solver
+
+        solver = _crossed_bound_solver(MindtPy_OA_Solver(), True)
+
+        self.assertTrue(solver.bounds_converged())
+        self.assertIs(solver.results.solver.termination_condition, tc.feasible)
+
+        _finalize_result(solver)
+
+        self.assertEqual(solver.results.problem.lower_bound, 1011.6577899409375)
+        self.assertEqual(solver.results.problem.upper_bound, float('inf'))
+
+    def test_ecp_crossed_bounds_are_not_reported_as_global_optimal(self):
+        from pyomo.contrib.mindtpy.extended_cutting_plane import MindtPy_ECP_Solver
+
+        solver = _crossed_bound_solver(MindtPy_ECP_Solver(), True)
+
+        self.assertTrue(solver.bounds_converged())
+        self.assertIs(solver.results.solver.termination_condition, tc.feasible)
+
+    def test_oa_crossed_bounds_on_convex_model_stay_optimal(self):
+        """A convex model gives OA a rigorous dual bound, so crossing is tolerance."""
+        from pyomo.contrib.mindtpy.outer_approximation import MindtPy_OA_Solver
+
+        solver = _crossed_bound_solver(MindtPy_OA_Solver(), False)
+
+        self.assertTrue(solver.bounds_converged())
+        self.assertIs(solver.results.solver.termination_condition, tc.optimal)
+
+        _finalize_result(solver)
+
+        # The certified path reports both bounds unchanged, rather than replacing
+        # the uncertified side with an infinite bound.
+        self.assertEqual(solver.results.problem.lower_bound, 1011.6577899409375)
+        self.assertEqual(solver.results.problem.upper_bound, 1000.0)
+
+    def test_goa_crossed_bounds_preserve_certified_optimal_behavior(self):
+        """GOA relaxes with McCormick envelopes, so its dual bound is rigorous."""
+        from pyomo.contrib.mindtpy.global_outer_approximation import MindtPy_GOA_Solver
+
+        solver = _crossed_bound_solver(MindtPy_GOA_Solver(), True)
+
+        self.assertTrue(solver.bounds_converged())
+        self.assertIs(solver.results.solver.termination_condition, tc.optimal)
+
+    def test_algorithm_bound_certification_flags(self):
+        from pyomo.contrib.mindtpy.outer_approximation import MindtPy_OA_Solver
+        from pyomo.contrib.mindtpy.extended_cutting_plane import MindtPy_ECP_Solver
+        from pyomo.contrib.mindtpy.global_outer_approximation import MindtPy_GOA_Solver
+
+        self.assertFalse(MindtPy_OA_Solver._crossed_bounds_are_certified)
+        self.assertFalse(MindtPy_ECP_Solver._crossed_bounds_are_certified)
+        self.assertTrue(MindtPy_GOA_Solver._crossed_bounds_are_certified)
+
+    def test_certified_algorithm_skips_model_structure_check(self):
+        """GOA should not pay for the convexity scan, since it cannot need it."""
+        from pyomo.contrib.mindtpy.global_outer_approximation import MindtPy_GOA_Solver
+        from pyomo.contrib.mindtpy.outer_approximation import MindtPy_OA_Solver
+
+        nonconvex = ConcreteModel()
+        nonconvex.x = Var(bounds=(-2, 2))
+        nonconvex.y = Var(bounds=(-2, 2))
+        nonconvex.c = Constraint(expr=nonconvex.x * nonconvex.y <= 1)
+        nonconvex.obj = Objective(expr=nonconvex.y)
+
+        self.assertFalse(
+            MindtPy_GOA_Solver()._problem_may_have_nonrigorous_dual_bound(nonconvex)
+        )
+        self.assertTrue(
+            MindtPy_OA_Solver()._problem_may_have_nonrigorous_dual_bound(nonconvex)
+        )
 
 
 class TestMirrorDirectSolveResults(unittest.TestCase):

@@ -35,6 +35,10 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
     """
 
     CONFIG = _get_MindtPy_ECP_config()
+    # ECP separates with linearizations of the nonlinear constraints, which is
+    # only a valid relaxation when the model is convex, so its dual bound is not
+    # rigorous for nonconvex models.
+    _crossed_bounds_are_certified = False
 
     def MindtPy_iteration_loop(self):
         """Main loop for MindtPy Algorithms.
