@@ -66,8 +66,10 @@ def calc_jacobians(constraint_list, differentiate_mode):
 
 
 def initialize_feas_subproblem(m, feasibility_norm):
-    """Adds feasibility slack variables according to config.feasibility_norm (given an infeasible problem).
-       Defines the objective function of the feasibility subproblem.
+    """Add feasibility slacks and objective for the feasibility subproblem.
+
+    Adds feasibility slack variables according to ``feasibility_norm``
+    for an infeasible NLP and defines the feasibility objective.
 
     Parameters
     ----------
@@ -142,10 +144,12 @@ def add_var_bound(model, config):
 
 
 def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=False):
-    r"""This function generates objective (FP-NLP subproblem) for minimum
-    euclidean distance to setpoint_model.
+    r"""Generate an FP-NLP objective for minimum squared Euclidean (L2) distance.
 
-    L2 distance of :math:`(x,y) = \sqrt{\sum_i (x_i - y_i)^2}`.
+    This function generates an objective for minimum squared L2 distance to
+    ``setpoint_model``.
+
+    Squared Euclidean (L2) distance of :math:`(x,y) = \sum_i (x_i - y_i)^2`.
 
     Parameters
     ----------
@@ -198,7 +202,9 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
 
 
 def generate_norm1_objective_function(model, setpoint_model, discrete_only=False):
-    r"""This function generates objective (PF-OA main problem) for minimum
+    r"""Generate a PF-OA objective for minimum L1 distance.
+
+    This function generates objective (PF-OA main problem) for minimum
     Norm1 distance to setpoint_model.
 
     Norm1 distance of :math:`(x,y) = \sum_i |x_i - y_i|`.
@@ -440,7 +446,9 @@ def generate_lag_objective_function(
 
 
 def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=True):
-    r"""This function generates constraint (PF-OA main problem) for minimum
+    r"""Generate a monotonicity norm constraint for PF-OA iterations.
+
+    This function generates constraint (PF-OA main problem) for minimum
     Norm1 distance to setpoint_model.
 
     Norm constraint is used to guarantees the monotonicity of the norm
@@ -577,6 +585,8 @@ def set_solver_constraint_violation_tolerance(
         The name of solver.
     config : ConfigBlock
         The specific configurations for MindtPy.
+    warm_start : bool, optional
+        Whether to emit warm-start options for IPOPT when using the GAMS NLP solver interface.
     """
     if solver_name == 'baron':
         opt.options['AbsConFeasTol'] = config.zero_tolerance
@@ -703,12 +713,17 @@ class GurobiPersistent4MindtPy(GurobiPersistent):
     """A new persistent interface to Gurobi."""
 
     def _intermediate_callback(self):
+        """Create and return the intermediate callback wrapper for Gurobi."""
+
         def f(gurobi_model, where):
             """Callback function for Gurobi.
 
-            Args:
-                gurobi_model (Gurobi model): the Gurobi model derived from pyomo model.
-                where (int): an enum member of gurobipy.GRB.Callback.
+            Parameters
+            ----------
+            gurobi_model : gurobipy.Model
+                Gurobi model derived from the Pyomo model.
+            where : int
+                Callback location code from ``gurobipy.GRB.Callback``.
             """
             self._callback_func(
                 self._pyomo_model, self, where, self.mindtpy_solver, self.config
@@ -754,7 +769,17 @@ def epigraph_reformulation(exp, slack_var_list, constraint_list, use_mcpp, sense
 
 
 def setup_results_object(results, model, config):
-    """Record problem statistics for original model."""
+    """Record problem statistics for original model.
+
+    Parameters
+    ----------
+    results : SolverResults
+        Results container to populate.
+    model : Block
+        Original model being solved.
+    config : ConfigBlock
+        MindtPy configuration options.
+    """
     # Create the solver results object
     res = results
     prob = res.problem
@@ -813,7 +838,7 @@ def setup_results_object(results, model, config):
 
 
 def fp_converged(working_model, mip_model, proj_zero_tolerance, discrete_only=True):
-    """Calculates the euclidean norm between the discrete variables in the MIP and NLP models.
+    """Check whether FP projection distance is below the convergence tolerance.
 
     Parameters
     ----------
@@ -828,8 +853,9 @@ def fp_converged(working_model, mip_model, proj_zero_tolerance, discrete_only=Tr
 
     Returns
     -------
-    distance : float
-        The euclidean norm between the discrete variables in the MIP and NLP models.
+    bool
+        ``True`` if the maximum squared variable difference (optionally over
+        discrete variables only) is within ``proj_zero_tolerance``.
     """
     distance = max(
         (nlp_var.value - milp_var.value) ** 2
@@ -845,7 +871,9 @@ def fp_converged(working_model, mip_model, proj_zero_tolerance, discrete_only=Tr
 def add_orthogonality_cuts(working_model, mip_model, config):
     """Add orthogonality cuts.
 
-    This function adds orthogonality cuts to avoid cycling when the independence constraint qualification is not satisfied.
+    This helper lazily creates the FP orthogonality cut container on the
+    working model and MIP model, then adds cuts to avoid cycling when the
+    independence constraint qualification is not satisfied.
 
     Parameters
     ----------
@@ -856,6 +884,14 @@ def add_orthogonality_cuts(working_model, mip_model, config):
     config : ConfigBlock
         The specific configurations for MindtPy.
     """
+    if not hasattr(mip_model.MindtPy_utils.cuts, 'fp_orthogonality_cuts'):
+        mip_model.MindtPy_utils.cuts.fp_orthogonality_cuts = ConstraintList(
+            doc='FP orthogonality cuts'
+        )
+    if not hasattr(working_model.MindtPy_utils.cuts, 'fp_orthogonality_cuts'):
+        working_model.MindtPy_utils.cuts.fp_orthogonality_cuts = ConstraintList(
+            doc='FP orthogonality cuts'
+        )
     mip_integer_vars = mip_model.MindtPy_utils.discrete_variable_list
     nlp_integer_vars = working_model.MindtPy_utils.discrete_variable_list
     orthogonality_cut = (
@@ -885,7 +921,7 @@ def generate_norm_constraint(fp_nlp_model, mip_model, config):
     fp_nlp_model : Pyomo model
         The feasibility pump NLP subproblem.
     mip_model : Pyomo model
-        The mip_model model.
+        The FP main MIP model providing the reference point.
     config : ConfigBlock
         The specific configurations for MindtPy.
     """
@@ -931,9 +967,12 @@ def copy_var_list_values(
     ignore_integrality=False,
 ):
     """Copy variable values from one list to another.
+
     Rounds to Binary/Integer if necessary
     Sets to zero for NonNegativeReals if necessary
 
+    Parameters
+    ----------
     from_list : list
         The variables that provide the values to copy from.
     to_list : list
@@ -965,7 +1004,9 @@ def copy_var_list_values(
 def set_var_valid_value(
     var, var_val, integer_tolerance, zero_tolerance, ignore_integrality
 ):
-    """This function tries to set a valid value for variable with the given input.
+    """Set a valid variable value while respecting domain and tolerances.
+
+    This function tries to set a valid value for variable with the given input.
     Rounds to Binary/Integer if necessary.
     Sets to zero for NonNegativeReals if necessary.
 

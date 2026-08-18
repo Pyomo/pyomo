@@ -8,6 +8,8 @@
 # ____________________________________________________________________________________
 
 # -*- coding: utf-8 -*-
+"""Configuration definitions for MindtPy strategies and solver behavior."""
+
 import logging
 from pyomo.common.config import (
     ConfigBlock,
@@ -138,6 +140,13 @@ def _get_MindtPy_FP_config():
 
 
 def _add_oa_configs(CONFIG):
+    """Declare configuration options specific to OA-based methods.
+
+    Parameters
+    ----------
+    CONFIG : ConfigBlock
+        Configuration block to populate.
+    """
     CONFIG.declare(
         'heuristic_nonconvex',
         ConfigValue(
@@ -162,6 +171,13 @@ def _add_oa_configs(CONFIG):
 
 
 def _add_oa_cuts_configs(CONFIG):
+    """Declare configuration options controlling OA cut generation.
+
+    Parameters
+    ----------
+    CONFIG : ConfigBlock
+        Configuration block to populate.
+    """
     CONFIG.declare(
         'add_slack',
         ConfigValue(
@@ -211,6 +227,13 @@ def _add_oa_cuts_configs(CONFIG):
 
 
 def _add_goa_configs(CONFIG):
+    """Declare configuration options specific to GOA-based methods.
+
+    Parameters
+    ----------
+    CONFIG : ConfigBlock
+        Configuration block to populate.
+    """
     CONFIG.declare(
         'init_strategy',
         ConfigValue(
@@ -226,15 +249,23 @@ def _add_goa_configs(CONFIG):
 
 
 def _add_ecp_configs(CONFIG):
+    """Declare configuration options specific to ECP-based methods.
+
+    Parameters
+    ----------
+    CONFIG : ConfigBlock
+        Configuration block to populate.
+    """
     CONFIG.declare(
         'ecp_tolerance',
         ConfigValue(
             default=None,
             domain=PositiveFloat,
-            description='ECP tolerance',
-            doc='Feasibility tolerance used to determine the stopping criterion in'
-            'the ECP method. As long as nonlinear constraint are violated for '
-            'more than this tolerance, the method will keep iterating.',
+            description='ECP tolerance (defaults to absolute bound tolerance)',
+            doc='Feasibility tolerance used to determine the stopping criterion in '
+            'the ECP method. As long as nonlinear constraints are violated by '
+            'more than this tolerance, the method will keep iterating. If not '
+            'specified, this value is normalized to ``absolute_bound_tolerance``.',
         ),
     )
     CONFIG.declare(
@@ -252,6 +283,13 @@ def _add_ecp_configs(CONFIG):
 
 
 def _add_common_configs(CONFIG):
+    """Declare configuration options shared by all MindtPy strategies.
+
+    Parameters
+    ----------
+    CONFIG : ConfigBlock
+        Configuration block to populate.
+    """
     CONFIG.declare(
         'iteration_limit',
         ConfigValue(

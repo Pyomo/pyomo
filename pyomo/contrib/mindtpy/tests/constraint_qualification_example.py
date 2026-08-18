@@ -32,8 +32,18 @@ from pyomo.common.collections import ComponentMap
 
 
 class ConstraintQualificationExample(ConcreteModel):
+    """Test model designed to exercise constraint qualification edge cases."""
+
     def __init__(self, *args, **kwargs):
-        """Create the problem."""
+        """Create the problem.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments forwarded to ``ConcreteModel``.
+        **kwargs
+            Keyword arguments forwarded to ``ConcreteModel``.
+        """
         kwargs.setdefault('name', 'ConstraintQualificationExample')
         super(ConstraintQualificationExample, self).__init__(*args, **kwargs)
         m = self
