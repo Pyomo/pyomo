@@ -276,7 +276,7 @@ class BooleanConstant(BooleanValue):
         value           The initial value.
     """
 
-    __slots__ = ('value', '_name')
+    __slots__ = ('_value', '_name')
     singleton = {}
 
     def __new__(cls, value, name=None):
@@ -288,7 +288,7 @@ class BooleanConstant(BooleanValue):
                     'Not a valid BooleanValue. Unable to create a logical constant'
                 )
             cls.singleton[name] = super().__new__(cls)
-            cls.singleton[name].value = value
+            cls.singleton[name]._value = value
             cls.singleton[name]._name = name
         return cls.singleton[name]
 
@@ -297,11 +297,11 @@ class BooleanConstant(BooleanValue):
         return self
 
     def __reduce__(self):
-        return self.__class__, (self._name, self._args_)
+        return self.__class__, (self._name, self._value)
 
     def __init__(self, value, name=None):
         # note that the meat of __init__ is called as part of __new__ above.
-        assert self.value == value
+        assert self._value == value
 
     def is_constant(self):
         return True
@@ -316,15 +316,19 @@ class BooleanConstant(BooleanValue):
         return str(self._name)
 
     def __nonzero__(self):
-        return self.value
+        return self._value
 
     def __bool__(self):
-        return self.value
+        return self._value
+
+    @property
+    def value(self):
+        return self._value
 
     def __call__(self, exception=NOTSET):
         """Return the constant value"""
         exception = _type_check_exception_arg(self, exception)
-        return self.value
+        return self._value
 
     def pprint(self, ostream=None, verbose=False):
         if ostream is None:  # pragma:nocover

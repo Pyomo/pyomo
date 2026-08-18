@@ -15,7 +15,11 @@ from pyomo.contrib.solver.tests.solvers.gurobi_to_pyomo_expressions import (
     grb_nl_to_pyo_expr,
 )
 from pyomo.core.expr.compare import assertExpressionsEqual
-from pyomo.core.expr.numeric_expr import SumExpression, ProductExpression
+from pyomo.core.expr.numeric_expr import (
+    MonomialTermExpression,
+    ProductExpression,
+    SumExpression,
+)
 from pyomo.environ import (
     Binary,
     BooleanVar,
@@ -41,17 +45,16 @@ from pyomo.opt import WriterFactory
 from pyomo.contrib.solver.solvers.gurobi.gurobi_direct_minlp import (
     GurobiDirectMINLP,
     GurobiMINLPVisitor,
+    GRB,
+    gurobipy,
+    gurobipy_available,
 )
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import TerminationCondition
 from pyomo.contrib.solver.tests.solvers.test_gurobi_minlp_walker import CommonTest
 
-gurobipy, gurobipy_available = attempt_import('gurobipy', minimum_version='12.0.0')
-if gurobipy_available:
-    from gurobipy import GRB
-
-    if not GurobiDirectMINLP().available():
-        gurobipy_available = False
+if gurobipy_available and not GurobiDirectMINLP().available():
+    gurobipy_available = False
 
 
 def make_model():
@@ -490,7 +493,9 @@ class TestGurobiMINLPWriter(CommonTest):
         assertExpressionsEqual(
             self,
             pyo_expr,
-            ProductExpression((ProductExpression((0.0, m.x1, m.x2, m.x3)),)),
+            ProductExpression(
+                (ProductExpression((MonomialTermExpression((0.0, m.x1)), m.x2)), m.x3)
+            ),
         )
 
         opt = SolverFactory('gurobi_direct_minlp')

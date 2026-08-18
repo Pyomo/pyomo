@@ -44,9 +44,7 @@ from .logical_expr import (
     BooleanExpression,
     BooleanExpressionBase,
     #
-    UnaryBooleanExpression,
     NotExpression,
-    BinaryBooleanExpression,
     EquivalenceExpression,
     XorExpression,
     ImplicationExpression,
@@ -199,7 +197,7 @@ from .taylor_series import taylor_series_expansion
 #
 # declare deprecation paths for removed modules and attributes
 #
-from pyomo.common.deprecation import moved_module
+from pyomo.common.deprecation import moved_module, relocated_module_attribute
 
 moved_module(
     "pyomo.core.expr.current",
@@ -208,4 +206,15 @@ moved_module(
     "Please import expression symbols from pyomo.core.expr",
     version='6.6.2',
 )
-del moved_module
+relocated_module_attribute(
+    'UnaryBooleanExpression',
+    'pyomo.core.expr.logical_expr.UnaryBooleanExpression',
+    version='6.10.1.dev0',
+)
+relocated_module_attribute(
+    'BinaryBooleanExpression',
+    'pyomo.core.expr.logical_expr.BinaryBooleanExpression',
+    version='6.10.1.dev0',
+)
+
+del moved_module, relocated_module_attribute

@@ -315,14 +315,14 @@ class BaseNumeric(Base):
                     for i, arg in enumerate(args):
                         if mutable[i]:
                             arg.__class__ = classes[i]
-                            arg._args_ = orig_args_clone[i]._args_
+                            arg._args = orig_args_clone[i]._args
                             arg._nargs = orig_args_clone[i]._nargs
         except:
             self._print_error(test_num, orig_args_clone + [result], ans)
             for i, arg in enumerate(args):
                 if mutable[i]:
                     arg.__class__ = classes[i]
-                    arg._args_ = orig_args_clone[i]._args_
+                    arg._args = orig_args_clone[i]._args
                     arg._nargs = orig_args_clone[i]._nargs
             raise
 
