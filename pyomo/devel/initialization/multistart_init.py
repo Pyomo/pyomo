@@ -35,6 +35,7 @@ def _initialize_with_multistart_solver(
     fix_vars_with_equal_bounds(nlp)
     logger.info('fixed variables with equal bounds')
 
+    # Set multistart solver configs
     multistart_solver.config.seed = seed
     multistart_solver.config.load_solutions = False
     multistart_solver.config.raise_exception_on_nonoptimal_result = False

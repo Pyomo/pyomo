@@ -13,7 +13,7 @@ from itertools import product
 from io import StringIO
 
 import pyomo.common.unittest as unittest
-from pyomo.common.dependencies import attempt_import, numpy_available
+from pyomo.common.dependencies import attempt_import, numpy_available, scipy_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.multistart.high_conf_stop import should_stop
 from pyomo.contrib.multistart.reinit import strategies
@@ -190,6 +190,7 @@ class MultistartTests(unittest.TestCase):
             results_obj_obj.incumbent_objective, results_obj_str.incumbent_objective
         )
 
+    @unittest.skipIf(not scipy_available, "Scipy not available")
     def test_sampling_methods(self):
         sampling_methods = ["uniform", "latin_hypercube", "sobol"]
         strategies = ["rand", "rand_vector"]
