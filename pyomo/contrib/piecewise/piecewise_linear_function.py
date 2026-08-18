@@ -14,6 +14,7 @@ from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import numpy as np
 from pyomo.common.dependencies.scipy import spatial
+from pyomo.common.enums import IntEnum
 from pyomo.contrib.piecewise.piecewise_linear_expression import (
     PiecewiseLinearExpression,
 )
@@ -37,6 +38,12 @@ import pyomo.core.expr as EXPR
 ZERO_TOLERANCE = 1e-8
 
 logger = logging.getLogger(__name__)
+
+
+class FunctionType(IntEnum):
+    UNSPECIFIED = 0
+    CONVEX = 1
+    CONCAVE = 2
 
 
 class PiecewiseLinearFunctionData(BlockData):
@@ -256,6 +263,10 @@ class PiecewiseLinearFunction(Block):
             as specified, trusting the user in the case of AssumeValid.
             When no argument or None is passed, the default is
             Triangulation.Unknown
+        function_type (optional): Member of FunctionType enum: Either unspecified
+            (the default), convex, or concave. If convex/concave, serves as a
+            user-provided guarantee that the piecewise-linear function is convex.
+            Note that this will be used without being validated.
     """
 
     _ComponentDataClass = PiecewiseLinearFunctionData
@@ -283,6 +294,7 @@ class PiecewiseLinearFunction(Block):
         _tabular_data_arg = kwargs.pop('tabular_data', None)
         _tabular_data_rule_arg = kwargs.pop('tabular_data_rule', None)
         _triangulation_rule_arg = kwargs.pop('triangulation', None)
+        _func_type_rule_arg = kwargs.pop('function_type', None)
 
         kwargs.setdefault('ctype', PiecewiseLinearFunction)
         Block.__init__(self, *args, **kwargs)
@@ -303,6 +315,9 @@ class PiecewiseLinearFunction(Block):
         )
         self._triangulation_rule = Initializer(
             _triangulation_rule_arg, treat_sequences_as_mappings=False
+        )
+        self._func_type_rule = Initializer(
+            _func_type_rule_arg, treat_sequences_as_mappings=False
         )
 
     def _get_dimension_from_points(self, points):
@@ -605,6 +620,11 @@ class PiecewiseLinearFunction(Block):
                 "mapping points to nonlinear function values."
             )
         obj = handler(self, obj, parent, nonlinear_function)
+
+        # Update convexity info
+        obj.function_type = FunctionType.UNSPECIFIED
+        if self._func_type_rule is not None:
+            obj.function_type = self._func_type_rule(parent, index)
 
         return obj
 
