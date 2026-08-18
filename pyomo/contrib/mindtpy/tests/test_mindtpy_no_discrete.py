@@ -505,10 +505,14 @@ class TestMindtPyShortCircuitRouting(unittest.TestCase):
         nlp_opt=None,
         mip_constraint_polynomial_degree=None,
         mip_objective_polynomial_degree=None,
+        algorithm_class=None,
     ):
-        from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
+        if algorithm_class is None:
+            from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 
-        algo = _MindtPyAlgorithm()
+            algorithm_class = _MindtPyAlgorithm
+
+        algo = algorithm_class()
         algo.config = _SimpleNamespace(
             logger=MagicMock(),
             mip_solver=mip_solver_name,
@@ -575,6 +579,15 @@ class TestMindtPyShortCircuitRouting(unittest.TestCase):
         m.x = Var(bounds=(0, 10))
         m.c = Constraint(expr=m.x >= 1)
         m.obj = Objective(expr=m.x**3, sense=minimize)
+        return m
+
+    def _make_fixed_binary_nlp_model(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 10))
+        m.y = Var(domain=Binary, initialize=1)
+        m.y.fix(1)
+        m.c = Constraint(expr=m.x >= m.y)
+        m.obj = Objective(expr=m.x**3 + m.y, sense=minimize)
         return m
 
     def test_short_circuit_lp_routes_to_mip(self):
@@ -680,6 +693,29 @@ class TestMindtPyShortCircuitRouting(unittest.TestCase):
             ),
         )
 
+        with patch(
+            'pyomo.contrib.mindtpy.algorithm_base_class.update_solver_timelimit'
+        ):
+            self.assertFalse(algo.model_is_valid())
+
+        algo.mip_opt.solve.assert_not_called()
+        algo.nlp_opt.solve.assert_called_once()
+
+    def test_goa_short_circuit_fixed_discrete_nlp_uses_nlp_solver(self):
+        from pyomo.contrib.mindtpy.global_outer_approximation import MindtPy_GOA_Solver
+
+        algo = self._make_algorithm(
+            self._make_fixed_binary_nlp_model(),
+            mip_solver_name='gurobi',
+            mip_opt=_FakeLegacyMIPSolver(
+                quadratic_objective=True, quadratic_constraint=True
+            ),
+            algorithm_class=MindtPy_GOA_Solver,
+        )
+
+        self.assertEqual(
+            len(algo.working_model.MindtPy_utils.discrete_variable_list), 0
+        )
         with patch(
             'pyomo.contrib.mindtpy.algorithm_base_class.update_solver_timelimit'
         ):
