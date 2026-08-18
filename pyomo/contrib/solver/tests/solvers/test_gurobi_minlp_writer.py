@@ -87,13 +87,13 @@ class TestGurobiMINLPWriter(CommonTest):
         ).write(m, symbolic_solver_labels=True)
 
         self.assertEqual(len(var_map), 7)
-        x1 = var_map[id(m.x1)]
-        x2 = var_map[id(m.x2)]
-        x3 = var_map[id(m.x3)]
-        y1 = var_map[id(m.y1)]
-        y2 = var_map[id(m.y2)]
-        y3 = var_map[id(m.y3)]
-        z1 = var_map[id(m.z1)]
+        x1 = var_map[m.x1]
+        x2 = var_map[m.x2]
+        x3 = var_map[m.x3]
+        y1 = var_map[m.y1]
+        y2 = var_map[m.y2]
+        y3 = var_map[m.y3]
+        z1 = var_map[m.z1]
 
         self.assertEqual(grb_model.numVars, 9)
         self.assertEqual(grb_model.numIntVars, 4)
@@ -199,7 +199,7 @@ class TestGurobiMINLPWriter(CommonTest):
         ).write(m, symbolic_solver_labels=True)
 
         self.assertEqual(len(var_map), 1)
-        x1 = var_map[id(m.x1)]
+        x1 = var_map[m.x1]
 
         self.assertEqual(grb_model.numVars, 1)
         self.assertEqual(grb_model.numIntVars, 0)
@@ -245,7 +245,7 @@ class TestGurobiMINLPWriter(CommonTest):
         ).write(m, symbolic_solver_labels=True)
 
         self.assertEqual(len(var_map), 1)
-        x1 = var_map[id(m.x1)]
+        x1 = var_map[m.x1]
 
         self.assertEqual(grb_model.numVars, 1)
         self.assertEqual(grb_model.numIntVars, 0)
@@ -289,8 +289,8 @@ class TestGurobiMINLPWriter(CommonTest):
         ).write(m, symbolic_solver_labels=True)
 
         self.assertEqual(len(var_map), 2)
-        x = var_map[id(m.x)]
-        y = var_map[id(m.y)]
+        x = var_map[m.x]
+        y = var_map[m.y]
 
         self.assertEqual(grb_model.numVars, 2)
         self.assertEqual(grb_model.numIntVars, 0)
@@ -352,8 +352,8 @@ class TestGurobiMINLPWriter(CommonTest):
         ).write(m, symbolic_solver_labels=True)
 
         self.assertEqual(len(var_map), 2)
-        x = var_map[id(m.x)]
-        y = var_map[id(m.y)]
+        x = var_map[m.x]
+        y = var_map[m.y]
         reverse_var_map = {grbv: pyov for pyov, grbv in var_map.items()}
 
         self.assertEqual(grb_model.numVars, 4)
@@ -454,9 +454,9 @@ class TestGurobiMINLPWriter(CommonTest):
         ).write(m, symbolic_solver_labels=True)
 
         self.assertEqual(len(var_map), 3)
-        x1 = var_map[id(m.x1)]
-        x2 = var_map[id(m.x2)]
-        x3 = var_map[id(m.x3)]
+        x1 = var_map[m.x1]
+        x2 = var_map[m.x2]
+        x3 = var_map[m.x3]
 
         self.assertEqual(grb_model.numVars, 4)
         self.assertEqual(grb_model.numIntVars, 0)
