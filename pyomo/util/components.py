@@ -33,7 +33,7 @@ def rename_components(model, component_list, prefix):
     >>> c_list = list(model.component_objects(ctype=pyo.Var, descend_into=True))
     >>> new = rename_components(model, component_list=c_list, prefix='special_')
     >>> str(new)
-    "ComponentMap({'special_x (key=...)': 'x', 'special_y (key=...)': 'y'})"
+    'ComponentMap(special_x: x, special_y: y)'
 
     Returns
     -------
@@ -46,7 +46,8 @@ def rename_components(model, component_list, prefix):
       generator since this can lead to an infinite loop
 
     """
-    # Need to collect any Reference first so that we can record the old mapping of data objects before renaming
+    # Need to collect any Reference first so that we can record the old
+    # mapping of data objects before renaming
     refs = {}
     for c in component_list:
         if c.is_reference():

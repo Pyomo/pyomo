@@ -12,6 +12,7 @@ Tests for the PyROS UncertaintySet class and subclasses.
 """
 
 import itertools as it
+from pyomo.common.errors import InvalidConstraintError
 import pyomo.common.unittest as unittest
 
 from pyomo.common.collections import Bunch
@@ -27,6 +28,12 @@ from pyomo.core.base import ConcreteModel, Param, Var, minimize, UnitInterval
 from pyomo.core.expr import RangedExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.environ import SolverFactory
+from pyomo.opt import (
+    assert_optimal_termination,
+    SolverResults,
+    SolverStatus,
+    TerminationCondition,
+)
 
 from pyomo.contrib.pyros.uncertainty_sets import (
     AxisAlignedEllipsoidalSet,
@@ -398,16 +405,25 @@ class TestBoxSet(unittest.TestCase):
         """
         Test validate bounds check performs as expected.
         """
-        CONFIG = Bunch()
+        CONFIG = Bunch(progress_logger=logging.getLogger("pyomo.contrib.pyros"))
 
         # construct valid box set
         box_set = BoxSet(bounds=[[1.0, 2.0], [3.0, 4.0]])
 
         # check when LB >= UB
-        box_set.bounds[0][0] = 5
+        box_set.bounds[0, 0] = 5
         exc_str = r"Lower bound 5.0 exceeds upper bound 2.0"
         with self.assertRaisesRegex(ValueError, exc_str):
             box_set.validate(config=CONFIG)
+
+        # check infinite bounds
+        box_set.bounds[0, 0] = -float("inf")
+        exc_str = r"Entry.*is not a finite numeric value"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            box_set.validate(config=CONFIG)
+        exc_str = r"Boundedness check failed.*BoxSet"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            UncertaintySet.validate(box_set, config=CONFIG)
 
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_bounded_and_nonempty(self):
@@ -416,6 +432,20 @@ class TestBoxSet(unittest.TestCase):
         """
         box_set = BoxSet(bounds=[[1.0, 2.0], [3.0, 4.0]])
         bounded_and_nonempty_check(self, box_set)
+
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_is_nonempty(self):
+        CONFIG = Bunch(global_solver=SolverFactory("baron"))
+        # nonempty
+        box_set = BoxSet(bounds=[[1.0, 2.0], [3.0, 4.0]])
+        self.assertTrue(box_set.is_nonempty(config=CONFIG))
+        # nonempty (check using nominal values)
+        CONFIG.nominal_uncertain_param_vals = [1.5, 3.5]
+        self.assertTrue(box_set.is_nonempty(config=CONFIG))
+        # empty, since lower bounds > upper bounds
+        # (by more than tolerance)
+        box_set.bounds = [[2.0, 1.0], [1.0, 0.0]]
+        self.assertFalse(box_set.is_nonempty(config=CONFIG))
 
     def test_fbbt_error(self):
         """
@@ -787,6 +817,16 @@ class TestBudgetSet(unittest.TestCase):
         budget_set = BudgetSet(budget_mat, budget_rhs_vec)
         bounded_and_nonempty_check(self, budget_set)
 
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_is_nonempty(self):
+        CONFIG = Bunch(global_solver=SolverFactory("baron"))
+        # nonempty
+        buset = BudgetSet(budget_membership_mat=[[1, 0, 1], [0, 1, 0]], rhs_vec=[1, 3])
+        self.assertTrue(buset.is_nonempty(config=CONFIG))
+        # empty, due to negative budget RHS vector entry
+        buset.budget_rhs_vec = [-1, 3]
+        self.assertFalse(buset.is_nonempty(config=CONFIG))
+
     def test_is_coordinate_fixed(self):
         """
         Test method for checking whether there are coordinates
@@ -842,6 +882,11 @@ class TestFactorModelSet(unittest.TestCase):
         np.testing.assert_allclose(fset.origin, [1, 1, 0])
         np.testing.assert_allclose(fset.psi_mat, [[1, 0], [0, 1], [1, 1]])
         np.testing.assert_allclose(fset.beta, 0.5)
+
+        # ensure finiteness check runs
+        exc_str = r"beta.*not a finite numeric value"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            fset.beta = float("inf")
 
     def test_error_on_factor_model_set_dim_change(self):
         """
@@ -1239,6 +1284,25 @@ class TestFactorModelSet(unittest.TestCase):
         beta = 0.5
         factor_set = FactorModelSet(origin, number_of_factors, psi_mat, beta)
         bounded_and_nonempty_check(self, factor_set)
+
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_is_nonempty(self):
+        CONFIG = Bunch(global_solver=SolverFactory("baron"))
+        # nonempty
+        fset = FactorModelSet(
+            origin=[0, 0, 0],
+            number_of_factors=2,
+            psi_mat=[[1, 0], [0, 1], [1, 1]],
+            beta=0.5,
+        )
+        self.assertTrue(fset.is_nonempty(config=CONFIG))
+        # empty, due to negative beta value
+        # pyomo raises exception during constraint setup,
+        # before the solver is even called
+        fset.beta = -0.1
+        exc_str = r"Constraint\.Infeasible"
+        with self.assertRaisesRegex(InvalidConstraintError, exc_str):
+            fset.is_nonempty(config=CONFIG)
 
     def test_is_coordinate_fixed(self):
         """
@@ -1663,13 +1727,12 @@ class TestIntersectionSet(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, exc_str):
             intersection_set.validate(config=CONFIG)
 
-        # check when individual sets are not actually intersecting
+        # confirm intersection set is valid (i.e., bounded)
+        # if all operand sets are valid, even if intersection is empty
         bset1 = BoxSet(bounds=[[1, 2], [1, 2]])
         bset2 = BoxSet(bounds=[[-2, -1], [-2, -1]])
         intersection_set = IntersectionSet(box_set1=bset1, box_set2=bset2)
-        exc_str = r"Could not compute.*bound in dimension.*Solver status summary:.*"
-        with self.assertRaisesRegex(ValueError, exc_str):
-            intersection_set.validate(config=CONFIG)
+        intersection_set.validate(config=CONFIG)
 
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_bounded_and_nonempty(self):
@@ -1680,6 +1743,19 @@ class TestIntersectionSet(unittest.TestCase):
         aset = AxisAlignedEllipsoidalSet([0, 0, 0], [1, 1, 1])
         intersection_set = IntersectionSet(box_set=bset, axis_aligned_set=aset)
         bounded_and_nonempty_check(self, intersection_set)
+
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_is_nonempty(self):
+        CONFIG = Bunch(global_solver=SolverFactory("baron"))
+        # nonempty (singleton)
+        bset1 = BoxSet(bounds=[[1, 2], [1, 2]])
+        bset2 = BoxSet(bounds=[[2, 3], [2, 3]])
+        iset = IntersectionSet(box_set1=bset1, box_set2=bset2)
+
+        # empty: even though the operands are nonempty,
+        #        they do not intersect
+        bset2.bounds = [[-2, -1], [-2, -1]]
+        self.assertFalse(iset.is_nonempty(config=CONFIG))
 
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_is_coordinate_fixed(self):
@@ -1858,6 +1934,11 @@ class TestCardinalitySet(unittest.TestCase):
         np.testing.assert_allclose(cset.gamma, 0.5)
         np.testing.assert_allclose(cset.positive_deviation, [3, 0])
         np.testing.assert_equal(cset.negative_deviation, [0, -1.5])
+
+        # ensure finiteness check runs
+        exc_str = r"gamma.*not a finite numeric value"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cset.gamma = float("inf")
 
     def test_cardinality_constructor_args_order(self):
         """
@@ -2166,6 +2247,18 @@ class TestCardinalitySet(unittest.TestCase):
         )
         bounded_and_nonempty_check(self, cardinality_set)
 
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_is_nonempty(self):
+        CONFIG = Bunch(global_solver=SolverFactory("baron"))
+
+        # nonempty
+        cset = CardinalitySet(origin=[0, 0], gamma=2, positive_deviation=[1, 1])
+        self.assertTrue(cset.is_nonempty(config=CONFIG))
+
+        # empty, since gamma is negative
+        cset.gamma = -1
+        self.assertFalse(cset.is_nonempty(config=CONFIG))
+
     def test_is_coordinate_fixed(self):
         """
         Test method for checking whether there are coordinates
@@ -2351,6 +2444,14 @@ class TestDiscreteScenarioSet(unittest.TestCase):
         """
         discrete_set = DiscreteScenarioSet([[1, 2], [3, 4]])
         bounded_and_nonempty_check(self, discrete_set)
+
+    def test_is_nonempty(self):
+        # nonempty
+        discrete_set = DiscreteScenarioSet([[1, 2], [3, 4]])
+        self.assertTrue(discrete_set.is_nonempty(config=Bunch()))
+        # empty: scenarios list is empty
+        discrete_set.scenarios.clear()
+        self.assertFalse(discrete_set.is_nonempty(config=Bunch()))
 
     def test_is_coordinate_fixed(self):
         """
@@ -2584,6 +2685,12 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         a_ellipsoid_set = AxisAlignedEllipsoidalSet(center, half_lengths)
         bounded_and_nonempty_check(self, a_ellipsoid_set)
 
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_is_nonempty(self):
+        CONFIG = Bunch(global_solver=SolverFactory("baron"))
+        aeset = AxisAlignedEllipsoidalSet(center=[0, 0], half_lengths=[1.0, 3.0])
+        self.assertTrue(aeset.is_nonempty(config=CONFIG))
+
     def test_is_coordinate_fixed(self):
         """
         Test method for checking whether there are coordinates
@@ -2664,6 +2771,11 @@ class TestEllipsoidalSet(unittest.TestCase):
             eset.gaussian_conf_lvl,
             err_msg="EllipsoidalSet Gaussian confidence level update not as expected",
         )
+
+        # ensure finiteness check runs
+        exc_str = r"scale.*not a finite numeric value"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            eset.scale = float("inf")
 
     def test_normal_construction_and_update_gaussian_conf_lvl(self):
         """
@@ -3002,6 +3114,16 @@ class TestEllipsoidalSet(unittest.TestCase):
         ellipsoid_set = EllipsoidalSet(center, shape_matrix, scale)
         bounded_and_nonempty_check(self, ellipsoid_set)
 
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_is_nonempty(self):
+        CONFIG = Bunch(global_solver=SolverFactory("baron"))
+        # nonempty
+        eset = EllipsoidalSet(center=[0, 0], shape_matrix=[[1, 0], [0, 2]], scale=1)
+        self.assertTrue(eset.is_nonempty(config=CONFIG))
+        # empty when `scale` has a negative value
+        eset.scale = -1
+        self.assertFalse(eset.is_nonempty(config=CONFIG))
+
     def test_is_coordinate_fixed(self):
         """
         Test method for checking whether there are coordinates
@@ -3169,6 +3291,12 @@ class TestPolyhedralSet(unittest.TestCase):
         computed_bounds = pset._compute_exact_parameter_bounds(SolverFactory("baron"))
         self.assertEqual(computed_bounds, [(1, 2), (-1, 1)])
 
+        # computation should fail here, since set is not bounded
+        pset2 = PolyhedralSet(lhs_coefficients_mat=[[1, 1]], rhs_vec=[2])
+        exc_str = r"Could not compute lower.*dimension 1"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            pset2._compute_exact_parameter_bounds(SolverFactory("baron"))
+
     def test_point_in_set(self):
         """
         Test point in set checks work as expected.
@@ -3277,6 +3405,33 @@ class TestPolyhedralSet(unittest.TestCase):
             rhs_vec=[2.0, -1.0, -1.0],
         )
         bounded_and_nonempty_check(self, polyhedral_set)
+
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_is_nonempty(self):
+        CONFIG = Bunch(global_solver=SolverFactory("baron"))
+        # nonempty set q >= 3
+        pset = PolyhedralSet(lhs_coefficients_mat=[[1], [1]], rhs_vec=[2, 3])
+        self.assertTrue(pset.is_nonempty(config=CONFIG))
+        # empty set q <= 2 and q >= 3
+        pset = PolyhedralSet(lhs_coefficients_mat=[[1], [-1]], rhs_vec=[2, -3])
+        self.assertFalse(pset.is_nonempty(config=CONFIG))
+
+        class UnknownSolver:
+            def available(self, exception_flag=None):
+                return True
+
+            def solve(self, model, *args, **kwargs):
+                res = SolverResults()
+                res.solver.termination_condition = TerminationCondition.unknown
+                res.solver.status = SolverStatus.warning
+                return res
+
+        # nonemptiness check fails as nomemptiness/emptiness could
+        # not be deduced using this solver
+        CONFIG.global_solver = UnknownSolver()
+        exc_str = "Could not successfully confirm.*feasible or infeasible"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            pset.is_nonempty(config=CONFIG)
 
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_is_coordinate_fixed(self):
@@ -3829,7 +3984,7 @@ class CustomUncertaintySet(UncertaintySet):
 
     @property
     def geometry(self):
-        self.geometry = Geometry.LINEAR
+        return Geometry.LINEAR
 
     @property
     def dim(self):
@@ -3912,8 +4067,6 @@ class TestCustomUncertaintySet(unittest.TestCase):
         custom_set = CustomUncertaintySet(dim=2)
         uq = custom_set.set_as_constraint(uncertain_params=None, block=m)
 
-        con1, con2, con3 = uq.uncertainty_cons
-        var1, var2 = uq.uncertain_param_vars
         self.assertEqual(uq.auxiliary_vars, [])
         self.assertIs(uq.block, m)
         self.assertEqual(len(uq.uncertainty_cons), 3)
@@ -3966,13 +4119,7 @@ class TestCustomUncertaintySet(unittest.TestCase):
         # feasibility problem passes
         baron = SolverFactory("baron")
         custom_set = CustomUncertaintySet(dim=2)
-        custom_set._solve_feasibility(baron)
-
-        # feasibility problem fails
-        custom_set.parameter_bounds = [[1, 2], [3, 4]]
-        exc_str = r"Could not successfully solve feasibility problem. .*"
-        with self.assertRaisesRegex(ValueError, exc_str):
-            custom_set._solve_feasibility(baron)
+        assert_optimal_termination(custom_set._solve_feasibility(baron))
 
     # test default is_bounded
     @unittest.skipUnless(baron_available, "BARON is not available")
@@ -4007,25 +4154,16 @@ class TestCustomUncertaintySet(unittest.TestCase):
         CONFIG = pyros_config()
         CONFIG.global_solver = global_solver
 
-        # constructing a feasibility problem
-        self.assertTrue(custom_set.is_nonempty(config=CONFIG), "Set is empty")
+        # nonempty by itself
+        self.assertTrue(custom_set.is_nonempty(config=CONFIG))
 
-        # using provided nominal point
+        # nonempty since nominal point is in set
         CONFIG.nominal_uncertain_param_vals = [0, 0]
-        self.assertTrue(custom_set.is_nonempty(config=CONFIG), "Set is empty")
+        self.assertTrue(custom_set.is_nonempty(config=CONFIG))
 
-        # check when nominal point is not in set
+        # nonempty even if nominal point is not in set
         CONFIG.nominal_uncertain_param_vals = [-2, -2]
-        self.assertFalse(
-            custom_set.is_nonempty(config=CONFIG), "Nominal point is in set"
-        )
-
-        # check when feasibility problem fails
-        CONFIG.nominal_uncertain_param_vals = None
-        custom_set.parameter_bounds = [[1, 2], [3, 4]]
-        exc_str = r"Could not successfully solve feasibility problem. .*"
-        with self.assertRaisesRegex(ValueError, exc_str):
-            custom_set.is_nonempty(config=CONFIG)
+        self.assertTrue(custom_set.is_nonempty(config=CONFIG))
 
     def test_fbbt_values(self):
         """

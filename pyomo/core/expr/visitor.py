@@ -16,6 +16,7 @@ from collections import deque
 
 logger = logging.getLogger('pyomo.core')
 
+from pyomo.common.collections import ComponentMap
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.errors import DeveloperError, TemplateExpressionError
 from pyomo.common.numeric_types import (
@@ -967,7 +968,7 @@ def replace_expressions(
     ----------
     expr : Pyomo expression
        The source expression
-    substitution_map : dict
+    substitution_map : dict | ComponentMap
        A dictionary mapping object ids in the source to the replacement objects.
     descend_into_named_expressions : bool
        True if replacement should go into named expression objects, False to halt at
@@ -996,6 +997,16 @@ class ExpressionReplacementVisitor(StreamBasedExpressionVisitor):
     ):
         if substitute is None:
             substitute = {}
+        elif isinstance(substitute, ComponentMap):
+            # ComponentMaps hold references to the keys that they took
+            # the id() of.  Those *could* be the only references to
+            # those objects, so we want to keep a reference to the
+            # ComponentMap to guarantee that they don't fall out of
+            # scope and are collected.
+            self._cm_substitute = substitute
+            substitute = {
+                k if k.__class__ is int else id(k): v for k, v in substitute.items()
+            }
         # Note: preserving the attribute names from the previous
         # implementation of the expression walker.
         self.substitute = substitute

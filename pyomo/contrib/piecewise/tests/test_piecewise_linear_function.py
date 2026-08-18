@@ -19,7 +19,8 @@ from pyomo.core.expr.compare import (
     assertExpressionsEqual,
     assertExpressionsStructurallyEqual,
 )
-from pyomo.environ import ConcreteModel, Constraint, log, Var
+from pyomo.core.expr.visitor import replace_expressions
+from pyomo.environ import ConcreteModel, Constraint, log, Var, value
 
 np, numpy_available = attempt_import('numpy')
 scipy, scipy_available = attempt_import('scipy')
@@ -39,6 +40,38 @@ def f2(x):
 
 def f3(x):
     return (log(5 / 3) / 4) * x + log(6 / ((5 / 3) ** (3 / 2)))
+
+
+class TestPiecewiseLinearExpression(unittest.TestCase):
+    def test_polynomial_degree(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.pw = PiecewiseLinearFunction(tabular_data={0: 0, 1: 1, 2: 4, 3: 9})
+
+        e = m.pw(m.x * 2) + 5
+        self.assertIsNone(e.polynomial_degree())
+
+    def test_evaluate(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=1)
+        m.pw = PiecewiseLinearFunction(tabular_data={0: 0, 1: 1, 2: 4, 3: 9})
+
+        e = m.pw(m.x * 2) + 5
+        self.assertEqual(value(e), 9)
+
+    def test_replacement(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=1)
+        m.y = Var(initialize=1.25)
+        m.pw = PiecewiseLinearFunction(tabular_data={0: 0, 1: 1, 2: 4, 3: 9})
+
+        e = m.pw(m.x * 2) + 5
+        self.assertEqual(value(e), 9)
+
+        f = replace_expressions(e, {id(m.x): m.y})
+        self.assertEqual(value(f), 11.5)
+        m.y = 1
+        self.assertEqual(value(f), 9)
 
 
 class TestPiecewiseLinearFunction2D(unittest.TestCase):
