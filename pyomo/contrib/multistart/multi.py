@@ -322,6 +322,11 @@ class MultiStart(SolverBase):
             obj = None
             obj_sign = 1
             config.break_on_solution = True
+            logger.warning(
+                "No objective found in the provided model. The solver will "
+                "stop if it finds a feasible solution before completing "
+                "the total number of iterations."
+            )
 
         # store objective values and objective/result information for best
         # solution obtained
@@ -429,6 +434,11 @@ class MultiStart(SolverBase):
                         best_objective = obj_val
                         best_result = result
             timer.stop(f"timer_iter_{num_iter}")
+            self._update_solver_timelimit(num_iter, config, timer)
+
+            if config.time_limit == 0:
+                logger.warning(f"Time limit reached after {num_iter} iterations.")
+                break
 
         timer.stop('iterative_solves')
         delattr(model, tmp_var_list_name)
@@ -449,13 +459,15 @@ class MultiStart(SolverBase):
 
         # Check termination condition for ipopt-specific outputs
         if str(
-            best_result.solver_name
+            best_result.solver_name.lower()
         ) == "ipopt" and best_result.termination_condition in {
             TerminationCondition.locallyInfeasible,
             TerminationCondition.unbounded,
             TerminationCondition.provenInfeasible,
         }:
             results.termination_condition = TerminationCondition.infeasibleOrUnbounded
+        elif config.time_limit == 0:
+            results.termination_condition = TerminationCondition.maxTimeLimit
         else:
             results.termination_condition = best_result.termination_condition
 
@@ -475,25 +487,19 @@ class MultiStart(SolverBase):
         results.timing_info.wall_time = default_timer() - start_time
         return results
 
-    def _update_solver_timelimits(self, iteration, config, timer):
-
+    def _update_solver_timelimit(self, iteration, config, timer):
         if config.subsolver_args["time_limit"] == None:
             return
 
         # Get elapsed time from last timer
-        if iteration == 0:
-            last_timer = timer._get_timer('initial_solve')
-        else:
-            last_timer = timer._get_timer(f"timer_iter_{iteration}")
-        elapsed_time = default_timer() - last_timer
+        last_timer = timer._get_timer(f"timer_iter_{iteration}")
+        elapsed_time = last_timer.total_time
+        print(f"elapsed_time: {elapsed_time}")
 
         # Take elapsed time off of time_limit for subsolver
-        solver_time_limit = config.time_limit - elapsed_time
-        subsolver_time_limit = config.subsolver_args["time_limit"] - elapsed_time
-
+        new_time_limit = config.time_limit - elapsed_time
         # Set new timelimits
-        config.time_limit = max(solver_time_limit, 0)
-        config.subsolver_args["time_limit"] = max(subsolver_time_limit, 1e-6)
+        config.time_limit = max(new_time_limit, 0)
 
     def __enter__(self):
         return self
