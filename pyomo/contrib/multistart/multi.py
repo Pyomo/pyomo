@@ -300,11 +300,8 @@ class MultiStart(SolverBase):
             solver = config.subsolver
 
         # Set specific sub-solver options
-        # if config.subsolver_args is None:
         config.subsolver_args["load_solutions"] = False
         config.subsolver_args["raise_exception_on_nonoptimal_result"] = False
-        # if config.time_limit is not None:
-        config.subsolver_args["time_limit"] = config.time_limit
 
         # Model sense
         objectives = list(model.component_data_objects(Objective, active=True))
@@ -488,7 +485,7 @@ class MultiStart(SolverBase):
         return results
 
     def _update_solver_timelimit(self, iteration, config, timer):
-        if config.subsolver_args["time_limit"] == None:
+        if config.time_limit == None:
             return
 
         # Get elapsed time from last timer

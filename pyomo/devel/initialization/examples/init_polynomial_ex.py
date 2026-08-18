@@ -75,6 +75,6 @@ def multistart_init_ex():
 if __name__ == '__main__':
     # stat, x = lp_init_ex()
     # stat, x = pwl_init_ex()
-    # stat, x = global_init_ex()
-    stat, x = multistart_init_ex()
+    stat, x = global_init_ex()
+    # stat, x = multistart_init_ex()
     print(stat, round(x, 4))

@@ -206,6 +206,23 @@ class MultistartTests(unittest.TestCase):
                 TerminationCondition.convergenceCriteriaSatisfied,
             )
 
+    def test_max_time_limit(self):
+        simple_model = build_model()
+        output = StringIO()
+
+        with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.WARNING):
+            res = SolverFactory('multistart').solve(
+                simple_model,
+                raise_exception_on_nonoptimal_result=False,
+                time_limit=1e-6,
+            )
+            self.assertIn(
+                "Time limit reached after 1 iterations.", output.getvalue().strip()
+            )
+            self.assertEqual(
+                res.termination_condition, TerminationCondition.maxTimeLimit
+            )
+
 
 def build_model():
     """Simple non-convex model with many local minima"""
