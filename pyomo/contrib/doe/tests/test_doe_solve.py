@@ -9,6 +9,7 @@
 import json
 import logging
 import os, os.path
+from itertools import combinations, product
 from glob import glob
 
 from pyomo.common.dependencies import (
@@ -27,6 +28,7 @@ if matplotlib_available:
 
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
+from pyomo.contrib.doe.utils import _SMALL_TOLERANCE_DEFINITENESS
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
@@ -39,10 +41,12 @@ if scipy_available:
     )
     from pyomo.contrib.doe.tests.experiment_class_example_flags import (
         RooneyBieglerExperimentBad,
+        RooneyBieglerMultiExperiment,
     )
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
         RooneyBieglerExperiment,
     )
+from pyomo.contrib.doe.tests.utils_for_doe_tests import make_ipopt_solver
 from pyomo.contrib.doe.utils import rescale_FIM
 from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
 
@@ -83,6 +87,11 @@ def get_rooney_biegler_experiment():
     )
 
 
+def _optimize_experiments_param_scenario(results, index=0):
+    """Return one parameter-scenario entry from optimize_experiments() results."""
+    return results["solution"]["param_scenarios"][index]
+
+
 def get_FIM_Q_L(doe_obj=None):
     """
     Helper function to retrieve results to compare.
@@ -112,7 +121,7 @@ def get_FIM_Q_L(doe_obj=None):
         for j in model.parameter_names
     ]
     sigma_inv = [
-        1 / v**2 for k, v in model.scenario_blocks[0].measurement_error.items()
+        1 / v**2 for k, v in model.fd_scenario_blocks[0].measurement_error.items()
     ]
     FIM_vals_np = np.array(FIM_vals).reshape((n_param, n_param))
 
@@ -134,7 +143,7 @@ def get_FIM_Q_L(doe_obj=None):
 
 def get_standard_args(experiment, fd_method, obj_used):
     args = {}
-    args['experiment'] = experiment
+    args['experiment'] = None if experiment is None else [experiment]
     args['fd_formula'] = fd_method
     args['step'] = 1e-3
     args['objective_option'] = obj_used
@@ -145,10 +154,7 @@ def get_standard_args(experiment, fd_method, obj_used):
     args['fim_initial'] = None
     args['L_diagonal_lower_bound'] = 1e-7
     # Make solver object with good linear subroutines
-    solver = SolverFactory("ipopt")
-    solver.options["linear_solver"] = "ma57"
-    solver.options["halt_on_ampl_error"] = "yes"
-    solver.options["max_iter"] = 3000
+    solver = make_ipopt_solver()
     args['solver'] = solver
     args['tee'] = False
     args['get_labeled_model_args'] = None
@@ -378,12 +384,43 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
 
         doe_obj.compute_FIM(method="sequential")
 
+    def test_compute_FIM_multi_experiment_is_sum_of_experiment_fims(self):
+        fd_method = "central"
+        obj_used = "pseudo_trace"
+
+        prior_fim = np.array([[1.5, 0.1], [0.1, 0.5]])
+
+        multi_args = get_standard_args(
+            RooneyBieglerMultiExperiment(hour=1.5, y=9.0), fd_method, obj_used
+        )
+        multi_args["experiment"] = [
+            RooneyBieglerMultiExperiment(hour=1.5, y=9.0),
+            RooneyBieglerMultiExperiment(hour=3.5, y=12.0),
+        ]
+        multi_args["prior_FIM"] = prior_fim
+        doe_multi = DesignOfExperiments(**multi_args)
+
+        fim_total = doe_multi.compute_FIM(method="sequential")
+
+        self.assertEqual(len(doe_multi._computed_FIM_by_experiment), 2)
+        fim_expected = prior_fim.copy()
+        for fim_exp in doe_multi._computed_FIM_by_experiment:
+            fim_expected = fim_expected + np.array(fim_exp)
+
+        self.assertTrue(np.allclose(fim_total, fim_expected, atol=1e-8))
+        self.assertTrue(
+            np.all(np.isfinite(np.array(doe_multi._computed_FIM_by_experiment[0])))
+        )
+        self.assertTrue(
+            np.all(np.isfinite(np.array(doe_multi._computed_FIM_by_experiment[1])))
+        )
+
     # This test ensure that compute FIM runs without error using the
     # `kaug` option. kaug computes the FIM directly so no finite difference
     # scheme is needed.
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     @unittest.skipIf(
-        not k_aug_available.available(False), "The 'k_aug' command is not available"
+        not k_aug_available, "The 'k_aug' is not available in this environment"
     )
     def test_compute_FIM_kaug(self):
         fd_method = "forward"
@@ -481,7 +518,7 @@ class TestRooneyBieglerExampleSolving(unittest.TestCase):
             [
                 [
                     v
-                    for k, v in doe_obj.model.scenario_blocks[
+                    for k, v in doe_obj.model.fd_scenario_blocks[
                         0
                     ].unknown_parameters.items()
                 ]
@@ -914,6 +951,518 @@ class TestDoEFactorialFigure(unittest.TestCase):
         self.assertTrue(
             len(expected_plot_log) == 5,
             f"Expected 5 plot files, but found {len(expected_plot_log)}. Files found: {expected_plot_log}",
+        )
+
+
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not scipy_available, "scipy is not available")
+class TestOptimizeExperimentsAlgorithm(unittest.TestCase):
+    @staticmethod
+    def _make_template_doe(objective_option="pseudo_trace"):
+        exp = RooneyBieglerMultiExperiment(hour=2.0, y=10.0)
+        solver = make_ipopt_solver()
+        return DesignOfExperiments(
+            experiment=[exp],
+            objective_option=objective_option,
+            step=1e-2,
+            solver=solver,
+        )
+
+    @staticmethod
+    def _build_template_model_for_multi_experiment(doe_obj, n_exp):
+        doe_obj.model.param_scenario_blocks = pyo.Block(range(1))
+        doe_obj.model.param_scenario_blocks[0].exp_blocks = pyo.Block(range(n_exp))
+        for k in range(n_exp):
+            doe_obj.create_doe_model(
+                model=doe_obj.model.param_scenario_blocks[0].exp_blocks[k],
+                experiment_index=0,
+                _for_multi_experiment=True,
+            )
+
+    @staticmethod
+    def _make_square_solve_then_stub_solver(real_solver):
+        def _stub_results():
+            class _SolverInfo:
+                status = "ok"
+                termination_condition = "optimal"
+                message = "stub-solve"
+
+            class _SolverResults:
+                solver = _SolverInfo()
+
+            return _SolverResults()
+
+        class _SquareSolveThenStubSolver:
+            def __init__(self, wrapped_solver):
+                self._wrapped_solver = wrapped_solver
+                self.name = wrapped_solver.name
+                self.options = wrapped_solver.options
+
+            def solve(self, *args, **kwargs):
+                model = args[0] if args else kwargs.get("model", None)
+                if model is not None and hasattr(model, "dummy_obj"):
+                    # Keep square-solve path real so model state initializes correctly.
+                    return self._wrapped_solver.solve(*args, **kwargs)
+                return _stub_results()
+
+        return _SquareSolveThenStubSolver(real_solver)
+
+    def test_evaluate_objective_from_fim_numerical_values(self):
+        fim = np.array([[4.0, 1.0], [1.0, 3.0]])
+        expected_det = 11.0
+        expected_pseudo_trace = 7.0
+        expected_trace = 7.0 / 11.0
+
+        doe_det = self._make_template_doe("determinant")
+        self.assertAlmostEqual(
+            doe_det._evaluate_objective_from_fim(fim), expected_det, places=10
+        )
+
+        doe_ptr = self._make_template_doe("pseudo_trace")
+        self.assertAlmostEqual(
+            doe_ptr._evaluate_objective_from_fim(fim), expected_pseudo_trace, places=10
+        )
+
+        doe_tr = self._make_template_doe("trace")
+        self.assertAlmostEqual(
+            doe_tr._evaluate_objective_from_fim(fim), expected_trace, places=10
+        )
+
+    def test_evaluate_objective_from_fim_fallback_paths(self):
+        singular_fim = np.zeros((2, 2))
+
+        doe_trace = self._make_template_doe("trace")
+        self.assertEqual(doe_trace._evaluate_objective_from_fim(singular_fim), np.inf)
+
+        doe_zero = self._make_template_doe("zero")
+        self.assertEqual(doe_zero._evaluate_objective_from_fim(singular_fim), 0.0)
+
+    def test_compute_fim_at_point_no_prior_restores_prior(self):
+        doe_no_prior = self._make_template_doe("pseudo_trace")
+        doe_no_prior.prior_FIM = np.zeros((2, 2))
+        expected = doe_no_prior.compute_FIM(method="sequential")
+
+        doe = self._make_template_doe("pseudo_trace")
+        saved_prior = np.array([[7.0, 0.0], [0.0, 5.0]])
+        doe.prior_FIM = saved_prior
+        got = doe._compute_fim_at_point_no_prior(experiment_index=0, input_values=[2.0])
+
+        self.assertTrue(np.allclose(got, expected, atol=1e-8))
+        self.assertIs(doe.prior_FIM, saved_prior)
+        self.assertTrue(np.allclose(doe.prior_FIM, saved_prior, atol=1e-12))
+
+    def test_compute_fim_at_point_no_prior_exception_fallback_zero(self):
+        doe = self._make_template_doe("pseudo_trace")
+        saved_prior = np.array([[3.0, 0.0], [0.0, 4.0]])
+        doe.prior_FIM = saved_prior
+
+        original_sequential_fim = doe._sequential_FIM
+
+        def _raise_boom(*args, **kwargs):
+            # Intentionally inject a sequential FIM failure so we can verify the
+            # fallback behavior (zero FIM + warning + prior restoration).
+            raise RuntimeError("boom")
+
+        doe._sequential_FIM = _raise_boom
+        try:
+            with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
+                got = doe._compute_fim_at_point_no_prior(
+                    experiment_index=0, input_values=[2.0]
+                )
+        finally:
+            doe._sequential_FIM = original_sequential_fim
+
+        self.assertTrue(np.allclose(got, np.zeros((2, 2))))
+        self.assertIs(doe.prior_FIM, saved_prior)
+        self.assertTrue(
+            any("Using zero matrix as fallback" in msg for msg in log_cm.output)
+        )
+
+    def test_optimize_experiments_cholesky_jitter_branch(self):
+        # Seed a deliberately singular FIM so the Cholesky regularization path
+        # is exercised deterministically with a fixed, known diagonal shift.
+        doe = self._make_template_doe("determinant")
+        self._build_template_model_for_multi_experiment(doe, n_exp=1)
+        doe.create_multi_experiment_objective_function(doe.model)
+
+        scenario = doe.model.param_scenario_blocks[0]
+        param_names = list(scenario.exp_blocks[0].parameter_names)
+        expected_total_fim = np.array([[1.0, 1.0], [1.0, 1.0]])
+        for i, p in enumerate(param_names):
+            for j, q in enumerate(param_names):
+                if doe.only_compute_fim_lower and i < j:
+                    continue
+                scenario.exp_blocks[0].fim[p, q].set_value(expected_total_fim[i, j])
+
+        doe._initialize_scenario_quantities_from_square_solve(
+            n_param_scenarios=1, n_exp=1, parameter_names=param_names
+        )
+
+        expected_cholesky_input = (
+            expected_total_fim
+            + _SMALL_TOLERANCE_DEFINITENESS * np.eye(expected_total_fim.shape[0])
+        )
+        L_vals = np.array(
+            [
+                [pyo.value(scenario.obj_cons.L[p, q]) for q in param_names]
+                for p in param_names
+            ]
+        )
+
+        self.assertTrue(
+            np.allclose(L_vals @ L_vals.T, expected_cholesky_input, atol=1e-8)
+        )
+
+    def test_lhs_initialize_experiments_matches_bruteforce_combo(self):
+        # Compare the helper's chosen initial design directly against an
+        # independent brute-force scorer so this test isolates LHS selection
+        # instead of the later NLP solve and result-payload bookkeeping.
+        n_exp = 2
+        lhs_n_samples = 3
+        # Set random seed to keep LHS initialization deterministic.
+        lhs_seed = 17
+
+        # Build expected best combo using the same helper path and objective scoring.
+        expected_obj = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(expected_obj, n_exp=n_exp)
+
+        first_exp_block = expected_obj.model.param_scenario_blocks[0].exp_blocks[0]
+        exp_input_vars = expected_obj._get_experiment_input_vars(first_exp_block)
+        lb_vals = np.array([v.lb for v in exp_input_vars])
+        ub_vals = np.array([v.ub for v in exp_input_vars])
+
+        rng = np.random.default_rng(lhs_seed)
+        from scipy.stats.qmc import LatinHypercube
+
+        per_dim_samples = []
+        for i in range(len(exp_input_vars)):
+            dim_seed = int(rng.integers(0, 2**31))
+            sampler = LatinHypercube(d=1, seed=dim_seed)
+            s_unit = sampler.random(n=lhs_n_samples).flatten()
+            s_scaled = lb_vals[i] + s_unit * (ub_vals[i] - lb_vals[i])
+            per_dim_samples.append(s_scaled.tolist())
+
+        candidate_points = list(product(*per_dim_samples))
+        candidate_fims = [
+            expected_obj._compute_fim_at_point_no_prior(0, list(pt))
+            for pt in candidate_points
+        ]
+
+        best_combo = None
+        best_obj = -np.inf
+        for combo in combinations(range(len(candidate_points)), n_exp):
+            fim_total = sum((candidate_fims[idx] for idx in combo), np.zeros((2, 2)))
+            obj_val = expected_obj._evaluate_objective_from_fim(fim_total)
+            if obj_val > best_obj:
+                best_obj = obj_val
+                best_combo = combo
+
+        expected_points = [list(candidate_points[i]) for i in best_combo]
+
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=n_exp)
+        actual_points, lhs_diag = doe._lhs_initialize_experiments(
+            lhs_n_samples=lhs_n_samples, lhs_seed=lhs_seed, n_exp=n_exp
+        )
+
+        actual_points_norm = sorted(tuple(np.round(p, 8)) for p in actual_points)
+        expected_points_norm = sorted(tuple(np.round(p, 8)) for p in expected_points)
+        self.assertEqual(actual_points_norm, expected_points_norm)
+        self.assertAlmostEqual(lhs_diag["best_obj"], best_obj, places=12)
+
+    def test_optimize_experiments_is_reentrant_on_same_object(self):
+        # Tests that optimize_experiments() can be run repeatedly on one DoE object.
+        doe = self._make_template_doe("pseudo_trace")
+        doe.optimize_experiments(n_exp=1)
+        first_design = _optimize_experiments_param_scenario(doe.results)["experiments"][
+            0
+        ]["design"]
+        first_build_time = doe.results["timing"]["build_time_s"]
+
+        doe.optimize_experiments(n_exp=1)
+        second_design = _optimize_experiments_param_scenario(doe.results)[
+            "experiments"
+        ][0]["design"]
+
+        self.assertEqual(len(first_design), len(second_design))
+        self.assertIn("timing", doe.results)
+        self.assertGreater(doe.results["timing"]["build_time_s"], 0.0)
+        self.assertGreaterEqual(first_build_time, 0.0)
+        self.assertEqual(len(list(doe.model.param_scenario_blocks.keys())), 1)
+
+    def test_lhs_no_candidate_fim_scored_uses_zero_fallback(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=1)
+
+        # Force candidate FIM evaluations to return None so we exercise the
+        # LHS fallback path when no candidate FIM can be scored.
+        doe._compute_fim_at_point_no_prior = lambda experiment_index, input_values: None
+        # Set random seed to keep LHS initialization deterministic.
+        points, diag = doe._lhs_initialize_experiments(
+            lhs_n_samples=3, lhs_seed=8, n_exp=1
+        )
+
+        self.assertEqual(len(points), 1)
+        self.assertFalse(diag["timed_out"])
+
+    def test_lhs_combo_serial_minimize_objective_update(self):
+        # Rooney-Biegler integration check for the LHS combination scorer on a
+        # minimize objective (trace/A-opt). Verify that optimize_experiments()
+        # picks the known initial-design pair for this fixed seed/fixture.
+        n_exp = 2
+        lhs_n_samples = 4
+        # Set random seed to keep LHS initialization deterministic.
+        lhs_seed = 61
+        expected_points = [[8.444882444378123], [1.677771030243514]]
+
+        doe = self._make_template_doe("trace")
+        doe.optimize_experiments(
+            n_exp=n_exp,
+            init_method="latin_hypercube_sampling",
+            init_n_samples=lhs_n_samples,
+            init_seed=lhs_seed,
+        )
+        got_points = doe.results["initialization"]["selected_initial_designs"]
+
+        # Normalize (round + sort) so we compare selected points robustly
+        # despite floating-point noise and ordering differences.
+        got_norm = sorted(tuple(np.round(p, 8)) for p in got_points)
+        exp_norm = sorted(tuple(np.round(p, 8)) for p in expected_points)
+        self.assertEqual(got_norm, exp_norm)
+
+    def test_lhs_combo_no_scored_combo_falls_back_to_first_n_exp(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=3)
+        lhs_n_samples = 3
+        # Set random seed to keep LHS initialization deterministic.
+        lhs_seed = 13
+        expected_points = [
+            [1.1964805935118192],
+            [7.43601921283148],
+            [5.780792707335482],
+        ]
+
+        def _nan_fim(experiment_index, input_values):
+            # Any comparison with NaN is False, so best_combo remains None and
+            # we exercise the fallback branch that selects the first n_exp points.
+            return np.array([[np.nan, 0.0], [0.0, np.nan]])
+
+        doe._compute_fim_at_point_no_prior = _nan_fim
+        with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
+            got_points, _ = doe._lhs_initialize_experiments(
+                lhs_n_samples=lhs_n_samples, lhs_seed=lhs_seed, n_exp=3
+            )
+
+        # Normalize (round + sort) so we compare selected points robustly
+        # despite floating-point noise and ordering differences.
+        got_norm = sorted(tuple(np.round(p, 8)) for p in got_points)
+        exp_norm = sorted(tuple(np.round(p, 8)) for p in expected_points)
+        self.assertEqual(got_norm, exp_norm)
+        # The fallback branch must be user-visible: no scored combinations
+        # should emit the warning that first n_exp candidates were used.
+        self.assertTrue(
+            any(
+                "Falling back to the first n_exp candidate points." in msg
+                for msg in log_cm.output
+            )
+        )
+
+    def test_lhs_combo_scoring_n_exp_3_matches_exhaustive_reference(self):
+        n_exp = 3
+        lhs_n_samples = 5
+        # Set random seed to keep LHS initialization deterministic.
+        lhs_seed = 2
+        # Fixed golden output for the deterministic seed/fixture.
+        expected_points = [
+            [3.8879931642615397],
+            [5.038982360056636],
+            [1.747554794490243],
+        ]
+
+        doe = self._make_template_doe("pseudo_trace")
+        doe.optimize_experiments(
+            n_exp=n_exp,
+            init_method="latin_hypercube_sampling",
+            init_n_samples=lhs_n_samples,
+            init_seed=lhs_seed,
+        )
+        got_points = doe.results["initialization"]["selected_initial_designs"]
+
+        # Normalize (round + sort) so we compare selected points robustly
+        # despite floating-point noise and ordering differences.
+        got_norm = sorted(tuple(np.round(p, 8)) for p in got_points)
+        exp_norm = sorted(tuple(np.round(p, 8)) for p in expected_points)
+        self.assertEqual(got_norm, exp_norm)
+
+    def test_lhs_matches_exhaustive_reference_with_fixed_samples(self):
+        doe = self._make_template_doe("pseudo_trace")
+        self._build_template_model_for_multi_experiment(doe, n_exp=2)
+        lhs_n_samples = 3
+        # Set random seed to keep LHS initialization deterministic.
+        lhs_seed = 123
+        expected_points = [[9.840553760362205], [6.131800018881211]]
+
+        def _fake_fim(experiment_index, input_values):
+            x = float(input_values[0])
+            return np.array([[x + 1.0, 0.0], [0.0, 2.0 * x + 1.0]])
+
+        doe._compute_fim_at_point_no_prior = _fake_fim
+        got_points, _ = doe._lhs_initialize_experiments(
+            lhs_n_samples=lhs_n_samples, lhs_seed=lhs_seed, n_exp=2
+        )
+
+        # Normalize (round + sort) so we compare selected points robustly
+        # despite floating-point noise and ordering differences.
+        got_norm = sorted(tuple(np.round(p, 8)) for p in got_points)
+        exp_norm = sorted(tuple(np.round(p, 8)) for p in expected_points)
+        self.assertEqual(got_norm, exp_norm)
+
+    def test_optimize_experiments_determinant_expected_values(self):
+        # Tests determinant-objective optimization against known expected design/metric
+        # values.
+        # Match the multi-experiment example style (explicit experiment list)
+        exp_list = [
+            RooneyBieglerMultiExperiment(hour=1.0, y=8.3),
+            RooneyBieglerMultiExperiment(hour=2.0, y=10.3),
+        ]
+        solver = make_ipopt_solver()
+
+        doe = DesignOfExperiments(
+            experiment=exp_list,
+            objective_option="determinant",
+            step=1e-2,
+            solver=solver,
+        )
+        doe.optimize_experiments()
+
+        scenario = _optimize_experiments_param_scenario(doe.results)
+        got_hours = sorted(exp["design"][0] for exp in scenario["experiments"])
+        expected_hours = [1.9321985035514362, 9.999999685577139]
+
+        self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-3)
+        self.assertAlmostEqual(
+            scenario["quality_metrics"]["log10_d_opt"], 6.028152580313302, places=3
+        )
+
+    def test_optimize_experiments_trace_expected_values(self):
+        # Tests trace-objective optimization against known expected design/metric values.
+        # Match the multi-experiment example style (explicit experiment list)
+        exp_list = [
+            RooneyBieglerMultiExperiment(hour=1.0, y=8.3),
+            RooneyBieglerMultiExperiment(hour=2.0, y=10.3),
+        ]
+        solver = make_ipopt_solver()
+        # prior_FIM from data `hour = 1, y = 8.3` with default value of parameters, which
+        # is theta = {'asymptote': 15, 'rate_constant': 0.5}
+        prior_FIM = np.array(
+            [[15.48181217, 357.97684273], [357.97684273, 8277.28811613]]
+        )
+
+        doe = DesignOfExperiments(
+            experiment=exp_list,
+            objective_option="trace",
+            step=1e-2,
+            solver=solver,
+            prior_FIM=prior_FIM,
+        )
+        doe.optimize_experiments()
+
+        scenario = _optimize_experiments_param_scenario(doe.results)
+        got_hours = sorted(exp["design"][0] for exp in scenario["experiments"])
+        expected_hours = [10.0, 10.0]
+
+        self.assertStructuredAlmostEqual(got_hours, expected_hours, abstol=1e-3)
+        self.assertAlmostEqual(
+            scenario["quality_metrics"]["log10_a_opt"], -2.2347, places=3
+        )
+
+    def test_optimize_experiments_prior_fim_aggregation_non_lhs_template_mode(self):
+        # Tests that total FIM equals sum(experiment FIMs) + prior in template mode.
+        prior_fim = np.array([[2.0, 0.1], [0.1, 1.5]])
+        doe = self._make_template_doe("pseudo_trace")
+        doe.prior_FIM = prior_fim.copy()
+
+        doe.optimize_experiments(n_exp=2, init_method=None)
+
+        scenario = _optimize_experiments_param_scenario(doe.results)
+        total_fim = np.array(scenario["total_fim"])
+        exp_fim_sum = sum(
+            (np.array(exp_data["fim"]) for exp_data in scenario["experiments"]),
+            np.zeros_like(total_fim),
+        )
+        stored_prior = np.array(doe.results["problem"]["prior_fim"])
+
+        self.assertTrue(np.allclose(total_fim, exp_fim_sum + prior_fim, atol=1e-6))
+        self.assertTrue(np.allclose(total_fim, exp_fim_sum + stored_prior, atol=1e-6))
+
+    def test_optimize_experiments_prior_fim_aggregation_non_lhs_user_initialized_mode(
+        self,
+    ):
+        # Tests that total FIM aggregation with prior is correct in user-initialized mode.
+        exp_list = [
+            RooneyBieglerMultiExperiment(hour=1.5, y=9.0),
+            RooneyBieglerMultiExperiment(hour=3.5, y=12.0),
+        ]
+        solver = make_ipopt_solver()
+        prior_fim = np.array([[1.25, 0.05], [0.05, 0.9]])
+
+        doe = DesignOfExperiments(
+            experiment=exp_list,
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=solver,
+            prior_FIM=prior_fim,
+        )
+        doe.optimize_experiments(init_method=None)
+
+        scenario = _optimize_experiments_param_scenario(doe.results)
+        total_fim = np.array(scenario["total_fim"])
+        exp_fim_sum = sum(
+            (np.array(exp_data["fim"]) for exp_data in scenario["experiments"]),
+            np.zeros_like(total_fim),
+        )
+        stored_prior = np.array(doe.results["problem"]["prior_fim"])
+
+        self.assertTrue(np.allclose(total_fim, exp_fim_sum + prior_fim, atol=1e-6))
+        self.assertTrue(np.allclose(total_fim, exp_fim_sum + stored_prior, atol=1e-6))
+
+    def test_optimize_experiments_safe_metric_failure_sets_nan(self):
+        # Tests that metric-computation failures are captured as NaN.
+        # For this template setup, the A-opt metric naturally becomes non-finite
+        # and the API should surface it as NaN.
+        doe = self._make_template_doe("pseudo_trace")
+        doe.optimize_experiments(n_exp=1)
+
+        scenario = _optimize_experiments_param_scenario(doe.results)
+        self.assertTrue(np.isnan(scenario["quality_metrics"]["log10_a_opt"]))
+
+    def test_optimize_experiments_non_cholesky_determinant_initialization(self):
+        # Tests determinant initialization correctness when Cholesky formulation is disabled.
+        exp = RooneyBieglerMultiExperiment(hour=2.0, y=10.0)
+        solver = make_ipopt_solver()
+        doe = DesignOfExperiments(
+            experiment=[exp],
+            objective_option="determinant",
+            step=1e-2,
+            solver=solver,
+            _Cholesky_option=False,
+            _only_compute_fim_lower=False,
+        )
+        # Keep the square initialization solve real and stub the final solve.
+        # Without this, this case can terminate at max iterations and the
+        # determinant assertion becomes solver-fragile/non-deterministic.
+        doe.solver = self._make_square_solve_then_stub_solver(doe.solver)
+        doe.optimize_experiments(n_exp=1)
+
+        scenario_block = doe.model.param_scenario_blocks[0]
+        self.assertTrue(hasattr(scenario_block.obj_cons, "determinant"))
+        total_fim = np.array(
+            _optimize_experiments_param_scenario(doe.results)["total_fim"]
+        )
+        expected_det = np.linalg.det(total_fim)
+        self.assertAlmostEqual(
+            pyo.value(scenario_block.obj_cons.determinant), expected_det, places=6
         )
 
 
