@@ -11,7 +11,6 @@ from typing import Tuple
 
 import pyomo.environ as pyo
 import pyomo.devel.initialization as ini
-from pyomo.devel.initialization.lp_approx_init import numpy_available, scipy_available
 from pyomo.devel.initialization.examples.init_polynomial_ex import (
     lp_init_ex,
     pwl_init_ex,
@@ -19,7 +18,7 @@ from pyomo.devel.initialization.examples.init_polynomial_ex import (
     multistart_init_ex,
 )
 from pyomo.common import unittest
-from pyomo.common.dependencies import scipy_available
+from pyomo.common.dependencies import numpy_available, scipy_available
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import (
     SolutionStatus,
