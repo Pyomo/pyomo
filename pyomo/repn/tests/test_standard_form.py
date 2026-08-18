@@ -351,6 +351,116 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         self.assertTrue(np.all(repn.c == ref))
         self._verify_solution(soln, repn, True)
 
+    def test_keep_range_constraints(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var([0, 1, 3], bounds=lambda m, i: (0, 10))
+        # Pure lower-bound constraint
+        m.c = pyo.Constraint(expr=m.x + 2 * m.y[1] >= 3)
+        # Pure upper-bound constraint
+        m.d = pyo.Constraint(expr=m.y[1] + 4 * m.y[3] <= 5)
+        # Range constraint: -2 <= y[0] + 1 + 6*y[1] <= 7  →  -3 <= y[0] + 6*y[1] <= 6
+        m.e = pyo.Constraint(expr=pyo.inequality(-2, m.y[0] + 1 + 6 * m.y[1], 7))
+        # Equality
+        m.f = pyo.Constraint(expr=m.x + m.y[0] == 8)
+        m.o = pyo.Objective(expr=5 * m.x)
+
+        col_order = [m.x, m.y[0], m.y[1], m.y[3]]
+
+        # --- mixed_form + keep_range_constraints ---
+        repn = LinearStandardFormCompiler().write(
+            m, mixed_form=True, keep_range_constraints=True, column_order=col_order
+        )
+        # m.e: single range row (bound_type=2); all others are normal mixed rows
+        self.assertEqual(repn.rows, [(m.c, -1), (m.d, 1), (m.e, 2), (m.f, 0)])
+        ref_A = np.array([[1, 0, 2, 0], [0, 0, 1, 4], [0, 1, 6, 0], [1, 1, 0, 0]])
+        self.assertTrue(np.all(repn.A.toarray() == ref_A))
+        # m.e: rhs = ub - offset = 7 - 1 = 6
+        self.assertTrue(np.all(repn.rhs == np.array([3, 5, 6, 8])))
+        # rhs_range: only m.e is a range row; range = 7 - (-2) = 9
+        self.assertTrue(np.all(repn.rhs_range == np.array([0.0, 0.0, 9.0, 0.0])))
+
+        # --- default form + keep_range_constraints ---
+        repn2 = LinearStandardFormCompiler().write(
+            m, keep_range_constraints=True, column_order=col_order
+        )
+        # lb-only (m.c) → negated ≤ row; ub-only (m.d) → ≤ row;
+        # range (m.e) → single row; equality (m.f) → two rows (ub + negated lb)
+        self.assertEqual(
+            repn2.rows, [(m.c, -1), (m.d, 1), (m.e, 2), (m.f, 1), (m.f, -1)]
+        )
+        self.assertTrue(np.all(repn2.rhs_range == np.array([0.0, 0.0, 9.0, 0.0, 0.0])))
+
+        # --- without keep_range_constraints m.e still splits into two rows ---
+        repn3 = LinearStandardFormCompiler().write(
+            m, mixed_form=True, column_order=col_order
+        )
+        e_rows = [
+            (r.constraint, r.bound_type) for r in repn3.rows if r.constraint is m.e
+        ]
+        self.assertEqual(e_rows, [(m.e, 1), (m.e, -1)])
+        # rhs_range is None when keep_range_constraints=False
+        self.assertIsNone(repn3.rhs_range)
+
+        # --- slack_form + keep_range_constraints must raise ---
+        with self.assertRaises(ValueError):
+            LinearStandardFormCompiler().write(
+                m, slack_form=True, keep_range_constraints=True
+            )
+
+    def test_inf_bounds_normalized(self):
+        """Constraints returning +/-inf bounds are treated as unbounded (None).
+
+        Both pyomo.kernel and AML constraints can return ±inf from
+        to_bounded_expression() when the user explicitly passes float('inf').
+        LinearStandardFormCompiler must normalize these so that a one-sided
+        constraint is not misclassified as a range constraint, and a fully
+        unbounded constraint is skipped rather than emitted as a range row.
+        """
+        # --- AML: explicit float('inf') in RangedExpression ---
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        # One-sided: (-inf, x, 5) — lb should be treated as unbounded
+        m.c_ub = pyo.Constraint(rule=lambda m: (float('-inf'), m.x, 5))
+        # Fully unbounded: (-inf, x, inf) — should be skipped entirely
+        m.c_skip = pyo.Constraint(rule=lambda m: (float('-inf'), m.x, float('inf')))
+
+        repn2 = LinearStandardFormCompiler().write(
+            m, mixed_form=True, keep_range_constraints=True
+        )
+        by_con2 = {r.constraint: r.bound_type for r in repn2.rows}
+        self.assertEqual(by_con2[m.c_ub], 1)  # ≤, not range
+        self.assertNotIn(m.c_skip, by_con2)  # fully unbounded: skipped
+
+    def test_kernel_compatibility(self):
+        import pyomo.kernel as pmo
+
+        # --- kernel ---
+        mk = pmo.block()
+        mk.x = pmo.variable()
+        # lb=-inf (unbounded below) → should become a pure ≤ row, not a range row
+        mk.c_ub = pmo.constraint(ub=2.0, body=mk.x)
+        # ub=+inf (unbounded above) → should become a pure ≥ row, not a range row
+        mk.c_lb = pmo.constraint(lb=-3.0, body=mk.x)
+        # Explicit finite range → should still be a range row
+        mk.c_rng = pmo.constraint((-1.0, mk.x, 4.0))
+
+        repn = LinearStandardFormCompiler().write(
+            mk, mixed_form=True, keep_range_constraints=True
+        )
+        by_con = {r.constraint: r.bound_type for r in repn.rows}
+        self.assertEqual(by_con[mk.c_ub], 1)  # ≤, not range
+        self.assertEqual(by_con[mk.c_lb], -1)  # ≥, not range
+        self.assertEqual(by_con[mk.c_rng], 2)  # finite range
+        rhs_map = {r.constraint: repn.rhs[i] for i, r in enumerate(repn.rows)}
+        self.assertEqual(rhs_map[mk.c_ub], 2.0)
+        self.assertEqual(rhs_map[mk.c_lb], -3.0)
+        self.assertEqual(rhs_map[mk.c_rng], 4.0)  # ub of range row
+        rr_map = {r.constraint: repn.rhs_range[i] for i, r in enumerate(repn.rows)}
+        self.assertEqual(rr_map[mk.c_ub], 0.0)
+        self.assertEqual(rr_map[mk.c_lb], 0.0)
+        self.assertEqual(rr_map[mk.c_rng], 5.0)  # 4 - (-1)
+
 
 class TestTemplatedLinearStandardFormCompiler(TestLinearStandardFormCompiler):
     def setUp(self):
