@@ -14,6 +14,9 @@ import pyomo.common.unittest as unittest
 from pyomo.environ import SolverFactory, value, maximize
 from pyomo.opt import TerminationCondition
 from pyomo.common.dependencies import numpy_available, scipy_available
+
+if not (numpy_available and scipy_available):
+    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP as SimpleMINLP
 
 model_list = [SimpleMINLP(grey_box=True)]

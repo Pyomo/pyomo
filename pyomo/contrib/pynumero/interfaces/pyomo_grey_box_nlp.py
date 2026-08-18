@@ -6,19 +6,19 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
+#
+#  Additional contributions Copyright (c) 2026 OLI Systems, Inc.
+#  ___________________________________________________________________________________
 """
 This module defines the classes that provide an NLP interface based on
 the Ampl Solver Library (ASL) implementation
 """
 
-import os
 import numpy as np
 import logging
 
 from scipy.sparse import coo_matrix, identity
-from pyomo.common.deprecation import deprecated
 import pyomo.core.base as pyo
-from pyomo.common.collections import ComponentMap
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.pynumero.sparse.block_matrix import BlockMatrix
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
@@ -31,6 +31,9 @@ from pyomo.contrib.pynumero.interfaces.utils import (
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
 from pyomo.contrib.pynumero.interfaces.nlp_projections import ProjectedNLP
 from pyomo.core.base.suffix import SuffixFinder
+from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
+    ExternalGreyBoxConstraint,
+)
 
 
 # Todo: make some of the numpy arrays not writable from __init__
@@ -77,18 +80,34 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
                 if number_of_objectives == 0:
                     pyomo_model.del_component(objective)
 
+            # With Vars we need to account for Vars that are not part of the Block
+            # but appear within Constraints
+            # First, get all the Vars from the model
             self._pyomo_model_var_names_to_datas = {
                 v.getname(fully_qualified=True): v
                 for v in pyomo_model.component_data_objects(
                     ctype=pyo.Var, descend_into=True
                 )
             }
+            # Next, check the PyomoNLP for any Vars that are missing
+            # This can occur if a constraint in the model references a Var that is not part of the model
+            for v in self._pyomo_nlp.get_pyomo_variables():
+                self._pyomo_model_var_names_to_datas[
+                    v.getname(fully_qualified=True)
+                ] = v
+
             self._pyomo_model_constraint_names_to_datas = {
                 c.getname(fully_qualified=True): c
                 for c in pyomo_model.component_data_objects(
-                    ctype=pyo.Constraint, descend_into=True
+                    ctype=pyo.Constraint, descend_into=True, active=True
                 )
             }
+            # Check for ExternalGreyBoxConstraint objects and add
+            # them too
+            for c in pyomo_model.component_data_objects(
+                ExternalGreyBoxConstraint, active=True, descend_into=True
+            ):
+                self._pyomo_model_constraint_names_to_datas[c.name] = c
 
         finally:
             # Restore the ctypes of the ExternalGreyBoxBlock components
@@ -506,6 +525,36 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
     def has_hessian_support(self):
         return self._has_hessian_support
 
+    # Compatibility API for PyomoNLP - this is only a partial implementation
+    def get_pyomo_variables(self):
+        return self._pyomo_model_var_datas
+
+    def get_pyomo_constraints(self):
+        return list(self._pyomo_model_constraint_names_to_datas.values())
+
+    def get_pyomo_equality_constraints(self):
+        return [c for c in self.get_pyomo_constraints() if c.equality]
+
+    def get_pyomo_inequality_constraints(self):
+        return [c for c in self.get_pyomo_constraints() if not c.equality]
+
+    def get_primal_indices(self, var):
+        # get the name of the variable
+        var_name = var.getname(fully_qualified=True)
+        # get the index of the variable in the primals
+        try:
+            return self._primals_names.index(var_name)
+        except ValueError:
+            raise ValueError(f'Variable {var_name} not found in primals.')
+
+    def get_constraint_indices(self, constraint):
+        constraint_name = constraint.getname(fully_qualified=True)
+        # get the index of the constraint in the constraints
+        try:
+            return self._constraint_names.index(constraint_name)
+        except ValueError:
+            raise ValueError(f'Constraint {constraint_name} not found in constraints.')
+
 
 def _default_if_none(value, default):
     if value is None:
@@ -528,7 +577,6 @@ class _ExternalGreyBoxAsNLP(NLP):
         self._obj_factor = 1.0
         n_inputs = len(self._block.inputs)
         assert n_inputs == self._ex_model.n_inputs()
-        n_eq_constraints = self._ex_model.n_equality_constraints()
         n_outputs = len(self._block.outputs)
         assert n_outputs == self._ex_model.n_outputs()
 
@@ -542,6 +590,7 @@ class _ExternalGreyBoxAsNLP(NLP):
             self._block.outputs[k].getname(fully_qualified=True)
             for k in self._block.outputs
         )
+
         n_primals = len(self._primals_names)
 
         prefix = self._block.getname(fully_qualified=True)

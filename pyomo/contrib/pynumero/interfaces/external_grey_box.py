@@ -6,24 +6,25 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
+#
+#  Additional contributions Copyright (c) 2026 OLI Systems, Inc.
+#  ___________________________________________________________________________________
 
-import abc
 import logging
-import numpy as np
-from scipy.sparse import coo_matrix
-from pyomo.common.dependencies import numpy as np
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base import Var, Set, Constraint, value
-from pyomo.core.base.block import BlockData, Block, declare_custom_block
+from pyomo.core.base import Var, Set
+from pyomo.core.base.block import BlockData, Block
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.set import UnindexedComponent_set
 from pyomo.core.base.reference import Reference
 
-from ..sparse.block_matrix import BlockMatrix
+from pyomo.contrib.pynumero.interfaces.external_grey_box_constraint import (
+    ExternalGreyBoxConstraint,
+)
 
 logger = logging.getLogger('pyomo.contrib.pynumero')
 
@@ -407,8 +408,25 @@ class ExternalGreyBoxBlockData(BlockData):
         # call the callback so the model can set initialization, bounds, etc.
         external_grey_box_model.finalize_block_construction(self)
 
+        # Construct the ExternalGreyBoxConstraint objects
+        self._construct_implicit_constraints()
+
     def get_external_model(self):
         return self._ex_model
+
+    def _construct_implicit_constraints(self):
+        """
+        Construct the implicit constraints for this block. This should be
+        called by the solver interface before solving to ensure that the
+        implicit constraints are constructed and available on the block.
+        """
+        # Let the EGBConstraints infer names from the indexing sets
+        self._equality_constraint_set = Set(
+            initialize=self._equality_constraint_names, ordered=True
+        )
+
+        self.eq_constraints = ExternalGreyBoxConstraint(self._equality_constraint_set)
+        self.output_constraints = ExternalGreyBoxConstraint(self._output_names_set)
 
 
 class ExternalGreyBoxBlock(Block):
