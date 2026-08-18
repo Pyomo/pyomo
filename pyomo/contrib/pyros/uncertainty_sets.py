@@ -41,6 +41,7 @@ from pyomo.core.base import (
 )
 from pyomo.core.expr import mutable_expression, native_numeric_types, value
 from pyomo.core.util import quicksum, dot_product
+from pyomo.opt import TerminationCondition
 from pyomo.opt.results import check_optimal_termination
 from pyomo.contrib.pyros.util import (
     copy_docstring,
@@ -473,7 +474,7 @@ class Geometry(Enum):
     DISCRETE_SCENARIOS = 4
 
 
-class UncertaintySet(object, metaclass=abc.ABCMeta):
+class UncertaintySet(metaclass=abc.ABCMeta):
     """
     An object representing an uncertainty set to be passed to the
     PyROS solver.
@@ -499,32 +500,26 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         int : Dimension of the uncertainty set (number of uncertain
         parameters in a corresponding optimization model of interest).
         """
-        raise NotImplementedError
+        ...
 
     @property
     @abc.abstractmethod
     def geometry(self):
-        """
-        Geometry : Geometry of the uncertainty set.
-        """
-        raise NotImplementedError
+        """Geometry : Geometry of the uncertainty set."""
+        ...
 
     @property
     @abc.abstractmethod
     def parameter_bounds(self):
         """
-        Bounds for the value of each uncertain parameter constrained
-        by the set (i.e. bounds for each set dimension).
-
-        Returns
-        -------
-        list[tuple[numbers.Real, numbers.Real]]
-            If the bounds can be calculated efficiently, then this list
-            should be of length ``self.dim`` and contain the
-            (lower, upper) bound pairs.
-            Otherwise, the list should be empty.
+        list[tuple[numbers.Real, numbers.Real]] : Valid lower and upper
+        bounds for the coordinate values of points comprising the
+        set. If the bounds can be calculated efficiently,
+        then this list should be of length ``self.dim``
+        and contain the (lower, upper) bound pairs.
+        Otherwise, the list should be empty.
         """
-        raise NotImplementedError
+        ...
 
     @property
     def _cache(self):
@@ -583,7 +578,8 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
     def is_bounded(self, config):
         """
-        Determine whether the uncertainty set is bounded.
+        Return True if the uncertainty set is certified to be bounded,
+        False otherwise.
 
         Parameters
         ----------
@@ -592,9 +588,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Returns
         -------
-        : bool
-            True if the uncertainty set is certified to be bounded,
-            and False otherwise.
+        bool
 
         Notes
         -----
@@ -649,7 +643,8 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
     def is_nonempty(self, config):
         """
-        Determine whether the uncertainty set is nonempty.
+        Return True if the uncertainty set is known to be nonempty,
+        False if the uncertainty set is known to be empty.
 
         Parameters
         ----------
@@ -658,31 +653,34 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Returns
         -------
-        : bool
-            True if the uncertainty set is nonempty,
-            and False otherwise.
+        bool
+
+        Raises
+        ------
+        ValueError
+            If neither nonemptiness nor emptiness of the uncertainty
+            set can be certified.
         """
-        # check if nominal point is in set for quick test
-        if config.nominal_uncertain_param_vals:
-            set_nonempty = self.point_in_set(config.nominal_uncertain_param_vals)
+        if config.nominal_uncertain_param_vals and self.point_in_set(
+            config.nominal_uncertain_param_vals
+        ):
+            return True
+
+        res = self._solve_feasibility(config.global_solver)
+        if check_optimal_termination(res):
+            return True
+        elif res.solver.termination_condition == TerminationCondition.infeasible:
+            return False
         else:
-            # construct feasibility problem and solve otherwise
-            self._solve_feasibility(config.global_solver)
-            set_nonempty = True
-
-        # log result
-        if not set_nonempty:
-            config.progress_logger.error(
-                "Nominal point is not within the uncertainty set. "
-                f"Got nominal point: {config.nominal_uncertain_param_vals}"
+            raise ValueError(
+                "Could not successfully confirm whether feasibility problem "
+                f"for {type(self).__name__} instance was feasible or infeasible. "
+                f"Solver status summary:\n {res.solver}."
             )
-
-        return set_nonempty
 
     def validate(self, config):
         """
-        Validate the uncertainty set with a nonemptiness
-        and boundedness check.
+        Validate the uncertainty set with a boundedness check.
 
         Parameters
         ----------
@@ -692,12 +690,8 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         Raises
         ------
         ValueError
-            If nonemptiness check or boundedness check fails.
+            If boundedness check fails.
         """
-        # perform validation checks
-        if not self.is_nonempty(config=config):
-            raise ValueError(f"Nonemptiness check failed for uncertainty set {self}.")
-
         if not self.is_bounded(config=config):
             raise ValueError(f"Boundedness check failed for uncertainty set {self}.")
 
@@ -725,7 +719,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         UncertaintyQuantification
             A collection of the components added or addressed.
         """
-        pass
+        ...
 
     def point_in_set(self, point):
         """
@@ -955,29 +949,26 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
     def _solve_feasibility(self, solver):
         """
-        Construct and solve feasibility problem using uncertainty set
-        constraints and parameter bounds using `set_as_constraint` and
-        `_add_bounds_on_uncertain_parameters` of self.
+        Construct and solve feasibility problem with constraints
+        defined by ``self.set_as_constraint(self, ...)``.
 
         Parameters
         ----------
         solver : Pyomo solver
-            Optimizer capable of solving bounding problems to
-            global optimality.
+            Optimizer that can obtain a feasible solution to the
+            bounding problem or certify that the problem is
+            globally infeasible.
 
-        Raises
-        ------
-        ValueError
-            If feasibility problem fails to solve.
+        Returns
+        -------
+        pyomo.opt.SolverResults
+            Solver results for the feasibility problem.
         """
         model = ConcreteModel()
         model.u = Var(within=NonNegativeReals)
 
         # construct param vars
         model.param_vars = Var(range(self.dim))
-
-        # add bounds on param vars
-        self._add_bounds_on_uncertain_parameters(model.param_vars, global_solver=solver)
 
         # add constraints
         self.set_as_constraint(uncertain_params=model.param_vars, block=model)
@@ -988,12 +979,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             return model.u
 
         # solve feasibility problem
-        res = solver.solve(model, load_solutions=False)
-        if not check_optimal_termination(res):
-            raise ValueError(
-                "Could not successfully solve feasibility problem. "
-                f"Solver status summary:\n {res.solver}."
-            )
+        return solver.solve(model, load_solutions=False)
 
     def _add_bounds_on_uncertain_parameters(
         self, uncertain_param_vars, global_solver=None
@@ -2113,7 +2099,7 @@ class PolyhedralSet(UncertaintySet):
             If any uncertainty set attributes are not valid.
             (e.g., numeric values are infinite,
             or ``self.coefficients_mat`` has column of zeros).
-            If bounded and nonempty checks fail.
+            If boundedness check fails.
         """
         lhs_coeffs_arr = self.coefficients_mat
         rhs_vec_arr = self.rhs_vec
@@ -2147,7 +2133,7 @@ class PolyhedralSet(UncertaintySet):
                 "Ensure column has at least one nonzero entry"
             )
 
-        # check boundedness and nonemptiness
+        # boundedness check
         super().validate(config)
 
 
@@ -2717,6 +2703,13 @@ class FactorModelSet(UncertaintySet):
 
     @beta.setter
     def beta(self, val):
+        validate_arg_type(
+            arg_name="beta",
+            arg_val=val,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+            is_entry_of_arg=False,
+        )
         self._beta = val
 
     @property
@@ -3711,16 +3704,16 @@ class DiscreteScenarioSet(UncertaintySet):
         ]
         return parameter_bounds
 
-    def is_bounded(self, config):
+    def is_nonempty(self, config):
         """
-        Return True if the uncertainty set is bounded, and False
+        Return True if the uncertainty set is nonempty, and False
         otherwise.
 
-        By default, the discrete scenario set is bounded,
-        as the entries of all uncertain parameter scenarios
-        are finite.
+        Returns
+        -------
+        bool
         """
-        return True
+        return len(self.scenarios) > 0
 
     @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, uncertain_params=None, block=None):
@@ -4064,6 +4057,10 @@ class IntersectionSet(UncertaintySet):
     def validate(self, config):
         """
         Check IntersectionSet validity.
+
+        This check is performed by validating each operand
+        set of the intersection and then validating the
+        intersection as a whole.
 
         Raises
         ------
