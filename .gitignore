@@ -8,6 +8,7 @@
 .spyder*
 .ropeproject
 .vscode
+.pixi/
 
 # Python generates numerous files when byte compiling / installing packages
 __pycache__/
@@ -34,6 +35,3 @@ cplex.log
 
 # Mac tracking files
 *.DS_Store*
-
-# Pixi local environments
-.pixi/
