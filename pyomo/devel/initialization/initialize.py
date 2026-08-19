@@ -380,6 +380,8 @@ def initialize_with_multistart_opt(
             multistart_solver=multistart_solver,
             seed=seed,
             default_bound=default_bound,
+            use_univariate_nonlinear_decomposition=use_univariate_nonlinear_decomposition,
+            aggressive_substitution=aggressive_substitution,
         )
     finally:
         _cleanup(orig_var_data)

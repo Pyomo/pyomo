@@ -232,8 +232,10 @@ class MultiStart(SolverBase):
     def __init__(self, **kwds: Any) -> None:
         super().__init__(**kwds)
 
-        #: Instance configuration;
-        self.config = self.config
+        # Reset defaults for solver settings
+        self.subsolver = None
+        self.remaining_time_limit = None
+        self._timing_lim = False
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -282,13 +284,12 @@ class MultiStart(SolverBase):
         # Define solver using either string input or provided solver object
         if isinstance(config.subsolver, str):
             self.subsolver = SolverFactory(config.subsolver)
-
         else:
             self.subsolver = config.subsolver
 
         if not self.subsolver.available():
             raise RuntimeError(
-                f"Selected subsolver '{config.subsolver}' is not available."
+                f"Selected subsolver '{self.subsolver.name}' is not available."
             )
 
         subsolver_args = dict(config.subsolver_args)
@@ -515,6 +516,9 @@ class MultiStart(SolverBase):
         return results
 
     def _update_solver_timelimit(self, iteration, timer, subsolver_args):
+        if self.remaining_time_limit is None:
+            return
+
         # Get elapsed time from last timer
         last_timer = timer._get_timer(f"timer_iter_{iteration}")
         elapsed_time = last_timer.total_time
