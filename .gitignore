@@ -34,3 +34,6 @@ cplex.log
 
 # Mac tracking files
 *.DS_Store*
+
+# Pixi local environments
+.pixi/
