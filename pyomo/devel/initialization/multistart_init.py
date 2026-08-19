@@ -22,8 +22,23 @@ logger = logging.getLogger(__name__)
 
 
 def _initialize_with_multistart_solver(
-    nlp: BlockData, multistart_solver, seed, default_bound=1.0e8
+    nlp: BlockData,
+    multistart_solver,
+    seed,
+    default_bound=1.0e8,
+    use_univariate_nonlinear_decomposition: bool = True,
+    aggressive_substitution: bool = True,
 ):
+
+    # first introduce auxiliary variables so that we don't try to
+    # approximate any functions of more than two variables
+    # this does not matter as much as it does for PWL
+    if use_univariate_nonlinear_decomposition:
+        trans = pyo.TransformationFactory(
+            'contrib.piecewise.univariate_nonlinear_decomposition'
+        )
+        trans.apply_to(nlp, aggressive_substitution=aggressive_substitution)
+        logger.info('applied the univariate_nonlinear_decomposition transformation')
 
     # Make a shallow clone
     nlp = shallow_clone(nlp)
