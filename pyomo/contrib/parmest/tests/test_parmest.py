@@ -146,10 +146,7 @@ class TestParmestCovEst(unittest.TestCase):
         ][0]
 
         if measurement_error is None and obj_function == "SSE":
-            if (
-                cov_method == "finite_difference"
-                or cov_method == "automatic_differentiation_kaug"
-            ):
+            if cov_method in ("finite_difference", "automatic_differentiation_kaug"):
                 self.assertAlmostEqual(
                     cov.iloc[asymptote_index, asymptote_index], 6.229612, places=2
                 )  # 6.22864 from paper
@@ -180,10 +177,7 @@ class TestParmestCovEst(unittest.TestCase):
                     places=2,
                 )  # 0.04124 from paper
         elif measurement_error is not None and obj_function in ("SSE", "SSE_weighted"):
-            if (
-                cov_method == "finite_difference"
-                or cov_method == "automatic_differentiation_kaug"
-            ):
+            if cov_method in ("finite_difference", "automatic_differentiation_kaug"):
                 self.assertAlmostEqual(
                     cov.iloc[asymptote_index, asymptote_index], 0.009588, places=4
                 )
@@ -845,9 +839,9 @@ class TestModelVariants(unittest.TestCase):
                 m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.measurement_error.update([(m.y, None)])
 
-        rooney_biegler_indexed_vars_exp_list = []
+        self.rooney_biegler_indexed_vars_exp_list = []
         for i in range(self.data.shape[0]):
-            rooney_biegler_indexed_vars_exp_list.append(
+            self.rooney_biegler_indexed_vars_exp_list.append(
                 RooneyBieglerExperimentIndexedVars(self.data.loc[i, :])
             )
 
@@ -875,24 +869,24 @@ class TestModelVariants(unittest.TestCase):
                 "theta_vals": theta_vals,
             },
             "vars_index": {
-                "exp_list": rooney_biegler_indexed_vars_exp_list,
+                "exp_list": self.rooney_biegler_indexed_vars_exp_list,
                 "theta_names": ["theta"],
                 "theta_vals": theta_vals_index,
             },
             "vars_quoted_index": {
-                "exp_list": rooney_biegler_indexed_vars_exp_list,
+                "exp_list": self.rooney_biegler_indexed_vars_exp_list,
                 "theta_names": ["theta['asymptote']", "theta['rate_constant']"],
                 "theta_vals": theta_vals_index,
             },
             "vars_str_index": {
-                "exp_list": rooney_biegler_indexed_vars_exp_list,
+                "exp_list": self.rooney_biegler_indexed_vars_exp_list,
                 "theta_names": ["theta[asymptote]", "theta[rate_constant]"],
                 "theta_vals": theta_vals_index,
             },
         }
 
     @unittest.skipIf(not pynumero_ASL_available, "pynumero_ASL is not available")
-    def check_rooney_biegler_results(self, objval, cov):
+    def check_rooney_biegler_results(self, objval, cov, cov_method="reduced_hessian"):
 
         # get indices in covariance matrix
         cov_cols = cov.columns.to_list()
@@ -902,18 +896,33 @@ class TestModelVariants(unittest.TestCase):
         ][0]
 
         self.assertAlmostEqual(objval, 4.3317112, places=2)
-        self.assertAlmostEqual(
-            cov.iloc[asymptote_index, asymptote_index], 6.155892, places=2
-        )  # 6.22864 from paper
-        self.assertAlmostEqual(
-            cov.iloc[asymptote_index, rate_constant_index], -0.425232, places=2
-        )  # -0.4322 from paper
-        self.assertAlmostEqual(
-            cov.iloc[rate_constant_index, asymptote_index], -0.425232, places=2
-        )  # -0.4322 from paper
-        self.assertAlmostEqual(
-            cov.iloc[rate_constant_index, rate_constant_index], 0.040571, places=2
-        )  # 0.04124 from paper
+
+        if cov_method in ("finite_difference", "automatic_differentiation_kaug"):
+            self.assertAlmostEqual(
+                cov.iloc[asymptote_index, asymptote_index], 6.229612, places=2
+            )  # 6.22864 from paper
+            self.assertAlmostEqual(
+                cov.iloc[asymptote_index, rate_constant_index], -0.432265, places=2
+            )  # -0.4322 from paper
+            self.assertAlmostEqual(
+                cov.iloc[rate_constant_index, asymptote_index], -0.432265, places=2
+            )  # -0.4322 from paper
+            self.assertAlmostEqual(
+                cov.iloc[rate_constant_index, rate_constant_index], 0.041242, places=2
+            )  # 0.04124 from paper
+        else:
+            self.assertAlmostEqual(
+                cov.iloc[asymptote_index, asymptote_index], 6.155892, places=2
+            )  # 6.22864 from paper
+            self.assertAlmostEqual(
+                cov.iloc[asymptote_index, rate_constant_index], -0.425232, places=2
+            )  # -0.4322 from paper
+            self.assertAlmostEqual(
+                cov.iloc[rate_constant_index, asymptote_index], -0.425232, places=2
+            )  # -0.4322 from paper
+            self.assertAlmostEqual(
+                cov.iloc[rate_constant_index, rate_constant_index], 0.040571, places=2
+            )  # 0.04124 from paper
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics(self):
@@ -985,6 +994,32 @@ class TestModelVariants(unittest.TestCase):
             cov = pest.cov_est(method="reduced_hessian")
             self.check_rooney_biegler_results(objval, cov)
 
+    @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
+    def test_parmest_indexed_vars_finite_difference_cov(self):
+
+        pest = parmest.Estimator(
+            self.rooney_biegler_indexed_vars_exp_list,
+            obj_function=self.objective_function,
+        )
+
+        objval, thetavals = pest.theta_est()
+        cov_method = "finite_difference"
+        cov = pest.cov_est(method=cov_method)
+        self.check_rooney_biegler_results(objval, cov, cov_method)
+
+    @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
+    def test_parmest_indexed_vars_auto_differentiation_cov(self):
+
+        pest = parmest.Estimator(
+            self.rooney_biegler_indexed_vars_exp_list,
+            obj_function=self.objective_function,
+        )
+
+        objval, thetavals = pest.theta_est()
+        cov_method = "automatic_differentiation_kaug"
+        cov = pest.cov_est(method=cov_method)
+        self.check_rooney_biegler_results(objval, cov, cov_method)
+
 
 @unittest.skipIf(
     not parmest.parmest_available,
@@ -1034,6 +1069,54 @@ class TestReactorDesign(unittest.TestCase):
             exp_list, obj_function="SSE", solver_options=solver_options
         )
 
+        # create an inherited class to test the results when a
+        # full measurement-error covariance matrix is used
+        class ReactorFullErrorCov(ReactorDesignExperiment):
+            def label_model(self):
+                m = self.model
+
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update(
+                    [
+                        (m.ca, self.data_i['ca']),
+                        (m.cb, self.data_i['cb']),
+                        (m.cc, self.data_i['cc']),
+                        (m.cd, self.data_i['cd']),
+                    ]
+                )
+
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    (k, pyo.ComponentUID(k)) for k in [m.k1, m.k2, m.k3]
+                )
+
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update(
+                    [(m.ca, 1), (m.cb, 0.1), (m.cc, 0.1), (m.cd, 0.1)]
+                )
+                m.measurement_error.update(
+                    [
+                        ((m.ca, m.cb), 0),
+                        ((m.ca, m.cc), 0),
+                        ((m.ca, m.cd), 0),
+                        ((m.cb, m.cc), 0),
+                        ((m.cb, m.cd), 0),
+                        ((m.cc, m.cd), 0),
+                    ]
+                )
+
+                return m
+
+        exp_list_full_error = []
+        for i in range(data.shape[0]):
+            exp_list_full_error.append(ReactorFullErrorCov(data, i))
+
+        self.pest_full_error = parmest.Estimator(
+            exp_list_full_error,
+            obj_function="SSE_weighted",
+            solver_options=solver_options,
+        )
+
     def test_theta_est(self):
         # used in data reconciliation
         objval, thetavals = self.pest.theta_est()
@@ -1041,6 +1124,12 @@ class TestReactorDesign(unittest.TestCase):
         self.assertAlmostEqual(thetavals["k1"], 5.0 / 6.0, places=4)
         self.assertAlmostEqual(thetavals["k2"], 5.0 / 3.0, places=4)
         self.assertAlmostEqual(thetavals["k3"], 1.0 / 6000.0, places=7)
+
+        objval2, thetavals2 = self.pest_full_error.theta_est()
+
+        self.assertAlmostEqual(thetavals2["k1"], 5.0 / 6.0, places=4)
+        self.assertAlmostEqual(thetavals2["k2"], 5.0 / 3.0, places=4)
+        self.assertAlmostEqual(thetavals2["k3"], 1.0 / 6000.0, places=7)
 
     def test_return_values(self):
         objval, thetavals, data_rec = self.pest.theta_est(
@@ -1251,7 +1340,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
 
         # create an instance of the ReactorDesignExperimentDAE class
         # without the "unknown_parameters" attribute
-        class ReactorDesignExperimentException(ReactorDesignExperimentDAE):
+        class ReactorDesignParameterException(ReactorDesignExperimentDAE):
             def label_model(self):
 
                 m = self.model
@@ -1273,11 +1362,118 @@ class TestReactorDesign_DAE(unittest.TestCase):
                 )
 
         # create an experiment list without the "unknown_parameters" attribute
-        exp_list_df_no_params = [ReactorDesignExperimentException(data_df)]
-        exp_list_dict_no_params = [ReactorDesignExperimentException(data_dict)]
+        self.exp_list_df_no_params = [ReactorDesignParameterException(data_df)]
+        self.exp_list_dict_no_params = [ReactorDesignParameterException(data_dict)]
 
-        self.exp_list_df_no_params = exp_list_df_no_params
-        self.exp_list_dict_no_params = exp_list_dict_no_params
+        # create instances of the ReactorDesignExperimentDAE class
+        # with incorrect definition of the measurement-error covariance
+        class ReactorErrorCovarianceException1(ReactorDesignExperimentDAE):
+            def label_model(self):
+
+                m = self.model
+
+                if isinstance(self.data, pd.DataFrame):
+                    meas_time_points = self.data.index
+                else:
+                    meas_time_points = list(self.data["ca"].keys())
+
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update(
+                    (m.ca[t], self.data["ca"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cb[t], self.data["cb"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cc[t], self.data["cc"][t]) for t in meas_time_points
+                )
+
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    (k, pyo.ComponentUID(k)) for k in [m.k1, m.k2]
+                )
+
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update((m.ca[t], 0.01) for t in meas_time_points)
+                m.measurement_error.update((m.cb[t], 0.01) for t in meas_time_points)
+                m.measurement_error.update((m.cc[t], 0.01) for t in meas_time_points)
+                m.measurement_error.update(
+                    ([m.ca[t], m.cb[t]], 0.1) for t in meas_time_points
+                )
+
+        class ReactorErrorCovarianceException2(ReactorDesignExperimentDAE):
+            def label_model(self):
+
+                m = self.model
+
+                if isinstance(self.data, pd.DataFrame):
+                    meas_time_points = self.data.index
+                else:
+                    meas_time_points = list(self.data["ca"].keys())
+
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update(
+                    (m.ca[t], self.data["ca"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cb[t], self.data["cb"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cc[t], self.data["cc"][t]) for t in meas_time_points
+                )
+
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    (k, pyo.ComponentUID(k)) for k in [m.k1, m.k2]
+                )
+
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update((m.ca[t], 0.01) for t in meas_time_points)
+                m.measurement_error.update((m.cb[t], 0.01) for t in meas_time_points)
+                m.measurement_error.update((m.cc[t], 0.01) for t in meas_time_points)
+                m.measurement_error.update(
+                    ((m.ca[t], m.k1), 0.1) for t in meas_time_points
+                )
+
+        class ReactorIncompleteErrorException(ReactorDesignExperimentDAE):
+            def label_model(self):
+
+                m = self.model
+
+                if isinstance(self.data, pd.DataFrame):
+                    meas_time_points = self.data.index
+                else:
+                    meas_time_points = list(self.data["ca"].keys())
+
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update(
+                    (m.ca[t], self.data["ca"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cb[t], self.data["cb"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cc[t], self.data["cc"][t]) for t in meas_time_points
+                )
+
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    (k, pyo.ComponentUID(k)) for k in [m.k1, m.k2]
+                )
+
+                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.measurement_error.update((m.ca[t], 0.01) for t in meas_time_points)
+                m.measurement_error.update((m.cb[t], 0.01) for t in meas_time_points)
+
+        # create an experiment list with the incorrect definition of the
+        # measurement-error covariance
+        self.exp_list_df_incorrect_err_cov1 = [
+            ReactorErrorCovarianceException1(data_df)
+        ]
+        self.exp_list_df_incorrect_err_cov2 = [
+            ReactorErrorCovarianceException2(data_df)
+        ]
+        self.exp_list_df_incomplete_err = [ReactorIncompleteErrorException(data_df)]
 
     def test_unknown_parameters_exception(self):
         """
@@ -1293,6 +1489,61 @@ class TestReactorDesign_DAE(unittest.TestCase):
             parmest.Estimator(self.exp_list_dict_no_params, obj_function="SSE")
 
         self.assertIn("unknown_parameters", str(context.exception))
+
+    def test_incorrect_error_covariance_exception(self):
+        """
+        Test the exception raised by parmest when the measurement-error
+        covariance is defined incorrectly
+        """
+        pest1 = parmest.Estimator(
+            self.exp_list_df_incorrect_err_cov1, obj_function="SSE"
+        )
+
+        obj1, theta1 = pest1.theta_est()
+        with pytest.raises(
+            TypeError,
+            match=r"Expected a tuple of two measured variables when specifying a "
+            r"measurement-error covariance, e\.g\., "
+            r"measurement_error\[\(y1, y2\)\] = covariance\.",
+        ):
+            pest1.cov_est()
+
+        pest2 = parmest.Estimator(
+            self.exp_list_df_incorrect_err_cov2, obj_function="SSE"
+        )
+
+        obj2, theta2 = pest2.theta_est()
+        with pytest.raises(
+            ValueError,
+            match=r"Measurement-error covariance must be defined only between "
+            r"experiment output variables\.",
+        ):
+            pest2.cov_est()
+
+        pest3 = parmest.Estimator(self.exp_list_df_incomplete_err, obj_function="SSE")
+
+        obj3, theta3 = pest3.theta_est()
+        with pytest.raises(
+            KeyError,
+            match='One or more experiment outputs are not defined in the '
+            '"measurement_error" attribute. All the variables defined '
+            'in "experiment_outputs" must be defined as keys in '
+            '"measurement_error".',
+        ):
+            pest3.cov_est()
+
+        pest4 = parmest.Estimator(
+            self.exp_list_df_incomplete_err, obj_function="SSE_weighted"
+        )
+
+        with pytest.raises(
+            KeyError,
+            match='One or more experiment outputs are not defined in the '
+            '"measurement_error" attribute. All the variables defined '
+            'in "experiment_outputs" must be defined as keys in '
+            '"measurement_error".',
+        ):
+            obj4, theta4 = pest4.theta_est()
 
     def test_dataformats(self):
         obj1, theta1 = self.pest_df.theta_est()
