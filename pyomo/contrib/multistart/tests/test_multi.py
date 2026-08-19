@@ -200,7 +200,7 @@ class MultistartTests(unittest.TestCase):
         for method, strategy in product(sampling_methods, strategies):
             m = simple_model.clone()
             res = SolverFactory("multistart").solve(
-                m, strategy=strategy, sampling_method=method
+                m, strategy=strategy, sampling_method=method, seed=seed
             )
             self.assertEqual(
                 res.termination_condition,

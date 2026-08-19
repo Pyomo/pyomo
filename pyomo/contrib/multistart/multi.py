@@ -23,6 +23,8 @@ from pyomo.common.config import (
 
 from typing import Any, Optional
 import datetime
+
+import pyomo.environ as pyo
 from pyomo.common.timing import HierarchicalTimer, default_timer
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.dependencies import numpy as np
@@ -41,7 +43,6 @@ from pyomo.contrib.solver.common.results import (
 from pyomo.contrib.solver.common.util import (
     NoOptimalSolutionError,
     NoSolutionError,
-    NoFeasibleSolutionError,
 )
 from pyomo.util.vars_from_expressions import get_vars_from_components
 
@@ -279,13 +280,19 @@ class MultiStart(SolverBase):
             datetime.timezone.utc
         )
 
-        if config.time_limit == 0:
-            results.termination_condition = TerminationCondition.maxTimeLimit
-            results.solution_status = SolutionStatus.noSolution
-            logger.warning(
-                "Time limit set to 0 seconds. Multistart solver did not run."
-            )
-            return results
+        if config.time_limit is not None:
+            if config.time_limit == 0:
+                results.termination_condition = TerminationCondition.maxTimeLimit
+                results.solution_status = SolutionStatus.noSolution
+                logger.warning(
+                    "Time limit set to 0 seconds. Multistart solver did not run."
+                )
+                return results
+            # Set timelimit config and overwrite solution loading and nonoptimal errors
+            if "time_limit" not in config.subsolver_args:
+                config.subsolver_args["time_limit"] = min(self.subsolver.config.time_limit, config.time_limit)
+
+            
 
         # Create centralized sampler once
         sampler = SamplingManager(
@@ -294,12 +301,12 @@ class MultiStart(SolverBase):
 
         # Define solver using either string input or provided solver object
         if type(config.subsolver) == str:
-            solver = SolverFactory(config.subsolver)
+            self.subsolver = SolverFactory(config.subsolver)
 
         else:
-            solver = config.subsolver
+            self.subsolver = config.subsolver
 
-        # Set specific sub-solver options
+        # Set args to avoid loading infeasible solves or erroring on nonoptimal solves
         config.subsolver_args["load_solutions"] = False
         config.subsolver_args["raise_exception_on_nonoptimal_result"] = False
 
@@ -358,7 +365,7 @@ class MultiStart(SolverBase):
         num_iter = 0
         timer.start('initial_solve')
         logger.info(f"Running initial solve. Iteration: {num_iter}\n")
-        best_result = result = solver.solve(model, **config.subsolver_args)
+        best_result = result = self.subsolver.solve(model, **config.subsolver_args)
         logger.info(
             f'solved NLP: {result.solution_status}, {result.termination_condition}'
         )
@@ -375,12 +382,18 @@ class MultiStart(SolverBase):
                 objectives.append(obj_val)
         timer.stop('initial_solve')
 
-        max_iter = config.iterations
+        self._update_solver_timelimit(num_iter, config, timer)
+        if config.time_limit == 0:
+            logger.warning(f"Time limit reached after {num_iter} iterations. Exiting.")
+            max_iter = 0
+        else:
+            max_iter = config.iterations
+
         # if HCS rule is specified, reinitialize completely randomly until
         # rule specifies stopping
         using_HCS = config.iterations == -1
         HCS_completed = False
-        if using_HCS:
+        if using_HCS and num_iter != max_iter:
             assert (
                 config.strategy == "rand"
             ), "High confidence stopping rule requires rand strategy."
@@ -405,7 +418,7 @@ class MultiStart(SolverBase):
             # at first iteration, solve the originally passed model
             m = model
             reinitialize_variables(m, config, sampler)
-            result = solver.solve(m, **config.subsolver_args)
+            result = self.subsolver.solve(m, **config.subsolver_args)
             logger.info(
                 f'solved NLP: {result.solution_status}, {result.termination_condition}'
             )
@@ -434,7 +447,7 @@ class MultiStart(SolverBase):
             self._update_solver_timelimit(num_iter, config, timer)
 
             if config.time_limit == 0:
-                logger.warning(f"Time limit reached after {num_iter} iterations.")
+                logger.warning(f"Time limit reached after {num_iter} iterations. Exiting")
                 break
 
         timer.stop('iterative_solves')
@@ -497,6 +510,7 @@ class MultiStart(SolverBase):
         new_time_limit = config.time_limit - elapsed_time
         # Set new timelimits
         config.time_limit = max(new_time_limit, 0)
+        config.subsolver_args["time_limit"] = max(1e-6, min(config.time_limit, config.subsolver_args["time_limit"]))
 
     def __enter__(self):
         return self
