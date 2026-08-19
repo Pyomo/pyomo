@@ -8,6 +8,7 @@
 .spyder*
 .ropeproject
 .vscode
+.pixi/
 
 # Python generates numerous files when byte compiling / installing packages
 __pycache__/
