@@ -100,7 +100,7 @@ class TestComponentMap(unittest.TestCase):
 
     def test_str(self):
         cmap = ComponentMap()
-        self.assertEqual(str(cmap), "ComponentMap({})")
+        self.assertEqual(str(cmap), "ComponentMap()")
         cmap.update(self._components)
         str(cmap)
 
