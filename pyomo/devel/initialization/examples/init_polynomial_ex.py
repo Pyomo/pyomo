@@ -56,7 +56,7 @@ def global_init_ex():
 def multistart_init_ex():
     m = build_model()
     nlp_solver = SolverFactory('ipopt')
-    multistart_solver = SolverFactory('multistart')
+    multistart_solver = SolverFactory('multistart', subsolver=nlp_solver)
 
     # multistart_solver.config.strategy = "rand"
     # multistart_solver.config.strategy = "rand_vector"
@@ -75,6 +75,6 @@ def multistart_init_ex():
 if __name__ == '__main__':
     # stat, x = lp_init_ex()
     # stat, x = pwl_init_ex()
-    stat, x = global_init_ex()
-    # stat, x = multistart_init_ex()
+    # stat, x = global_init_ex()
+    stat, x = multistart_init_ex()
     print(stat, round(x, 4))

@@ -84,19 +84,13 @@ class MultistartConfig(SolverConfig):
             """,
             ),
         )
-        self.subsolver = self.declare(
-            "subsolver",
-            ConfigValue(
-                default="ipopt",
-                description="solver to use, defaults to ipopt"
-                "Accepts solver names as string or solver objects.",
-            ),
-        )
+
         self.subsolver_args = self.declare(
             "subsolver_args",
             ConfigValue(
                 default={},
-                description="Dictionary of keyword arguments to pass to the solver.",
+                description="Dictionary of keyword arguments to pass to the chosen solver."
+                "Default subsolver is 'ipopt'.",
             ),
         )
         self.iterations = self.declare(
@@ -229,20 +223,27 @@ class MultiStart(SolverBase):
 
     CONFIG = MultistartConfig()
 
-    def __init__(self, **kwds: Any) -> None:
+    def __init__(self, subsolver="ipopt", **kwds: Any) -> None:
         super().__init__(**kwds)
 
+        # Create subsolver object to use in available and solve
+        # Define solver using either string input or provided solver object
+        if isinstance(subsolver, str):
+            self._subsolver = SolverFactory(subsolver)
+        else:
+            self._subsolver = subsolver
+
         # Reset defaults for solver settings
-        self.subsolver = None
         self.remaining_time_limit = None
         self._timing_lim = False
 
     def available(self, exception_flag=True):
         """Check if solver is available.
 
-        The multistart solver wrapper should always be available.
+        The multistart solver wrapper should always be available,
+        but the subsolver may not. Checking the subsolver availability.
         """
-        return True
+        return self._subsolver.available()
 
     def version(self):
         """Get solver version."""
@@ -280,12 +281,6 @@ class MultiStart(SolverBase):
             datetime.timezone.utc
         )
 
-        # Define solver using either string input or provided solver object
-        if isinstance(config.subsolver, str):
-            self.subsolver = SolverFactory(config.subsolver)
-        else:
-            self.subsolver = config.subsolver
-
         subsolver_args = dict(config.subsolver_args)
         self.remaining_time_limit = config.time_limit
 
@@ -299,7 +294,7 @@ class MultiStart(SolverBase):
                 )
                 return results
 
-            if self.subsolver.config.time_limit is None:
+            if self._subsolver.config.time_limit is None:
                 if "time_limit" not in subsolver_args:
                     subsolver_args["time_limit"] = self.remaining_time_limit
                 else:
@@ -308,7 +303,7 @@ class MultiStart(SolverBase):
                     )
             else:
                 subsolver_args["time_limit"] = min(
-                    self.subsolver.config.time_limit, self.remaining_time_limit
+                    self._subsolver.config.time_limit, self.remaining_time_limit
                 )
         else:
             self._timing_lim = False
@@ -371,7 +366,7 @@ class MultiStart(SolverBase):
         num_iter = 0
         timer.start(f"timer_iter_{num_iter}")
         logger.info(f"Running initial solve. Iteration: {num_iter}\n")
-        best_result = result = self.subsolver.solve(model, **subsolver_args)
+        best_result = result = self._subsolver.solve(model, **subsolver_args)
         logger.info(
             f'solved NLP: {result.solution_status}, {result.termination_condition}'
         )
@@ -427,7 +422,7 @@ class MultiStart(SolverBase):
             # at first iteration, solve the originally passed model
             m = model
             reinitialize_variables(m, config, sampler)
-            result = self.subsolver.solve(m, **subsolver_args)
+            result = self._subsolver.solve(m, **subsolver_args)
             logger.info(
                 f'solved NLP: {result.solution_status}, {result.termination_condition}'
             )
