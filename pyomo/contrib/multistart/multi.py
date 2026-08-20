@@ -240,8 +240,7 @@ class MultiStart(SolverBase):
     def available(self, exception_flag=True):
         """Check if solver is available.
 
-        The multistart solver wrapper should always be available,
-        The subsolver availability will be checked after it is assigned in solve()
+        The multistart solver wrapper should always be available.
         """
         return True
 
@@ -286,11 +285,6 @@ class MultiStart(SolverBase):
             self.subsolver = SolverFactory(config.subsolver)
         else:
             self.subsolver = config.subsolver
-
-        if not self.subsolver.available():
-            raise RuntimeError(
-                f"Selected subsolver '{self.subsolver.name}' is not available."
-            )
 
         subsolver_args = dict(config.subsolver_args)
         self.remaining_time_limit = config.time_limit

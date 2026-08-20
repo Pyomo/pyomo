@@ -30,6 +30,9 @@ def _initialize_with_multistart_solver(
     aggressive_substitution: bool = True,
 ):
 
+    # Make a shallow clone
+    nlp = shallow_clone(nlp)
+
     # first introduce auxiliary variables so that we don't try to
     # approximate any functions of more than two variables
     # this does not matter as much as it does for PWL
@@ -40,8 +43,6 @@ def _initialize_with_multistart_solver(
         trans.apply_to(nlp, aggressive_substitution=aggressive_substitution)
         logger.info('applied the univariate_nonlinear_decomposition transformation')
 
-    # Make a shallow clone
-    nlp = shallow_clone(nlp)
     # bounds on the nonlinear variables
     bound_all_nonlinear_variables(nlp, default_bound=default_bound)
     logger.info('bounded nonlinear variables')
