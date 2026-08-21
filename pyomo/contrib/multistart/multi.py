@@ -230,8 +230,14 @@ class MultiStart(SolverBase):
         # Define solver using either string input or provided solver object
         if isinstance(subsolver, str):
             self._subsolver = SolverFactory(subsolver)
-        else:
+        elif isinstance(subsolver, SolverBase):
             self._subsolver = subsolver
+
+        else:
+            raise TypeError(
+                f"Unrecognized subsolver {subsolver} with type{type(subsolver)}."
+                "Accepted subsolvers are either strings for SolverFactory or configured solver objects."
+            )
 
         # Reset defaults for solver settings
         self.remaining_time_limit = None

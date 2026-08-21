@@ -171,6 +171,14 @@ class MultistartTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             SolverFactory('multistart').solve(m, sampling_method="dummy")
 
+    def test_unsupported_solver_type(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 1))
+        m.obj = Objective(expr=m.x)
+        bad_solver = {"solver": "dummy"}
+        with self.assertRaises(TypeError):
+            SolverFactory('multistart', subsolver=bad_solver).solve(m)
+
     def test_solver_object_matches_solver_string(self):
         nlp_solver = Ipopt()
         solver_str = "ipopt"
