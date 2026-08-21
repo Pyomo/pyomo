@@ -42,14 +42,26 @@ class _FakeCuopt:
         self.__version__ = version
 
 
+_unset = object()
+
+
 class TestGetCuoptVersion(unittest.TestCase):
     def setUp(self):
-        self._orig_version = CUOPTDirect._version
-        self._orig_name = CUOPTDirect._name
+        # cuOpt may not be installed in this environment, in which case
+        # the attempt_import callback never ran and these class
+        # attributes were never set.
+        self._orig_version = CUOPTDirect.__dict__.get('_version', _unset)
+        self._orig_name = CUOPTDirect.__dict__.get('_name', _unset)
 
     def tearDown(self):
-        CUOPTDirect._version = self._orig_version
-        CUOPTDirect._name = self._orig_name
+        if self._orig_version is _unset:
+            del CUOPTDirect._version
+        else:
+            CUOPTDirect._version = self._orig_version
+        if self._orig_name is _unset:
+            del CUOPTDirect._name
+        else:
+            CUOPTDirect._name = self._orig_name
 
     def test_not_available(self):
         CUOPTDirect._version = None
