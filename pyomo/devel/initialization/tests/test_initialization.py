@@ -210,7 +210,6 @@ class TestInit(unittest.TestCase):
         )
 
     @unittest.skipUnless(highs.available(), 'highs is not available')
-    @unittest.skipUnless(ipopt.available(), 'ipopt is not available')
     def test_pwl_init_single(self):
         """
         Same as test_pwl_init but with single iteration
@@ -221,15 +220,23 @@ class TestInit(unittest.TestCase):
         m.obj = pyo.Objective(expr=m.x)
 
         # all the actual testing happens in the MockNLPSolver
+        nlp_solver = MockNLPSolver(
+            varlist=[m.x],
+            sol_map={
+                0: ([None], 0, 0),
+                1: ([-9.920096055464825], 1e-4, 1e-4),
+                2: ([-9.920096055464825], 1e-4, 1e-4),
+            },
+        )
         mip_solver = SolverFactory('highs')
         results = ini.initialize_with_piecewise_linear_approximation(
             nlp=m,
+            nlp_solver=nlp_solver,
             mip_solver=mip_solver,
-            num_initial_points=8,
+            num_initial_points=64,
             max_pwl_refinement_iter=1,
+            aggressive_substitution=False,
         )
-
-        self.assertEqual(results.solution_status, SolutionStatus.optimal)
 
     @unittest.skipUnless(highs.available(), 'highs is not available')
     @unittest.skipUnless(ipopt.available(), 'ipopt is not available')

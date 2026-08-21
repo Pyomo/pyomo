@@ -342,7 +342,7 @@ def _initialize_with_piecewise_linear_approximation(
             elif isinstance(mip_solver, (GurobiDirectMINLP, GurobiPersistent)):
                 opts = {'SolutionLimit': 1}
             elif isinstance(mip_solver, Highs):
-                opts = {}
+                opts = {'mip_max_improving_sols': 1}
             else:
                 raise NotImplementedError(
                     'Currently, the initialization module only works with new solver '
