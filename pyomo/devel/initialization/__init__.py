@@ -11,4 +11,5 @@ from pyomo.devel.initialization.initialize import (
     initialize_with_LP_approximation,
     initialize_with_piecewise_linear_approximation,
     initialize_with_global_opt,
+    initialize_with_multistart_opt,
 )

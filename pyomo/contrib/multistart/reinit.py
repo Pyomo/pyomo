@@ -11,35 +11,49 @@
 
 import logging
 import random
-
-from pyomo.core import Var
+from pyomo.common.dependencies import numpy as np
+from pyomo.common.dependencies.scipy import stats
+from pyomo.util.vars_from_expressions import get_vars_from_components
 
 logger = logging.getLogger('pyomo.contrib.multistart')
 
 
-def rand(val, lb, ub):
-    return random.uniform(lb, ub)  # uniform distribution between lb and ub
+def rand(val, lb, ub, sampler):
+    # sample = sampler.rng.uniform(lb, ub)
+    sample = sampler.sample_scalar(lb, ub)  # uniform distribution between lb and ub
+    return sample
 
 
-def midpoint_guess_and_bound(val, lb, ub):
+def rand_vector(lbs, ubs, sampler):
+    lowers = lbs
+    uppers = ubs
+    # Generate vector of samples using sampler
+    samples = sampler.sample_vector(lowers, uppers)
+    return samples
+
+
+def midpoint_guess_and_bound(val, lb, ub, sampler=None):
     """Midpoint between current value and farthest bound."""
     far_bound = ub if ((ub - val) >= (val - lb)) else lb  # farther bound
     return (far_bound + val) / 2
 
 
-def rand_guess_and_bound(val, lb, ub):
+def rand_guess_and_bound(val, lb, ub, sampler):
     """Random choice between current value and farthest bound."""
     far_bound = ub if ((ub - val) >= (val - lb)) else lb  # farther bound
-    return random.uniform(val, far_bound)
+    if far_bound == ub:
+        return sampler.sample_scalar(val, far_bound)
+    else:
+        return sampler.sample_scalar(far_bound, val)
 
 
-def rand_distributed(val, lb, ub, divisions=9):
+def rand_distributed(val, lb, ub, sampler, divisions=9):
     """Random choice among evenly distributed set of values between bounds."""
     set_distributed_vals = linspace(lb, ub, divisions)
-    return random.choice(set_distributed_vals)
+    return sampler.rng.choice(set_distributed_vals)
 
 
-def simple_midpoint(val, lb, ub):
+def simple_midpoint(val, lb, ub, sampler=None):
     return (lb + ub) * 0.5
 
 
@@ -50,6 +64,7 @@ def linspace(lower, upper, n):
 
 strategies = {
     "rand": rand,
+    "rand_vector": rand_vector,
     "midpoint_guess_and_bound": midpoint_guess_and_bound,
     "rand_guess_and_bound": rand_guess_and_bound,
     "rand_distributed": rand_distributed,
@@ -57,13 +72,15 @@ strategies = {
 }
 
 
-def reinitialize_variables(model, config):
+def reinitialize_variables(model, config, sampler):
     """Reinitializes all variable values in the model.
 
     Excludes fixed, noncontinuous, and unbounded variables.
 
     """
-    for var in model.component_data_objects(ctype=Var, descend_into=True):
+
+    eligible_vars = []
+    for var in model._vars_list:
         if var.is_fixed() or not var.is_continuous():
             continue
         if var.lb is None or var.ub is None:
@@ -75,8 +92,34 @@ def reinitialize_variables(model, config):
                     'suppress_unbounded_warning flag.' % (var.name, var.lb, var.ub)
                 )
             continue
-        val = var.value if var.value is not None else (var.lb + var.ub) / 2
-        # apply reinitialization strategy to variable
-        var.set_value(
-            strategies[config.strategy](val, var.lb, var.ub), skip_validation=True
-        )
+
+        eligible_vars.append(var)
+
+    if config.strategy == "rand_vector":
+
+        if len(eligible_vars) == 0:
+            raise ValueError(
+                "No eligible variables to reinitialize." "Please add bounds."
+            )
+        # Collect lower and upper bounds for sampler
+        lowers = [v.lb for v in eligible_vars]
+        uppers = [v.ub for v in eligible_vars]
+
+        samples = rand_vector(lowers, uppers, sampler)
+
+        # assign samples to variables
+        for var, sample in zip(eligible_vars, samples):
+            var.set_value(sample, skip_validation=True)
+
+        return
+
+    # Otherwise
+    else:
+        for var in eligible_vars:
+            val = var.value if var.value is not None else (var.lb + var.ub) / 2
+            # print(f"val = {val}\n")
+            # apply reinitialization strategy to variable
+            var.set_value(
+                strategies[config.strategy](val, var.lb, var.ub, sampler),
+                skip_validation=True,
+            )

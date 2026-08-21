@@ -13,6 +13,7 @@ from itertools import product
 from io import StringIO
 
 import pyomo.common.unittest as unittest
+from pyomo.common.dependencies import attempt_import, numpy_available, scipy_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.multistart.high_conf_stop import should_stop
 from pyomo.contrib.multistart.reinit import strategies
@@ -21,14 +22,18 @@ from pyomo.environ import (
     Constraint,
     NonNegativeReals,
     Objective,
-    SolverFactory,
     Var,
     maximize,
     sin,
     value,
 )
+from pyomo.contrib.solver.common.factory import SolverFactory
+from pyomo.contrib.solver.solvers.ipopt import Ipopt
+from pyomo.contrib.solver.common.util import NoOptimalSolutionError
+from pyomo.contrib.solver.common.results import TerminationCondition
 
 
+@unittest.skipIf(not numpy_available, "Numpy not available")
 @unittest.skipIf(not SolverFactory('ipopt').available(), "IPOPT not available")
 class MultistartTests(unittest.TestCase):
     """
@@ -94,6 +99,8 @@ class MultistartTests(unittest.TestCase):
                 "variable x with bounds (0, None).",
                 output.getvalue().strip(),
             )
+        with self.assertRaises(ValueError):
+            SolverFactory('multistart').solve(m, strategy="rand_vector")
 
     def test_var_value_None(self):
         m = ConcreteModel()
@@ -101,15 +108,38 @@ class MultistartTests(unittest.TestCase):
         m.obj = Objective(expr=m.x)
         SolverFactory('multistart').solve(m)
 
+    def test_no_obj(self):
+        m = ConcreteModel()
+        m.x = Var()
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.WARNING):
+            try:
+                SolverFactory('multistart').solve(m)
+            except:
+                pass
+            self.assertIn(
+                "No objective found in the provided model. The solver will "
+                "stop if it finds a feasible solution before completing "
+                "the total number of iterations.",
+                output.getvalue().strip(),
+            )
+
     def test_model_infeasible(self):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 1))
         m.c = Constraint(expr=m.x >= 2)
         m.o = Objective(expr=m.x)
-        SolverFactory('multistart').solve(m, iterations=2)
+
+        with self.assertRaises(NoOptimalSolutionError):
+            SolverFactory('multistart').solve(m, iterations=2)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.WARNING):
-            SolverFactory('multistart').solve(m, iterations=-1, HCS_max_iterations=3)
+            SolverFactory('multistart').solve(
+                m,
+                iterations=-1,
+                HCS_max_iterations=3,
+                raise_exception_on_nonoptimal_result=False,
+            )
             self.assertIn(
                 "High confidence stopping rule was unable to "
                 "complete after 3 iterations.",
@@ -134,18 +164,73 @@ class MultistartTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "multiple active objectives"):
             SolverFactory('multistart').solve(m)
 
-    def test_no_obj(self):
+    def test_unsupported_sampling_method(self):
         m = ConcreteModel()
-        m.x = Var()
-        with self.assertRaisesRegex(RuntimeError, "no active objective"):
-            SolverFactory('multistart').solve(m)
+        m.x = Var(bounds=(0, 1))
+        m.obj = Objective(expr=m.x)
+        with self.assertRaises(ValueError):
+            SolverFactory('multistart').solve(m, sampling_method="dummy")
 
-    def test_const_obj(self):
+    def test_unsupported_solver_type(self):
         m = ConcreteModel()
-        m.x = Var()
-        m.o = Objective(expr=5)
-        with self.assertRaisesRegex(RuntimeError, "constant objective"):
-            SolverFactory('multistart').solve(m)
+        m.x = Var(bounds=(0, 1))
+        m.obj = Objective(expr=m.x)
+        bad_solver = {"solver": "dummy"}
+        with self.assertRaises(TypeError):
+            SolverFactory('multistart', subsolver=bad_solver).solve(m)
+
+    def test_solver_object_matches_solver_string(self):
+        nlp_solver = Ipopt()
+        solver_str = "ipopt"
+        seed = 145
+
+        fresh_model = build_model()
+
+        m1 = fresh_model.clone()
+        results_obj_obj = SolverFactory('multistart', subsolver=nlp_solver).solve(
+            m1, seed=seed
+        )
+        m2 = fresh_model.clone()
+        results_obj_str = SolverFactory('multistart', subsolver=solver_str).solve(
+            m2, seed=seed
+        )
+        self.assertAlmostEqual(
+            results_obj_obj.incumbent_objective, results_obj_str.incumbent_objective
+        )
+
+    @unittest.skipIf(not scipy_available, "Scipy not available")
+    def test_sampling_methods(self):
+        sampling_methods = ["uniform", "latin_hypercube", "sobol"]
+        strategies = ["rand", "rand_vector"]
+        seed = 145
+        # For the simple model, check all sampling methods converge
+        simple_model = build_model()
+        for method, strategy in product(sampling_methods, strategies):
+            m = simple_model.clone()
+            res = SolverFactory("multistart").solve(
+                m, strategy=strategy, sampling_method=method, seed=seed
+            )
+            self.assertEqual(
+                res.termination_condition,
+                TerminationCondition.convergenceCriteriaSatisfied,
+            )
+
+    def test_max_time_limit(self):
+        simple_model = build_model()
+        output = StringIO()
+
+        with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.WARNING):
+            res = SolverFactory('multistart').solve(
+                simple_model,
+                raise_exception_on_nonoptimal_result=False,
+                time_limit=1e-6,
+            )
+            self.assertIn(
+                "Time limit reached after 1 iterations.", output.getvalue().strip()
+            )
+            self.assertEqual(
+                res.termination_condition, TerminationCondition.maxTimeLimit
+            )
 
 
 def build_model():

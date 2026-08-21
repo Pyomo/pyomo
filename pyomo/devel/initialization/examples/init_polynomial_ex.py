@@ -53,8 +53,28 @@ def global_init_ex():
     return results.solution_status, m.x.value
 
 
+def multistart_init_ex():
+    m = build_model()
+    nlp_solver = SolverFactory('ipopt')
+    multistart_solver = SolverFactory('multistart', subsolver=nlp_solver)
+
+    # multistart_solver.config.strategy = "rand"
+    # multistart_solver.config.strategy = "rand_vector"
+    # multistart_solver.config.sampling_method = "uniform"
+    # multistart_solver.config.sampling_method = "lhs"
+    # multistart_solver.config.sampling_method = "sobol"
+    multistart_solver.config.iterations = 10
+    multistart_solver.config.break_on_solution = True
+
+    results = ini.initialize_with_multistart_opt(
+        nlp=m, nlp_solver=nlp_solver, multistart_solver=multistart_solver, seed=145
+    )
+    return results, m.x.value
+
+
 if __name__ == '__main__':
     # stat, x = lp_init_ex()
     # stat, x = pwl_init_ex()
-    stat, x = global_init_ex()
+    # stat, x = global_init_ex()
+    stat, x = multistart_init_ex()
     print(stat, round(x, 4))
