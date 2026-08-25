@@ -387,6 +387,35 @@ class TestDaeMisc(unittest.TestCase):
         self.assertTrue(value(m.con3[2, 0, 2, 1, 1].lower) is None)
         self.assertTrue(value(m.con3[3, 2, 3, 2, 2].upper) == 20)
 
+    def test_discretized_params_initialized_on_new_points(self):
+        for transformation, options in (
+            ('dae.finite_difference', dict(nfe=4)),
+            ('dae.collocation', dict(nfe=2, ncp=2)),
+        ):
+            m = ConcreteModel()
+            m.t = ContinuousSet(bounds=(0, 1))
+            m.s = Set(initialize=['a', 'b'])
+            m.p = Param(m.t, initialize=3, mutable=True)
+            m.p_indexed = Param(
+                m.t,
+                m.s,
+                initialize=lambda m, t, s: t + (1 if s == 'a' else 2),
+                mutable=True,
+            )
+            m.p_default = Param(m.t, m.s, default=5, mutable=True)
+            m.p_immutable = Param(m.t, initialize=7)
+
+            TransformationFactory(transformation).apply_to(m, **options)
+
+            new_point = next(t for t in m.t if t not in (0, 1))
+            self.assertEqual(m.p[new_point].value, 3)
+            self.assertAlmostEqual(m.p_indexed[new_point, 'a'].value, new_point + 1)
+            self.assertAlmostEqual(m.p_indexed[new_point, 'b'].value, new_point + 2)
+            self.assertEqual(m.p_default[new_point, 'a'].value, 5)
+            self.assertEqual(value(m.p_immutable[0]), 7)
+            with self.assertRaisesRegex(ValueError, 'undefined'):
+                value(m.p_immutable[new_point])
+
     # test update_contset_indexed_component method for Expression with
     # single index of the ContinuouSet
     def test_update_contset_indexed_component_expressions_single(self):
