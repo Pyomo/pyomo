@@ -9,7 +9,7 @@
 
 from collections import namedtuple
 from heapq import heappush, heappop
-import traceback
+
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import document_kwargs_from_configdict
@@ -441,19 +441,8 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                 result = SolverFactory(config.minlp_solver).solve(
                     subproblem, **minlp_args
                 )
-        except RuntimeError as e:
-            config.logger.warning(
-                "Solver encountered RuntimeError. Treating as infeasible. "
-                "Msg: %s\n%s" % (str(e), traceback.format_exc())
-            )
-            copy_var_list_values(  # copy variable values, even if errored
-                from_list=subprob_utils.algebraic_variable_list,
-                to_list=model_utils.algebraic_variable_list,
-                config=config,
-                ignore_integrality=True,
-            )
-            return float('inf'), float('inf')
-
+        except RuntimeError:
+            raise
         term_cond = result.solver.termination_condition
         if term_cond == tc.optimal:
             assert result.solver.status is SolverStatus.ok
@@ -536,19 +525,8 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                 result = SolverFactory(config.local_minlp_solver).solve(
                     subproblem, **config.local_minlp_solver_args
                 )
-        except RuntimeError as e:
-            config.logger.warning(
-                "Solver encountered RuntimeError. Treating as infeasible. "
-                "Msg: %s\n%s" % (str(e), traceback.format_exc())
-            )
-            copy_var_list_values(  # copy variable values, even if errored
-                from_list=subprob_utils.algebraic_variable_list,
-                to_list=model_utils.algebraic_variable_list,
-                config=config,
-                ignore_integrality=True,
-            )
-            return float('-inf'), float('inf')
-
+        except RuntimeError:
+            raise
         term_cond = result.solver.termination_condition
         if term_cond == tc.optimal:
             assert result.solver.status is SolverStatus.ok
