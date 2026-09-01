@@ -7,14 +7,25 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-import pyomo.common.unittest as unittest
-from pyomo.contrib.mindtpy.util import set_var_valid_value
+import logging
 
-from pyomo.environ import Var, Integers, ConcreteModel, Integers
+import pyomo.common.unittest as unittest
+from pyomo.common.collections import Bunch
+from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_OA_config
+from pyomo.contrib.mindtpy.cut_generation import add_affine_cuts
 from pyomo.contrib.mindtpy.tests.MINLP5_simple import SimpleMINLP5
-from pyomo.contrib.mindtpy.util import add_var_bound
+from pyomo.contrib.mindtpy.util import add_var_bound, set_var_valid_value
+from pyomo.environ import (
+    Block,
+    ConcreteModel,
+    Constraint,
+    ConstraintList,
+    Integers,
+    Var,
+    value,
+)
 
 
 class UnitTestMindtPy(unittest.TestCase):
@@ -93,6 +104,33 @@ class UnitTestMindtPy(unittest.TestCase):
         self.assertEqual(
             solver_object.working_model.y.upper, solver_object.config.integer_var_bound
         )
+
+    @unittest.skipIf(not mcpp_available(), "MC++ is not available")
+    def test_goa_affine_cut_uses_convex_slope_for_upper_cut(self):
+        m = ConcreteModel()
+        m.P = Var(bounds=(0, 10), initialize=0.05)
+        m.Q = Var(bounds=(1, 10), initialize=1.000002190520329)
+        m.F = Var(bounds=(0, 10), initialize=0.050000453446344)
+        m.QP = Var(bounds=(0, 10), initialize=1.0)
+        m.c = Constraint(expr=m.P * m.Q - m.F * m.QP == 0)
+
+        m.MindtPy_utils = Block()
+        m.MindtPy_utils.nonlinear_constraint_list = [m.c]
+        m.MindtPy_utils.cuts = Block()
+        m.MindtPy_utils.cuts.aff_cuts = ConstraintList()
+
+        config = Bunch(logger=logging.getLogger('pyomo.contrib.mindtpy.tests'))
+        add_affine_cuts(m, config, Bunch())
+
+        feasible_point = [(m.P, 0.05), (m.Q, 1.1), (m.F, 0.055), (m.QP, 1.0)]
+        for var, val in feasible_point:
+            var.set_value(val)
+
+        aff_cuts = list(m.MindtPy_utils.cuts.aff_cuts.values())
+        self.assertEqual(len(aff_cuts), 2)
+        convex_cut = aff_cuts[1]
+        self.assertLessEqual(value(convex_cut.body), value(convex_cut.upper) + 1e-12)
+        self.assertAlmostEqual(value(convex_cut.body), -0.5)
 
 
 if __name__ == '__main__':
