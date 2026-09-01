@@ -14,7 +14,10 @@ from pyomo.common.collections import ComponentSet
 from pyomo.contrib.incidence_analysis.incidence import (
     IncidenceMethod,
     get_incident_variables,
+    get_variables_incident_to_constraint,
 )
+from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
+import pyomo.contrib.pynumero.interfaces.tests.external_grey_box_models as ex_models
 
 
 class TestAssumedBehavior(unittest.TestCase):
@@ -254,6 +257,32 @@ class TestIncidenceStandardRepnComputeValues(
     def _get_incident_variables(self, expr, **kwds):
         method = IncidenceMethod.standard_repn_compute_values
         return get_incident_variables(expr, method=method, **kwds)
+
+
+class TestGetVariablesIncidentToConstraint(unittest.TestCase):
+
+    def test_explicit_constraint(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.eq = pyo.Constraint(expr=m.x[1] + m.x[3] ** 3 == 1)
+        incident_vars = get_variables_incident_to_constraint(m.eq)
+        self.assertEqual(ComponentSet(incident_vars), ComponentSet([m.x[1], m.x[3]]))
+
+    def test_egb_constraint_body(self):
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        gbm = ex_models.PressureDropSingleOutput()
+        m.egb.set_external_model(gbm)
+        incident_vars = get_variables_incident_to_constraint(
+            m.egb.output_constraints["Pout"]
+        )
+        expected = [
+            m.egb.inputs["Pin"],
+            m.egb.inputs["c"],
+            m.egb.inputs["F"],
+            m.egb.outputs["Pout"],
+        ]
+        self.assertEqual(ComponentSet(incident_vars), ComponentSet(expected))
 
 
 if __name__ == "__main__":

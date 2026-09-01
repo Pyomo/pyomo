@@ -1777,6 +1777,24 @@ class TestInterface(unittest.TestCase):
         igraph = IncidenceGraphInterface(m, include_inequality=True, include_fixed=True)
         igraph.plot(title="test plot", show=False)
 
+    @unittest.skipUnless(plotly_available, "Plotly is not available")
+    @unittest.skipUnless(scipy_available, "SciPy is not available")
+    def test_plot_with_grey_box_constraint(self):
+        """
+        Regression test: ExternalGreyBoxConstraintData has no lb/ub, so
+        plot() must not assume every constraint node has them.
+        """
+        from pyomo.contrib.pynumero.interfaces.external_grey_box import (
+            ExternalGreyBoxBlock,
+        )
+        import pyomo.contrib.pynumero.interfaces.tests.external_grey_box_models as ex_models
+
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        m.egb.set_external_model(ex_models.PressureDropSingleEquality())
+        igraph = IncidenceGraphInterface(m, include_inequality=True)
+        igraph.plot(title="test plot with grey box constraint", show=False)
+
     def test_zero_coeff(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2, 3])
