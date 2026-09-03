@@ -7,7 +7,10 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+import os
+
 from pyomo.common import unittest
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.environ import (
     ConcreteModel,
     Var,
@@ -21,6 +24,32 @@ from pyomo.environ import (
 from pyomo.opt import SolverFactory, TerminationCondition
 
 knitroampl_available = SolverFactory('knitroampl').available(False)
+
+
+class TestKNITROAMPLDefaultExecutable(unittest.TestCase):
+    def test_default_executable_from_KNITRODIR(self):
+        with TempfileManager.new_context() as tempfile:
+            knitrodir = tempfile.create_tempdir()
+            exe = os.path.join(knitrodir, 'knitroampl', 'knitroampl')
+            # This makes a fake executable with the correct permissions
+            # so KNITRO actually recognizes it
+            os.mkdir(os.path.dirname(exe))
+            with open(exe, 'w'):
+                pass
+            os.chmod(exe, 0o755)
+
+            orig = os.environ.get('KNITRODIR')
+            os.environ['KNITRODIR'] = knitrodir
+            try:
+                opt = SolverFactory('knitroampl')
+                self.assertEqual(
+                    os.path.realpath(opt._default_executable()), os.path.realpath(exe)
+                )
+            finally:
+                if orig is None:
+                    del os.environ['KNITRODIR']
+                else:
+                    os.environ['KNITRODIR'] = orig
 
 
 @unittest.skipIf(not knitroampl_available, "The 'knitroampl' command is not available")
