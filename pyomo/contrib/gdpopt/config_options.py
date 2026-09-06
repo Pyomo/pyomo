@@ -529,6 +529,14 @@ def _add_tolerance_configs(CONFIG):
             description="Tolerance for bound convergence.",
         ),
     )
+    CONFIG.declare(
+        "eigenvalue_tolerance",
+        ConfigValue(
+            default=1e-10,
+            domain=NonNegativeFloat,
+            description=("Numerical tolerance for eigenvalue-based convexity checks."),
+        ),
+    )
 
 
 def _add_ldsda_configs(CONFIG):

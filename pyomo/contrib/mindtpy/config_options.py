@@ -13,6 +13,7 @@ from pyomo.common.config import (
     ConfigBlock,
     ConfigValue,
     In,
+    NonNegativeFloat,
     PositiveFloat,
     PositiveInt,
     NonNegativeInt,
@@ -672,6 +673,14 @@ def _add_tolerance_configs(CONFIG):
             description='Relative bound tolerance',
             doc='Relative tolerance for bound feasibility checks. '
             ':math:`|Primal Bound - Dual Bound| / (1e-10 + |Primal Bound|) <= relative tolerance`',
+        ),
+    )
+    CONFIG.declare(
+        'eigenvalue_tolerance',
+        ConfigValue(
+            default=1e-10,
+            domain=NonNegativeFloat,
+            description='Numerical tolerance for eigenvalue-based convexity checks.',
         ),
     )
     CONFIG.declare(

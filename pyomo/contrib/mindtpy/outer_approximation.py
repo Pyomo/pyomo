@@ -36,6 +36,8 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
     """
 
     CONFIG = _get_MindtPy_OA_config()
+    # OA linearizations only provide a valid relaxation for convex models.
+    _requires_model_convexity = True
 
     def check_config(self):
         config = self.config

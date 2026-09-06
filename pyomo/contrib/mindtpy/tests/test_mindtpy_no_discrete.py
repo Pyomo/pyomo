@@ -8,9 +8,11 @@
 # ____________________________________________________________________________________
 
 
+import logging
 from unittest.mock import MagicMock, patch
 
-from pyomo.opt import TerminationCondition as tc, SolverStatus
+from pyomo.common.collections import Bunch
+from pyomo.opt import SolverResults, TerminationCondition as tc, SolverStatus
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import (
@@ -25,6 +27,10 @@ from pyomo.environ import (
     maximize,
     value,
 )
+from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
+from pyomo.contrib.mindtpy.extended_cutting_plane import MindtPy_ECP_Solver
+from pyomo.contrib.mindtpy.global_outer_approximation import MindtPy_GOA_Solver
+from pyomo.contrib.mindtpy.outer_approximation import MindtPy_OA_Solver
 
 required_nlp_solvers = 'ipopt'
 # Open-source (or generally available) solver pair used by MindtPy tests that
@@ -264,6 +270,78 @@ class _SimpleNamespace:
             object.__setattr__(self, k, v)
 
 
+def _crossed_bound_solver(solver, model_is_not_certified_convex):
+    """Set up a solver instance with maximization bounds that have crossed."""
+    solver.config = solver.CONFIG()
+    solver.config.absolute_bound_tolerance = 1e-6
+    solver.config.relative_bound_tolerance = 1e-6
+    solver.config.logger = logging.getLogger(__name__)
+    solver.results = SolverResults()
+    solver.objective_sense = maximize
+    solver.primal_bound = 1011.6577899409375
+    solver.dual_bound = 1000.0
+    solver.best_solution_found = object()
+    solver._model_is_not_certified_convex = model_is_not_certified_convex
+    solver.update_gap()
+    return solver
+
+
+def _finalize_result(solver):
+    solver.timing = Bunch(total=0.0)
+    solver.mip_iter = 1
+    solver.nlp_infeasible_counter = 0
+    solver.best_solution_found_time = None
+    solver.primal_integral = 0.0
+    solver.dual_integral = 0.0
+    solver.primal_dual_gap_integral = 0.0
+    solver.update_result()
+
+
+class TestMindtPyCrossedBoundResults(unittest.TestCase):
+    def test_oa_crossed_bounds_are_not_reported_as_global_optimal(self):
+        solver = _crossed_bound_solver(MindtPy_OA_Solver(), True)
+
+        self.assertTrue(solver.bounds_converged())
+        self.assertIs(solver.results.solver.termination_condition, tc.feasible)
+
+        _finalize_result(solver)
+
+        self.assertEqual(solver.results.problem.lower_bound, 1011.6577899409375)
+        self.assertEqual(solver.results.problem.upper_bound, float('inf'))
+
+    def test_ecp_crossed_bounds_are_not_reported_as_global_optimal(self):
+        solver = _crossed_bound_solver(MindtPy_ECP_Solver(), True)
+
+        self.assertTrue(solver.bounds_converged())
+        self.assertIs(solver.results.solver.termination_condition, tc.feasible)
+
+    def test_oa_crossed_bounds_on_convex_model_stay_optimal(self):
+        """A convex model gives OA a rigorous dual bound, so crossing is tolerance."""
+        solver = _crossed_bound_solver(MindtPy_OA_Solver(), False)
+
+        self.assertTrue(solver.bounds_converged())
+        self.assertIs(solver.results.solver.termination_condition, tc.optimal)
+
+        _finalize_result(solver)
+
+        # The certified path reports both bounds unchanged, rather than replacing
+        # the uncertified side with an infinite bound.
+        self.assertEqual(solver.results.problem.lower_bound, 1011.6577899409375)
+        self.assertEqual(solver.results.problem.upper_bound, 1000.0)
+
+    def test_goa_crossed_bounds_preserve_certified_optimal_behavior(self):
+        """GOA relaxes with McCormick envelopes, so its dual bound is rigorous."""
+        solver = _crossed_bound_solver(MindtPy_GOA_Solver(), True)
+
+        self.assertTrue(solver.bounds_converged())
+        self.assertIs(solver.results.solver.termination_condition, tc.optimal)
+
+    def test_algorithm_convexity_requirements(self):
+        self.assertTrue(MindtPy_OA_Solver._requires_model_convexity)
+        self.assertTrue(MindtPy_ECP_Solver._requires_model_convexity)
+        self.assertFalse(MindtPy_GOA_Solver._requires_model_convexity)
+
+
 class TestMirrorDirectSolveResults(unittest.TestCase):
     """Unit tests for _mirror_direct_solve_results covering all branches."""
 
@@ -272,8 +350,6 @@ class TestMirrorDirectSolveResults(unittest.TestCase):
     def _make_algorithm_stub(self):
         """Create a minimal stub of _MindtPyAlgorithm with only the fields
         needed by _mirror_direct_solve_results."""
-        from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
-
         stub = MagicMock(spec=_MindtPyAlgorithm)
         stub.results = MagicMock()
         stub.results.solver = MagicMock()
@@ -506,8 +582,6 @@ class TestMindtPyShortCircuitRouting(unittest.TestCase):
         mip_constraint_polynomial_degree=None,
         mip_objective_polynomial_degree=None,
     ):
-        from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
-
         algo = _MindtPyAlgorithm()
         algo.config = _SimpleNamespace(
             logger=MagicMock(),
