@@ -131,6 +131,12 @@ class GDP_Enumeration_Solver(_GDPoptAlgorithm):
         )
         discrete_vars = subproblem_util_block.discrete_variable_list
 
+        for v in discrete_vars:
+            if v.lb is None or v.ub is None:
+                raise ValueError(
+                    f"GDPopt enumeration requires finite bounds on integer variable {v.name}."
+                )
+
         self.num_discrete_solns = math.prod(
             len(disjunction.disjuncts) for disjunction in disjunctions
         )

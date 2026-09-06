@@ -66,6 +66,15 @@ class TestGDPoptEnumerateUnit(unittest.TestCase):
 
         self.assertEqual([solution[2] for solution in solutions], [(1,), (2,), (3,)])
 
+    def test_unbounded_integer_variable(self):
+        m = ConcreteModel()
+        m.i = Var(domain=Integers)
+        m.disjunction = Disjunction(expr=[[m.i >= 0], [m.i <= 0]])
+        m.obj = Objective(expr=m.i)
+
+        with self.assertRaisesRegex(ValueError, 'finite bounds'):
+            GDP_Enumeration_Solver().solve(m, force_subproblem_nlp=True)
+
     def test_completion(self):
         m = ConcreteModel()
         m.disjunction = Disjunction(
