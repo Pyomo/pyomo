@@ -506,10 +506,6 @@ class LazyOACallback_cplex(
             mindtpy_solver.best_solution_found_time = get_main_elapsed_time(
                 mindtpy_solver.timing
             )
-            if config.add_no_good_cuts or config.use_tabu_list:
-                mindtpy_solver.stored_bound.update(
-                    {mindtpy_solver.primal_bound: mindtpy_solver.dual_bound}
-                )
         config.logger.info(
             mindtpy_solver.fixed_nlp_log_formatter.format(
                 '*' if mindtpy_solver.primal_bound_improved else ' ',

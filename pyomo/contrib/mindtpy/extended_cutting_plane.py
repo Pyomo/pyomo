@@ -59,7 +59,6 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
                 self.config.call_after_main_solve(main_mip)
 
             if self.algorithm_should_terminate():
-                self.last_iter_cuts = False
                 break
 
             add_ecp_cuts(self.mip, self.jacobians, self.config, self.timing)

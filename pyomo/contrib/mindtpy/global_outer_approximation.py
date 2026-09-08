@@ -10,7 +10,6 @@
 # ____________________________________________________________________________________
 
 
-from pyomo.contrib.gdpopt.util import get_main_elapsed_time
 from pyomo.core import ConstraintList
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_GOA_config
@@ -69,24 +68,6 @@ class MindtPy_GOA_Solver(_MindtPyAlgorithm):
         super().initialize_mip_problem()
         self.mip.MindtPy_utils.cuts.aff_cuts = ConstraintList(doc='Affine cuts')
 
-    def update_primal_bound(self, bound_value):
-        """Update the primal bound.
-
-        Call after solve fixed NLP subproblem.
-        Use the optimal primal bound of the relaxed problem to update the dual bound.
-
-        Parameters
-        ----------
-        bound_value : float
-            The input value used to update the primal bound.
-        """
-        super().update_primal_bound(bound_value)
-        self.primal_bound_progress_time.append(get_main_elapsed_time(self.timing))
-        if self.primal_bound_improved:
-            self.num_no_good_cuts_added.update(
-                {self.primal_bound: len(self.mip.MindtPy_utils.cuts.no_good_cuts)}
-            )
-
     def add_cuts(
         self,
         dual_values=None,
@@ -96,15 +77,3 @@ class MindtPy_GOA_Solver(_MindtPyAlgorithm):
         nlp=None,
     ):
         add_affine_cuts(self.mip, self.config, self.timing)
-
-    def deactivate_no_good_cuts_when_fixing_bound(self, no_good_cuts):
-        try:
-            valid_no_good_cuts_num = self.num_no_good_cuts_added[self.primal_bound]
-            if self.config.add_no_good_cuts:
-                for i in range(valid_no_good_cuts_num + 1, len(no_good_cuts) + 1):
-                    no_good_cuts[i].deactivate()
-            if self.config.use_tabu_list:
-                self.integer_list = self.integer_list[:valid_no_good_cuts_num]
-        except KeyError as e:
-            self.config.logger.error(e, exc_info=True)
-            self.config.logger.error('Deactivating no-good cuts failed.')
