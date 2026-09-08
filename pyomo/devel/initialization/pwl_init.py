@@ -262,7 +262,7 @@ def _refine_pwl_approx(
         cons = pwl_expr_to_con_map.pop(e1)
         pwl_expr_to_con_map[e2] = cons
 
-        return True
+    return True
 
 
 def _initialize_with_piecewise_linear_approximation(
