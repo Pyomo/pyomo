@@ -345,7 +345,7 @@ def _initialize_with_piecewise_linear_approximation(
                 raise NotImplementedError(
                     'Currently, the initialization module only works with new solver '
                     'interfaces, so the mip solvers are limited to Highs, ScipDirect, '
-                    'ScipPersistent, and GurobiDirectMINLP.'
+                    'ScipPersistent, GurobiDirectMINLP, and GurobiPersistent.'
                 )
         else:
             opts = {}
