@@ -265,6 +265,22 @@ def _refine_pwl_approx(
     return True
 
 
+def _set_mip_solver_solution_limit(mip_solver):
+    # Set solver specific option for solution limit
+    if isinstance(mip_solver, (ScipDirect, ScipPersistent)):
+        mip_solver.config.solver_options['limits/solutions'] = 1
+    elif isinstance(mip_solver, (GurobiDirectMINLP, GurobiPersistent)):
+        mip_solver.config.solver_options['SolutionLimit'] = 1
+    elif isinstance(mip_solver, Highs):
+        mip_solver.config.solver_options['mip_max_improving_sols'] = 1
+    else:
+        raise NotImplementedError(
+            'Currently, the initialization module only works with new solver '
+            'interfaces, so the mip solvers are limited to Highs, ScipDirect, '
+            'ScipPersistent, GurobiDirectMINLP, and GurobiPersistent.'
+        )
+
+
 def _initialize_with_piecewise_linear_approximation(
     nlp: BlockData,
     mip_solver: SolverBase,
@@ -335,27 +351,10 @@ def _initialize_with_piecewise_linear_approximation(
         logger.info('applied the disaggregated logarithmic transformation')
 
         if max_iter == 1:
-            if isinstance(mip_solver, (ScipDirect, ScipPersistent)):
-                opts = {'limits/solutions': 1}
-            elif isinstance(mip_solver, (GurobiDirectMINLP, GurobiPersistent)):
-                opts = {'SolutionLimit': 1}
-            elif isinstance(mip_solver, Highs):
-                opts = {'mip_max_improving_sols': 1}
-            else:
-                raise NotImplementedError(
-                    'Currently, the initialization module only works with new solver '
-                    'interfaces, so the mip solvers are limited to Highs, ScipDirect, '
-                    'ScipPersistent, GurobiDirectMINLP, and GurobiPersistent.'
-                )
-        else:
-            opts = {}
-
+            _set_mip_solver_solution_limit(mip_solver)
         # solve the MILP
         res = mip_solver.solve(
-            _pwl,
-            load_solutions=False,
-            raise_exception_on_nonoptimal_result=False,
-            solver_options=opts,
+            _pwl, load_solutions=False, raise_exception_on_nonoptimal_result=False
         )
         logger.info(f'solved MILP: {res.solution_status}, {res.termination_condition}')
         if res.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:

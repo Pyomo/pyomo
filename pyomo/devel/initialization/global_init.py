@@ -18,19 +18,27 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def _initialize_with_global_solver(
-    nlp: BlockData, global_solver: SolverBase, nlp_solver: SolverBase
-):
+def _set_global_solver_solution_limit(global_solver):
+    # Set solver specific option for solution limit
     if isinstance(global_solver, (ScipDirect, ScipPersistent)):
-        opts = {'limits/solutions': 1}
+        global_solver.config.solver_options['limits/solutions'] = 1
     elif isinstance(global_solver, (GurobiDirectMINLP,)):
-        opts = {'SolutionLimit': 1}
+        global_solver.config.solver_options['SolutionLimit'] = 1
     else:
+        # Raise error if solver is not currently implemented
         raise NotImplementedError(
             'Currently, the initialization module only works with new solver '
             'interfaces, so the global solvers are limited to ScipDirect, '
             'ScipPersistent, and GurobiDirectMINLP.'
         )
+
+
+def _initialize_with_global_solver(
+    nlp: BlockData, global_solver: SolverBase, nlp_solver: SolverBase
+):
+    # Set solution limit
+    _set_global_solver_solution_limit(global_solver)
+
     # Check if time limit is provided for global solver
     if global_solver.config.time_limit is None:
         logger.warning(
@@ -40,10 +48,7 @@ def _initialize_with_global_solver(
         )
 
     res = global_solver.solve(
-        nlp,
-        load_solutions=False,
-        raise_exception_on_nonoptimal_result=False,
-        solver_options=opts,
+        nlp, load_solutions=False, raise_exception_on_nonoptimal_result=False
     )
     logger.info(
         f'solved NLP with {global_solver.name}: {res.solution_status}, {res.termination_condition}'

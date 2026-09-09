@@ -17,6 +17,8 @@ from pyomo.devel.initialization.examples.init_polynomial_ex import (
     pwl_init_ex,
     global_init_ex,
 )
+from pyomo.devel.initialization.pwl_init import _set_mip_solver_solution_limit
+from pyomo.devel.initialization.global_init import _set_global_solver_solution_limit
 from pyomo.common import unittest
 from pyomo.common.dependencies import scipy_available
 from pyomo.contrib.solver.common.factory import SolverFactory
@@ -31,6 +33,7 @@ from pyomo.common.unittest import pytest
 scip = SolverFactory('scip_direct')
 ipopt = SolverFactory('ipopt')
 highs = SolverFactory('highs')
+gurobi = SolverFactory('gurobi_direct_minlp')
 
 
 class MockNLPSolver(SolverBase):
@@ -255,6 +258,63 @@ class TestInit(unittest.TestCase):
 
         self.assertEqual(results.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(results.incumbent_objective, 1, 5)
+
+    # Test solver support for global and pwl with no refinement
+    @unittest.skipUnless(highs.available(), 'highs is not available')
+    @unittest.skipUnless(scip.available(), 'scip is not available')
+    @unittest.skipUnless(gurobi.available(), 'gurobi is not available')
+    def test_global_solution_limit(self):
+        # Check supported solvers
+        solver_list = ["gurobi_direct_minlp", "scip_direct", "scip_persistent"]
+
+        for solver in solver_list:
+            global_solver = SolverFactory(solver)
+            _set_global_solver_solution_limit(global_solver)
+            global_solver_opts = global_solver.config.solver_options
+            if solver == "gurobi_direct_minlp":
+                self.assertEqual(global_solver_opts["SolutionLimit"], 1)
+            elif solver in {"scip_direct", "scip_persistent"}:
+                self.assertEqual(global_solver_opts["limits/solutions"], 1)
+        # Check unsupported solver
+        with self.assertRaisesRegex(
+            NotImplementedError,
+            '.*Currently, the initialization module only works with new solver.*',
+        ):
+            wrong_solver = SolverFactory("highs")
+            _set_global_solver_solution_limit(wrong_solver)
+
+    @unittest.skipUnless(highs.available(), 'highs is not available')
+    @unittest.skipUnless(scip.available(), 'scip is not available')
+    @unittest.skipUnless(gurobi.available(), 'gurobi is not available')
+    def test_pwl_solver_solution_limit(self):
+
+        # Check supported solvers
+        solver_list = [
+            "scip_direct",
+            "scip_persistent",
+            "gurobi_direct_minlp",
+            "gurobi_persistent",
+            "highs",
+        ]
+
+        for solver in solver_list:
+            mip_solver = SolverFactory(solver)
+            _set_mip_solver_solution_limit(mip_solver)
+            mip_solver_opts = mip_solver.config.solver_options
+            if solver in {"gurobi_direct_minlp", "gurobi_persistent"}:
+                self.assertEqual(mip_solver_opts['SolutionLimit'], 1)
+            elif solver in {"scip_direct", "scip_persistent"}:
+                self.assertEqual(mip_solver_opts['limits/solutions'], 1)
+            elif solver == "highs":
+                self.assertEqual(mip_solver_opts['mip_max_improving_sols'], 1)
+
+        # Check unsupported solver
+        with self.assertRaisesRegex(
+            NotImplementedError,
+            '.*Currently, the initialization module only works with new solver.*',
+        ):
+            wrong_solver = SolverFactory("multistart")
+            _set_mip_solver_solution_limit(wrong_solver)
 
 
 if __name__ == '__main__':
