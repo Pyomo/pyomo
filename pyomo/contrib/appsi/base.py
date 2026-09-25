@@ -1626,7 +1626,9 @@ class LegacySolverInterface:
                         legacy_soln.constraint[symbol]['Slack'] = val
             if hasattr(model, 'rc') and model.rc.import_enabled():
                 for v, val in results.solution_loader.get_reduced_costs().items():
-                    legacy_soln.variable['Rc'] = val
+                    symbol = symbol_map.getSymbol(v)
+                    if symbol in legacy_soln.variable:
+                        legacy_soln.variable[symbol]['Rc'] = val
 
             legacy_results.solution.insert(legacy_soln)
             legacy_results._smap = symbol_map

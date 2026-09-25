@@ -571,7 +571,9 @@ class LegacySolverWrapper:
                     legacy_soln.constraint[symbol_map.getSymbol(con)] = {'Dual': val}
             if hasattr(model, 'rc') and model.rc.import_enabled():
                 for var, val in results.solution_loader.get_reduced_costs().items():
-                    legacy_soln.variable['Rc'] = val
+                    symbol = symbol_map.getSymbol(var)
+                    if symbol in legacy_soln.variable:
+                        legacy_soln.variable[symbol]['Rc'] = val
 
             legacy_results.solution.insert(legacy_soln)
             legacy_results._smap_id = id(symbol_map)

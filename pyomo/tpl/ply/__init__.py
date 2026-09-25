@@ -20,7 +20,7 @@ and avoids potential security concerns.
 The original PLY project (https://github.com/dabeaz/ply) was archived on
 December 21, 2025 and is no longer developed or maintained.
 
-PLY (3.11) documentation is available here:  https://www.dabeaz.com/ply/ply.html
+PLY (3.11) documentation is available here:  http://www.dabeaz.com/ply/ply.html
 
 """
 

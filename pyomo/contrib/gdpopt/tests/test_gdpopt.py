@@ -322,6 +322,34 @@ class TestGDPoptUnit(unittest.TestCase):
         ):
             SolverFactory('gdpopt').solve(m)
 
+    @unittest.skipUnless(
+        SolverFactory(mip_solver).available(), "MIP solver not available"
+    )
+    def test_LOA_maximize_matches_minimize_negated_objective(self):
+        def build_model(maximize_objective):
+            m = ConcreteModel()
+            m.x = Var(bounds=(0, 10))
+            m.disjunction = Disjunction(expr=[[m.x == 1], [m.x == 9]])
+            if maximize_objective:
+                m.obj = Objective(expr=m.x, sense=maximize)
+            else:
+                m.obj = Objective(expr=-m.x)
+            return m
+
+        for maximize_objective in (False, True):
+            m = build_model(maximize_objective)
+            results = SolverFactory('gdpopt.loa').solve(
+                m,
+                mip_solver=mip_solver,
+                nlp_solver=nlp_solver,
+                init_algorithm='no_init',
+            )
+
+            self.assertEqual(
+                results.solver.termination_condition, TerminationCondition.optimal
+            )
+            self.assertAlmostEqual(value(m.x), 9)
+
     @unittest.skipIf(
         not LOA_solvers_available,
         "Required subsolvers %s are not available" % (LOA_solvers,),

@@ -31,8 +31,8 @@ from pyomo.environ import (
     NonNegativeReals,
     sum_product,
 )
-
-is_pypy = platform.python_implementation().lower().startswith("pypy")
+from pyomo.common.dependencies import dill_available
+from pyomo.common.envvar import is_pypy
 
 
 def obj_rule(model):
@@ -319,7 +319,7 @@ class Test(unittest.TestCase):
         model.con = Constraint(rule=rule1)
         model.con2 = Constraint(model.a, rule=rule2)
         instance = model.create_instance()
-        if is_pypy:
+        if is_pypy and dill_available:
             str_ = pickle.dumps(instance)
             tmp_ = pickle.loads(str_)
         else:

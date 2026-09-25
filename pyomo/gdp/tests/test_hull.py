@@ -2335,7 +2335,7 @@ class TestErrors(unittest.TestCase):
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
             self.assertRaisesRegex(
                 KeyError,
-                r".*disjunction",
+                r".*disjunct.ScalarDisjunction object",
                 hull.get_disaggregation_constraint,
                 m.d[1].transformation_block.disaggregatedVars.w,
                 m.disjunction,

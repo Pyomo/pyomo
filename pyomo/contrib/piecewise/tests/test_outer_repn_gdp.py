@@ -178,3 +178,6 @@ class TestTransformPiecewiseModelToOuterRepnGDP(unittest.TestCase):
         SolverFactory('gurobi').solve(m)
 
         ct.check_log_x_model_soln(self, m)
+
+    def test_single_segment_no_disjunction(self):
+        ct.check_single_segment_no_disjunction(self, 'contrib.piecewise.outer_repn_gdp')
