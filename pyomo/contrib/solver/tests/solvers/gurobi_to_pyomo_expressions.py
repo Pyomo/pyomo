@@ -112,7 +112,7 @@ def grb_nl_to_pyo_expr(opcodes, data, parents, var_map):
         # starts with -1.  We can safely replace that entry with the
         # list of processed operands.
         #
-        # Note also, the parent of the root node (i.e., parent[0] is -1,
+        # Note also, the parent of the root node (i.e., parent[0]) is -1,
         # so this will actually overwrite the *last* data entry, but
         # that is also OK because at that point we are already done with
         # it.
