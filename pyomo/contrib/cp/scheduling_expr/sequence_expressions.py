@@ -99,17 +99,17 @@ class PredecessorToExpression(BooleanExpression):
 
     """
 
-    __slots__ = ('_predecessor', '_successor', '_sequence')
+    __slots__ = ('_before', '_after', '_sequence')
 
     def __init__(self, args):
-        self._predecessor, self._successor, self._sequence = args
+        self._before, self._after, self._sequence = args
 
     def nargs(self):
         return 3
 
     @property
     def args(self):
-        return self._predecessor, self._successor, self._sequence
+        return self._before, self._after, self._sequence
 
     def _to_string(self, values, verbose, smap):
         return "predecessor_to(%s, %s, %s)" % (values[0], values[1], values[2])
