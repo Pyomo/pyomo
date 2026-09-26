@@ -209,12 +209,12 @@ moved_module(
 relocated_module_attribute(
     'UnaryBooleanExpression',
     'pyomo.core.expr.logical_expr.UnaryBooleanExpression',
-    version='6.10.1.dev0',
+    version='6.10.2.dev0',
 )
 relocated_module_attribute(
     'BinaryBooleanExpression',
     'pyomo.core.expr.logical_expr.BinaryBooleanExpression',
-    version='6.10.1.dev0',
+    version='6.10.2.dev0',
 )
 
 del moved_module, relocated_module_attribute

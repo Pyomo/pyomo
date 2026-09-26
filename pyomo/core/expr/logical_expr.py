@@ -302,7 +302,7 @@ def count_if(*args):
 
 @deprecated(
     "UnaryBooleanExpression is no longer used; see UnaryExpression_Mixin",
-    version="6.10.1.dev0",
+    version="6.10.2.dev0",
 )
 class UnaryBooleanExpression(BooleanExpression):
     """
@@ -339,7 +339,7 @@ class NotExpression(UnaryExpression_Mixin, BooleanExpression):
 
 @deprecated(
     "BinaryBooleanExpression is no longer used; see BinaryExpression_Mixin",
-    version="6.10.1.dev0",
+    version="6.10.2.dev0",
 )
 class BinaryBooleanExpression(BooleanExpression):
     """
@@ -415,7 +415,7 @@ class ImplicationExpression(BinaryExpression_Mixin, BooleanExpression):
 
 @deprecated(
     "NaryBooleanExpression is no longer used; see NaryExpression_Mixin",
-    version="6.10.1.dev0",
+    version="6.10.2.dev0",
 )
 class NaryBooleanExpression(BooleanExpression):
     """
