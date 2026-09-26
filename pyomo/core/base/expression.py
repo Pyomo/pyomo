@@ -61,8 +61,6 @@ class NamedExpressionData(UnaryExpression_Mixin, numeric_expr.NumericValue):
         i: int
             Index of the child argument to return
 
-        Returns: The i-th child node.
-
         """
         return self.args[i]
 

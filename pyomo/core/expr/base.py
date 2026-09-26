@@ -67,8 +67,6 @@ class ExpressionBase(PyomoObject):
         i: int
             Index of the child argument to return
 
-        Returns: The i-th child node.
-
         """
         # FIXME: we are mapping the exception for backwards compatibility
         try:
