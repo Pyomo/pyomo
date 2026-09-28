@@ -94,7 +94,7 @@ grb_op_to_pyo = GurobiPyomoOpMap()
 
 def grb_nl_to_pyo_expr(opcodes, data, parents, var_map):
     OPCODE_VARIABLE = gurobipy.GRB.OPCODE_VARIABLE
-    # Note that we walk the Gurobi data strictures in reverse: Gurobi
+    # Note that we walk the Gurobi data structures in reverse: Gurobi
     # uses a prefix notation, but Pyomo assumes expressions were
     # generated from the leaves to the root.  By reversing the
     # iteration, we are effectively converting the gurobi data structure
@@ -105,17 +105,22 @@ def grb_nl_to_pyo_expr(opcodes, data, parents, var_map):
         else:
             fcn, args = grb_op_to_pyo[op]
             if dat.__class__ is list:
+                # Because we are walking the prefix notation in reverse,
+                # we are processing arguments right-to-left.  Reverse
+                # the arguments to recover the original argument ordering.
                 dat.reverse()
             node = fcn(dat, *args)
-        # Data holds "-1" for any operators.  If parent is anything
-        # other than -1, then that is point to an operator whose data
-        # starts with -1.  We can safely replace that entry with the
-        # list of processed operands.
+        # Data starts off holding "-1" for any operators.  If `parent`
+        # is anything other than -1, then that is pointing to an
+        # operator (whose initial data entry will start as -1).  We can
+        # safely replace that entry with the list of processed operands.
         #
-        # Note also, the parent of the root node (i.e., parent[0]) is -1,
-        # so this will actually overwrite the *last* data entry, but
-        # that is also OK because at that point we are already done with
-        # it.
+        # Note also, the parent of the root node (i.e., parent[0]) is
+        # -1, so this will actually overwrite the *last* data entry, but
+        # that is also OK (it's an unnecessary operation, but harmless:
+        # we know the last entry is *not* an operator, so the data entry
+        # will be some (non-list) integer.  Overwriting it is fine now
+        # because we are done processing the expresion).
         if data[parent].__class__ is list:
             data[parent].append(node)
         else:
