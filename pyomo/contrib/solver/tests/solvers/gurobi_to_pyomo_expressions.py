@@ -120,7 +120,7 @@ def grb_nl_to_pyo_expr(opcodes, data, parents, var_map):
         # that is also OK (it's an unnecessary operation, but harmless:
         # we know the last entry is *not* an operator, so the data entry
         # will be some (non-list) integer.  Overwriting it is fine now
-        # because we are done processing the expresion).
+        # because we are done processing the expression).
         if data[parent].__class__ is list:
             data[parent].append(node)
         else:
