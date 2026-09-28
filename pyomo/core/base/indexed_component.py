@@ -516,7 +516,7 @@ You can silence this warning by one of three ways:
             # _data keys instead of iterating over the whole index.
             return iter(sorted_robust(self._data))
         elif not sort:
-            # Unsorted and sparse. Simply return in insertion order for 
+            # Unsorted and sparse. Simply return in insertion order for
             # efficiency so we don't end up sorting the whole index below.
             return iter(self._data)
         else:
