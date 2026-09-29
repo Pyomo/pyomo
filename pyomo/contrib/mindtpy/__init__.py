@@ -7,4 +7,6 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+"""MindtPy solver package for Pyomo MINLP decomposition methods."""
+
 __version__ = (1, 0, 0)
