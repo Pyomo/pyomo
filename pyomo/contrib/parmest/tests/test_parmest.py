@@ -2586,14 +2586,14 @@ class SineExperiment(Experiment):
         m = pyo.ConcreteModel()
         m.k = pyo.Var(initialize=1.0, bounds=(0.1, 10.0))
         m.k.fix()
-        m.yhat = pyo.Var(initialize=0.0)
-        m.yhat_link = pyo.Constraint(expr=m.yhat == pyo.sin(m.k * self.x))
+        m.y_hat = pyo.Var(initialize=0.0)
+        m.y_hat_link = pyo.Constraint(expr=m.y_hat == pyo.sin(m.k * self.x))
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update([(m.yhat, self.y)])
+        m.experiment_outputs.update([(m.y_hat, self.y)])
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         m.unknown_parameters.update([(m.k, pyo.ComponentUID(m.k))])
         m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.measurement_error.update([(m.yhat, None)])
+        m.measurement_error.update([(m.y_hat, None)])
         return m
 
 
