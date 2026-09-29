@@ -19,10 +19,13 @@ import pyomo.contrib.parmest.graphics as graphics
 import pyomo.contrib.parmest as parmestbase
 import pyomo.environ as pyo
 import pyomo.dae as dae
-import math
+import io
+import logging
 
 from pyomo.common.dependencies import numpy as np, pandas as pd, scipy, matplotlib
 from pyomo.common.fileutils import this_file_dir
+from pyomo.common.log import LoggingIntercept
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.contrib.parmest.experiment import Experiment
 from pyomo.contrib.pynumero.asl import AmplInterface
 
@@ -2544,6 +2547,68 @@ class StartCoupledExperiment(Experiment):
         return self.model
 
 
+class QuotedIndexExperiment(Experiment):
+    """
+    Indexed theta over string indices that Pyomo quotes in component names
+    (theta['1'], theta['2']), with two outputs so both entries are
+    identifiable. The optimum is theta['1'] = 2.5, theta['2'] = 1.5.
+    """
+
+    def get_labeled_model(self):
+        m = pyo.ConcreteModel()
+        m.I = pyo.Set(initialize=["1", "2"])
+        m.theta = pyo.Var(m.I, initialize=1.0, bounds=(0.0, 5.0))
+        m.theta.fix()
+        m.y = pyo.Var(initialize=0.0)
+        m.z = pyo.Var(initialize=0.0)
+        m.y_link = pyo.Constraint(expr=m.y == m.theta["1"] + m.theta["2"])
+        m.z_link = pyo.Constraint(expr=m.z == m.theta["1"] - m.theta["2"])
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs.update([(m.y, 4.0), (m.z, 1.0)])
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update([(m.theta, pyo.ComponentUID(m.theta))])
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error.update([(m.y, None), (m.z, None)])
+        return m
+
+
+class SineExperiment(Experiment):
+    """
+    One point of y = sin(k x). Over k in [0.1, 10] the SSE has several local
+    minima, so different starts converge to different solutions.
+    """
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def get_labeled_model(self):
+        m = pyo.ConcreteModel()
+        m.k = pyo.Var(initialize=1.0, bounds=(0.1, 10.0))
+        m.k.fix()
+        m.yhat = pyo.Var(initialize=0.0)
+        m.yhat_link = pyo.Constraint(expr=m.yhat == pyo.sin(m.k * self.x))
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs.update([(m.yhat, self.y)])
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update([(m.k, pyo.ComponentUID(m.k))])
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.measurement_error.update([(m.yhat, None)])
+        return m
+
+
+def _build_sine_estimator(solver_options=None, noise=0.0):
+    # Data from k = 2: the global minimum is near k = 2 (SSE = 0 without
+    # noise), and a start at k = 6 converges to a worse local minimum near
+    # k = 6.2. Noise (seeded) gives a nonzero covariance at the best start.
+    xs = np.linspace(0.2, 3.0, 8)
+    ys = np.sin(2.0 * xs) + noise * np.random.default_rng(0).standard_normal(8)
+    exp_list = [SineExperiment(x, float(y)) for x, y in zip(xs, ys)]
+    return parmest.Estimator(
+        exp_list, obj_function="SSE", solver_options=solver_options
+    )
+
+
 def _build_linear_estimator():
     exp_list = [LinearThetaExperiment(1.0, 2.0), LinearThetaExperiment(2.0, 3.0)]
     return parmest.Estimator(exp_list, obj_function="SSE")
@@ -2737,6 +2802,175 @@ class TestParmestMultistart(unittest.TestCase):
             [MultiOutputExperiment(), MultiOutputExperiment()]
         )
         self.assertEqual(total_points, 2)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_quoted_index_names_map_starts_and_results(self):
+        pest = parmest.Estimator([QuotedIndexExperiment()], obj_function="SSE")
+        _, theta_single = pest.theta_est()
+        # Columns use the theta_est names, given in a different order.
+        starts = pd.DataFrame(
+            [[4.2, 0.3], [0.1, 4.5]], columns=["theta['2']", "theta['1']"]
+        )
+        results_df, best_theta, best_obj = pest.theta_est_multistart(
+            user_provided_df=starts
+        )
+        # Columns and best_theta use the same names as theta_est.
+        self.assertEqual(set(best_theta), set(theta_single))
+        self.assertAlmostEqual(results_df.loc[0, "theta['1']"], 0.3, places=12)
+        self.assertAlmostEqual(results_df.loc[1, "theta['2']"], 0.1, places=12)
+        for i in range(2):
+            self.assertAlmostEqual(
+                results_df.loc[i, "converged_theta['1']"], 2.5, places=6
+            )
+            self.assertAlmostEqual(
+                results_df.loc[i, "converged_theta['2']"], 1.5, places=6
+            )
+        self.assertAlmostEqual(best_theta["theta['1']"], 2.5, places=6)
+        self.assertAlmostEqual(best_theta["theta['2']"], 1.5, places=6)
+        self.assertAlmostEqual(best_obj, 0.0, places=8)
+
+    def test_quoted_index_starts_initialize_ef_model(self):
+        pest = parmest.Estimator([QuotedIndexExperiment()], obj_function="SSE")
+        starts = pd.DataFrame([[0.3, 4.2]], columns=["theta['1']", "theta['2']"])
+        df = pest._generate_initial_theta(user_provided_df=starts)
+        # The row, keyed by the table's column names, is what
+        # theta_est_multistart passes as theta_vals for each start.
+        theta_vals = {name: float(df.loc[0, name]) for name in starts.columns}
+        model = pest._create_scenario_blocks(theta_vals=theta_vals)
+        self.assertEqual(pyo.value(model.parmest_theta["theta['1']"]), 0.3)
+        self.assertEqual(pyo.value(model.parmest_theta["theta['2']"]), 4.2)
+        child = model.exp_scenarios[0]
+        self.assertEqual(pyo.value(child.theta["1"]), 0.3)
+        self.assertEqual(pyo.value(child.theta["2"]), 4.2)
+
+    def test_user_provided_columns_must_match_theta_names(self):
+        pest = parmest.Estimator([QuotedIndexExperiment()], obj_function="SSE")
+        for cols in (["theta[1]", "theta[2]"], ["theta['1']", "theta['1']"]):
+            starts = pd.DataFrame([[0.3, 4.2]], columns=cols)
+            with self.assertRaisesRegex(ValueError, "must match the theta names"):
+                pest._generate_initial_theta(user_provided_df=starts)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_estimator_state_after_multistart_is_best_start(self):
+        pest = _build_sine_estimator(noise=0.02)
+        # Best start first and a worse local minimum last, so leftover state
+        # from the last solve would be detected.
+        starts = pd.DataFrame({"k": [2.3, 6.0]})
+        results_df, best_theta, best_obj = pest.theta_est_multistart(
+            user_provided_df=starts
+        )
+        self.assertAlmostEqual(results_df.loc[1, "converged_k"], 6.18, places=1)
+        self.assertAlmostEqual(best_theta["k"], 2.0, delta=0.01)
+        self.assertLess(best_obj, results_df.loc[1, "final objective"])
+        # The best start's solution is restored as-is, not solved again.
+        self.assertEqual(pest.estimated_theta, best_theta)
+        self.assertEqual(pest.obj_value, best_obj)
+        self.assertEqual(
+            pyo.value(pest.ef_instance.parmest_theta["k"]), best_theta["k"]
+        )
+        # cov_est must be evaluated at the best start: compare with a run
+        # whose only start is the best one. reduced_hessian uses the solved
+        # model (ef_instance), finite_difference only the estimated theta.
+        ref = _build_sine_estimator(noise=0.02)
+        ref.theta_est_multistart(user_provided_df=pd.DataFrame({"k": [2.3]}))
+        methods = ["finite_difference"]
+        if parmest.inverse_reduced_hessian_available:
+            methods.append("reduced_hessian")
+        for method in methods:
+            np.testing.assert_allclose(
+                pest.cov_est(method=method).to_numpy(),
+                ref.cov_est(method=method).to_numpy(),
+                rtol=1e-6,
+                err_msg=method,
+            )
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_nonoptimal_starts_record_termination_and_keep_state(self):
+        pest = _build_sine_estimator(solver_options={"max_iter": 1})
+        # State from an earlier estimate must survive a multistart run in
+        # which no start converges.
+        pest.estimated_theta = {"k": 1.23}
+        pest.obj_value = 4.56
+        log = io.StringIO()
+        with LoggingIntercept(log, "pyomo.contrib.parmest", logging.WARNING):
+            results_df, best_theta, best_obj = pest.theta_est_multistart(
+                n_restarts=3, seed=3
+            )
+        self.assertTrue(
+            (
+                results_df["solver termination"]
+                == str(pyo.TerminationCondition.maxIterations)
+            ).all()
+        )
+        self.assertTrue(results_df["final objective"].isna().all())
+        self.assertIsNone(best_theta)
+        self.assertTrue(np.isnan(best_obj))
+        self.assertIn("none of the 3 starts terminated optimally", log.getvalue())
+        self.assertEqual(pest.estimated_theta, {"k": 1.23})
+        self.assertEqual(pest.obj_value, 4.56)
+
+    @unittest.pytest.mark.mpi
+    def test_multistart_parallel_ranks_share_starts(self):
+        """use mpiexec and mpi4py"""
+        # With seed=None, each rank would sample different starts if the root
+        # rank's table were not shared. The driver checks that every rank
+        # returns the same starts, holds the best start's solution (and gets
+        # the same cov_est), and that the saved CSV matches the starts.
+        driver = """
+import sys
+from mpi4py import MPI
+from pyomo.common.dependencies import numpy as np, pandas as pd
+import pyomo.environ as pyo
+import pyomo.contrib.parmest.parmest as parmest
+from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+    RooneyBieglerExperiment,
+)
+
+comm = MPI.COMM_WORLD
+data = pd.DataFrame(
+    data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
+    columns=["hour", "y"],
+)
+exp_list = [RooneyBieglerExperiment(data.loc[i, :]) for i in range(data.shape[0])]
+pest = parmest.Estimator(exp_list, obj_function="SSE")
+results_df, best_theta, best_obj = pest.theta_est_multistart(
+    n_restarts=4, seed=None, save_results=True, file_name=sys.argv[1]
+)
+cols = ["asymptote", "rate_constant"]
+# Every rank holds the best start's solution, including the rank(s) that did
+# not solve it and loaded its variable values.
+assert best_theta is not None
+assert pest.estimated_theta == best_theta and pest.obj_value == best_obj
+for name in cols:
+    assert pyo.value(pest.ef_instance.parmest_theta[name]) == best_theta[name]
+cov = pest.cov_est().to_numpy()
+all_dfs = comm.gather(results_df, root=0)
+all_covs = comm.gather(cov, root=0)
+if comm.rank == 0:
+    for df in all_dfs[1:]:
+        assert df[cols].equals(all_dfs[0][cols]), "ranks used different starts"
+    for c in all_covs[1:]:
+        assert np.allclose(c, all_covs[0]), "ranks computed different covariances"
+    saved = pd.read_csv(sys.argv[1])
+    assert np.allclose(saved[cols].to_numpy(), results_df[cols].to_numpy())
+"""
+        with TempfileManager.new_context() as tempfile:
+            tmpdir = tempfile.mkdtemp()
+            driver_path = os.path.join(tmpdir, "multistart_mpi_driver.py")
+            with open(driver_path, "w") as f:
+                f.write(driver)
+            csv_path = os.path.join(tmpdir, "results.csv")
+            rlist = [
+                "mpiexec",
+                "--allow-run-as-root",
+                "-n",
+                "2",
+                sys.executable,
+                driver_path,
+                csv_path,
+            ]
+            ret = subprocess.run(rlist)
+            self.assertEqual(ret.returncode, 0)
 
     # Not sure if this test is needed, but leaving here until I decide.
     # @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
