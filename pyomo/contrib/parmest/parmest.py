@@ -170,7 +170,7 @@ def _build_meas_error_covariance_matrix(model, estimated_var=None):
     Therefore, for correlation in time, shared timepoints, or other types of
     correlation, the user must provide all the desired covariance terms
     The diagonal elements can be constructed automatically or the standard
-    deviations can be specified by the user. They standard deviations may be
+    deviations can be specified by the user. The standard deviations may be
     constant or depend on the value (i.e., data) of the measured or input
     variables (e.g., be proportional to them)
 
@@ -199,8 +199,6 @@ def _build_meas_error_covariance_matrix(model, estimated_var=None):
     Sigma_y = np.zeros((number_outputs, number_outputs))
 
     if hasattr(model, "measurement_error"):
-        # check if all the measurement-error standard deviations
-        # have been supplied
         all_known_errors = all(
             model.measurement_error[y_hat] is not None
             for y_hat in model.experiment_outputs
@@ -950,8 +948,7 @@ def _finite_difference_FIM(
     # get the inverse of the measurement-error covariance matrix
     Sigma_y_inv = get_meas_error_covariance_matrix_inv(model, estimated_var)
 
-    # calculate the FIM using the formula in our future paper
-    # Lilonfe and Dowling. (2026)
+    # compute the FIM
     FIM = J.T @ Sigma_y_inv @ J
 
     return FIM

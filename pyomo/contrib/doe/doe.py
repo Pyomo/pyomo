@@ -614,8 +614,6 @@ class DesignOfExperiments:
         # define the measurement-error covariance matrix
         Sigma_y = np.zeros((number_outputs, number_outputs))
 
-        # check if all the values of the measurement-error standard deviation
-        # have been supplied
         try:
             all_known_errors = all(
                 model.measurement_error[y_hat] is not None
