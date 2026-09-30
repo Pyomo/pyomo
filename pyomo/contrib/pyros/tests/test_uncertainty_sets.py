@@ -3156,14 +3156,16 @@ class TestEllipsoidalSet(unittest.TestCase):
         ):
             ellipsoid_set = EllipsoidalSet(center, [[1, 1], [0, 1]], scale)
             ellipsoid_set.validate(config=CONFIG)
-        with self.assertRaises(
-            np.linalg.LinAlgError, msg="Singular shape matrix test failed"
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Cholesky.*failed.*not positive definite",
+            msg="Singular shape matrix test failed",
         ):
             ellipsoid_set = EllipsoidalSet(center, [[0, 0], [0, 0]], scale)
             ellipsoid_set.validate(config=CONFIG)
         with self.assertRaisesRegex(
             ValueError,
-            r"2-th leading minor.*not positive definite.*",
+            r"Cholesky.*failed.*not positive definite",
             msg="Indefinite shape matrix test failed",
         ):
             ellipsoid_set = EllipsoidalSet(center, [[1, 0], [0, -2]], scale)

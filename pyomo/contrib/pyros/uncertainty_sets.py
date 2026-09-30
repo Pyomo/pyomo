@@ -3576,7 +3576,18 @@ class EllipsoidalSet(UncertaintySet):
         # incidentally, this also verifies that
         # the diagonal entries are positive,
         # so their square roots can be calculated later where needed
-        sp.linalg.cho_factor(shape_mat_arr, lower=True)
+        try:
+            sp.linalg.cho_factor(shape_mat_arr, lower=True)
+        except sp.linalg.LinAlgError as err:
+            if "Internal potrf return info =" in str(
+                err
+            ) or "not positive definite" in str(err):
+                raise ValueError(
+                    "Cholesky decomposition attempt failed because "
+                    "the shape matrix is not positive definite."
+                ) from err
+            else:
+                raise
 
 
 class DiscreteScenarioSet(UncertaintySet):
