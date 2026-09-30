@@ -7,8 +7,11 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+"""Plugin loader for registering MindtPy solver variants."""
+
 
 def load():
+    """Import MindtPy solver modules so their plugins are registered."""
     import pyomo.contrib.mindtpy.MindtPy
     import pyomo.contrib.mindtpy.outer_approximation
     import pyomo.contrib.mindtpy.extended_cutting_plane
