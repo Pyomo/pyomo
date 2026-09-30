@@ -775,7 +775,7 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         f = e.create_node_with_local_data(e.args)
         self.assertIsNot(f, e)
         self.assertIs(type(f), type(e))
-        self.assertIs(f.args, e.args)
+        self.assertIs(f._arg, e._arg)
 
         f = e.create_node_with_local_data((2,))
         self.assertIsNot(f, e)
@@ -800,7 +800,8 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         f = e.create_node_with_local_data(e.args)
         self.assertIsNot(f, e)
         self.assertIs(type(f), type(e))
-        self.assertIs(f.args, e.args)
+        self.assertIs(f._l_arg, e._l_arg)
+        self.assertIs(f._r_arg, e._r_arg)
 
         f = e.create_node_with_local_data((2, 3))
         self.assertIsNot(f, e)
@@ -875,7 +876,8 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         f = e.create_node_with_local_data(e.args)
         self.assertIsNot(f, e)
         self.assertIs(type(f), type(e))
-        self.assertIs(f.args, e.args)
+        self.assertIs(f._l_arg, e._l_arg)
+        self.assertIs(f._r_arg, e._r_arg)
 
         f = e.create_node_with_local_data((m.p, 3))
         self.assertIsNot(f, e)
@@ -922,7 +924,8 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         f = e.create_node_with_local_data(e.args)
         self.assertIsNot(f, e)
         self.assertIs(type(f), type(e))
-        self.assertIs(f.args, e.args)
+        self.assertIs(f._l_arg, e._l_arg)
+        self.assertIs(f._r_arg, e._r_arg)
 
         f = e.create_node_with_local_data((2, 3))
         self.assertIsNot(f, e)
@@ -947,13 +950,13 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         f = e.create_node_with_local_data(e.args)
         self.assertIsNot(f, e)
         self.assertIs(type(f), type(e))
-        self.assertIsNot(f._args_, e._args_)
+        self.assertIsNot(f._args, e._args)
         self.assertIsNot(f.args, e.args)
 
-        f = e.create_node_with_local_data(e._args_)
+        f = e.create_node_with_local_data(e._args)
         self.assertIsNot(f, e)
         self.assertIs(type(f), type(e))
-        self.assertIs(f._args_, e._args_)
+        self.assertIs(f._args, e._args)
         self.assertIsNot(f.args, e.args)
 
         f = e.create_node_with_local_data((m.x, 2, 3))
@@ -997,7 +1000,9 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         f = e.create_node_with_local_data(e.args)
         self.assertIsNot(f, e)
         self.assertIs(type(f), type(e))
-        self.assertIs(f.args, e.args)
+        self.assertIs(f._if, e._if)
+        self.assertIs(f._then, e._then)
+        self.assertIs(f._else, e._else)
 
         f = e.create_node_with_local_data((2, 3, 4))
         self.assertIsNot(f, e)
@@ -1023,7 +1028,7 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         f = e.create_node_with_local_data(e.args)
         self.assertIsNot(f, e)
         self.assertIs(type(f), type(e))
-        self.assertIs(f.args, e.args)
+        self.assertIs(f._arg, e._arg)
         self.assertIs(e._fcn, f._fcn)
         self.assertIs(e._name, f._name)
 
@@ -1058,7 +1063,7 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         f = e.create_node_with_local_data(e.args)
         self.assertIsNot(f, e)
         self.assertIs(type(f), type(e))
-        self.assertIs(f.args, e.args)
+        self.assertIs(f._arg, e._arg)
         self.assertIs(e._fcn, f._fcn)
         self.assertIs(e._name, f._name)
 

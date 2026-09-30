@@ -115,11 +115,11 @@ class ObjectiveData(NamedExpressionData, ActiveComponentData):
 
     """
 
-    __slots__ = ("_args_", "_sense")
+    __slots__ = ("_arg", "_sense")
 
     def __init__(self, expr=None, sense=minimize, component=None):
         # Inlining NamedExpressionData.__init__
-        self._args_ = (expr,)
+        self._arg = expr
         # Inlining ActiveComponentData.__init__
         self._component = weakref_ref(component) if (component is not None) else None
         self._index = NOTSET
@@ -172,10 +172,10 @@ class TemplateDataMixin:
         # Note that it is faster to just generate the expression from
         # scratch than it is to clone it and replace the IndexTemplate objects
         self.set_value(self.parent_component().rule(self.parent_block(), self.index()))
-        return self._args_
+        return (self._arg,)
 
     def template_expr(self):
-        return self._args_
+        return self._arg
 
     def set_value(self, expr):
         # Setting a value will convert this instance from a templatized
@@ -204,7 +204,7 @@ class TemplateObjectiveData(TemplateDataMixin, ObjectiveData):
         self._component = component
         self._active = True
         self._index = index
-        self._args_ = template_info
+        self._arg = template_info
         self._sense = sense
 
 
@@ -346,7 +346,7 @@ class Objective(ActiveIndexedComponent):
                         else:
                             assert self.__class__ is ScalarObjective
                             self.__class__ = TemplateScalarObjective
-                            self._args_ = template_info
+                            self._arg = template_info
                             self._data = {None: self}
                             self.set_sense(self._init_sense(self, self.index()))
                         return
