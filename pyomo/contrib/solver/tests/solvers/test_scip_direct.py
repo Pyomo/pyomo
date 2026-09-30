@@ -243,6 +243,26 @@ class TestScipDirect(unittest.TestCase):
                 m, load_solutions=True, raise_exception_on_nonoptimal_result=False
             )
 
+    def test_trivial_constraints(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(0, 1))
+        m.feasible = pyo.Constraint(expr=pyo.Constraint.Feasible)
+        m.obj = pyo.Objective(expr=m.x)
+
+        opt = ScipDirect()
+        res = opt.solve(m)
+        self.assertEqual(res.solution_status, SolutionStatus.optimal)
+        self.assertAlmostEqual(m.x.value, 0)
+
+        m.infeasible = pyo.Constraint(expr=pyo.Constraint.Infeasible)
+        res = opt.solve(
+            m, load_solutions=False, raise_exception_on_nonoptimal_result=False
+        )
+        self.assertEqual(
+            res.termination_condition, TerminationCondition.provenInfeasible
+        )
+        self.assertEqual(res.solution_status, SolutionStatus.noSolution)
+
     def test_timer(self):
         m = self.create_lp_model()
         timer = HierarchicalTimer()
