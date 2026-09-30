@@ -118,17 +118,27 @@ def _test_iis(solver_name):
 
 
 def _validate_ilp(file_name):
-    lines_found = {"c2: 100 x + y <= 0": False, "c3: x >= 0.5": False}
+    # Xpress may write constraint terms in different orders across versions
+    # (e.g., "100 x + y <= 0" vs "y + 100 x <= 0"), so check both forms for c2.
+    c2_forms = {"c2: 100 x + y <= 0", "c2: y + 100 x <= 0"}
+    c2_found = False
+    c3_found = False
     with open(file_name, "r") as f:
         for line in f.readlines():
-            for k, v in lines_found.items():
-                if (not v) and k in line:
-                    lines_found[k] = True
+            if any(form in line for form in c2_forms):
+                c2_found = True
+            if "c3: x >= 0.5" in line:
+                c3_found = True
 
-    if not all(lines_found.values()):
+    missing = []
+    if not c2_found:
+        missing.append("c2: 100 x + y <= 0")
+    if not c3_found:
+        missing.append("c3: x >= 0.5")
+    if missing:
         raise Exception(
             f"The file {file_name} is not as expected. Missing constraints:\n"
-            + "\n".join(k for k, v in lines_found.items() if not v)
+            + "\n".join(missing)
         )
 
 
