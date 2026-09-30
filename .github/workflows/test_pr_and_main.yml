@@ -181,14 +181,6 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.12
-          other: /numpy2
-          slim: 1
-          TARGET: linux
-          PYENV: pip
-          PACKAGES: "gurobipy dill numpy>2.0 scipy networkx"
-
-        - os: ubuntu-latest
           python: '3.10'
           other: /pyutilib
           TARGET: linux
