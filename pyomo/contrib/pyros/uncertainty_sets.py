@@ -3474,9 +3474,15 @@ class EllipsoidalSet(UncertaintySet):
 
         # we need the inverse of the shape matrix.
         # since the matrix should be positive definite,
-        # prefer Cholesky factorization for the inversion
-        inv_shape_mat = sp.linalg.inv(
-            self.shape_matrix, assume_a="pos", check_finite=False
+        # use Cholesky factorization for the inversion.
+        # Cholesky factorization will fail if the matrix is not
+        # positive definite.
+        # the matrix is already assumed to be symmetric.
+        inv_shape_cho_factor, lower = sp.linalg.cho_factor(
+            self.shape_matrix, lower=True
+        )
+        inv_shape_mat = sp.linalg.cho_solve(
+            (inv_shape_cho_factor, lower), np.eye(self.dim)
         )
 
         with mutable_expression() as expr:
