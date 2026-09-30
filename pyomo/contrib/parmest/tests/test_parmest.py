@@ -1002,10 +1002,10 @@ class TestModelVariants(unittest.TestCase):
             obj_function=self.objective_function,
         )
 
-        objval, thetavals = pest.theta_est()
+        obj_val, theta_vals = pest.theta_est()
         cov_method = "finite_difference"
         cov = pest.cov_est(method=cov_method)
-        self.check_rooney_biegler_results(objval, cov, cov_method)
+        self.check_rooney_biegler_results(obj_val, cov, cov_method)
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_indexed_vars_auto_differentiation_cov(self):

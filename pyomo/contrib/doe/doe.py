@@ -609,7 +609,6 @@ class DesignOfExperiments:
         outputs_name = [y_hat.name for y_hat in outputs]
         outputs_index = {y_hat_name: i for i, y_hat_name in enumerate(outputs_name)}
 
-        # get the number of output variables
         number_outputs = len(outputs)
 
         # define the measurement-error covariance matrix
@@ -633,7 +632,6 @@ class DesignOfExperiments:
         # fill the leading-diagonal elements from the standard deviation of
         # the measurement errors
         for y_hat in outputs:
-            # get the index of y_hat
             i = outputs_index[y_hat.name]
 
             if all_known_errors:
@@ -723,7 +721,6 @@ class DesignOfExperiments:
         """
         params_data_object = []
         for component in model.unknown_parameters:
-            # check if it is indexed
             if component.is_indexed():
                 # get the parameter data objects
                 params_data_object.extend(component.values())

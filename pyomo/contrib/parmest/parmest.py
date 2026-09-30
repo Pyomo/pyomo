@@ -193,7 +193,6 @@ def _build_meas_error_covariance_matrix(model, estimated_var=None):
     outputs_name = [y_hat.name for y_hat in outputs]
     outputs_index = {y_hat_name: i for i, y_hat_name in enumerate(outputs_name)}
 
-    # get the number of output variables
     number_outputs = len(outputs)
 
     # define the measurement-error covariance matrix
@@ -210,7 +209,6 @@ def _build_meas_error_covariance_matrix(model, estimated_var=None):
         # fill the leading-diagonal elements from the standard deviation of
         # the measurement errors
         for y_hat in outputs:
-            # get the index of y_hat
             i = outputs_index[y_hat.name]
 
             if all_known_errors:
