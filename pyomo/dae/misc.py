@@ -190,14 +190,6 @@ def update_contset_indexed_component(comp, expansion_map):
     if comp.ctype is Suffix:
         return
 
-    # Params indexed by a ContinuousSet should include an initialize
-    # and/or default rule which will be called automatically when the
-    # parameter value at a new point in the ContinuousSet is
-    # requested. Therefore, no special processing is required for
-    # Params.
-    if comp.ctype is Param:
-        return
-
     # Integral components are handled after every ContinuousSet has been
     # discretized. Import is deferred to here due to circular references.
     from pyomo.dae import Integral
@@ -228,6 +220,12 @@ def update_contset_indexed_component(comp, expansion_map):
                 # as Var components
                 expansion_map[comp] = _update_var
                 _update_var(comp)
+            elif comp.ctype is Param:
+                # Mutable Params with an initialize rule need to be updated
+                # after new ContinuousSet points are added. Immutable Params
+                # intentionally retain their existing behavior.
+                expansion_map[comp] = _update_param
+                _update_param(comp)
             elif comp.ctype == Constraint:
                 expansion_map[comp] = _update_constraint
                 _update_constraint(comp)
@@ -265,6 +263,40 @@ def _update_var(v):
     new_indices = set(v.index_set()) - set(v._data.keys())
     for index in new_indices:
         v.add(index)
+
+
+def _update_param(p):
+    """
+    Initialize new indices in a mutable Param after a ContinuousSet changes.
+
+    The Param initializer is only applied during component construction. A
+    DAE discretization can add points to a ContinuousSet after that, so the
+    normal construction path does not see the new indices. Defaults are
+    handled lazily by Param itself; this method only applies explicit
+    initialize rules to missing data.
+    """
+    if not p.mutable or p._rule is None or p._rule.contains_indices():
+        return
+    if not p.index_set().isfinite():
+        return
+
+    new_indices = [
+        index
+        for index in p.index_set()
+        if index not in p._data or p._data[index]._value is Param.NoValue
+    ]
+    if not new_indices:
+        return
+
+    block = p.parent_block()
+    rule = p._rule
+    if rule.constant():
+        value = rule(block, None)
+        for index in new_indices:
+            p._setitem_when_not_present(index, value)
+    else:
+        for index in new_indices:
+            p._setitem_when_not_present(index, rule(block, index))
 
 
 def _update_constraint(con):
