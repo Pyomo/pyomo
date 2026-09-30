@@ -27,6 +27,7 @@ from pyomo.core.expr.numeric_expr import (
     NPV_UnaryFunctionExpression,
 )
 from pyomo.core.base.units_container import _PyomoUnit
+import pyomo.environ as pyo
 
 from pyomo.repn.util import ExitNodeDispatcher
 from pyomo.core.base import (
@@ -272,9 +273,12 @@ def _handle_pow(node, data, visitor):
 
 def _handle_named_expression(node, data, visitor):
     assert len(data) == 1
-    node.expr = data[0]
-    visitor.substitution_map[node] = node
-    return node
+    res = data[0]
+    # node.expr = data[0]
+    visitor.substitution_map[node] = res
+    # visitor.node_to_var_map[res] = visitor.node_to_var_map[data[0]]
+    # visitor.degree_map[res] = visitor.degree_map[data[0]]
+    return res
 
 
 def _handle_negation(node, data, visitor):
@@ -386,8 +390,14 @@ class _UnivariateNonlinearDecompositionVisitor(StreamBasedExpressionVisitor):
             return expr
         else:
             x = self.block.x.add()
+            # initialize from the current expression value, if possible
+            # try:
+            #     x.set_value(pyo.value(expr, exception=True))
+            # except:
+            #     x.set_value(None)
             self.substitution_map[expr] = x
             c = self.block.c.add(x == expr)
+            # c.pprint()
             # we need to compute bounds on x now because some of the
             # handlers depend on variable bounds (e.g., division)
             xl, xu = self._interval_visitor.walk_expression(expr)

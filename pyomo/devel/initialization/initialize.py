@@ -40,9 +40,7 @@ def _get_solver(sname, reason):
 def _setup(nlp):
     # get all variable bounds, domains, etc. to restore them later
     orig_vars = get_vars(nlp)
-    orig_var_data = [
-        (v, (v.lower, v.upper, v.domain, v.fixed, v.value)) for v in orig_vars
-    ]
+    orig_var_data = [(v, (v.lb, v.ub, v.domain, v.fixed, v.value)) for v in orig_vars]
     for v, vdata in orig_var_data:
         if vdata[2].isdiscrete():
             raise RuntimeError(
