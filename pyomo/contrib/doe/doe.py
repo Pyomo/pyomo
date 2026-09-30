@@ -591,7 +591,7 @@ class DesignOfExperiments:
         explicitly supplies
         Therefore, for correlation in time, shared timepoints, or other types of
         correlation, the user must provide all the desired covariance terms
-        They standard deviations may be constant or depend on the value (i.e.,
+        The standard deviations may be constant or depend on the value (i.e.,
         data) of the measured or input variables (e.g., be proportional to them)
 
         Parameters
