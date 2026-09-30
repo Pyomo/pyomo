@@ -48,9 +48,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
     - name: Set up Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: 3.11
     - name: Black Formatting Check
@@ -60,7 +60,7 @@ jobs:
         pip install 'black!=24.4.1'
         black . --check --diff
     - name: Spell Check
-      uses: crate-ci/typos@master
+      uses: crate-ci/typos@main
       with:
         config: ./.github/workflows/typos.toml
     - name: Set DNS server
@@ -211,7 +211,7 @@ jobs:
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Configure job parameters
       run: |
@@ -232,7 +232,7 @@ jobs:
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
 
     #- name: Pip package cache
-    #  uses: actions/cache@v5
+    #  uses: actions/cache@v6
     #  if: matrix.PYENV == 'pip'
     #  id: pip-cache
     #  with:
@@ -240,7 +240,7 @@ jobs:
     #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
 
     #- name: OS package cache
-    #  uses: actions/cache@v5
+    #  uses: actions/cache@v6
     #  if: matrix.TARGET != 'osx'
     #  id: os-cache
     #  with:
@@ -248,7 +248,7 @@ jobs:
     #    key: pkg-${{env.CACHE_VER}}.0-${{runner.os}}
 
     - name: TPL package download cache
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       if: ${{ ! matrix.slim }}
       id: download-cache
       with:
@@ -308,7 +308,7 @@ jobs:
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python }}
 
@@ -326,7 +326,7 @@ jobs:
     # have support for OSX.
     - name: Set up UI testing infrastructure
       if: ${{ matrix.TARGET != 'osx' }}
-      uses: pyvista/setup-headless-display-action@v3
+      uses: pyvista/setup-headless-display-action@v5
       with:
         qt: true
         pyvista: false
@@ -889,10 +889,10 @@ jobs:
     timeout-minutes: 10
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Set up Python 3.10
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: '3.10'
 
@@ -945,11 +945,11 @@ jobs:
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       # We need the source for .codecov.yml and running "coverage xml"
 
     #- name: Pip package cache
-    #  uses: actions/cache@v5
+    #  uses: actions/cache@v6
     #  id: pip-cache
     #  with:
     #    path: cache/pip
@@ -961,7 +961,7 @@ jobs:
         path: artifacts
 
     - name: Set up Python 3.12
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: 3.12
 
@@ -1039,7 +1039,7 @@ jobs:
       if: |
         env.PYOMO_WORKFLOW != 'branch' &&
         (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@v7
       with:
         files: coverage.xml
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
@@ -1052,7 +1052,7 @@ jobs:
         env.PYOMO_WORKFLOW != 'branch' &&
         hashFiles('coverage-other.xml') != '' &&
         (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@v7
       with:
         files: coverage-other.xml
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
