@@ -15,7 +15,7 @@ import pyomo.environ as pyo
 
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
-from pyomo.contrib.appsi.solvers.highs import Highs
+from pyomo.contrib.appsi.solvers.highs import Highs, highspy
 from pyomo.contrib.appsi.base import TerminationCondition
 
 from pyomo.contrib.solver.tests.solvers import instances
@@ -182,6 +182,49 @@ class TestBugs(unittest.TestCase):
             pyo.SolverFactory("appsi_highs").solve(m, tee=True, warmstart=True)
         log = output.getvalue()
         self.assertIn("MIP start solution is feasible, objective value is 25", log)
+
+    @unittest.skipUnless(
+        hasattr(highspy, "kHighsUndefined"),
+        "Partial MIP starts require highspy>=1.11 (kHighsUndefined)",
+    )
+    def test_partial_warm_start(self):
+        m = pyo.ConcreteModel()
+
+        # decision variables
+        m.x1 = pyo.Var(domain=pyo.Integers, name="x1", bounds=(0, 10))
+        m.x2 = pyo.Var(domain=pyo.Reals, name="x2", bounds=(0, 10))
+        m.x3 = pyo.Var(domain=pyo.Binary, name="x3")
+
+        # objective function
+        m.OBJ = pyo.Objective(expr=(3 * m.x1 + 2 * m.x2 + 4 * m.x3), sense=pyo.maximize)
+
+        # constraints
+        m.C1 = pyo.Constraint(expr=m.x1 + m.x2 <= 9)
+        m.C2 = pyo.Constraint(expr=3 * m.x1 + m.x2 <= 18)
+        m.C3 = pyo.Constraint(expr=m.x1 <= 7)
+        m.C4 = pyo.Constraint(expr=m.x2 <= 6)
+
+        # partial MIP start: x3 is left unset
+        m.x1 = 4
+        m.x2 = 4.5
+
+        # We add one more constraint compared to test_warm_start:
+        # with x1 = 4, the constraint forces x3 = 1, so filling x3 with 0 is
+        # infeasible (which is what the interface passed to HiGHS before
+        # partial starts were supported).
+        # NOTE: a tighter C5 (e.g. x1 <= 3 + x3) lets presolve solve the model
+        # before the start is used, so the "MIP start" line is never printed
+        # and the test fails.
+        m.C5 = pyo.Constraint(expr=m.x1 <= 3 + 7 * m.x3)
+
+        # solving process
+        with capture_output() as output:
+            pyo.SolverFactory("appsi_highs").solve(m, tee=True, warmstart=True)
+        log = output.getvalue()
+        # We just check whether the MIP start solution is feasible, not for an
+        # actual objective value, since that depends on how HiGHS completes the
+        # partial start.
+        self.assertIn("MIP start solution is feasible", log)
 
     def test_node_limit_term_cond(self):
         opt = Highs()
