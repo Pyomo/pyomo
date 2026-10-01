@@ -132,6 +132,9 @@ class TestWarmStart(unittest.TestCase):
 
         return m
 
+    @unittest.skipUnless(
+        opt.version()[:2] >= (1, 8), "Partial MIP starts require HiGHS>=1.8"
+    )
     def test_warm_start(self):
         m = self.make_model()
 
@@ -149,6 +152,9 @@ class TestWarmStart(unittest.TestCase):
             "MIP start solution is feasible, objective value is 26", res.solver_log
         )
 
+    @unittest.skipUnless(
+        opt.version()[:2] >= (1, 8), "Partial MIP starts require HiGHS>=1.8"
+    )
     def test_partial_warm_start(self):
         m = self.make_model()
 
@@ -171,6 +177,9 @@ class TestWarmStart(unittest.TestCase):
         # partial start.
         self.assertIn("MIP start solution is feasible", res.solver_log)
 
+    @unittest.skipUnless(
+        opt.version()[:2] >= (1, 8), "Partial MIP starts require HiGHS>=1.8"
+    )
     def test_warm_start_from_previous_results(self):
         m = self.make_model()
         opt = Highs()
@@ -193,6 +202,9 @@ class TestWarmStart(unittest.TestCase):
             "MIP start solution is feasible, objective value is 25", res.solver_log
         )
 
+    @unittest.skipUnless(
+        opt.version()[:2] >= (1, 8), "Partial MIP starts require HiGHS>=1.8"
+    )
     def test_warm_start_resolve_drops_unset_values(self):
         m = self.make_model()
         opt = Highs()
