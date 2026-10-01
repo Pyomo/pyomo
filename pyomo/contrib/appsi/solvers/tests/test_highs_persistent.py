@@ -15,7 +15,7 @@ import pyomo.environ as pyo
 
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
-from pyomo.contrib.appsi.solvers.highs import Highs, highspy
+from pyomo.contrib.appsi.solvers.highs import Highs
 from pyomo.contrib.appsi.base import TerminationCondition
 
 from pyomo.contrib.solver.tests.solvers import instances
@@ -184,7 +184,7 @@ class TestBugs(unittest.TestCase):
         self.assertIn("MIP start solution is feasible, objective value is 25", log)
 
     @unittest.skipUnless(
-        hasattr(highspy, "kHighsUndefined"),
+        opt.version()[:2] >= (1, 11),
         "Partial MIP starts require highspy>=1.11 (kHighsUndefined)",
     )
     def test_partial_warm_start(self):
