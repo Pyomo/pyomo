@@ -2373,6 +2373,242 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         self.assertEqual(len(m.p), 2)
         self.assertEqual(len(m.p._data), 0)
 
+    def test_immutable_nonfinite_indexing_sets(self):
+        m = ConcreteModel()
+        m.p = Param(Integers, initialize={0: 1, 2: 3})
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0], 1)
+        with self.assertRaisesRegex(
+            ValueError, 'The Param value is undefined and no default value '
+        ):
+            m.p[1]
+        self.assertEqual(m.p[2], 3)
+        self.assertEqual(len(m.p._data), 2)
+
+        m = ConcreteModel()
+        m.p = Param(Integers, initialize={0: 1, 2: 3}, default=4)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0], 1)
+        self.assertEqual(m.p[1], 4)
+        self.assertEqual(m.p[2], 3)
+        self.assertEqual(len(m.p._data), 2)
+
+        m = ConcreteModel()
+        m.p = Param(Integers, initialize={0: 1, 2: 3}, default=lambda m, i: i * 10)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0], 1)
+        self.assertEqual(m.p[1], 10)
+        self.assertEqual(m.p[2], 3)
+        self.assertEqual(len(m.p._data), 2)
+
+        m = ConcreteModel()
+        m.p = Param(Integers, initialize=lambda m, i: i * 10, default=100)
+        self.assertEqual(len(m.p._data), 0)
+        self.assertEqual(m.p[0], 0)
+        self.assertEqual(m.p[1], 10)
+        self.assertEqual(m.p[2], 20)
+        self.assertEqual(len(m.p._data), 3)  # initialize inserts values into the _data
+
+        m = ConcreteModel()
+        m.p = Param(Integers, initialize=10, default=100)
+        self.assertEqual(len(m.p._data), 0)
+        self.assertEqual(m.p[0], 10)
+        self.assertEqual(m.p[1], 10)
+        self.assertEqual(m.p[2], 10)
+        self.assertEqual(len(m.p._data), 3)  # initialize inserts values into the _data
+
+        m = ConcreteModel()
+        m.p = Param(Integers, default=100)
+        self.assertEqual(len(m.p._data), 0)
+        self.assertEqual(m.p[0], 100)
+        self.assertEqual(m.p[1], 100)
+        self.assertEqual(m.p[2], 100)
+        self.assertEqual(len(m.p._data), 0)
+
+    def test_mutable_nonfinite_indexing_sets(self):
+        m = ConcreteModel()
+        m.p = Param(Integers, mutable=True, initialize={0: 1, 2: 3})
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0].value, 1)
+        with self.assertRaisesRegex(
+            ValueError, 'The Param value is currently set to an invalid value'
+        ):
+            m.p[1].value
+        self.assertEqual(m.p[2].value, 3)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        m.p = Param(Integers, mutable=True, initialize={0: 1, 2: 3}, default=4)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0].value, 1)
+        self.assertEqual(m.p[1].value, 4)
+        self.assertEqual(m.p[2].value, 3)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        m.p = Param(
+            Integers, mutable=True, initialize={0: 1, 2: 3}, default=lambda m, i: i * 10
+        )
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0].value, 1)
+        self.assertEqual(m.p[1].value, 10)
+        self.assertEqual(m.p[2].value, 3)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        m.p = Param(Integers, mutable=True, initialize=lambda m, i: i * 10, default=100)
+        self.assertEqual(len(m.p._data), 0)
+        self.assertEqual(m.p[0].value, 0)
+        self.assertEqual(m.p[1].value, 10)
+        self.assertEqual(m.p[2].value, 20)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        m.p = Param(Integers, mutable=True, initialize=10, default=100)
+        self.assertEqual(len(m.p._data), 0)
+        self.assertEqual(m.p[0].value, 10)
+        self.assertEqual(m.p[1].value, 10)
+        self.assertEqual(m.p[2].value, 10)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        m.p = Param(Integers, mutable=True, default=100)
+        self.assertEqual(len(m.p._data), 0)
+        self.assertEqual(m.p[0].value, 100)
+        self.assertEqual(m.p[1].value, 100)
+        self.assertEqual(m.p[2].value, 100)
+        self.assertEqual(len(m.p._data), 3)
+
+    def test_immutable_dynamic_indexing_sets(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        m.p = Param(m.I, initialize={0: 1, 2: 3})
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0], 1)
+        with self.assertRaisesRegex(
+            ValueError, 'The Param value is undefined and no default value '
+        ):
+            m.p[1]
+        self.assertEqual(m.p[2], 3)
+        self.assertEqual(len(m.p._data), 2)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        m.p = Param(m.I, initialize={0: 1, 2: 3}, default=4)
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0], 1)
+        self.assertEqual(m.p[1], 4)
+        self.assertEqual(m.p[2], 3)
+        self.assertEqual(len(m.p._data), 2)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        m.p = Param(m.I, initialize={0: 1, 2: 3}, default=lambda m, i: i * 10)
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0], 1)
+        self.assertEqual(m.p[1], 10)
+        self.assertEqual(m.p[2], 3)
+        self.assertEqual(len(m.p._data), 2)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        m.p = Param(m.I, initialize=lambda m, i: i * 10, default=100)
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0], 0)
+        self.assertEqual(m.p[1], 10)
+        self.assertEqual(m.p[2], 20)
+        self.assertEqual(len(m.p._data), 3)  # initialize inserts values into the _data
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        m.p = Param(m.I, initialize=10, default=100)
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0], 10)
+        self.assertEqual(m.p[1], 10)
+        self.assertEqual(m.p[2], 10)
+        self.assertEqual(len(m.p._data), 3)  # initialize inserts values into the _data
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        m.p = Param(m.I, default=100)
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 0)
+        self.assertEqual(m.p[0], 100)
+        self.assertEqual(m.p[1], 100)
+        self.assertEqual(m.p[2], 100)
+        self.assertEqual(len(m.p._data), 0)
+
+    def test_mutable_dynamic_indexing_sets(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        m.p = Param(m.I, mutable=True, initialize={0: 1, 2: 3})
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0].value, 1)
+        with self.assertRaisesRegex(
+            ValueError, 'The Param value is currently set to an invalid value'
+        ):
+            m.p[1].value
+        self.assertEqual(m.p[2].value, 3)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        m.p = Param(m.I, mutable=True, initialize={0: 1, 2: 3}, default=4)
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0].value, 1)
+        self.assertEqual(m.p[1].value, 4)
+        self.assertEqual(m.p[2].value, 3)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        m.p = Param(
+            m.I, mutable=True, initialize={0: 1, 2: 3}, default=lambda m, i: i * 10
+        )
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0].value, 1)
+        self.assertEqual(m.p[1].value, 10)
+        self.assertEqual(m.p[2].value, 3)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        m.p = Param(m.I, mutable=True, initialize=lambda m, i: i * 10, default=100)
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0].value, 0)
+        self.assertEqual(m.p[1].value, 10)
+        self.assertEqual(m.p[2].value, 20)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        m.p = Param(m.I, mutable=True, initialize=10, default=100)
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0].value, 10)
+        self.assertEqual(m.p[1].value, 10)
+        self.assertEqual(m.p[2].value, 10)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        m.p = Param(m.I, mutable=True, default=100)
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 0)
+        self.assertEqual(m.p[0].value, 100)
+        self.assertEqual(m.p[1].value, 100)
+        self.assertEqual(m.p[2].value, 100)
+        self.assertEqual(len(m.p._data), 3)
+
 
 # Add test methods for all intrinsic functions
 assignTestsIndexedParamTests(MiscIndexedParamBehaviorTests, intrinsic_test_list)
