@@ -350,7 +350,9 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         _domain_rule = self._pop_from_kwargs('Param', kwd, ('domain', 'within'))
         self._validate = kwd.pop('validate', None)
         self._mutable = kwd.pop('mutable', None)
-        self._default_val = kwd.pop('default', Param.NoValue)
+        self._default_val = Initializer(
+            kwd.pop('default', Param.NoValue), arg_not_specified=Param.NoValue
+        )
         self._dense_initialize = kwd.pop('initialize_as_dense', False)
         self._units = kwd.pop('units', None)
 
@@ -401,7 +403,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         component.  If a default value is specified, then the
         length equals the number of items in the component index.
         """
-        if self._default_val is Param.NoValue:
+        if self._default_val is None or not self._index_set.isfinite():
             return len(self._data)
         return len(self._index_set)
 
@@ -410,7 +412,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         Return true if the index is in the dictionary.  If the default value
         is specified, then all members of the component index are valid.
         """
-        if self._default_val is Param.NoValue:
+        if self._default_val is None:
             return idx in self._data
         return idx in self._index_set
 
@@ -440,7 +442,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             # implementation of keys() to only return values from
             # self._data:
             tmp = self._default_val
-            self._default_val = Param.NoValue
+            self._default_val = None
             return self.keys(sort)
         finally:
             self._default_val = tmp
@@ -452,7 +454,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         # picked up here, too):
         try:
             tmp = self._default_val
-            self._default_val = Param.NoValue
+            self._default_val = None
             return self.values(sort)
         finally:
             self._default_val = tmp
@@ -464,7 +466,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         # pattern used for sparse_keys (and get len() to "lie")
         try:
             tmp = self._default_val
-            self._default_val = Param.NoValue
+            self._default_val = None
             return self.items(sort)
         finally:
             self._default_val = tmp
@@ -648,7 +650,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 "Default value (%s) is not valid for Param %s domain %s"
                 % (str(val), self.name, self.domain.name)
             )
-        self._default_val = val
+        self._default_val = Initializer(val)
 
     def default(self):
         """
@@ -664,16 +666,30 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 f(model, i) returns the value for the default value for
                 parameter i
         """
+        if self._default_val is None:
+            return Param.NoValue
+        if self._default_val.constant():
+            return self._default_val(self, None)
         return self._default_val
 
     def _getitem_when_not_present(self, index):
         """
         Returns the default component data value
         """
-        #
-        # Local values
-        #
-        val = self._default_val
+        # If the _rule contained indices, then we populated everything
+        # in construct().  But if it was a function / constant, then we
+        # should use it to initialize this value.
+        if self._rule is not None and not self._rule.contains_indices():
+            val = self._rule(self, index)
+            _check_value_domain = True
+            _store_value = True
+        elif self._default_val is not None:
+            val = self._default_val(self, index)
+            _check_value_domain = not self._default_val.constant()
+            _store_value = self._mutable
+        else:
+            val = Param.NoValue
+
         if val is Param.NoValue:
             # We should allow the creation of mutable params without
             # a default value, as long as *solving* a model without
@@ -694,26 +710,6 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 "Error retrieving immutable Param value (%s):\n\tThe Param "
                 "value is undefined and no default value is specified." % (idx_str,)
             )
-
-        _default_type = type(val)
-        _check_value_domain = True
-        if _default_type in native_types:
-            #
-            # The set_default() method validates the domain of native types, so
-            # we can skip the check on the value domain.
-            #
-            _check_value_domain = False
-        elif _default_type is types.FunctionType:
-            val = apply_indexed_rule(self, val, self.parent_block(), index)
-        elif hasattr(val, '__getitem__') and (
-            not isinstance(val, NumericValue) or val.is_indexed()
-        ):
-            # Things that look like Dictionaries should be allowable.  This
-            # includes other IndexedComponent objects.
-            val = val[index]
-        else:
-            # this is something simple like a non-indexed component
-            pass
 
         #
         # If the user wants to validate values, we need to validate the
@@ -739,7 +735,8 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 self._data[index] = val
                 self._validate_value(index, val, _check_value_domain)
             finally:
-                del self._data[index]
+                if not _store_value:
+                    del self._data[index]
 
         return val
 
@@ -896,16 +893,17 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             # If the default value is a simple type, we check it versus
             # the domain.
             #
-            val = self._default_val
-            if (
-                val is not Param.NoValue
-                and type(val) in native_types
-                and val not in self.domain
-            ):
-                raise ValueError(
-                    "Default value (%s) is not valid for Param %s domain %s"
-                    % (str(val), self.name, self.domain.name)
-                )
+            if self._default_val is not None and self._default_val.constant():
+                val = self._default_val(self, None)
+                if (
+                    val is not Param.NoValue
+                    and type(val) in native_types
+                    and val not in self.domain
+                ):
+                    raise ValueError(
+                        "Default value (%s) is not valid for Param %s domain %s"
+                        % (str(val), self.name, self.domain.name)
+                    )
             #
             # Flag that we are in the "during construction" phase
             #
@@ -957,17 +955,17 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         """
         Return data that will be printed for this component.
         """
-        if self._default_val is Param.NoValue:
+        if self._default_val is None:
             default = "None"  # for backwards compatibility in reporting
-        elif type(self._default_val) is types.FunctionType:
-            default = "(function)"
+        elif self._default_val.constant():
+            default = str(self._default_val(self, None))
         else:
-            default = str(self._default_val)
+            default = "(function)"
         if self._mutable or not self.is_indexed():
             dataGen = lambda k, v: [v._value]
         else:
             dataGen = lambda k, v: [v]
-        if self.index_set().isfinite() or self._default_val is Param.NoValue:
+        if self.index_set().isfinite() or self._default_val is None:
             _len = len(self)
         else:
             _len = 'inf'

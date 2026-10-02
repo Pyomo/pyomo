@@ -105,7 +105,7 @@ class ParamTester:
             self.assertRaises(TypeError, float, self.instance.A)
             self.assertRaises(TypeError, int, self.instance.A)
 
-        if self.instance.A._default_val is NoValue:
+        if self.instance.A._default_val is None:
             val_list = self.sparse_data.items()
         else:
             val_list = self.data.items()
@@ -236,7 +236,7 @@ class ParamTester:
         if len(keys) == len(sparse_keys):
             # No default value possible
             return
-        if self.instance.A._default_val is NoValue:
+        if self.instance.A._default_val is None:
             # No default value defined
             return
 
@@ -245,12 +245,16 @@ class ParamTester:
             if not idx in sparse_keys:
                 break
 
-        self.assertEqual(value(self.instance.A[idx]), self.instance.A._default_val)
+        self.assertEqual(
+            value(self.instance.A[idx]),
+            self.instance.A._default_val(self.instance.A, idx),
+        )
         if self.instance.A.mutable:
             self.assertIsInstance(self.instance.A[idx], ParamData)
         else:
             self.assertEqual(
-                type(self.instance.A[idx]), type(value(self.instance.A._default_val))
+                type(self.instance.A[idx]),
+                type(value(self.instance.A._default_val(self.instance.A, idx))),
             )
 
         try:
@@ -314,7 +318,7 @@ class ParamTester:
     def test_keys(self):
         test = self.instance.A.keys()
         # self.assertEqual( type(test), list )
-        if self.instance.A._default_val is NoValue:
+        if self.instance.A._default_val is None:
             self.assertEqual(sorted(test), sorted(self.sparse_data.keys()))
         else:
             self.assertEqual(sorted(test), sorted(self.data.keys()))
@@ -327,7 +331,7 @@ class ParamTester:
             test = self.instance.A.values()
             # self.assertEqual( type(test), list )
             test = zip(self.instance.A.keys(), test)
-            if self.instance.A._default_val is NoValue:
+            if self.instance.A._default_val is None:
                 self.validateDict(self.sparse_data.items(), test)
             else:
                 self.validateDict(self.data.items(), test)
@@ -339,12 +343,12 @@ class ParamTester:
     def test_items(self):
         expectException = False
         #                  len(self.sparse_data) < len(self.data) and \
-        #                  not self.instance.A._default_val is NoValue and \
+        #                  not self.instance.A._default_val is None and \
         #                  not self.instance.A.mutable
         try:
             test = self.instance.A.items()
             # self.assertEqual( type(test), list )
-            if self.instance.A._default_val is NoValue:
+            if self.instance.A._default_val is None:
                 self.validateDict(self.sparse_data.items(), test)
             else:
                 self.validateDict(self.data.items(), test)
@@ -403,7 +407,7 @@ class ParamTester:
         self.assertEqual(list(test), list(self.instance.A.sparse_items()))
 
     def test_extract_values(self):
-        if self.instance.A._default_val is NoValue:
+        if self.instance.A._default_val is None:
             ref = self.sparse_data
         else:
             ref = self.data
@@ -420,7 +424,7 @@ class ParamTester:
 
     def test_len(self):
         # """Check the use of len"""
-        if self.instance.A._default_val is NoValue:
+        if self.instance.A._default_val is None:
             self.assertEqual(len(self.instance.A), len(self.sparse_data))
             self.assertEqual(len(list(self.instance.A.keys())), len(self.sparse_data))
         else:
@@ -440,17 +444,19 @@ class ParamTester:
             return
         idx = list(set(self.data) - set(self.sparse_data))[0]
         expectException = (
-            self.instance.A._default_val is NoValue and not self.instance.A.mutable
+            self.instance.A._default_val is None and not self.instance.A.mutable
         )
         try:
             test = self.instance.A[idx]
             if expectException:
                 self.fail("Expected the test to raise an exception")
             self.assertFalse(expectException)
-            expectException = self.instance.A._default_val is NoValue
+            expectException = self.instance.A._default_val is None
             try:
                 ans = value(test)
-                self.assertEqual(ans, value(self.instance.A._default_val))
+                self.assertEqual(
+                    ans, value(self.instance.A._default_val(self.instance.A, None))
+                )
                 self.assertFalse(expectException)
             except:
                 if not expectException:
@@ -937,7 +943,7 @@ class ScalarTester(ParamTester):
         self.assertEqual(self.instance.A.dim(), 0)
 
     def test_extract_values(self):
-        if self.instance.A._default_val is NoValue:
+        if self.instance.A._default_val is None:
             ref = self.sparse_data
         else:
             ref = self.data
