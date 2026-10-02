@@ -123,6 +123,18 @@ class _ImplicitAny(_AnySet):
         pass
 
 
+class _SparseParamValues(collections.defaultdict):
+    def __init__(self, values, param, fcn):
+        super().__init__(None, values)
+        self._param = param
+        self._fcn = fcn
+
+    def __missing__(self, idx):
+        if idx in self._param._index_set:
+            return self._fcn(self._param, idx)
+        raise KeyError(idx)
+
+
 class ParamData(ComponentData, NumericValue):
     """
     This class defines the data for a mutable parameter.
@@ -524,12 +536,12 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             # converted into a dictionary containing parameter values.
             ans = dict(self.items())
 
-        # We need to fill-in the "missing" values with the declared default
-        #
-        # TBD [11/2025]: should we declare __missing__ so we can still
-        # validate the index for any missing values?
-        if self._default_val is not Param.NoValue and not self._index_set.isfinite():
-            ans = collections.defaultdict(lambda: self._default_val, ans)
+        # We need to fill-in the "missing" values with the declared
+        # default (or constant initializer)
+        if self._rule is not None and not self._rule.contains_indices():
+            return _SparseParamValues(ans, self, self._rule)
+        if self._default_val is not None:
+            return _SparseParamValues(ans, self, self._default_val)
         return ans
 
     def extract_values_sparse(self):
@@ -556,14 +568,18 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             # The parameter is not mutable, so sparse_items() can be
             # converted into a dictionary containing parameter values.
             #
-            ans = dict(self.sparse_iteritems())
+            ans = dict(self.sparse_items())
 
         # We need to fill-in the "missing" values with the declared default
         #
         # TBD [11/2025]: should we declare __missing__ so we can still
         # validate the index for any missing values?
-        if self._default_val is not Param.NoValue:
-            ans = collections.defaultdict(lambda: self._default_val, ans)
+        # We need to fill-in the "missing" values with the declared
+        # default (or constant initializer)
+        if self._rule is not None and not self._rule.contains_indices():
+            return _SparseParamValues(ans, self, self._rule)
+        if self._default_val is not None:
+            return _SparseParamValues(ans, self, self._default_val)
         return ans
 
     def store_values(self, new_values, check=True):
