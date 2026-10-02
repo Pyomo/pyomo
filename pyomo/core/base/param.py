@@ -925,19 +925,16 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                         "\tData type is not a mapping type, and a Mapping is "
                         "expected." % (self.name, str(data))
                     )
-            else:
-                data_items = iter(())
-
-            try:
-                for key, val in data_items:
-                    self._setitem_when_not_present(self._validate_index(key), val)
-            except:
-                msg = sys.exc_info()[1]
-                raise RuntimeError(
-                    "Failed to set value for param=%s, index=%s, value=%s.\n"
-                    "\tsource error message=%s"
-                    % (self.name, str(key), str(val), str(msg))
-                )
+                try:
+                    for key, val in data_items:
+                        self._setitem_when_not_present(self._validate_index(key), val)
+                except:
+                    msg = sys.exc_info()[1]
+                    raise RuntimeError(
+                        "Failed to set value for param=%s, index=%s, value=%s.\n"
+                        "\tsource error message=%s"
+                        % (self.name, str(key), str(val), str(msg))
+                    )
             #
             # Flag that things are fully constructed now (and changing an
             # immutable Param is now an exception).
