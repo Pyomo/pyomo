@@ -42,7 +42,7 @@ logger = logging.getLogger('pyomo.core')
 
 
 def _placeholder_rule(*args, **kwargs):
-    pass
+    "Flag function used in Param initialization.  This should never be called."
 
 
 def _raise_modifying_immutable_error(obj, index):
