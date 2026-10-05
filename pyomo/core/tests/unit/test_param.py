@@ -415,12 +415,24 @@ class ParamTester:
         self.assertEqual(ref, vals)
         for k, v in vals.items():
             self.assertIsInstance(v, (float, int))
+        with self.assertRaisesRegex(KeyError, '12345.6'):
+            vals[12345.6]
 
     def test_extract_values_sparse(self):
         vals = self.instance.A.extract_values_sparse()
         self.assertEqual(self.sparse_data, vals)
         for k, v in vals.items():
             self.assertIsInstance(v, (float, int))
+        with self.assertRaisesRegex(KeyError, '12345.6'):
+            vals[12345.6]
+        if self.data != self.sparse_data:
+            keys = set(self.data) - set(self.sparse_data)
+            for key in keys:
+                if self.data[key] is NoValue:
+                    with self.assertRaisesRegex(KeyError, str(key)):
+                        vals[key]
+                else:
+                    self.assertEqual(self.data[key], vals[key])
 
     def test_len(self):
         # """Check the use of len"""
