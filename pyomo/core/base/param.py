@@ -362,7 +362,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         _domain_rule = self._pop_from_kwargs('Param', kwd, ('domain', 'within'))
         self._validate = kwd.pop('validate', None)
         self._mutable = kwd.pop('mutable', None)
-        self._default_val = Initializer(
+        self._default = Initializer(
             kwd.pop('default', Param.NoValue), arg_not_specified=Param.NoValue
         )
         self._dense_initialize = kwd.pop('initialize_as_dense', False)
@@ -415,7 +415,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         component.  If a default value is specified, then the
         length equals the number of items in the component index.
         """
-        if self._default_val is None or not self._index_set.isfinite():
+        if self._default is None or not self._index_set.isfinite():
             return len(self._data)
         return len(self._index_set)
 
@@ -424,7 +424,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         Return true if the index is in the dictionary.  If the default value
         is specified, then all members of the component index are valid.
         """
-        if self._default_val is None:
+        if self._default is None:
             return idx in self._data
         return idx in self._index_set
 
@@ -453,11 +453,11 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             # len(self._dict).  This will cause the base class
             # implementation of keys() to only return values from
             # self._data:
-            tmp = self._default_val
-            self._default_val = None
+            tmp = self._default
+            self._default = None
             return self.keys(sort)
         finally:
-            self._default_val = tmp
+            self._default = tmp
 
     def sparse_values(self, sort=SortComponents.UNSORTED):
         """Return a list of the defined param data objects"""
@@ -465,11 +465,11 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         # so that any changes in the base class implementation are
         # picked up here, too):
         try:
-            tmp = self._default_val
-            self._default_val = None
+            tmp = self._default
+            self._default = None
             return self.values(sort)
         finally:
-            self._default_val = tmp
+            self._default = tmp
 
     def sparse_items(self, sort=SortComponents.UNSORTED):
         """Return a list (index,data) tuples for defined parameters"""
@@ -477,11 +477,11 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         # Instead of reimplementing that here, we will follow the
         # pattern used for sparse_keys (and get len() to "lie")
         try:
-            tmp = self._default_val
-            self._default_val = None
+            tmp = self._default
+            self._default = None
             return self.items(sort)
         finally:
-            self._default_val = tmp
+            self._default = tmp
 
     @deprecated(
         "The sparse_iterkeys method is deprecated.  Use sparse_keys()",
@@ -540,8 +540,8 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         # default (or constant initializer)
         if self._rule is not None and not self._rule.contains_indices():
             return _SparseParamValues(ans, self, self._rule)
-        if self._default_val is not None:
-            return _SparseParamValues(ans, self, self._default_val)
+        if self._default is not None:
+            return _SparseParamValues(ans, self, self._default)
         return ans
 
     def extract_values_sparse(self):
@@ -578,8 +578,8 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         # default (or constant initializer)
         if self._rule is not None and not self._rule.contains_indices():
             return _SparseParamValues(ans, self, self._rule)
-        if self._default_val is not None:
-            return _SparseParamValues(ans, self, self._default_val)
+        if self._default is not None:
+            return _SparseParamValues(ans, self, self._default)
         return ans
 
     def store_values(self, new_values, check=True):
@@ -666,7 +666,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 "Default value (%s) is not valid for Param %s domain %s"
                 % (str(val), self.name, self.domain.name)
             )
-        self._default_val = Initializer(val)
+        self._default = Initializer(val)
 
     def default(self):
         """
@@ -682,11 +682,11 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 f(model, i) returns the value for the default value for
                 parameter i
         """
-        if self._default_val is None:
+        if self._default is None:
             return Param.NoValue
-        if self._default_val.constant():
-            return self._default_val(self, None)
-        return self._default_val
+        if self._default.constant():
+            return self._default(self, None)
+        return self._default
 
     def _getitem_when_not_present(self, index):
         """
@@ -699,9 +699,9 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             val = self._rule(self, index)
             _check_value_domain = True
             _store_value = True
-        elif self._default_val is not None:
-            val = self._default_val(self, index)
-            _check_value_domain = not self._default_val.constant()
+        elif self._default is not None:
+            val = self._default(self, index)
+            _check_value_domain = not self._default.constant()
             _store_value = self._mutable
         else:
             val = Param.NoValue
@@ -909,8 +909,8 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             # If the default value is a simple type, we check it versus
             # the domain.
             #
-            if self._default_val is not None and self._default_val.constant():
-                val = self._default_val(self, None)
+            if self._default is not None and self._default.constant():
+                val = self._default(self, None)
                 if (
                     val is not Param.NoValue
                     and type(val) in native_types
@@ -968,17 +968,17 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         """
         Return data that will be printed for this component.
         """
-        if self._default_val is None:
+        if self._default is None:
             default = "None"  # for backwards compatibility in reporting
-        elif self._default_val.constant():
-            default = str(self._default_val(self, None))
+        elif self._default.constant():
+            default = str(self._default(self, None))
         else:
             default = "(function)"
         if self._mutable or not self.is_indexed():
             dataGen = lambda k, v: [v._value]
         else:
             dataGen = lambda k, v: [v]
-        if self.index_set().isfinite() or self._default_val is None:
+        if self.index_set().isfinite() or self._default is None:
             _len = len(self)
         else:
             _len = 'inf'
