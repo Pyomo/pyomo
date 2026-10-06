@@ -7,6 +7,7 @@ Analysis in Pyomo
    alternative_solutions
    community
    doe/doe
+   edi/index
    iis
    incidence/index
    mpc/index
