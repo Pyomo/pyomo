@@ -118,6 +118,10 @@ class UIDataNoUi:
         for o in self.model.component_data_objects(pyo.Expression, active=True):
             try:
                 self.value_cache[o] = pyo.value(o, exception=False)
+                if "numpy.float" in str(type(self.value_cache[o])):
+                    self.value_cache[o] = float(self.value_cache[o])
+                elif "numpy.int" in str(type(self.value_cache[o])):
+                    self.value_cache[o] = int(self.value_cache[o])
             except ZeroDivisionError:
                 self.value_cache[o] = "Divide_by_0"
             try:
