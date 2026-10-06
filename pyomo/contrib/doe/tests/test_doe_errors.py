@@ -6,13 +6,15 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
-
+import json
+import warnings
 from pyomo.common.dependencies import (
     numpy as np,
     numpy_available,
     pandas as pd,
     pandas_available,
     scipy_available,
+    attempt_import,
 )
 
 from pyomo.common.errors import DeveloperError
@@ -21,17 +23,31 @@ import pyomo.common.unittest as unittest
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
 
-if scipy_available:
-    from pyomo.contrib.doe import DesignOfExperiments
-    from pyomo.contrib.doe.tests.experiment_class_example_flags import (
-        BadExperiment,
-        RooneyBieglerExperimentFlag,
-    )
+from pyomo.contrib.doe import DesignOfExperiments
+import pyomo.contrib.doe.doe as doe_module
+from pyomo.contrib.doe.doe import InitializationMethod, _DoEResultsJSONEncoder
+from pyomo.contrib.doe.tests.experiment_class_example_flags import (
+    BadExperiment,
+    RooneyBieglerExperimentFlag,
+    RooneyBieglerMultiExperiment,
+    RooneyBieglerMultiInputExperimentFlag,
+)
+from pyomo.contrib.doe.tests.utils_for_doe_tests import make_ipopt_solver
+from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+    RooneyBieglerExperiment,
+)
 
 from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
+import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
+parameterized, parameterized_available = attempt_import("parameterized")
+
+
+class _DummyExperiment:
+    def get_labeled_model(self, **kwargs):
+        raise RuntimeError("Should not be called in argument-validation tests")
 
 
 def get_rooney_biegler_experiment_flag():
@@ -52,7 +68,7 @@ def get_rooney_biegler_experiment_flag():
 
 def get_standard_args(experiment, fd_method, obj_used, flag):
     args = {}
-    args['experiment'] = experiment
+    args['experiment'] = None if experiment is None else [experiment]
     args['fd_formula'] = fd_method
     args['step'] = 1e-3
     args['objective_option'] = obj_used
@@ -62,13 +78,8 @@ def get_standard_args(experiment, fd_method, obj_used, flag):
     args['jac_initial'] = None
     args['fim_initial'] = None
     args['L_diagonal_lower_bound'] = 1e-7
-    # Make solver object with
-    # good linear subroutines
-    solver = SolverFactory("ipopt")
-    solver.options["linear_solver"] = "ma57"
-    solver.options["halt_on_ampl_error"] = "yes"
-    solver.options["max_iter"] = 3000
-    args['solver'] = solver
+    # Make solver object with good linear subroutines.
+    args['solver'] = make_ipopt_solver()
     args['tee'] = False
     if flag is not None:
         args['get_labeled_model_args'] = {"flag": flag}
@@ -81,18 +92,35 @@ def get_standard_args(experiment, fd_method, obj_used, flag):
 @unittest.skipIf(not scipy_available, "scipy is not available")
 @unittest.skipIf(not pandas_available, "pandas is not available")
 class TestDoEErrors(unittest.TestCase):
+    def _make_dummy_optimize_experiments_doe(self, n_experiments=1):
+        return DesignOfExperiments(
+            experiment=[_DummyExperiment() for _ in range(n_experiments)],
+            objective_option="pseudo_trace",
+        )
+
     def test_experiment_none_error(self):
         fd_method = "central"
         obj_used = "pseudo_trace"
         flag_val = 1  # Value for faulty model build mode - 1: No exp outputs
 
         with self.assertRaisesRegex(
-            ValueError, "Experiment object must be provided to perform DoE."
+            ValueError, "The 'experiment' argument is required"
         ):
             # Experiment provided as None
             DoE_args = get_standard_args(None, fd_method, obj_used, flag_val)
 
             DesignOfExperiments(**DoE_args)
+
+    def test_experiment_empty_list_error(self):
+        with self.assertRaisesRegex(
+            ValueError,
+            "The 'experiment' argument is required and cannot be an empty list",
+        ):
+            DesignOfExperiments(experiment=[], objective_option="pseudo_trace")
+
+    def test_doe_results_json_encoder_unsupported_object_raises(self):
+        with self.assertRaises(TypeError):
+            json.dumps({"x": object()}, cls=_DoEResultsJSONEncoder)
 
     def test_reactor_check_no_get_labeled_model(self):
         fd_method = "central"
@@ -102,8 +130,7 @@ class TestDoEErrors(unittest.TestCase):
         experiment = BadExperiment()
 
         with self.assertRaisesRegex(
-            ValueError,
-            "The experiment object must have a ``get_labeled_model`` function",
+            ValueError, "Experiment at index .* must have a.*get_labeled_model"
         ):
             DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
 
@@ -121,8 +148,7 @@ class TestDoEErrors(unittest.TestCase):
         doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
-            RuntimeError,
-            "Experiment model does not have suffix " + '"experiment_outputs".',
+            RuntimeError, "Experiment model does not have suffix 'experiment_outputs'."
         ):
             doe_obj.create_doe_model()
 
@@ -138,8 +164,7 @@ class TestDoEErrors(unittest.TestCase):
         doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
-            RuntimeError,
-            "Experiment model does not have suffix " + '"measurement_error".',
+            RuntimeError, "Experiment model does not have suffix 'measurement_error'."
         ):
             doe_obj.create_doe_model()
 
@@ -155,8 +180,7 @@ class TestDoEErrors(unittest.TestCase):
         doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
-            RuntimeError,
-            "Experiment model does not have suffix " + '"experiment_inputs".',
+            RuntimeError, "Experiment model does not have suffix 'experiment_inputs'."
         ):
             doe_obj.create_doe_model()
 
@@ -172,8 +196,7 @@ class TestDoEErrors(unittest.TestCase):
         doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
-            RuntimeError,
-            "Experiment model does not have suffix " + '"unknown_parameters".',
+            RuntimeError, "Experiment model does not have suffix 'unknown_parameters'."
         ):
             doe_obj.create_doe_model()
 
@@ -674,7 +697,7 @@ class TestDoEErrors(unittest.TestCase):
             "Please report this to the Pyomo Developers.",
         ):
             doe_obj.fd_formula = "bad things"
-            doe_obj._generate_scenario_blocks()
+            doe_obj._generate_fd_scenario_blocks()
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_bad_FD_seq_compute_FIM(self):
@@ -760,6 +783,31 @@ class TestDoEErrors(unittest.TestCase):
             doe_obj.compute_FIM(method="Bad Method")
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    def test_compute_FIM_multi_experiment_parameter_value_mismatch(self):
+        fd_method = "central"
+        obj_used = "pseudo_trace"
+
+        DoE_args = get_standard_args(
+            RooneyBieglerMultiExperiment(hour=1.5, y=9.0), fd_method, obj_used, None
+        )
+        DoE_args["experiment"] = [
+            RooneyBieglerMultiExperiment(
+                hour=1.5, y=9.0, theta={'asymptote': 15, 'rate_constant': 0.5}
+            ),
+            RooneyBieglerMultiExperiment(
+                hour=3.5, y=12.0, theta={'asymptote': 16, 'rate_constant': 0.5}
+            ),
+        ]
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        # The mismatch is detected before the second experiment solve, when
+        # compute_FIM validates unknown parameter values across experiments.
+        with self.assertRaisesRegex(
+            ValueError, "must share the same unknown parameter values"
+        ):
+            doe_obj.compute_FIM(method="sequential")
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_invalid_trace_without_cholesky(self):
         fd_method = "central"
         obj_used = "trace"
@@ -774,9 +822,438 @@ class TestDoEErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            "objective_option='trace' currently only implemented with ``_Cholesky option=True``.",
+            "objective_option='trace' currently only implemented with "
+            "``_Cholesky option=True``.",
         ):
             doe_obj.create_objective_function()
+
+    @unittest.skipIf(
+        not parameterized_available, "The 'parameterized' package is not available"
+    )
+    @parameterized.parameterized.expand(
+        [
+            (
+                "unsupported_init_method",
+                {"init_method": "bad"},
+                ValueError,
+                r"``init_method`` must be one of \[None, 'latin_hypercube_sampling'\], got 'bad'.",
+            ),
+            (
+                "enum_init_method_still_validates_init_n_samples",
+                {
+                    "init_method": InitializationMethod.latin_hypercube_sampling,
+                    "init_n_samples": 0,
+                },
+                ValueError,
+                r"``init_n_samples`` must be a positive integer, got 0.",
+            ),
+            (
+                "non_positive_init_n_samples",
+                {"init_method": "latin_hypercube_sampling", "init_n_samples": 0},
+                ValueError,
+                r"``init_n_samples`` must be a positive integer, got 0.",
+            ),
+            (
+                "non_integer_init_n_samples",
+                {"init_method": "latin_hypercube_sampling", "init_n_samples": 2.5},
+                ValueError,
+                r"``init_n_samples`` must be a positive integer, got 2.5.",
+            ),
+            (
+                "init_seed_must_be_integer",
+                {
+                    "n_exp": 2,
+                    "init_method": "latin_hypercube_sampling",
+                    "init_n_samples": 2,
+                    "init_seed": 1.5,
+                },
+                ValueError,
+                r"``init_seed`` must be None or an integer",
+            ),
+        ]
+    )
+    def test_optimize_experiments_init_argument_validation_cases(
+        self, _label, kwargs, exc_type, regex
+    ):
+        # These argument checks all fail before any model build, so this
+        # parameterized test keeps contracts aligned without duplicated setup.
+        doe_obj = self._make_dummy_optimize_experiments_doe()
+        with self.assertRaisesRegex(exc_type, regex):
+            doe_obj.optimize_experiments(**kwargs)
+
+    def test_optimize_experiments_lhs_requires_template_mode(self):
+        # Tests that LHS initialization is disallowed in user-initialized
+        # multi-experiment mode.
+        doe_obj = DesignOfExperiments(
+            experiment=[_DummyExperiment(), _DummyExperiment()],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            r"``init_method='latin_hypercube_sampling'`` is currently supported only in template mode",
+        ):
+            doe_obj.optimize_experiments(init_method="latin_hypercube_sampling")
+
+    def test_optimize_experiments_lhs_requires_scipy(self):
+        # Tests that LHS initialization requires scipy to be available.
+        doe_obj = DesignOfExperiments(
+            experiment=[_DummyExperiment()], objective_option="pseudo_trace"
+        )
+        old_scipy_available = doe_module.scipy_available
+        doe_module.scipy_available = False
+        try:
+            with self.assertRaisesRegex(
+                ImportError, r"LHS initialization requires scipy"
+            ):
+                doe_obj.optimize_experiments(init_method="latin_hypercube_sampling")
+        finally:
+            doe_module.scipy_available = old_scipy_available
+
+    @unittest.skipIf(
+        not parameterized_available, "The 'parameterized' package is not available"
+    )
+    @parameterized.parameterized.expand(
+        [
+            (
+                "n_exp_disallowed_with_multi_experiment_list",
+                2,
+                {"n_exp": 2},
+                ValueError,
+                r"``n_exp`` must not be set when the experiment list contains more "
+                "than one experiment",
+            ),
+            (
+                "n_exp_must_be_positive",
+                1,
+                {"n_exp": 0},
+                ValueError,
+                r"``n_exp`` must be a positive integer, got 0.",
+            ),
+            (
+                "results_file_must_be_str_or_path",
+                1,
+                {"results_file": 5},
+                ValueError,
+                r"``results_file`` must be either a Path object or a string.",
+            ),
+            (
+                "init_solver_must_have_solve",
+                1,
+                {"init_solver": object()},
+                ValueError,
+                r"``init_solver`` must be None or a solver object with a 'solve' "
+                "method.",
+            ),
+        ]
+    )
+    def test_optimize_experiments_general_argument_validation_cases(
+        self, _label, n_experiments, kwargs, exc_type, regex
+    ):
+        # These are remaining lightweight API validations whose only contract
+        # is the raised error for a bad user-facing kwarg/value pair.
+        doe_obj = self._make_dummy_optimize_experiments_doe(n_experiments=n_experiments)
+        with self.assertRaisesRegex(exc_type, regex):
+            doe_obj.optimize_experiments(**kwargs)
+
+
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not scipy_available, "scipy is not available")
+@unittest.skipIf(not pandas_available, "pandas is not available")
+class TestDoEErrorsRequiringSolver(unittest.TestCase):
+    @unittest.skipIf(
+        not parameterized_available, "The 'parameterized' package is not available"
+    )
+    @parameterized.parameterized.expand(
+        [("minimum_eigenvalue",), ("condition_number",)]
+    )
+    def test_optimize_experiments_non_greybox_rejects_e_and_me_objectives(
+        self, objective_option
+    ):
+        # E-opt and ME-opt require the greybox objective path in
+        # optimize_experiments(); the standard algebraic multi-experiment build
+        # should fail fast with a user-facing validation error instead.
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
+            objective_option=objective_option,
+            step=1e-2,
+            solver=make_ipopt_solver(),
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            rf"objective_option='{objective_option}' requires "
+            r"use_grey_box_objective=True\.",
+        ):
+            doe_obj.optimize_experiments(n_exp=2)
+
+    def test_optimize_experiments_trace_requires_cholesky_or_greybox(self):
+        # Multi-experiment trace uses the Cholesky-based build unless the
+        # greybox objective path is enabled, so optimize_experiments() should
+        # reject ``_Cholesky_option=False`` before any solve phase begins.
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
+            objective_option="trace",
+            step=1e-2,
+            solver=make_ipopt_solver(),
+            _Cholesky_option=False,
+        )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            r"objective_option='trace' currently only implemented with "
+            r"``_Cholesky_option=True`` or ``use_grey_box_objective=True``\.",
+        ):
+            doe_obj.optimize_experiments(n_exp=2)
+
+    def test_optimize_experiments_requires_matching_unknown_parameter_values(self):
+        # Tests that user-initialized multi-experiment mode rejects experiments
+        # that linearize around different nominal theta values.
+        doe_obj = DesignOfExperiments(
+            experiment=[
+                RooneyBieglerMultiExperiment(
+                    hour=2.0, y=10.0, theta={'asymptote': 15.0, 'rate_constant': 0.5}
+                ),
+                RooneyBieglerMultiExperiment(
+                    hour=3.0, y=11.0, theta={'asymptote': 15.0, 'rate_constant': 0.6}
+                ),
+            ],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=make_ipopt_solver(),
+        )
+
+        with self.assertRaisesRegex(
+            ValueError, "must use the same nominal values for unknown_parameters"
+        ):
+            doe_obj.optimize_experiments()
+
+    def test_optimize_experiments_requires_matching_unknown_parameter_labels(self):
+        # Tests that user-initialized multi-experiment mode rejects experiments
+        # whose unknown-parameter sets differ.
+        class _DifferentUnknownParameterExperiment:
+            def __init__(self, base_exp):
+                self._base_exp = base_exp
+
+            def get_labeled_model(self, **kwargs):
+                m = self._base_exp.get_labeled_model(**kwargs)
+                m.fake_theta = pyo.Var(initialize=1.0)
+                m.fake_theta.fix()
+                m.del_component(m.unknown_parameters)
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    [
+                        (m.asymptote, pyo.value(m.asymptote)),
+                        (m.fake_theta, pyo.value(m.fake_theta)),
+                    ]
+                )
+                return m
+
+        doe_obj = DesignOfExperiments(
+            experiment=[
+                RooneyBieglerMultiExperiment(hour=2.0, y=10.0),
+                _DifferentUnknownParameterExperiment(
+                    RooneyBieglerMultiExperiment(hour=3.0, y=11.0)
+                ),
+            ],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=make_ipopt_solver(),
+        )
+
+        with self.assertRaisesRegex(
+            ValueError, "must define the same unknown_parameters in the same order"
+        ):
+            doe_obj.optimize_experiments()
+
+    def test_optimize_experiments_requires_matching_unknown_parameter_order(self):
+        # Tests that user-initialized multi-experiment mode rejects experiments
+        # whose unknown parameters appear in a different order.
+        class _ReorderedUnknownParameterExperiment:
+            def __init__(self, base_exp):
+                self._base_exp = base_exp
+
+            def get_labeled_model(self, **kwargs):
+                m = self._base_exp.get_labeled_model(**kwargs)
+                m.del_component(m.unknown_parameters)
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    [
+                        (m.rate_constant, pyo.value(m.rate_constant)),
+                        (m.asymptote, pyo.value(m.asymptote)),
+                    ]
+                )
+                return m
+
+        doe_obj = DesignOfExperiments(
+            experiment=[
+                RooneyBieglerMultiExperiment(hour=2.0, y=10.0),
+                _ReorderedUnknownParameterExperiment(
+                    RooneyBieglerMultiExperiment(hour=3.0, y=11.0)
+                ),
+            ],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=make_ipopt_solver(),
+        )
+
+        with self.assertRaisesRegex(
+            ValueError, "must define the same unknown_parameters in the same order"
+        ):
+            doe_obj.optimize_experiments()
+
+    def test_optimize_experiments_sym_break_var_must_be_input(self):
+        # Tests that symmetry-breaking marker variables must also be experiment inputs.
+        class _BadSymBreakExperiment:
+            def __init__(self, base_exp):
+                self._base_exp = base_exp
+
+            def get_labeled_model(self, **kwargs):
+                m = self._base_exp.get_labeled_model(**kwargs)
+                m.sym_break_cons = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.sym_break_cons[next(iter(m.unknown_parameters.keys()))] = None
+                return m
+
+        exp = _BadSymBreakExperiment(RooneyBieglerMultiExperiment(hour=2.0, y=10.0))
+        doe_obj = DesignOfExperiments(
+            experiment=[exp],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=make_ipopt_solver(),
+        )
+
+        with self.assertRaisesRegex(
+            ValueError, "sym_break_cons.*must also be an experiment input variable"
+        ):
+            doe_obj.optimize_experiments(n_exp=2)
+
+    def test_optimize_experiments_symmetry_mapping_failure_raises(self):
+        # Tests that failure to map symmetry variable across experiment blocks raises.
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+        )
+        probe_model = doe_obj.experiment_list[0].get_labeled_model(
+            **doe_obj.get_labeled_model_args
+        )
+        sym_var_name = next(iter(probe_model.experiment_inputs.keys())).local_name
+        original_find = pyo.ComponentUID.find_component_on
+
+        def _fail_only_symmetry_mapping(cuid, block):
+            if (
+                sym_var_name in str(cuid)
+                and hasattr(block, "experiment_inputs")
+                and block.index() == 0
+            ):
+                return None
+            return original_find(cuid, block)
+
+        pyo.ComponentUID.find_component_on = _fail_only_symmetry_mapping
+        try:
+            with self.assertRaisesRegex(
+                RuntimeError, "Failed to map symmetry breaking variable"
+            ):
+                doe_obj.optimize_experiments(n_exp=2)
+        finally:
+            pyo.ComponentUID.find_component_on = original_find
+
+    def test_optimize_experiments_symmetry_breaking_default_variable_warning(self):
+        # Tests that missing explicit symmetry marker triggers warning and default
+        # choice.
+        doe_obj = DesignOfExperiments(
+            experiment=[
+                RooneyBieglerMultiInputExperimentFlag(hour=2.0, sym_break_flag=0),
+                RooneyBieglerMultiInputExperimentFlag(hour=4.0, sym_break_flag=0),
+            ],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=make_ipopt_solver(),
+        )
+        with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as cm:
+            doe_obj.optimize_experiments()
+        self.assertTrue(
+            any("No symmetry breaking variable specified" in msg for msg in cm.output)
+        )
+        self.assertTrue(
+            hasattr(doe_obj.model.param_scenario_blocks[0], "symmetry_breaking_s0_exp1")
+        )
+
+    def test_optimize_experiments_symmetry_breaking_multiple_markers_warning(self):
+        # Tests that multiple symmetry markers trigger an ambiguity warning.
+        doe_obj = DesignOfExperiments(
+            experiment=[
+                RooneyBieglerMultiInputExperimentFlag(hour=2.0, sym_break_flag=2),
+                RooneyBieglerMultiInputExperimentFlag(hour=4.0, sym_break_flag=2),
+            ],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=make_ipopt_solver(),
+        )
+        with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as cm:
+            doe_obj.optimize_experiments()
+        self.assertTrue(
+            any(
+                "Multiple variables marked in sym_break_cons" in msg
+                for msg in cm.output
+            )
+        )
+
+    def test_lhs_initialization_large_space_emits_warnings(self):
+        # Tests that very large LHS candidate/combo spaces emit user-facing warnings.
+        doe_obj = DesignOfExperiments(
+            experiment=[RooneyBieglerMultiExperiment(hour=2.0, y=10.0)],
+            objective_option="pseudo_trace",
+            step=1e-2,
+            solver=make_ipopt_solver(),
+        )
+        with self.assertLogs("pyomo.contrib.doe.doe", level="WARNING") as log_cm:
+            with warnings.catch_warnings(record=True) as warn_cm:
+                warnings.simplefilter("always")
+                # Keep this warning-path test fast and deterministic: with
+                # init_n_samples=10001 and n_exp=2, the real path would do
+                # 10,001 candidate FIM evaluations and score
+                # C(10,001, 2)=50,005,000 combinations, which is too expensive
+                # for a unit test. We only need to verify warning contracts.
+                original_combinations = doe_module.combinations
+                original_compute_fim = doe_obj._compute_fim_at_point_no_prior
+                doe_module.combinations = lambda *_args, **_kwargs: iter([(0, 1)])
+                doe_obj._compute_fim_at_point_no_prior = lambda *args, **kwargs: np.eye(
+                    2
+                )
+                try:
+                    doe_obj.optimize_experiments(
+                        n_exp=2,
+                        init_method="latin_hypercube_sampling",
+                        init_n_samples=10001,
+                        # Set random seed to keep LHS initialization deterministic.
+                        init_seed=11,
+                    )
+                finally:
+                    doe_module.combinations = original_combinations
+                    doe_obj._compute_fim_at_point_no_prior = original_compute_fim
+
+        self.assertTrue(
+            any("candidate experiment designs" in str(w.message) for w in warn_cm)
+        )
+        self.assertTrue(any("combinations to evaluate" in msg for msg in log_cm.output))
+
+    def test_lhs_missing_bounds_error_message(self):
+        # Tests that LHS initialization fails fast when experiment inputs lack bounds.
+        doe_obj = DesignOfExperiments(
+            experiment=[
+                RooneyBieglerMultiExperiment(hour=2.0, hour_bounds=(None, 10.0))
+            ],
+            objective_option="pseudo_trace",
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            r"LHS initialization requires explicit lower and upper bounds on all "
+            "experiment input variables",
+        ):
+            doe_obj.optimize_experiments(
+                init_method="latin_hypercube_sampling", init_n_samples=2
+            )
 
     def test_invalid_determinant_without_cholesky(self):
         fd_method = "central"
