@@ -85,7 +85,7 @@ class IIdentityExpression(NumericValue):
         return True
 
     @property
-    def _args_(self):
+    def _args(self):
         """A tuple of subexpressions involved in this expressions operation."""
         return (self._expr,)
 

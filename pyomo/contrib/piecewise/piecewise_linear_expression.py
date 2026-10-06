@@ -8,11 +8,12 @@
 # ____________________________________________________________________________________
 
 from pyomo.common.autoslots import AutoSlots
+from pyomo.core.expr.base import NaryExpression_Mixin
 from pyomo.core.expr.numeric_expr import NumericExpression
 from weakref import ref as weakref_ref
 
 
-class PiecewiseLinearExpression(NumericExpression):
+class PiecewiseLinearExpression(NaryExpression_Mixin, NumericExpression):
     """
     A numeric expression node representing a specific instantiation of a
     :obj:`~.piecewise_linear_function.PiecewiseLinearFunction`.
@@ -26,15 +27,12 @@ class PiecewiseLinearExpression(NumericExpression):
         Piece-wise linear function of which this node is an instance.
     """
 
-    __slots__ = ('_pw_linear_function',)
+    __slots__ = ('_args', '_pw_linear_function')
     __autoslot_mappers__ = {'_pw_linear_function': AutoSlots.weakref_mapper}
 
     def __init__(self, args, pw_linear_function):
         super().__init__(args)
         self._pw_linear_function = weakref_ref(pw_linear_function)
-
-    def nargs(self):
-        return len(self._args_)
 
     @property
     def pw_linear_function(self):

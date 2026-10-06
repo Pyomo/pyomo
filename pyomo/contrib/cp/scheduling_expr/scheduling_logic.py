@@ -8,10 +8,11 @@
 # ____________________________________________________________________________________
 
 
-from pyomo.core.expr.logical_expr import NaryBooleanExpression, _flattened
+from pyomo.core.expr.base import NaryExpression_Mixin
+from pyomo.core.expr.logical_expr import BooleanExpression, _flattened
 
 
-class SpanExpression(NaryBooleanExpression):
+class SpanExpression(NaryExpression_Mixin, BooleanExpression):
     """
     Expression over IntervalVars representing that the first arg spans all the
     following args in the schedule. The first arg is absent if and only if all
@@ -21,16 +22,20 @@ class SpanExpression(NaryBooleanExpression):
         args (tuple): Child nodes, of type IntervalVar
     """
 
+    __slots__ = ('_args',)
+
     def _to_string(self, values, verbose, smap):
         return "%s.spans(%s)" % (values[0], ", ".join(values[1:]))
 
 
-class AlternativeExpression(NaryBooleanExpression):
+class AlternativeExpression(NaryExpression_Mixin, BooleanExpression):
     """
     Expression over IntervalVars representing that if the first arg is present,
     then exactly one of the following args must be present. The first arg is
     absent if and only if all the others are absent.
     """
+
+    __slots__ = ('_args',)
 
     # [ESJ 4/4/24]: docplex takes an optional 'cardinality' argument with this
     # too--it generalized to "exactly n" of the intervals have to exist,
@@ -41,12 +46,14 @@ class AlternativeExpression(NaryBooleanExpression):
         return "alternative(%s, [%s])" % (values[0], ", ".join(values[1:]))
 
 
-class SynchronizeExpression(NaryBooleanExpression):
+class SynchronizeExpression(NaryExpression_Mixin, BooleanExpression):
     """
     Expression over IntervalVars synchronizing the first argument with all of the
     following arguments. That is, if the first argument is present, the remaining
     arguments start and end at the same time as it.
     """
+
+    __slots__ = ('_args',)
 
     def _to_string(self, values, verbose, smap):
         return "synchronize(%s, [%s])" % (values[0], ", ".join(values[1:]))
