@@ -16,6 +16,7 @@ from pyomo.devel.initialization.examples.init_polynomial_ex import (
     lp_init_ex,
     pwl_init_ex,
     global_init_ex,
+    run_example,
 )
 from pyomo.devel.initialization.pwl_init import _set_mip_solver_solution_limit
 from pyomo.devel.initialization.global_init import _set_global_solver_solution_limit
@@ -87,6 +88,15 @@ class TestExamples(unittest.TestCase):
         stat, x = lp_init_ex()
         self.assertEqual(stat, SolutionStatus.optimal)
         self.assertAlmostEqual(x, -9.920159607881597)
+
+    @unittest.skipUnless(highs.available(), 'highs is not available')
+    def test_run_example_and_unknown_method(self):
+        stat, x = run_example(method='lp')
+        self.assertEqual(stat, SolutionStatus.optimal)
+        self.assertAlmostEqual(x, -9.920159607881597)
+
+        with self.assertRaises(ValueError):
+            run_example(method='unknown')
 
 
 class TestInit(unittest.TestCase):

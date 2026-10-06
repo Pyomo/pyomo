@@ -201,7 +201,7 @@ class _PWLRefinementVisitor(StreamBasedExpressionVisitor):
         return False, new_expr.expr
 
 
-def _refine_pwl_approx(
+def _is_refineable_pwl_approx(
     m: BlockData,
     pwl_expr_to_con_map: MutableMapping[
         PiecewiseLinearExpression, Sequence[ConstraintData]
@@ -326,6 +326,7 @@ def _initialize_with_piecewise_linear_approximation(
     logger.info('replaced nonlinear expressions with piecewise linear expressions')
 
     """
+    Check if the PWL approximation can be refined.
     Now we want to 
     1. solve the PWL approximation
     2. Initialize the NLP to the solution
@@ -379,8 +380,8 @@ def _initialize_with_piecewise_linear_approximation(
         for ov, nv in zip(orig_vars, new_vars):
             ov.set_value(nv.value, skip_validation=True)
 
-        # refine the PWL approximation, use refined check to decide whether to break
-        refined = _refine_pwl_approx(
+        # check if the PWL approximation can be refined, use this check to decide whether to break
+        refined = _is_refineable_pwl_approx(
             pwl,
             pwl_expr_to_con_map=pwl_expr_to_con_map,
             num_to_refine=num_cons_to_refine_per_iter,
