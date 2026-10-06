@@ -82,15 +82,31 @@ class LinearStandardFormInfo:
 
     rhs : numpy.ndarray
 
-        The constraint right-hand sides.
+        The constraint right-hand sides.  For range rows (``bound_type
+        == 2``, only produced when ``keep_range_constraints=True``),
+        this holds the adjusted *upper* bound ``ub - offset``.
+
+    rhs_range : numpy.ndarray or None
+
+        Range widths for range rows: ``rhs_range[i] = ub - lb`` for
+        ``bound_type == 2`` rows.  ``None`` when
+        ``keep_range_constraints=False`` (the default) or when the
+        model contains no range constraints.  When not ``None``, the
+        adjusted lower bound for a range row can be recovered as
+        ``rhs[i] - rhs_range[i]``.
 
     rows : List[Tuple[ConstraintData, int]]
 
         The list of Pyomo constraint objects corresponding to the rows
         in `A`.  Each element in the list is a 2-tuple of
-        (ConstraintData, row_multiplier).  The `row_multiplier` will be
-        +/- 1 indicating if the row was multiplied by -1 (corresponding
-        to a constraint lower bound) or +1 (upper bound).
+        (ConstraintData, bound_type).  ``bound_type`` values:
+
+        * ``+1`` – upper-bound row (``Ax ≤ rhs``);
+        * ``-1`` – lower-bound row (see mode-dependent sign conventions);
+        * ``0``  – equality row (``mixed_form`` only);
+        * ``+2`` – range row (``lb - offset ≤ Ax ≤ ub - offset``,
+          coefficients in the upper-bound sense; only produced when
+          ``keep_range_constraints=True``).
 
     columns : List[VarData]
 
@@ -99,7 +115,9 @@ class LinearStandardFormInfo:
 
     objectives : List[ObjectiveData]
 
-        The list of Pyomo objective objects corresponding to the active objectives
+        The list of Pyomo objective objects corresponding to the active
+        objectives whose expressions are purely linear (and thus appear
+        in `c`).
 
     eliminated_vars: List[Tuple[VarData, NumericExpression]]
 
@@ -111,17 +129,47 @@ class LinearStandardFormInfo:
         all variables appearing in the expression must either have
         appeared in the standard form, or appear *earlier* in this list.
 
+    nonlinear_constraints : List[ConstraintData] or None
+
+        Constraints skipped because they contain nonlinear terms.  ``None``
+        when ``allow_nonlinear=False`` (the default).  When
+        ``allow_nonlinear=True``, holds the list of constraints with nonlinear
+        terms that were omitted from the compiled matrices (may be empty).
+
+    nonlinear_objectives : List[ObjectiveData] or None
+
+        Objectives skipped because they contain nonlinear terms.  ``None``
+        when ``allow_nonlinear=False`` (the default).  When
+        ``allow_nonlinear=True``, holds the list of objectives with nonlinear
+        terms that were omitted from the compiled matrices (may be empty).
+
     """
 
-    def __init__(self, c, c_offset, A, rhs, rows, columns, objectives, eliminated_vars):
+    def __init__(
+        self,
+        c,
+        c_offset,
+        A,
+        rhs,
+        rhs_range,
+        rows,
+        columns,
+        objectives,
+        eliminated_vars,
+        nonlinear_constraints=None,
+        nonlinear_objectives=None,
+    ):
         self.c = c
         self.c_offset = c_offset
         self.A = A
         self.rhs = rhs
+        self.rhs_range = rhs_range
         self.rows = rows
         self.columns = columns
         self.objectives = objectives
         self.eliminated_vars = eliminated_vars
+        self.nonlinear_constraints = nonlinear_constraints
+        self.nonlinear_objectives = nonlinear_objectives
 
     @property
     def x(self):
@@ -181,11 +229,48 @@ class LinearStandardFormCompiler:
         ),
     )
     CONFIG.declare(
+        'keep_range_constraints',
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description='Emit range constraints (finite lb ≠ ub) as a single '
+            'row with bound_type=2 rather than splitting them into separate '
+            'upper- and lower-bound rows.  The rhs entry for such a row is the '
+            'adjusted upper bound (ub - offset); the range width (ub - lb) is '
+            'stored in the rhs_range array of the returned '
+            'LinearStandardFormInfo.  Cannot be combined with slack_form.',
+        ),
+    )
+    CONFIG.declare(
         'set_sense',
         ConfigValue(
             default=ObjectiveSense.minimize,
             domain=InEnum(ObjectiveSense),
             description='If not None, map all objectives to the specified sense.',
+        ),
+    )
+    CONFIG.declare(
+        'allow_nonlinear',
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description='If True, constraints and objectives containing nonlinear '
+            'terms are collected into ``LinearStandardFormInfo.nonlinear_constraints`` '
+            'and ``LinearStandardFormInfo.nonlinear_objectives`` rather than raising '
+            'an exception.  The nonlinear components are omitted from the compiled '
+            'matrices.',
+        ),
+    )
+    CONFIG.declare(
+        'extra_valid_ctypes',
+        ConfigValue(
+            default=[],
+            description='Additional component types that are permitted to appear '
+            'in the model without causing an error, but that are not processed by '
+            'the compiler.  Use this when the model contains component types '
+            '(e.g., :class:`~pyomo.core.base.sos.SOSConstraint`) that are valid '
+            'for the calling solver but that the standard-form compiler does not '
+            'know how to handle.',
         ),
     )
     CONFIG.declare(
@@ -309,7 +394,8 @@ class _LinearStandardFormCompiler_impl:
                 RangeSet,
                 Port,
                 # TODO: Piecewise, Complementarity
-            },
+            }
+            | set(self.config.extra_valid_ctypes),
             targets={Suffix, Objective},
         )
         if unknown:
@@ -364,6 +450,7 @@ class _LinearStandardFormCompiler_impl:
         # Process objective
         #
         set_sense = self.config.set_sense
+        allow_nonlinear = self.config.allow_nonlinear
         objectives = []
         for blk in component_map[Objective]:
             objectives.extend(
@@ -376,28 +463,53 @@ class _LinearStandardFormCompiler_impl:
         obj_data = []
         obj_index = []
         obj_index_ptr = [0]
+        linear_objectives = []
+        nonlinear_objectives = []
         for obj in objectives:
             if hasattr(obj, 'template_expr'):
-                offset, linear_index, linear_data, lb, ub = (
-                    template_visitor.expand_expression(obj, obj.template_expr())
-                )
+                if allow_nonlinear:
+                    try:
+                        offset, linear_index, linear_data, lb, ub = (
+                            template_visitor.expand_expression(obj, obj.template_expr())
+                        )
+                    except InvalidExpressionError:
+                        nonlinear_objectives.append(obj)
+                        if with_debug_timing:
+                            timer.toc(
+                                'Objective %s (nonlinear)', obj, level=logging.DEBUG
+                            )
+                        continue
+                else:
+                    offset, linear_index, linear_data, lb, ub = (
+                        template_visitor.expand_expression(obj, obj.template_expr())
+                    )
                 assert lb is None and ub is None
                 N = len(linear_index)
                 obj_index.append(linear_index)
                 obj_data.append(linear_data)
                 obj_offset.append(offset)
+                linear_objectives.append(obj)
             else:
                 repn = visitor.walk_expression(obj.expr)
-                N = len(repn.linear)
-                obj_index.append(map(var_recorder.var_order.__getitem__, repn.linear))
-                obj_data.append(repn.linear.values())
-                obj_offset.append(repn.constant)
 
                 if repn.nonlinear is not None:
+                    if allow_nonlinear:
+                        nonlinear_objectives.append(obj)
+                        if with_debug_timing:
+                            timer.toc(
+                                'Objective %s (nonlinear)', obj, level=logging.DEBUG
+                            )
+                        continue
                     raise InvalidExpressionError(
                         f"Model objective ({obj.name}) contains nonlinear terms that "
                         "cannot be compiled to standard (linear) form."
                     )
+
+                N = len(repn.linear)
+                obj_index.append(map(var_recorder.var_order.__getitem__, repn.linear))
+                obj_data.append(repn.linear.values())
+                obj_offset.append(repn.constant)
+                linear_objectives.append(obj)
 
             obj_nnz += N
             if set_sense is not None and set_sense != obj.sense:
@@ -406,20 +518,28 @@ class _LinearStandardFormCompiler_impl:
             obj_index_ptr.append(obj_index_ptr[-1] + N)
             if with_debug_timing:
                 timer.toc('Objective %s', obj, level=logging.DEBUG)
+        objectives = linear_objectives
 
         #
         # Tabulate constraints
         #
         slack_form = self.config.slack_form
         mixed_form = self.config.mixed_form
+        keep_range_constraints = self.config.keep_range_constraints
         if slack_form and mixed_form:
             raise ValueError("cannot specify both slack_form and mixed_form")
+        if slack_form and keep_range_constraints:
+            raise ValueError(
+                "cannot specify both slack_form and keep_range_constraints"
+            )
         rows = []
         rhs = []
+        rhs_range = [] if keep_range_constraints else None
         con_nnz = 0
         con_data = []
         con_index = []
         con_index_ptr = [0]
+        nonlinear_constraints = []
         last_parent = None
         for con in ordered_active_constraints(model, self.config):
             if with_debug_timing and con._component is not last_parent:
@@ -428,9 +548,22 @@ class _LinearStandardFormCompiler_impl:
                 last_parent = con._component
 
             if hasattr(con, 'template_expr'):
-                offset, linear_index, linear_data, lb, ub = (
-                    template_visitor.expand_expression(con, con.template_expr())
-                )
+                if allow_nonlinear:
+                    try:
+                        offset, linear_index, linear_data, lb, ub = (
+                            template_visitor.expand_expression(con, con.template_expr())
+                        )
+                    except InvalidExpressionError:
+                        nonlinear_constraints.append(con)
+                        if with_debug_timing:
+                            timer.toc(
+                                'Constraint %s (nonlinear)', con, level=logging.DEBUG
+                            )
+                        continue
+                else:
+                    offset, linear_index, linear_data, lb, ub = (
+                        template_visitor.expand_expression(con, con.template_expr())
+                    )
                 N = len(linear_data)
             else:
                 # Note: lb and ub could be a number, expression, or None.
@@ -442,6 +575,13 @@ class _LinearStandardFormCompiler_impl:
                     ub = value(ub)
                 repn = visitor.walk_expression(body)
                 if repn.nonlinear is not None:
+                    if allow_nonlinear:
+                        nonlinear_constraints.append(con)
+                        if with_debug_timing:
+                            timer.toc(
+                                'Constraint %s (nonlinear)', con, level=logging.DEBUG
+                            )
+                        continue
                     raise InvalidConstraintError(
                         f"Model constraint ({con.name}) contains nonlinear terms that "
                         "cannot be compiled to standard (linear) form."
@@ -452,6 +592,14 @@ class _LinearStandardFormCompiler_impl:
                 offset = repn.constant
                 linear_index = map(var_recorder.var_order.__getitem__, repn.linear)
                 linear_data = repn.linear.values()
+
+            # Normalize ±inf to None: both kernel constraints and AML
+            # RangedExpressions can return ±inf instead of None for unbounded
+            # sides (e.g., `(-inf, x, 5)`).  Treat them as unbounded.
+            if lb == -float('inf'):
+                lb = None
+            if ub == float('inf'):
+                ub = None
 
             if lb is None and ub is None:
                 # Note: you *cannot* output trivial (unbounded)
@@ -473,6 +621,18 @@ class _LinearStandardFormCompiler_impl:
                     con_nnz += N
                     rows.append(RowEntry(con, 0))
                     rhs.append(ub - offset)
+                    if keep_range_constraints:
+                        rhs_range.append(0.0)
+                    con_data.append(linear_data)
+                    con_index.append(linear_index)
+                    con_index_ptr.append(con_nnz)
+                elif lb is not None and ub is not None and keep_range_constraints:
+                    # Range constraint: single row, coefficients in the upper-
+                    # bound sense (not negated), bound_type=2.
+                    con_nnz += N
+                    rows.append(RowEntry(con, 2))
+                    rhs.append(ub - offset)
+                    rhs_range.append(ub - lb)
                     con_data.append(linear_data)
                     con_index.append(linear_index)
                     con_index_ptr.append(con_nnz)
@@ -483,6 +643,8 @@ class _LinearStandardFormCompiler_impl:
                         con_nnz += N
                         rows.append(RowEntry(con, 1))
                         rhs.append(ub - offset)
+                        if keep_range_constraints:
+                            rhs_range.append(0.0)
                         con_data.append(linear_data)
                         con_index.append(linear_index)
                         con_index_ptr.append(con_nnz)
@@ -490,6 +652,8 @@ class _LinearStandardFormCompiler_impl:
                         con_nnz += N
                         rows.append(RowEntry(con, -1))
                         rhs.append(lb - offset)
+                        if keep_range_constraints:
+                            rhs_range.append(0.0)
                         con_data.append(linear_data)
                         con_index.append(linear_index)
                         con_index_ptr.append(con_nnz)
@@ -524,22 +688,37 @@ class _LinearStandardFormCompiler_impl:
                 con_index.append(linear_index)
                 con_index_ptr.append(con_nnz)
             else:
-                if ub is not None:
-                    if lb is not None:
-                        linear_index = list(linear_index)
+                is_range = lb is not None and ub is not None and lb != ub
+                if is_range and keep_range_constraints:
+                    # Range constraint: single row, bound_type=2.
                     con_nnz += N
-                    rows.append(RowEntry(con, 1))
+                    rows.append(RowEntry(con, 2))
                     rhs.append(ub - offset)
+                    rhs_range.append(ub - lb)
                     con_data.append(linear_data)
                     con_index.append(linear_index)
                     con_index_ptr.append(con_nnz)
-                if lb is not None:
-                    con_nnz += N
-                    rows.append(RowEntry(con, -1))
-                    rhs.append(offset - lb)
-                    con_data.append(-np.array(list(linear_data)))
-                    con_index.append(linear_index)
-                    con_index_ptr.append(con_nnz)
+                else:
+                    if ub is not None:
+                        if lb is not None:
+                            linear_index = list(linear_index)
+                        con_nnz += N
+                        rows.append(RowEntry(con, 1))
+                        rhs.append(ub - offset)
+                        if keep_range_constraints:
+                            rhs_range.append(0.0)
+                        con_data.append(linear_data)
+                        con_index.append(linear_index)
+                        con_index_ptr.append(con_nnz)
+                    if lb is not None:
+                        con_nnz += N
+                        rows.append(RowEntry(con, -1))
+                        rhs.append(offset - lb)
+                        if keep_range_constraints:
+                            rhs_range.append(0.0)
+                        con_data.append(-np.array(list(linear_data)))
+                        con_index.append(linear_index)
+                        con_index_ptr.append(con_nnz)
 
         if with_debug_timing:
             # report the last constraint
@@ -613,7 +792,17 @@ class _LinearStandardFormCompiler_impl:
             eliminated_vars = []
 
         info = LinearStandardFormInfo(
-            c, obj_offset, A, rhs, rows, columns, objectives, eliminated_vars
+            c,
+            obj_offset,
+            A,
+            rhs,
+            np.array(rhs_range) if keep_range_constraints else None,
+            rows,
+            columns,
+            objectives,
+            eliminated_vars,
+            nonlinear_constraints=nonlinear_constraints if allow_nonlinear else None,
+            nonlinear_objectives=nonlinear_objectives if allow_nonlinear else None,
         )
         timer.toc("Generated linear standard form representation", delta=False)
         return info
