@@ -63,6 +63,7 @@ from pyomo.environ import (
 from pyomo.common.errors import PyomoException
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
+from pyomo.core.base.initializer import InitializerBase
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.set import SetData
 from pyomo.core.base.units_container import units, pint_available, UnitsError
@@ -246,8 +247,7 @@ class ParamTester:
                 break
 
         self.assertEqual(
-            value(self.instance.A[idx]),
-            self.instance.A._default(self.instance.A, idx),
+            value(self.instance.A[idx]), self.instance.A._default(self.instance.A, idx)
         )
         if self.instance.A.mutable:
             self.assertIsInstance(self.instance.A[idx], ParamData)
@@ -1341,6 +1341,32 @@ class MiscParamTests(unittest.TestCase):
             r'Param p domain NonNegativeIntegers',
         ):
             model.p = Param(default=-1, within=NonNegativeIntegers)
+
+    def test_default_getter(self):
+        # Verify that we can initialize a parameter with an empty set.
+        m = ConcreteModel()
+        m.p = Param(mutable=True)
+        # No default returns NoValue
+        self.assertIs(m.p.default(), NoValue)
+        # Constant default returns the constant (either numeric
+        # constant, or a constant function)
+        m.p.set_default(1)
+        self.assertEqual(m.p.default(), 1)
+
+        def foo(m):
+            return 10
+
+        m.p.set_default(foo)
+        self.assertEqual(m.p.default(), 10)
+
+        # Other functions / values return an initializer
+        def foo(m, i):
+            return 20
+
+        m.p.set_default(foo)
+        self.assertIsInstance(m.p.default(), InitializerBase)
+        m.p.set_default({1: 2, 3: 4})
+        self.assertIsInstance(m.p.default(), InitializerBase)
 
     def test_invalid_data(self):
         # Verify that we can initialize a parameter with an empty set.
