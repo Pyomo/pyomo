@@ -18,40 +18,40 @@ literature.
 
 import abc
 import contextlib
-import math
-import functools
 import itertools
-from numbers import Integral
+import math
 from collections import namedtuple
 from collections.abc import Iterable, MutableSequence, Sequence
 from enum import Enum
+from numbers import Integral
 
-from pyomo.common.dependencies import numpy as np, scipy as sp
+from pyomo.common.dependencies import numpy as np
+from pyomo.common.dependencies import scipy as sp
 from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.common.modeling import unique_component_name
-from pyomo.core.base import (
-    Block,
-    ConstraintList,
-    ConcreteModel,
-    maximize,
-    minimize,
-    Var,
-    VarData,
-    NonNegativeReals,
-)
-from pyomo.core.expr import mutable_expression, native_numeric_types, value
-from pyomo.core.util import quicksum, dot_product
-from pyomo.opt import TerminationCondition
-from pyomo.opt.results import check_optimal_termination
+from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.pyros.util import (
-    copy_docstring,
-    PARAM_IS_CERTAIN_REL_TOL,
     PARAM_IS_CERTAIN_ABS_TOL,
+    PARAM_IS_CERTAIN_REL_TOL,
     POINT_IN_UNCERTAINTY_SET_TOL,
+    copy_docstring,
     standardize_component_data,
 )
-from pyomo.contrib.fbbt.fbbt import fbbt
-from pyomo.common.errors import InfeasibleConstraintException
+from pyomo.core.base import (
+    Block,
+    ConcreteModel,
+    ConstraintList,
+    NonNegativeReals,
+    Var,
+    VarData,
+    maximize,
+    minimize,
+)
+from pyomo.core.expr import mutable_expression, native_numeric_types, value
+from pyomo.core.util import dot_product, quicksum
+from pyomo.opt import TerminationCondition
+from pyomo.opt.results import check_optimal_termination
 
 
 def standardize_uncertain_param_vars(obj, dim):
@@ -465,9 +465,11 @@ def validate_array(
 
 class Geometry(Enum):
     """
-    Geometry classifications for PyROS uncertainty set objects.
+    Enum for classifying a PyROS uncertainty set according to the
+    structure of the constraints defining the set.
     """
 
+    # member values are arranged in increasing order of complexity
     LINEAR = 1
     CONVEX_NONLINEAR = 2
     GENERAL_NONLINEAR = 3
@@ -1078,6 +1080,17 @@ class UncertaintySet(metaclass=abc.ABCMeta):
             param_bounds = [param_bounds[idx] for idx in index]
         return [_values_close(lb, ub) for lb, ub in param_bounds]
 
+    @property
+    def scenarios(self):
+        """
+        list[tuple[numbers.Real, ...]] : If the uncertainty
+        set is of geometry equal to
+        :attr:`Geometry.DISCRETE_SCENARIOS`,
+        then this method should return the points
+        comprising the uncertainty set.
+        """
+        raise NotImplementedError
+
 
 class UncertaintySetList(MutableSequence):
     """
@@ -1095,13 +1108,13 @@ class UncertaintySetList(MutableSequence):
         provided, then the minimum required length is set to 0.
     """
 
-    def __init__(self, uncertainty_sets=[], name=None, min_length=None):
+    def __init__(self, uncertainty_sets=None, name=None, min_length=None):
         """Initialize self (see class docstring)."""
         self._name = name
         self._min_length = 0 if min_length is None else min_length
 
         # check minimum length requirement satisfied
-        initlist = list(uncertainty_sets)
+        initlist = [] if uncertainty_sets is None else list(uncertainty_sets)
         if len(initlist) < self._min_length:
             raise ValueError(
                 f"Attempting to initialize uncertainty set list "
@@ -1127,7 +1140,7 @@ class UncertaintySetList(MutableSequence):
 
     def __repr__(self):
         """Return repr(self)."""
-        return f"{self.__class__.__name__}({repr(self._list)})"
+        return f"{self.__class__.__name__}({self._list!r})"
 
     def __getitem__(self, idx):
         """Return self[idx]."""
@@ -1607,13 +1620,12 @@ class CardinalitySet(UncertaintySet):
 
         # dimension of the set is immutable
         val_arr = np.array(val)
-        if hasattr(self, "_origin"):
-            if val_arr.size != self.dim:
-                raise ValueError(
-                    "Attempting to set attribute 'origin' of cardinality "
-                    f"set of dimension {self.dim} "
-                    f"to value of dimension {val_arr.size}"
-                )
+        if hasattr(self, "_origin") and val_arr.size != self.dim:
+            raise ValueError(
+                "Attempting to set attribute 'origin' of cardinality "
+                f"set of dimension {self.dim} "
+                f"to value of dimension {val_arr.size}"
+            )
 
         self._origin = val_arr
 
@@ -1638,13 +1650,12 @@ class CardinalitySet(UncertaintySet):
         val_arr = np.array(val)
 
         # dimension of the set is immutable
-        if hasattr(self, "_origin"):
-            if val_arr.size != self.dim:
-                raise ValueError(
-                    "Attempting to set attribute 'positive_deviation' of "
-                    f"{type(self).__name__} of dimension {self.dim} "
-                    f"to value of dimension {val_arr.size}"
-                )
+        if hasattr(self, "_origin") and val_arr.size != self.dim:
+            raise ValueError(
+                "Attempting to set attribute 'positive_deviation' of "
+                f"{type(self).__name__} of dimension {self.dim} "
+                f"to value of dimension {val_arr.size}"
+            )
 
         self._positive_deviation = val_arr
 
@@ -1669,13 +1680,12 @@ class CardinalitySet(UncertaintySet):
         val_arr = np.array(val)
 
         # dimension of the set is immutable
-        if hasattr(self, "_origin"):
-            if val_arr.size != self.dim:
-                raise ValueError(
-                    "Attempting to set attribute 'negative_deviation' of "
-                    f"{type(self).__name__} of dimension {self.dim} "
-                    f"to value of dimension {val_arr.size}"
-                )
+        if hasattr(self, "_origin") and val_arr.size != self.dim:
+            raise ValueError(
+                "Attempting to set attribute 'negative_deviation' of "
+                f"{type(self).__name__} of dimension {self.dim} "
+                f"to value of dimension {val_arr.size}"
+            )
 
         self._negative_deviation = val_arr
 
@@ -1989,23 +1999,21 @@ class PolyhedralSet(UncertaintySet):
         lhs_coeffs_arr = np.array(val)
 
         # check no change in set dimension
-        if hasattr(self, "_coefficients_mat"):
-            if lhs_coeffs_arr.shape[1] != self.dim:
-                raise ValueError(
-                    f"Polyhedral set attribute 'coefficients_mat' must have "
-                    f"{self.dim} columns to match set dimension "
-                    f"(provided matrix with {lhs_coeffs_arr.shape[1]} columns)"
-                )
+        if hasattr(self, "_coefficients_mat") and lhs_coeffs_arr.shape[1] != self.dim:
+            raise ValueError(
+                f"Polyhedral set attribute 'coefficients_mat' must have "
+                f"{self.dim} columns to match set dimension "
+                f"(provided matrix with {lhs_coeffs_arr.shape[1]} columns)"
+            )
 
         # check shape match with rhs vector
-        if hasattr(self, "_rhs_vec"):
-            if lhs_coeffs_arr.shape[0] != self.rhs_vec.size:
-                raise ValueError(
-                    "PolyhedralSet attribute 'coefficients_mat' "
-                    f"must have {self.rhs_vec.size} rows "
-                    f"to match shape of attribute 'rhs_vec' "
-                    f"(provided {lhs_coeffs_arr.shape[0]} rows)"
-                )
+        if hasattr(self, "_rhs_vec") and lhs_coeffs_arr.shape[0] != self.rhs_vec.size:
+            raise ValueError(
+                "PolyhedralSet attribute 'coefficients_mat' "
+                f"must have {self.rhs_vec.size} rows "
+                f"to match shape of attribute 'rhs_vec' "
+                f"(provided {lhs_coeffs_arr.shape[0]} rows)"
+            )
         self._coefficients_mat = lhs_coeffs_arr
 
     @property
@@ -2031,14 +2039,16 @@ class PolyhedralSet(UncertaintySet):
 
         # ensure shape of coefficients matrix
         # and rhs vec match
-        if hasattr(self, "_coefficients_mat"):
-            if len(val) != self.coefficients_mat.shape[0]:
-                raise ValueError(
-                    "PolyhedralSet attribute 'rhs_vec' "
-                    f"must have {self.coefficients_mat.shape[0]} entries "
-                    f"to match shape of attribute 'coefficients_mat' "
-                    f"(provided {rhs_vec_arr.size} entries)"
-                )
+        if (
+            hasattr(self, "_coefficients_mat")
+            and len(val) != self.coefficients_mat.shape[0]
+        ):
+            raise ValueError(
+                "PolyhedralSet attribute 'rhs_vec' "
+                f"must have {self.coefficients_mat.shape[0]} entries "
+                f"to match shape of attribute 'coefficients_mat' "
+                f"(provided {rhs_vec_arr.size} entries)"
+            )
 
         self._rhs_vec = rhs_vec_arr
 
@@ -2282,24 +2292,28 @@ class BudgetSet(UncertaintySet):
         lhs_coeffs_arr = np.array(val)
 
         # check dimension match
-        if hasattr(self, "_budget_membership_mat"):
-            if lhs_coeffs_arr.shape[1] != self.dim:
-                raise ValueError(
-                    f"BudgetSet attribute 'budget_membership_mat' "
-                    "must have "
-                    f"{self.dim} columns to match set dimension "
-                    f"(provided matrix with {lhs_coeffs_arr.shape[1]} columns)"
-                )
+        if (
+            hasattr(self, "_budget_membership_mat")
+            and lhs_coeffs_arr.shape[1] != self.dim
+        ):
+            raise ValueError(
+                f"BudgetSet attribute 'budget_membership_mat' "
+                "must have "
+                f"{self.dim} columns to match set dimension "
+                f"(provided matrix with {lhs_coeffs_arr.shape[1]} columns)"
+            )
 
         # check shape match with rhs vector
-        if hasattr(self, "_budget_rhs_vec"):
-            if lhs_coeffs_arr.shape[0] != self.budget_rhs_vec.size:
-                raise ValueError(
-                    "BudgetSet attribute 'budget_membership_mat' "
-                    f"must have {self.budget_rhs_vec.size} rows "
-                    f"to match shape of attribute 'budget_rhs_vec' "
-                    f"(provided {lhs_coeffs_arr.shape[0]} rows)"
-                )
+        if (
+            hasattr(self, "_budget_rhs_vec")
+            and lhs_coeffs_arr.shape[0] != self.budget_rhs_vec.size
+        ):
+            raise ValueError(
+                "BudgetSet attribute 'budget_membership_mat' "
+                f"must have {self.budget_rhs_vec.size} rows "
+                f"to match shape of attribute 'budget_rhs_vec' "
+                f"(provided {lhs_coeffs_arr.shape[0]} rows)"
+            )
         # matrix is valid; update
         self._budget_membership_mat = lhs_coeffs_arr
 
@@ -2326,14 +2340,16 @@ class BudgetSet(UncertaintySet):
 
         # ensure shape of coefficients matrix
         # and rhs vec match
-        if hasattr(self, "_budget_membership_mat"):
-            if len(val) != self.budget_membership_mat.shape[0]:
-                raise ValueError(
-                    "Budget set attribute 'budget_rhs_vec' "
-                    f"must have {self.budget_membership_mat.shape[0]} entries "
-                    f"to match shape of attribute 'budget_membership_mat' "
-                    f"(provided {rhs_vec_arr.size} entries)"
-                )
+        if (
+            hasattr(self, "_budget_membership_mat")
+            and len(val) != self.budget_membership_mat.shape[0]
+        ):
+            raise ValueError(
+                "Budget set attribute 'budget_rhs_vec' "
+                f"must have {self.budget_membership_mat.shape[0]} entries "
+                f"to match shape of attribute 'budget_membership_mat' "
+                f"(provided {rhs_vec_arr.size} entries)"
+            )
 
         self._budget_rhs_vec = rhs_vec_arr
 
@@ -2610,13 +2626,12 @@ class FactorModelSet(UncertaintySet):
 
         # dimension of the set is immutable
         val_arr = np.array(val)
-        if hasattr(self, "_origin"):
-            if val_arr.size != self.dim:
-                raise ValueError(
-                    "Attempting to set attribute 'origin' of factor model "
-                    f"set of dimension {self.dim} "
-                    f"to value of dimension {val_arr.size}"
-                )
+        if hasattr(self, "_origin") and val_arr.size != self.dim:
+            raise ValueError(
+                "Attempting to set attribute 'origin' of factor model "
+                f"set of dimension {self.dim} "
+                f"to value of dimension {val_arr.size}"
+            )
 
         self._origin = val_arr
 
@@ -3004,13 +3019,12 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         val_arr = np.array(val)
 
         # dimension of the set is immutable
-        if hasattr(self, "_center"):
-            if val_arr.size != self.dim:
-                raise ValueError(
-                    "Attempting to set attribute 'center' of "
-                    f"AxisAlignedEllipsoidalSet of dimension {self.dim} "
-                    f"to value of dimension {val_arr.size}"
-                )
+        if hasattr(self, "_center") and val_arr.size != self.dim:
+            raise ValueError(
+                "Attempting to set attribute 'center' of "
+                f"AxisAlignedEllipsoidalSet of dimension {self.dim} "
+                f"to value of dimension {val_arr.size}"
+            )
 
         self._center = val_arr
 
@@ -3035,13 +3049,12 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         val_arr = np.array(val)
 
         # dimension of the set is immutable
-        if hasattr(self, "_center"):
-            if val_arr.size != self.dim:
-                raise ValueError(
-                    "Attempting to set attribute 'half_lengths' of "
-                    f"AxisAlignedEllipsoidalSet of dimension {self.dim} "
-                    f"to value of dimension {val_arr.size}"
-                )
+        if hasattr(self, "_center") and val_arr.size != self.dim:
+            raise ValueError(
+                "Attempting to set attribute 'half_lengths' of "
+                f"AxisAlignedEllipsoidalSet of dimension {self.dim} "
+                f"to value of dimension {val_arr.size}"
+            )
 
         self._half_lengths = val_arr
 
@@ -3070,13 +3083,10 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
             List, length `N`, of coordinate value
             (lower, upper) bound pairs.
         """
-        nom_value = self.center
-        half_length = self.half_lengths
-        parameter_bounds = [
-            (nom_value[i] - half_length[i], nom_value[i] + half_length[i])
-            for i in range(len(nom_value))
+        center, half_lengths = self.center, self.half_lengths
+        return [
+            (lb, ub) for lb, ub in zip(center - half_lengths, center + half_lengths)
         ]
-        return parameter_bounds
 
     @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, uncertain_params=None, block=None):
@@ -3090,7 +3100,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         )
 
         # now construct the constraints
-        diffs_squared = list()
+        diffs_squared = []
         zip_all = zip(param_var_data_list, self.center, self.half_lengths)
         for param, ctr, half_len in zip_all:
             if half_len > 0:
@@ -3309,63 +3319,14 @@ class EllipsoidalSet(UncertaintySet):
         val_arr = np.array(val)
 
         # dimension of the set is immutable
-        if hasattr(self, "_center"):
-            if val_arr.size != self.dim:
-                raise ValueError(
-                    "Attempting to set attribute 'center' of "
-                    f"{type(self).__name__} of dimension {self.dim} "
-                    f"to value of dimension {val_arr.size}"
-                )
-
-        self._center = val_arr
-
-    @staticmethod
-    def _verify_positive_definite(matrix):
-        """
-        Verify that a given symmetric square matrix is positive
-        definite. An exception is raised if the square matrix
-        is not positive definite.
-
-        Parameters
-        ----------
-        matrix : (N, N) array_like
-            Candidate matrix.
-
-        Raises
-        ------
-        ValueError
-            If matrix is not symmetric, not positive definite,
-            or the square roots of the diagonal entries are
-            not accessible.
-        LinAlgError
-            If matrix is not invertible.
-        """
-        matrix = np.array(matrix)
-
-        if not np.allclose(matrix, matrix.T, atol=1e-8):
-            raise ValueError("Shape matrix must be symmetric.")
-
-        # Numpy raises LinAlgError if not invertible
-        np.linalg.inv(matrix)
-
-        # check positive semi-definite.
-        # since also invertible, means positive definite
-        eigvals = np.linalg.eigvals(matrix)
-        if np.min(eigvals) < 0:
+        if hasattr(self, "_center") and val_arr.size != self.dim:
             raise ValueError(
-                "Non positive-definite shape matrix "
-                f"(detected eigenvalues {eigvals})"
+                "Attempting to set attribute 'center' of "
+                f"{type(self).__name__} of dimension {self.dim} "
+                f"to value of dimension {val_arr.size}"
             )
 
-        # check roots of diagonal entries accessible
-        # (should theoretically be true if positive definite)
-        for diag_entry in np.diagonal(matrix):
-            if np.isnan(np.power(diag_entry, 0.5)):
-                raise ValueError(
-                    "Cannot evaluate square root of the diagonal entry "
-                    f"{diag_entry} of argument `shape_matrix`. "
-                    "Check that this entry is nonnegative"
-                )
+        self._center = val_arr
 
     @property
     def shape_matrix(self):
@@ -3389,14 +3350,13 @@ class EllipsoidalSet(UncertaintySet):
         shape_mat_arr = np.array(val)
 
         # check matrix shape matches set dimension
-        if hasattr(self, "_center"):
-            if not all(size == self.dim for size in shape_mat_arr.shape):
-                raise ValueError(
-                    f"{type(self).__name__} attribute 'shape_matrix' "
-                    f"must be a square matrix of size "
-                    f"{self.dim} to match set dimension "
-                    f"(provided matrix with shape {shape_mat_arr.shape})"
-                )
+        if hasattr(self, "_center") and shape_mat_arr.shape != (self.dim,) * 2:
+            raise ValueError(
+                f"{type(self).__name__} attribute 'shape_matrix' "
+                f"must be a square matrix of size "
+                f"{self.dim} to match set dimension "
+                f"(provided matrix with shape {shape_mat_arr.shape})"
+            )
 
         self._shape_matrix = shape_mat_arr
 
@@ -3414,7 +3374,6 @@ class EllipsoidalSet(UncertaintySet):
         validate_arg_type(
             "scale", val, native_numeric_types, "a valid numeric type", False
         )
-
         self._scale = val
         self._gaussian_conf_lvl = sp.stats.chi2.cdf(x=val, df=self.dim)
 
@@ -3474,17 +3433,11 @@ class EllipsoidalSet(UncertaintySet):
             List, length `N`, of coordinate value
             (lower, upper) bound pairs.
         """
-        scale = self.scale
-        nom_value = self.center
-        P = self.shape_matrix
-        parameter_bounds = [
-            (
-                nom_value[i] - np.power(P[i][i] * scale, 0.5),
-                nom_value[i] + np.power(P[i][i] * scale, 0.5),
-            )
-            for i in range(self.dim)
+        max_abs_deviations = np.sqrt(self.scale * np.diag(self.shape_matrix))
+        return [
+            (ctr - max_abs_dev, ctr + max_abs_dev)
+            for ctr, max_abs_dev in zip(self.center, max_abs_deviations)
         ]
-        return parameter_bounds
 
     @copy_docstring(UncertaintySet.point_in_set)
     def point_in_set(self, point):
@@ -3498,14 +3451,15 @@ class EllipsoidalSet(UncertaintySet):
             required_shape_qual="to match the set dimension",
         )
         off_center = point - self.center
-        normalized_pt_radius = np.sqrt(
-            off_center @ np.linalg.inv(self.shape_matrix) @ off_center
-        )
-        normalized_boundary_radius = np.sqrt(self.scale)
-        return (
-            normalized_pt_radius
-            <= normalized_boundary_radius + POINT_IN_UNCERTAINTY_SET_TOL
-        )
+
+        # compute `y = shape_matrix^-1 @ (point - center)` by
+        # solving linear system `(shape_matrix @ y = (point - center)`
+        # (i.e., avoid matrix inversion)
+        cho_factor, is_lower = sp.linalg.cho_factor(self.shape_matrix)
+        mat_inv_point = sp.linalg.cho_solve((cho_factor, is_lower), off_center)
+
+        # check `(point - center) @ y` does not exceed scale factor
+        return off_center @ mat_inv_point <= self.scale + POINT_IN_UNCERTAINTY_SET_TOL
 
     @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, uncertain_params=None, block=None):
@@ -3518,7 +3472,19 @@ class EllipsoidalSet(UncertaintySet):
             )
         )
 
-        inv_shape_mat = np.linalg.inv(self.shape_matrix)
+        # we need the inverse of the shape matrix.
+        # since the matrix should be positive definite,
+        # use Cholesky factorization for the inversion.
+        # Cholesky factorization will fail if the matrix is not
+        # positive definite.
+        # the matrix is already assumed to be symmetric.
+        inv_shape_cho_factor, lower = sp.linalg.cho_factor(
+            self.shape_matrix, lower=True
+        )
+        inv_shape_mat = sp.linalg.cho_solve(
+            (inv_shape_cho_factor, lower), np.eye(self.dim)
+        )
+
         with mutable_expression() as expr:
             for (idx1, idx2), mat_entry in np.ndenumerate(inv_shape_mat):
                 expr += (
@@ -3548,8 +3514,11 @@ class EllipsoidalSet(UncertaintySet):
         ValueError
             If any uncertainty set attributes are not valid.
             (e.g., numeric values are infinite,
-            ``self.shape_matrix`` is not positive semidefinite,
+            ``self.shape_matrix`` is not symmetric,
             or ``self.scale`` is negative).
+        numpy.linalg.LinAlgError
+            If Cholesky factorization for ``self.shape_matrix`` fails
+            (i.e., ``self.shape_matrix`` is not positive definite).
         """
         ctr = self.center
         shape_mat_arr = self.shape_matrix
@@ -3574,19 +3543,51 @@ class EllipsoidalSet(UncertaintySet):
             required_shape=None,
         )
         validate_arg_type(
-            "scale", scale, native_numeric_types, "a valid numeric type", False
+            arg_name="scale",
+            arg_val=scale,
+            valid_types=native_numeric_types,
+            valid_type_desc="a valid numeric type",
+            is_entry_of_arg=False,
+            check_numeric_type_finite=True,
         )
 
-        # check shape matrix is positive semidefinite
-        self._verify_positive_definite(shape_mat_arr)
-
-        # ensure scale is non-negative
+        # ensure scale is non-negative so that the set is nonempty
         if scale < 0:
             raise ValueError(
                 f"{type(self).__name__} attribute "
                 f"'scale' must be a non-negative real "
                 f"(provided value {scale})"
             )
+
+        # shape matrix symmetry check, using a tolerance that is
+        # conservative, type-aware, and scale-aware
+        symmetry_atol = None
+        if not np.issubdtype(shape_mat_arr.dtype, np.integer):
+            symmetry_atol = (
+                np.finfo(shape_mat_arr.dtype).eps
+                * shape_mat_arr.shape[0]
+                * np.linalg.norm(shape_mat_arr, ord=np.inf)
+            )
+        if not sp.linalg.issymmetric(shape_mat_arr, atol=symmetry_atol):
+            raise ValueError("Shape matrix must be symmetric.")
+
+        # attempt Cholesky factorization to check that
+        # the shape matrix is positive definite.
+        # incidentally, this also verifies that
+        # the diagonal entries are positive,
+        # so their square roots can be calculated later where needed
+        try:
+            sp.linalg.cho_factor(shape_mat_arr, lower=True)
+        except sp.linalg.LinAlgError as err:
+            if "Internal potrf return info =" in str(
+                err
+            ) or "not positive definite" in str(err):
+                raise ValueError(
+                    "Cholesky decomposition attempt failed because "
+                    "the shape matrix is not positive definite."
+                ) from err
+            else:
+                raise
 
 
 class DiscreteScenarioSet(UncertaintySet):
@@ -3662,14 +3663,13 @@ class DiscreteScenarioSet(UncertaintySet):
         )
 
         scenario_arr = np.array(val)
-        if hasattr(self, "_scenarios"):
-            if scenario_arr.shape[1] != self.dim:
-                raise ValueError(
-                    f"DiscreteScenarioSet attribute 'scenarios' must have "
-                    f"{self.dim} columns to match set dimension "
-                    f"(provided array-like with {scenario_arr.shape[1]} "
-                    "columns)"
-                )
+        if hasattr(self, "_scenarios") and scenario_arr.shape[1] != self.dim:
+            raise ValueError(
+                f"DiscreteScenarioSet attribute 'scenarios' must have "
+                f"{self.dim} columns to match set dimension "
+                f"(provided array-like with {scenario_arr.shape[1]} "
+                "columns)"
+            )
 
         self._scenarios = [tuple(s) for s in val]
 
@@ -3797,28 +3797,34 @@ class DiscreteScenarioSet(UncertaintySet):
 
 class IntersectionSet(UncertaintySet):
     """
-    An intersection of two or more uncertainty sets, each of which
-    is represented by an `UncertaintySet` object.
+    An intersection of two or more uncertainty sets.
 
     Parameters
     ----------
-    **unc_sets : dict
-        PyROS `UncertaintySet` objects of which to construct
-        an intersection. At least two uncertainty sets must
-        be provided. All sets must be of the same dimension.
+    *args
+        The operand :class:`~UncertaintySet` objects representing the
+        uncertainty sets to be intersected.
+    **kwargs
+        Included to support specification of the operand
+        :class:`~UncertaintySet` objects using deprecated prior APIs.
+        Note that ``kwargs`` is ignored
+        if ``args`` has at least one entry.
 
     Notes
     -----
-    The :math:`n`-dimensional intersection set is defined by
+    Given uncertainty sets
+    :math:`\\mathcal{Q}_1,`
+    :math:`\\mathcal{Q}_2,`
+    :math:`\\dots,`
+    :math:`\\mathcal{Q}_m \\subset \\mathbb{R}^{n}`,
+    collectively represented by the operand uncertainty sets
+    passed through ``args`` or ``kwargs``,
+    the :math:`n`-dimensional intersection set is defined by
 
     .. math::
 
         \\mathcal{Q}_1 \\cap \\mathcal{Q}_2 \\cap \\cdots
-            \\cap \\mathcal{Q}_m
-
-    in which :math:`\\mathcal{Q}_i \\subset \\mathbb{R}^n`
-    refers to the uncertainty set ``list(unc_sets.values())[i - 1]``
-    for :math:`i = 1, 2, \\dots, m`.
+            \\cap \\mathcal{Q}_m.
 
     Examples
     --------
@@ -3832,17 +3838,27 @@ class IntersectionSet(UncertaintySet):
     ...     center=[0, 0],
     ...     half_lengths=[2, 2],
     ... )
-    >>> # to construct intersection, pass sets as keyword arguments.
-    >>> # keywords are arbitrary
-    >>> intersection = IntersectionSet(set1=square, set2=disk)
+    >>> intersection = IntersectionSet(square, disk)
     >>> intersection.all_sets  # doctest: +ELLIPSIS
     UncertaintySetList([...])
 
     """
 
-    def __init__(self, **unc_sets):
+    def __init__(self, *args, **kwargs):
         """Initialize self (see class docstring)."""
-        self.all_sets = unc_sets
+        if args:
+            self.all_sets = args
+        else:
+            deprecation_warning(
+                (
+                    f"Specifying {type(self).__name__} operand uncertainty "
+                    "sets through arbitrary keyword arguments is deprecated. "
+                    f"In subsequent usage of {type(self).__name__}, "
+                    "pass the operand uncertainty sets positionally."
+                ),
+                version="6.10.2.dev0",
+            )
+            self.all_sets = kwargs.values()
 
     @property
     def type(self):
@@ -3865,22 +3881,16 @@ class IntersectionSet(UncertaintySet):
 
     @all_sets.setter
     def all_sets(self, val):
-        if isinstance(val, dict):
-            the_sets = val.values()
-        else:
-            the_sets = list(val)
-
         # type validation, ensure all entries have same dimension
-        all_sets = UncertaintySetList(the_sets, name="all_sets", min_length=2)
+        all_sets = UncertaintySetList(val, name="all_sets", min_length=2)
 
         # set dimension is immutable
-        if hasattr(self, "_all_sets"):
-            if all_sets.dim != self.dim:
-                raise ValueError(
-                    "Attempting to set attribute 'all_sets' of an "
-                    f"IntersectionSet of dimension {self.dim} to a sequence "
-                    f"of sets of dimension {all_sets[0].dim}"
-                )
+        if hasattr(self, "_all_sets") and all_sets.dim != self.dim:
+            raise ValueError(
+                "Attempting to set attribute 'all_sets' of an "
+                f"IntersectionSet of dimension {self.dim} to a sequence "
+                f"of sets of dimension {all_sets[0].dim}"
+            )
 
         self._all_sets = all_sets
 
@@ -3907,8 +3917,18 @@ class IntersectionSet(UncertaintySet):
         Otherwise, a ValueError is raised.
         """
         if self.geometry == Geometry.DISCRETE_SCENARIOS:
-            discrete_intersection = functools.reduce(self.intersect, self.all_sets)
-            return discrete_intersection.scenarios
+            all_discrete_sets = filter(
+                lambda uset: uset.geometry == Geometry.DISCRETE_SCENARIOS, self.all_sets
+            )
+            smallest_discrete_set = min(
+                all_discrete_sets, key=lambda dset: len(dset.scenarios)
+            )
+            return list(
+                filter(
+                    lambda pt: all(uset.point_in_set(pt) for uset in self.all_sets),
+                    smallest_discrete_set.scenarios,
+                )
+            )
 
         raise ValueError(
             "Uncertainty set represented by `self` is not reducible "
@@ -3944,8 +3964,7 @@ class IntersectionSet(UncertaintySet):
             solver.
         """
         if self._PARAMETER_BOUNDS_EXACT:
-            discrete_intersection = functools.reduce(self.intersect, self.all_sets)
-            return discrete_intersection.parameter_bounds
+            return DiscreteScenarioSet(self.scenarios).parameter_bounds
 
         return []
 
@@ -3978,38 +3997,15 @@ class IntersectionSet(UncertaintySet):
         """
         return all(a_set.point_in_set(point=point) for a_set in self.all_sets)
 
-    # === Define pairwise intersection function
-    @staticmethod
-    def intersect(Q1, Q2):
-        """
-        Obtain the intersection of two uncertainty sets,
-        accounting for the case where either of the two sets
-        is discrete.
-
-        Parameters
-        ----------
-        Q1, Q2 : UncertaintySet
-            Operand uncertainty set.
-
-        Returns
-        -------
-        DiscreteScenarioSet or IntersectionSet
-            Intersection of the sets. A `DiscreteScenarioSet` is
-            returned if both operand sets are `DiscreteScenarioSet`
-            instances; otherwise, an `IntersectionSet` is returned.
-        """
-        for set1, set2 in zip((Q1, Q2), (Q2, Q1)):
-            if isinstance(set1, DiscreteScenarioSet):
-                return DiscreteScenarioSet(
-                    scenarios=[pt for pt in set1.scenarios if set2.point_in_set(pt)]
-                )
-
-        # === This case is if both sets are continuous
-        return IntersectionSet(set1=Q1, set2=Q2)
-
     @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, uncertain_params=None, block=None):
-        block, param_var_data_list, uncertainty_conlist, aux_var_list = (
+        # handle special case where the intersection is a discrete set
+        if self.geometry == Geometry.DISCRETE_SCENARIOS:
+            return DiscreteScenarioSet(self.scenarios).set_as_constraint(
+                uncertain_params=uncertain_params, block=block
+            )
+
+        block, param_var_data_list, *_ = (
             _setup_standard_uncertainty_set_constraint_block(
                 block=block,
                 uncertain_param_vars=uncertain_params,
@@ -4017,13 +4013,6 @@ class IntersectionSet(UncertaintySet):
                 num_auxiliary_vars=None,
             )
         )
-
-        # handle special case where the intersection is a discrete set
-        if self.geometry == Geometry.DISCRETE_SCENARIOS:
-            discrete_intersection = functools.reduce(self.intersect, self.all_sets)
-            return discrete_intersection.set_as_constraint(
-                uncertain_params=uncertain_params, block=block
-            )
 
         all_cons, all_aux_vars = [], []
         for idx, unc_set in enumerate(self.all_sets):
@@ -4054,32 +4043,42 @@ class IntersectionSet(UncertaintySet):
         )
         return np.array(list(aux_param_vals_iter))
 
+    def is_nonempty(self, config):
+        """
+        Return True if `self` is known to be nonempty,
+        False if `self` is known to be empty.
+
+        Parameters
+        ----------
+        config : ConfigDict
+            PyROS solver configuration.
+
+        Returns
+        -------
+        bool
+        """
+        if self.geometry == Geometry.DISCRETE_SCENARIOS:
+            return len(self.scenarios) > 0
+
+        return super().is_nonempty(config)
+
     def validate(self, config):
         """
-        Check IntersectionSet validity.
+        Validate the intersection set by validating each operand
+        set of the intersection.
 
-        This check is performed by validating each operand
-        set of the intersection and then validating the
-        intersection as a whole.
-
-        Raises
-        ------
-        ValueError
-            If finiteness or nonemptiness checks fail.
+        Parameters
+        ----------
+        config : ConfigDict
+            PyROS solver configuration.
         """
-        the_sets = self.all_sets
-
-        # validate each set
-        for a_set in the_sets:
+        for a_set in self.all_sets:
             a_set.validate(config)
-
-        # check boundedness and nonemptiness of intersected set
-        super().validate(config)
 
 
 class CartesianProductSet(UncertaintySet):
     """
-    A Cartesian product of uncertainty sets.
+    A Cartesian product of one or more uncertainty sets.
 
     The order and identities of the uncertainty sets
     involved in the Cartesian product are immutable,
@@ -4087,22 +4086,30 @@ class CartesianProductSet(UncertaintySet):
 
     Parameters
     ----------
-    all_sets : Sequence[UncertaintySet]
-        Uncertainty sets of which the product is to be taken.
+    *args
+        The operand :class:`~UncertaintySet` objects representing the
+        uncertainty sets of which the product is to be taken.
+    **kwargs
+        Included to support specification of the operand
+        :class:`~UncertaintySet` objects using deprecated prior APIs.
+        Note that ``kwargs`` is ignored
+        if ``args`` has at least one entry.
 
     Raises
     ------
     TypeError
-        If any entry of ``all_sets`` is not of type `UncertaintySet`.
+        If any of the specified operands is not of type
+        :class:`~UncertaintySet`, or if no operands were specified.
 
     Notes
     -----
     Given uncertainty sets
-    :math:`\\mathcal{Q}_1 \\in \\mathbb{R}^{n_1}`,
-    :math:`\\mathcal{Q}_2 \\in \\mathbb{R}^{n_2}`,
-    :math:`\\dots`,
-    :math:`\\mathcal{Q}_m \\in \\mathbb{R}^{n_m}`,
-    collectively represented by the argument ``all_sets``,
+    :math:`\\mathcal{Q}_1 \\subset \\mathbb{R}^{n_1},`
+    :math:`\\mathcal{Q}_2 \\subset \\mathbb{R}^{n_2},`
+    :math:`\\dots,`
+    :math:`\\mathcal{Q}_m \\subset \\mathbb{R}^{n_m}`,
+    collectively represented by the operand uncertainty sets
+    passed through ``args`` or ``kwargs``,
     the :math:`(n_1 + n_2 + \\dots + n_m)`-dimensional
     Cartesian product set is defined by
 
@@ -4123,25 +4130,67 @@ class CartesianProductSet(UncertaintySet):
     ...     center=[0, 0],
     ...     half_lengths=[2, 2],
     ... )
-    >>> cartesian_product = CartesianProductSet([interval, disk])
+    >>> cartesian_product = CartesianProductSet(interval, disk)
     """
 
-    def __init__(self, all_sets):
+    def __init__(self, *args, **kwargs):
         """Initialize self (see class docstring)."""
-        if not isinstance(all_sets, Sequence):
+
+        # deprecation warning settings for old API
+        deprecation_msg = (
+            f"Specifying {type(self).__name__} operand uncertainty "
+            "sets through a single positional/keyword argument `all_sets` "
+            "is deprecated. "
+            f"In subsequent usage of {type(self).__name__}, "
+            "pass each operand uncertainty set positionally; "
+            f"see the {type(self).__name__} documentation."
+        )
+        deprecation_version = "6.10.2.dev0"
+
+        # resolve arguments
+        if args:
+            if len(args) == 1 and isinstance(args[0], Sequence):
+                # support old API: allow single positional argument
+                #                  of type `Sequence`
+                deprecation_warning(msg=deprecation_msg, version=deprecation_version)
+                all_sets = args[0]
+            else:
+                # current API
+                all_sets = args
+        elif kwargs:
+            # support old API: allow single keyword argument `all_sets`
+            #                  of type `Sequence`
+            deprecation_warning(msg=deprecation_msg, version=deprecation_version)
+            all_sets_kwarg = kwargs.pop("all_sets", None)
+            if kwargs:
+                raise TypeError(
+                    f"{type(self).__name__} constructor got an unexpected "
+                    f"keyword argument {next(iter(kwargs))!r}. "
+                    f"Ensure that all arguments to {type(self).__name__} "
+                    "constructor are positional and of type "
+                    f"{UncertaintySet.__name__}."
+                )
+            if not isinstance(all_sets_kwarg, Sequence):
+                raise TypeError(
+                    f"Argument `all_sets` should be a {Sequence.__name__}-type "
+                    f"iterable, but is of type {type(all_sets_kwarg).__name__}."
+                )
+            all_sets = tuple(all_sets_kwarg)
+        else:
             raise TypeError(
-                f"Argument `all_sets` should be a {Sequence.__name__}-type "
-                f"iterable, but is of type {type(all_sets).__name__}."
+                f"No arguments were passed to the {type(self).__name__} "
+                "constructor. Ensure that one or more positional arguments "
+                f"of type {type(UncertaintySet).__name__} is passed to the "
+                "constructor."
             )
-        all_sets = tuple(all_sets)
+
+        # validate the operands
         for val in all_sets:
             if not isinstance(val, UncertaintySet):
                 raise TypeError(
-                    f"{type(self).__name__} has an entry of value {val!r} "
-                    "that is not of type "
-                    f"{UncertaintySet.__name__}. "
-                    "Ensure that all entries are of type "
-                    f"{UncertaintySet.__name__}."
+                    f"{type(self).__name__} constructor received an operand "
+                    f"{val!r} that is not of type {UncertaintySet.__name__}. "
+                    f"Ensure that all entries are of type {UncertaintySet.__name__}."
                 )
 
         # protect this attribute to make the Cartesian product set,
@@ -4276,7 +4325,7 @@ class CartesianProductSet(UncertaintySet):
 
     @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, uncertain_params=None, block=None):
-        block, param_var_data_list, uncertainty_conlist, aux_var_list = (
+        block, param_var_data_list, *_ = (
             _setup_standard_uncertainty_set_constraint_block(
                 block=block,
                 uncertain_param_vars=uncertain_params,
