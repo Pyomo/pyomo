@@ -8,12 +8,15 @@
 # ____________________________________________________________________________________
 
 # -*- coding: utf-8 -*-
-"""Example 1 in Paper 'Using regularization and second order information in outer approximation for convex MINLP'
+"""Convex MINLP test model based on Example 1 from a regularization OA study.
 
 The expected optimal solution value is -56.981.
 
-Ref:
-    Kronqvist J, Bernal D E, Grossmann I E. Using regularization and second order information in outer approximation for convex MINLP[J]. Mathematical Programming, 2020, 180(1): 285-310.
+References
+----------
+Kronqvist, J., Bernal, D. E., and Grossmann, I. E. (2020). Using
+regularization and second order information in outer approximation for convex
+MINLP. Mathematical Programming, 180(1), 285-310.
 
     Problem type:    convex MINLP
             size:    1  binary variable
@@ -37,11 +40,21 @@ from pyomo.environ import (
 from pyomo.common.collections import ComponentMap
 
 
-class SimpleMINLP4(ConcreteModel):
+class Minlp4Simple(ConcreteModel):
+    """Convex MINLP benchmark instance used in MindtPy regression tests."""
+
     def __init__(self, *args, **kwargs):
-        """Create the problem."""
-        kwargs.setdefault('name', 'SimpleMINLP4')
-        super(SimpleMINLP4, self).__init__(*args, **kwargs)
+        """Create the problem.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments forwarded to ``ConcreteModel``.
+        **kwargs
+            Keyword arguments forwarded to ``ConcreteModel``.
+        """
+        kwargs.setdefault('name', 'Minlp4Simple')
+        super(Minlp4Simple, self).__init__(*args, **kwargs)
         m = self
 
         m.x = Var(domain=Reals, bounds=(1, 20), initialize=5.29)
