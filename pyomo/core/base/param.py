@@ -532,7 +532,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             # value():
             ans = {key: expr_value(param_data) for key, param_data in self.items()}
         else:
-            # The parameter is not mutable, so iteritems() can be
+            # The parameter is not mutable, so items() can be
             # converted into a dictionary containing parameter values.
             ans = dict(self.items())
 
@@ -570,10 +570,6 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             #
             ans = dict(self.sparse_items())
 
-        # We need to fill-in the "missing" values with the declared default
-        #
-        # TBD [11/2025]: should we declare __missing__ so we can still
-        # validate the index for any missing values?
         # We need to fill-in the "missing" values with the declared
         # default (or constant initializer)
         if self._rule is not None and not self._rule.contains_indices():
