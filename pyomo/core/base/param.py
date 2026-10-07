@@ -900,6 +900,16 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             for _set in self._anonymous_sets:
                 _set.construct()
 
+        if (
+            self._default is not None
+            and self._rule is not None
+            and not self._rule.contains_indices()
+        ):
+            logger.warning(
+                f"Declaring Param '{self.name}' with a universal initializer "
+                "(constant or callback function) completely masks the default value"
+            )
+
         try:
             #
             # If the default value is a simple type, we check it versus

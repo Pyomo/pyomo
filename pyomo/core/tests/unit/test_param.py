@@ -2413,7 +2413,9 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
 
     def test_immutable_nonfinite_indexing_sets(self):
         m = ConcreteModel()
-        m.p = Param(Integers, initialize={0: 1, 2: 3})
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, initialize={0: 1, 2: 3})
+        self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(len(m.p._data), 2)
         self.assertEqual(m.p[0], 1)
         with self.assertRaisesRegex(
@@ -2424,7 +2426,9 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         self.assertEqual(len(m.p._data), 2)
 
         m = ConcreteModel()
-        m.p = Param(Integers, initialize={0: 1, 2: 3}, default=4)
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, initialize={0: 1, 2: 3}, default=4)
+        self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(len(m.p._data), 2)
         self.assertEqual(m.p[0], 1)
         self.assertEqual(m.p[1], 4)
@@ -2432,7 +2436,9 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         self.assertEqual(len(m.p._data), 2)
 
         m = ConcreteModel()
-        m.p = Param(Integers, initialize={0: 1, 2: 3}, default=lambda m, i: i * 10)
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, initialize={0: 1, 2: 3}, default=lambda m, i: i * 10)
+        self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(len(m.p._data), 2)
         self.assertEqual(m.p[0], 1)
         self.assertEqual(m.p[1], 10)
@@ -2440,7 +2446,13 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         self.assertEqual(len(m.p._data), 2)
 
         m = ConcreteModel()
-        m.p = Param(Integers, initialize=lambda m, i: i * 10, default=100)
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, initialize=lambda m, i: i * 10, default=100)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Declaring Param 'p' with a universal initializer "
+            "(constant or callback function) completely masks the default value\n",
+        )
         self.assertEqual(len(m.p._data), 0)
         self.assertEqual(m.p[0], 0)
         self.assertEqual(m.p[1], 10)
@@ -2448,7 +2460,13 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         self.assertEqual(len(m.p._data), 3)  # initialize inserts values into the _data
 
         m = ConcreteModel()
-        m.p = Param(Integers, initialize=10, default=100)
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, initialize=10, default=100)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Declaring Param 'p' with a universal initializer "
+            "(constant or callback function) completely masks the default value\n",
+        )
         self.assertEqual(len(m.p._data), 0)
         self.assertEqual(m.p[0], 10)
         self.assertEqual(m.p[1], 10)
@@ -2456,7 +2474,9 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         self.assertEqual(len(m.p._data), 3)  # initialize inserts values into the _data
 
         m = ConcreteModel()
-        m.p = Param(Integers, default=100)
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, default=100)
+        self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(len(m.p._data), 0)
         self.assertEqual(m.p[0], 100)
         self.assertEqual(m.p[1], 100)
@@ -2465,7 +2485,9 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
 
     def test_mutable_nonfinite_indexing_sets(self):
         m = ConcreteModel()
-        m.p = Param(Integers, mutable=True, initialize={0: 1, 2: 3})
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, mutable=True, initialize={0: 1, 2: 3})
+        self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(len(m.p._data), 2)
         self.assertEqual(m.p[0].value, 1)
         with self.assertRaisesRegex(
@@ -2476,7 +2498,9 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         self.assertEqual(len(m.p._data), 3)
 
         m = ConcreteModel()
-        m.p = Param(Integers, mutable=True, initialize={0: 1, 2: 3}, default=4)
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, mutable=True, initialize={0: 1, 2: 3}, default=4)
+        self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(len(m.p._data), 2)
         self.assertEqual(m.p[0].value, 1)
         self.assertEqual(m.p[1].value, 4)
@@ -2484,9 +2508,14 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         self.assertEqual(len(m.p._data), 3)
 
         m = ConcreteModel()
-        m.p = Param(
-            Integers, mutable=True, initialize={0: 1, 2: 3}, default=lambda m, i: i * 10
-        )
+        with LoggingIntercept() as LOG:
+            m.p = Param(
+                Integers,
+                mutable=True,
+                initialize={0: 1, 2: 3},
+                default=lambda m, i: i * 10,
+            )
+        self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(len(m.p._data), 2)
         self.assertEqual(m.p[0].value, 1)
         self.assertEqual(m.p[1].value, 10)
@@ -2494,7 +2523,15 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         self.assertEqual(len(m.p._data), 3)
 
         m = ConcreteModel()
-        m.p = Param(Integers, mutable=True, initialize=lambda m, i: i * 10, default=100)
+        with LoggingIntercept() as LOG:
+            m.p = Param(
+                Integers, mutable=True, initialize=lambda m, i: i * 10, default=100
+            )
+        self.assertEqual(
+            LOG.getvalue(),
+            "Declaring Param 'p' with a universal initializer "
+            "(constant or callback function) completely masks the default value\n",
+        )
         self.assertEqual(len(m.p._data), 0)
         self.assertEqual(m.p[0].value, 0)
         self.assertEqual(m.p[1].value, 10)
@@ -2502,7 +2539,13 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         self.assertEqual(len(m.p._data), 3)
 
         m = ConcreteModel()
-        m.p = Param(Integers, mutable=True, initialize=10, default=100)
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, mutable=True, initialize=10, default=100)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Declaring Param 'p' with a universal initializer "
+            "(constant or callback function) completely masks the default value\n",
+        )
         self.assertEqual(len(m.p._data), 0)
         self.assertEqual(m.p[0].value, 10)
         self.assertEqual(m.p[1].value, 10)
@@ -2510,7 +2553,9 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         self.assertEqual(len(m.p._data), 3)
 
         m = ConcreteModel()
-        m.p = Param(Integers, mutable=True, default=100)
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, mutable=True, default=100)
+        self.assertEqual(LOG.getvalue(), "")
         self.assertEqual(len(m.p._data), 0)
         self.assertEqual(m.p[0].value, 100)
         self.assertEqual(m.p[1].value, 100)
@@ -2520,7 +2565,9 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
     def test_immutable_dynamic_indexing_sets(self):
         m = ConcreteModel()
         m.I = Set(initialize=[0, 2])
-        m.p = Param(m.I, initialize={0: 1, 2: 3})
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, initialize={0: 1, 2: 3})
+        self.assertEqual(LOG.getvalue(), "")
         m.I.add(1)
         self.assertEqual(len(m.p._data), 2)
         self.assertEqual(m.p[0], 1)
@@ -2533,7 +2580,9 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
 
         m = ConcreteModel()
         m.I = Set(initialize=[0, 2])
-        m.p = Param(m.I, initialize={0: 1, 2: 3}, default=4)
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, initialize={0: 1, 2: 3}, default=4)
+        self.assertEqual(LOG.getvalue(), "")
         m.I.add(1)
         self.assertEqual(len(m.p._data), 2)
         self.assertEqual(m.p[0], 1)
@@ -2543,7 +2592,9 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
 
         m = ConcreteModel()
         m.I = Set(initialize=[0, 2])
-        m.p = Param(m.I, initialize={0: 1, 2: 3}, default=lambda m, i: i * 10)
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, initialize={0: 1, 2: 3}, default=lambda m, i: i * 10)
+        self.assertEqual(LOG.getvalue(), "")
         m.I.add(1)
         self.assertEqual(len(m.p._data), 2)
         self.assertEqual(m.p[0], 1)
@@ -2553,7 +2604,13 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
 
         m = ConcreteModel()
         m.I = Set(initialize=[0, 2])
-        m.p = Param(m.I, initialize=lambda m, i: i * 10, default=100)
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, initialize=lambda m, i: i * 10, default=100)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Declaring Param 'p' with a universal initializer "
+            "(constant or callback function) completely masks the default value\n",
+        )
         m.I.add(1)
         self.assertEqual(len(m.p._data), 2)
         self.assertEqual(m.p[0], 0)
@@ -2563,7 +2620,13 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
 
         m = ConcreteModel()
         m.I = Set(initialize=[0, 2])
-        m.p = Param(m.I, initialize=10, default=100)
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, initialize=10, default=100)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Declaring Param 'p' with a universal initializer "
+            "(constant or callback function) completely masks the default value\n",
+        )
         m.I.add(1)
         self.assertEqual(len(m.p._data), 2)
         self.assertEqual(m.p[0], 10)
@@ -2573,7 +2636,9 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
 
         m = ConcreteModel()
         m.I = Set(initialize=[0, 2])
-        m.p = Param(m.I, default=100)
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, default=100)
+        self.assertEqual(LOG.getvalue(), "")
         m.I.add(1)
         self.assertEqual(len(m.p._data), 0)
         self.assertEqual(m.p[0], 100)
@@ -2584,7 +2649,9 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
     def test_mutable_dynamic_indexing_sets(self):
         m = ConcreteModel()
         m.I = Set(initialize=[0, 2])
-        m.p = Param(m.I, mutable=True, initialize={0: 1, 2: 3})
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, mutable=True, initialize={0: 1, 2: 3})
+        self.assertEqual(LOG.getvalue(), "")
         m.I.add(1)
         self.assertEqual(len(m.p._data), 2)
         self.assertEqual(m.p[0].value, 1)
@@ -2597,7 +2664,9 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
 
         m = ConcreteModel()
         m.I = Set(initialize=[0, 2])
-        m.p = Param(m.I, mutable=True, initialize={0: 1, 2: 3}, default=4)
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, mutable=True, initialize={0: 1, 2: 3}, default=4)
+        self.assertEqual(LOG.getvalue(), "")
         m.I.add(1)
         self.assertEqual(len(m.p._data), 2)
         self.assertEqual(m.p[0].value, 1)
@@ -2607,9 +2676,11 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
 
         m = ConcreteModel()
         m.I = Set(initialize=[0, 2])
-        m.p = Param(
-            m.I, mutable=True, initialize={0: 1, 2: 3}, default=lambda m, i: i * 10
-        )
+        with LoggingIntercept() as LOG:
+            m.p = Param(
+                m.I, mutable=True, initialize={0: 1, 2: 3}, default=lambda m, i: i * 10
+            )
+        self.assertEqual(LOG.getvalue(), "")
         m.I.add(1)
         self.assertEqual(len(m.p._data), 2)
         self.assertEqual(m.p[0].value, 1)
@@ -2619,7 +2690,13 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
 
         m = ConcreteModel()
         m.I = Set(initialize=[0, 2])
-        m.p = Param(m.I, mutable=True, initialize=lambda m, i: i * 10, default=100)
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, mutable=True, initialize=lambda m, i: i * 10, default=100)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Declaring Param 'p' with a universal initializer "
+            "(constant or callback function) completely masks the default value\n",
+        )
         m.I.add(1)
         self.assertEqual(len(m.p._data), 2)
         self.assertEqual(m.p[0].value, 0)
@@ -2629,7 +2706,13 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
 
         m = ConcreteModel()
         m.I = Set(initialize=[0, 2])
-        m.p = Param(m.I, mutable=True, initialize=10, default=100)
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, mutable=True, initialize=10, default=100)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Declaring Param 'p' with a universal initializer "
+            "(constant or callback function) completely masks the default value\n",
+        )
         m.I.add(1)
         self.assertEqual(len(m.p._data), 2)
         self.assertEqual(m.p[0].value, 10)
@@ -2639,7 +2722,9 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
 
         m = ConcreteModel()
         m.I = Set(initialize=[0, 2])
-        m.p = Param(m.I, mutable=True, default=100)
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, mutable=True, default=100)
+        self.assertEqual(LOG.getvalue(), "")
         m.I.add(1)
         self.assertEqual(len(m.p._data), 0)
         self.assertEqual(m.p[0].value, 100)
