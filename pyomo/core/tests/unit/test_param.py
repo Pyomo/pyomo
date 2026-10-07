@@ -1752,6 +1752,17 @@ q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
             "     bb :     4\n",
         )
 
+        # Test a default callback function
+        m.s = Param(Any, mutable=True, initialize={1: 2}, default=lambda m, i: i)
+        OUT = StringIO()
+        m.s.pprint(OUT)
+        self.assertEqual(
+            OUT.getvalue(),
+            "s : Size=inf, Index=Any, Domain=Any, Default=(function), Mutable=True\n"
+            "    Key : Value\n"
+            "      1 :     2\n",
+        )
+
     def test_invalid_exception_argument(self):
         m = ConcreteModel()
         m.p = Param(initialize=7, mutable=True)
