@@ -213,10 +213,15 @@ class TestIpoptInterface(unittest.TestCase):
                 if sys.platform.startswith("win"):
                     return
 
+                # MRM 2026-10-07: The fake executables below are /bin/sh scripts
+                # rather than Python scripts. Starting a Python interpreter can
+                # occasionally exceed the 2-second version timeout,
+                # which made this test intermittently fail
+                # File exists, but is not executable
                 ipopt.Ipopt._exe_cache = {}
                 fname = os.path.join(dname, 'test2')
                 with open(fname, 'w') as F:
-                    F.write(f"#!{sys.executable}\nimport sys\nsys.exit(0)\n")
+                    F.write("#!/bin/sh\nexit 0\n")
                 solver = ipopt.Ipopt(executable=fname)
                 self.assertEqual({}, ipopt.Ipopt._exe_cache)
                 self.assertEqual(ipopt.Availability.NotFound, solver.available())
@@ -227,7 +232,7 @@ class TestIpoptInterface(unittest.TestCase):
                 ipopt.Ipopt._exe_cache = {}
                 fname = os.path.join(dname, 'test3')
                 with open(fname, 'w') as F:
-                    F.write(f"#!{sys.executable}\nimport sys\nsys.exit(1)\n")
+                    F.write("#!/bin/sh\nexit 1\n")
                 os.chmod(fname, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
                 solver = ipopt.Ipopt(executable=fname)
                 self.assertEqual({}, ipopt.Ipopt._exe_cache)
@@ -239,7 +244,7 @@ class TestIpoptInterface(unittest.TestCase):
                 ipopt.Ipopt._exe_cache = {}
                 fname = os.path.join(dname, 'test4')
                 with open(fname, 'w') as F:
-                    F.write(f"#!{sys.executable}\nimport sys\nsys.exit(0)\n")
+                    F.write("#!/bin/sh\nexit 0\n")
                 os.chmod(fname, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
                 solver = ipopt.Ipopt(executable=fname)
                 self.assertEqual({}, ipopt.Ipopt._exe_cache)
@@ -251,10 +256,7 @@ class TestIpoptInterface(unittest.TestCase):
                 ipopt.Ipopt._exe_cache = {}
                 fname = os.path.join(dname, 'test5')
                 with open(fname, 'w') as F:
-                    F.write(
-                        f"#!{sys.executable}\nprint('cbc 1.2.3 ASL')\n"
-                        "import sys\nsys.exit(0)\n"
-                    )
+                    F.write("#!/bin/sh\necho 'cbc 1.2.3 ASL'\nexit 0\n")
                 os.chmod(fname, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
                 solver = ipopt.Ipopt(executable=fname)
                 self.assertEqual({}, ipopt.Ipopt._exe_cache)
@@ -266,10 +268,7 @@ class TestIpoptInterface(unittest.TestCase):
                 ipopt.Ipopt._exe_cache = {}
                 fname = os.path.join(dname, 'test6')
                 with open(fname, 'w') as F:
-                    F.write(
-                        f"#!{sys.executable}\nprint('Ipopt 1.2.3a ASL')\n"
-                        "import sys\nsys.exit(0)\n"
-                    )
+                    F.write("#!/bin/sh\necho 'Ipopt 1.2.3a ASL'\nexit 0\n")
                 os.chmod(fname, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
                 solver = ipopt.Ipopt(executable=fname)
                 self.assertEqual({}, ipopt.Ipopt._exe_cache)
@@ -281,10 +280,7 @@ class TestIpoptInterface(unittest.TestCase):
                 ipopt.Ipopt._exe_cache = {}
                 fname = os.path.join(dname, 'test7')
                 with open(fname, 'w') as F:
-                    F.write(
-                        f"#!{sys.executable}\nprint('Ipopt 1.2.3 ASL')\n"
-                        "import sys\nsys.exit(0)\n"
-                    )
+                    F.write("#!/bin/sh\necho 'Ipopt 1.2.3 ASL'\nexit 0\n")
                 os.chmod(fname, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
                 solver = ipopt.Ipopt(executable=fname)
                 self.assertEqual({}, ipopt.Ipopt._exe_cache)
