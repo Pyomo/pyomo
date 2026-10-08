@@ -40,6 +40,7 @@ from enum import Enum
 import re
 import importlib as im
 import logging
+import time
 import types
 import json
 from collections.abc import Callable
@@ -61,7 +62,10 @@ import pyomo.environ as pyo
 
 from pyomo.opt import SolverFactory
 from pyomo.environ import Block, ComponentUID
-from pyomo.opt.results.solver import assert_optimal_termination
+from pyomo.opt.results.solver import (
+    assert_optimal_termination,
+    check_optimal_termination,
+)
 from pyomo.common.flags import NOTSET
 
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
@@ -1268,6 +1272,34 @@ class Estimator:
     def _create_parmest_model(self, experiment_number):
         """
         Modify the Pyomo model for parameter estimation
+
+        Gets a clone of the experiment's labeled model, adds the parmest
+        objective (if an objective function is set), and converts the unknown
+        parameters to unfixed variables. The returned model is used for each
+        scenario block of the extensive form model.
+
+        Parameters
+        ----------
+        experiment_number : int
+            Index into exp_list of the experiment to build the model for.
+
+        Returns
+        -------
+        parmest_model : ConcreteModel
+            Model for parameter estimation. If an objective function is set,
+            existing objectives are deactivated and the model has
+            ``FirstStageCost``, ``SecondStageCost`` (the objective, including
+            regularization if requested) and ``Total_Cost_Objective``. If the
+            model has no unknown parameters, a ``parmest_dummy_var`` is added.
+
+        Raises
+        ------
+        RuntimeError
+            If an objective function is set and the model already has a
+            component named ``Total_Cost_Objective``, ``FirstStageCost`` or
+            ``SecondStageCost``.
+        ValueError
+            If the regularization option is not supported.
         """
 
         model = _get_labeled_model(self.exp_list[experiment_number])
@@ -1350,17 +1382,30 @@ class Estimator:
         """
         Create scenario blocks for parameter estimation.
 
+        The extensive form model contains:
+        1. parent theta variables (``model.parmest_theta``), indexed by theta
+           name,
+        2. one scenario block per experiment (``model.exp_scenarios``),
+        3. constraints linking each block's theta variables to the parent
+           theta variables (only when fix_theta is False),
+        4. an objective equal to the average of the block objectives.
+
+        The model is also stored as ``self.ef_instance``.
+
         Parameters
         ----------
         bootlist : list, optional
             List of bootstrap experiment numbers to use. If None, use all experiments in exp_list.
             Default is None.
         theta_vals : dict, optional
-            Dictionary of theta values to set in the model. If None, use default values from experiment class.
-            Default is None.
+            Dictionary of theta values keyed by theta name, used as the initial
+            values of the theta variables (or their fixed values when fix_theta
+            is True). Thetas not in theta_vals use their values in the model
+            of the first experiment in exp_list. Default is None.
         fix_theta : bool, optional
             If True, fix the theta values in the model. If False, leave them free.
             Default is False.
+
         Returns
         -------
         model : ConcreteModel
@@ -1479,6 +1524,200 @@ class Estimator:
         self.ef_instance = model
         return model
 
+    def _generate_initial_theta(
+        self,
+        seed=None,
+        n_restarts=None,
+        multistart_sampling_method=None,
+        user_provided_df=None,
+        experiment_number=0,
+    ):
+        """
+        Create the table of starting theta values used by theta_est_multistart.
+
+        Starting values are sampled within the theta bounds, or taken from
+        user_provided_df. Every theta must have finite lower and upper bounds,
+        including when user_provided_df is given, and all starting values must
+        be within those bounds.
+
+        Parameters
+        ----------
+        seed : int, optional
+            Random seed for the sampling method. Not used with
+            user_provided_df. Default is None.
+        n_restarts : int, optional
+            Number of starts to sample. Required unless user_provided_df is
+            given; if given with user_provided_df, it must equal the number
+            of rows. Default is None.
+        multistart_sampling_method : str, optional
+            Method used to sample the starts within the theta bounds:
+            "uniform_random", "latin_hypercube" or "sobol_sampling"
+            (scrambled; a power of 2 for n_restarts gives the most even
+            coverage). Not used when user_provided_df is given. Default is
+            None.
+        user_provided_df : pd.DataFrame, optional
+            Starting values, one row per start and one column per theta. Column
+            names must match the theta names returned by theta_est (any order).
+            Default is None.
+        experiment_number : int, optional
+            Index into exp_list of the experiment used to get the theta names
+            and bounds. Default is 0.
+
+        Returns
+        -------
+        df_multistart : pd.DataFrame
+            One row per start, with columns:
+            1. one column per theta, holding the starting values,
+            2. ``converged_<theta name>`` for each theta (NaN),
+            3. ``final objective`` (NaN), ``solver termination`` (empty
+               string) and ``solve_time`` (NaN).
+
+            The last two groups are filled in by theta_est_multistart.
+
+        Raises
+        ------
+        ValueError
+            If a theta bound is missing or a lower bound exceeds its upper
+            bound, the sampling method is invalid, user_provided_df columns or
+            rows are invalid, n_restarts is not positive or does not match
+            user_provided_df, or a starting value is not finite or is out of
+            bounds.
+        TypeError
+            If user_provided_df is not a DataFrame, or n_restarts is not an
+            integer when sampling.
+        RuntimeError
+            If a theta variable cannot be found on the model.
+        """
+        parmest_model = self._create_parmest_model(experiment_number)
+
+        # Use the same theta names that _Q_opt uses for theta_vals and returns
+        # as keys of the estimated theta, so starts and results map exactly.
+        theta_names = list(self._expanded_theta_info(parmest_model)[0])
+        if len(theta_names) != len(set(theta_names)):
+            raise ValueError(f"Duplicate theta names are not allowed: {theta_names}")
+
+        theta_vars = [parmest_model.find_component(name) for name in theta_names]
+        if any(v is None for v in theta_vars):
+            raise RuntimeError(
+                "Failed to locate one or more theta components on model."
+            )
+
+        lower_bound = np.array([v.lb for v in theta_vars], dtype=float)
+        upper_bound = np.array([v.ub for v in theta_vars], dtype=float)
+
+        if np.any(np.isnan(lower_bound)) or np.any(np.isnan(upper_bound)):
+            raise ValueError(
+                "The lower and upper bounds for the theta values must be defined."
+            )
+        if np.any(lower_bound > upper_bound):
+            raise ValueError(
+                "Each lower bound must be less than or equal to the corresponding upper bound."
+            )
+
+        if user_provided_df is not None:
+            if not isinstance(user_provided_df, pd.DataFrame):
+                raise TypeError("user_provided_df must be a pandas DataFrame.")
+            if user_provided_df.shape[1] != len(theta_names):
+                raise ValueError(
+                    "user_provided_df must have exactly one column per theta name."
+                )
+            # Columns must use the theta names returned by theta_est (any order).
+            user_cols = [str(c) for c in user_provided_df.columns]
+            if sorted(user_cols) != sorted(theta_names):
+                raise ValueError(
+                    f"user_provided_df columns {user_cols} must match the theta "
+                    f"names {theta_names} (order may vary)."
+                )
+            df_multistart = user_provided_df.copy()
+            df_multistart.columns = user_cols
+            df_multistart = df_multistart[theta_names]
+            if df_multistart.shape[0] == 0:
+                raise ValueError("user_provided_df must contain at least one row.")
+            if n_restarts is not None and n_restarts != df_multistart.shape[0]:
+                raise ValueError(
+                    "n_restarts must match the number of rows in user_provided_df."
+                )
+            theta_vals_multistart = df_multistart.to_numpy(dtype=float)
+            n_restarts = df_multistart.shape[0]
+        elif multistart_sampling_method == "uniform_random":
+            if not isinstance(n_restarts, int):
+                raise TypeError("n_restarts must be an integer.")
+            if n_restarts <= 0:
+                raise ValueError("n_restarts must be greater than zero.")
+            # Use a local RNG to avoid mutating global random state.
+            rng = np.random.default_rng(seed)
+            theta_vals_multistart = rng.uniform(
+                low=lower_bound, high=upper_bound, size=(n_restarts, len(theta_names))
+            )
+
+        elif multistart_sampling_method == "latin_hypercube":
+            if not isinstance(n_restarts, int):
+                raise TypeError("n_restarts must be an integer.")
+            if n_restarts <= 0:
+                raise ValueError("n_restarts must be greater than zero.")
+            # Generate theta values using Latin hypercube sampling
+            # Create a Latin Hypercube sampler that uses the dimensions of the theta names
+            sampler = scipy.stats.qmc.LatinHypercube(d=len(theta_names), seed=seed)
+            # Generate random samples in the range of [0, 1] for number of restarts
+            samples = sampler.random(n=n_restarts)
+            # Resulting samples should be size (n_restarts, len(theta_names))
+
+        elif multistart_sampling_method == "sobol_sampling":
+            if not isinstance(n_restarts, int):
+                raise TypeError("n_restarts must be an integer.")
+            if n_restarts <= 0:
+                raise ValueError("n_restarts must be greater than zero.")
+            # Generate theta values using scrambled Sobol sampling. Scrambling
+            # means the first point is not the origin, so no point is skipped
+            # (skipping one would degrade the uniformity of the sequence).
+            sampler = scipy.stats.qmc.Sobol(
+                d=len(theta_names), scramble=True, seed=seed
+            )
+            samples = sampler.random(n=n_restarts)
+
+        elif multistart_sampling_method == "user_provided_values":
+            raise ValueError(
+                "multistart_sampling_method='user_provided_values' requires user_provided_df."
+            )
+
+        else:
+            raise ValueError(
+                "Invalid sampling method. Choose 'uniform_random', 'latin_hypercube', 'sobol_sampling'  or 'user_provided_values'."
+            )
+
+        if (
+            multistart_sampling_method == "sobol_sampling"
+            or multistart_sampling_method == "latin_hypercube"
+        ):
+            # Scale the samples to the range of the lower and upper bounds for each theta in theta_names
+            # The samples are in the range [0, 1], so we scale them to the range of the lower and upper bounds
+            theta_vals_multistart = np.array(
+                [lower_bound + (upper_bound - lower_bound) * theta for theta in samples]
+            )
+
+        # Create a DataFrame where each row is an initial theta vector for a restart
+        if user_provided_df is None:
+            # Ensure theta_vals_multistart is 2D (n_restarts, len(theta_names))
+            arr = np.atleast_2d(theta_vals_multistart)
+            if arr.shape[0] == 1 and n_restarts > 1:
+                arr = np.tile(arr, (n_restarts, 1))
+            df_multistart = pd.DataFrame(arr, columns=theta_names)
+
+        theta_arr = df_multistart[theta_names].to_numpy(dtype=float)
+        if not np.isfinite(theta_arr).all():
+            raise ValueError("Initial theta values must be finite.")
+        if np.any(theta_arr < lower_bound) or np.any(theta_arr > upper_bound):
+            raise ValueError("Initial theta values must be within model bounds.")
+
+        # Add columns for output info, initialized as nan
+        for name in theta_names:
+            df_multistart[f'converged_{name}'] = np.nan
+        df_multistart["final objective"] = np.nan
+        df_multistart["solver termination"] = ""
+        df_multistart["solve_time"] = np.nan
+
+        return df_multistart
+
     def _Q_opt(
         self,
         return_values=None,
@@ -1486,6 +1725,7 @@ class Estimator:
         solver="ef_ipopt",
         theta_vals=None,
         fix_theta=False,
+        multistart=False,
     ):
         """
         _Q_opt method for parameter estimation using an extensive form
@@ -1520,6 +1760,11 @@ class Estimator:
         fix_theta : bool, optional
             If True, fix the theta values in the model. If False, leave them free.
             Default is False.
+        multistart : bool, optional
+            If True (used by theta_est_multistart), a non-optimal termination
+            is returned instead of raising an error, the termination condition
+            is returned, and return_values is not used. Default is False.
+
         Returns
         -------
         obj_value : float or None
@@ -1530,7 +1775,10 @@ class Estimator:
             If fix_theta is True, this is the objective value at the fixed
             theta values. If the fixed-theta problem does not return a
             solution, obj_value is None.
-        theta_estimates : dict
+
+            If multistart is True and the solve did not terminate optimally,
+            obj_value is None.
+        theta_estimates : dict or None
             Dictionary of theta values keyed by theta name.
 
             If fix_theta is False, this contains the estimated parameter values
@@ -1538,14 +1786,18 @@ class Estimator:
 
             If fix_theta is True, this contains the fixed theta values used in
             the model.
+
+            If multistart is True and the solve did not terminate optimally,
+            theta_estimates is None.
         var_values : pd.DataFrame, optional
             DataFrame of variable values for the variables specified in
-            return_values. Only returned when fix_theta is False and
-            return_values is not None and contains at least one valid variable
-            name. The DataFrame has one row per scenario block and columns
-            corresponding to the variable names in return_values.
+            return_values. Only returned when fix_theta and multistart are
+            False and return_values is a non-empty list. The DataFrame has one
+            row per scenario block and columns corresponding to the variable
+            names in return_values found in the model.
         termination_condition : pyomo.opt.TerminationCondition, optional
-            Solver termination condition. Only returned when fix_theta is True.
+            Solver termination condition. Only returned when fix_theta or
+            multistart is True.
 
         """
         # Create extended form model with scenario blocks
@@ -1553,11 +1805,6 @@ class Estimator:
             bootlist=bootlist, theta_vals=theta_vals, fix_theta=fix_theta
         )
         expanded_theta_names = list(model._parmest_theta_names)
-
-        logger.debug("Parmest _Q_opt model with scenario blocks:")
-
-        if logger.isEnabledFor(logging.DEBUG):
-            model.pprint()
 
         # Check solver and set options
         if solver == "k_aug":
@@ -1590,8 +1837,16 @@ class Estimator:
             obj_value = None
             return obj_value, theta_estimates, termination_condition
 
+        # Separate handling of termination conditions for _Q_at_theta vs _Q_opt
+        # If not fixing theta, ensure optimal termination of the solve to return result
         if not fix_theta:
-            assert_optimal_termination(solve_result)
+            if not multistart:
+                assert_optimal_termination(solve_result)
+            elif not check_optimal_termination(solve_result):
+                # In multistart mode a failed start is reported, not raised.
+                # The solution is not loaded (load_from rejects non-optimal
+                # results), so only the termination condition is returned.
+                return None, None, termination_condition
 
         model.solutions.load_from(solve_result)
 
@@ -1605,8 +1860,9 @@ class Estimator:
         self.obj_value = obj_value
         self.estimated_theta = theta_estimates
 
-        # If fixing theta, return objective value, theta estimates, and solver status
-        if fix_theta:
+        # If fixing theta or in multistart mode, return objective value, theta
+        # estimates, and solver status
+        if fix_theta or multistart:
             return obj_value, theta_estimates, termination_condition
 
         # Extract return values if requested
@@ -2262,6 +2518,214 @@ class Estimator:
             results.append((sample, test, training))
 
         return results
+
+    def theta_est_multistart(
+        self,
+        n_restarts=20,
+        multistart_sampling_method="uniform_random",
+        user_provided_df=None,
+        seed=None,
+        save_results=False,
+        file_name="multistart_results.csv",
+    ):
+        """
+        Parameter estimation using all scenarios in the data, repeated from
+        multiple starting values of theta
+
+        Each start is solved in the same way as theta_est, starting from its
+        theta values. Starts are sampled within the theta bounds or given by
+        user_provided_df, and are solved one after another. Every theta must
+        have finite lower and upper bounds, including when user_provided_df is
+        given.
+
+        Parameters
+        ----------
+        n_restarts: int, optional
+            Number of starts to sample. Not used when user_provided_df is
+            given. Default is 20.
+        multistart_sampling_method: str, optional
+            Method used to sample the starts within the theta bounds:
+            "uniform_random", "latin_hypercube" or "sobol_sampling"
+            (scrambled; a power of 2 for n_restarts gives the most even
+            coverage). Not used when user_provided_df is given. Default is
+            "uniform_random".
+        user_provided_df: pd.DataFrame, optional
+            Starting values, one row per start and one column per theta. Column
+            names must match the theta names returned by theta_est (any order),
+            and values must be within the theta bounds. Default is None.
+        seed: int or None, optional
+            Random seed for the sampling method. Default is None.
+        save_results: bool, optional
+            If True, write results_df to a CSV file. Default is False.
+        file_name: str, optional
+            Name of the CSV file written when save_results is True.
+            Default is "multistart_results.csv".
+
+        Returns
+        -------
+        results_df: pd.DataFrame
+            One row per start, with the starting theta values, the converged
+            theta values (``converged_<theta name>``, NaN if the start did not
+            terminate optimally), ``final objective``, ``solver termination``
+            (the termination condition, or the error message if the solve
+            raised an exception) and ``solve_time`` (seconds, including model
+            construction)
+        best_theta: dict or None
+            Converged theta values of the best start, keyed by theta name.
+            None if no start terminated optimally.
+        best_obj: float
+            Objective value of the best start. NaN if no start terminated
+            optimally.
+
+        Notes
+        -----
+        The best start is the one with the smallest objective among starts
+        that terminated optimally (optimal/locallyOptimal/globallyOptimal).
+        If no start terminated optimally, ``best_theta`` is ``None`` and a
+        warning is logged.
+
+        After a successful run, the Estimator holds the best start's solution
+        (``estimated_theta``, ``obj_value`` and the solved model), so
+        ``cov_est()`` can be called next. The solved model of the best start
+        is kept while the starts are solved and restored afterwards, so it is
+        not solved again. If no start terminated optimally, these are left as
+        they were before the call.
+        """
+        if self.pest_deprecated is not None:
+            raise RuntimeError(
+                "Multistart is not supported in the deprecated parmest interface."
+            )
+        if user_provided_df is None:
+            if not isinstance(n_restarts, int):
+                raise TypeError("n_restarts must be an integer.")
+            if n_restarts <= 0:
+                raise ValueError("n_restarts must be greater than zero.")
+
+        n_restarts_for_generation = None if user_provided_df is not None else n_restarts
+        results_df = self._generate_initial_theta(
+            seed=seed,
+            n_restarts=n_restarts_for_generation,
+            multistart_sampling_method=multistart_sampling_method,
+            user_provided_df=user_provided_df,
+            experiment_number=0,
+        )
+        theta_names = [
+            c
+            for c in results_df.columns
+            if not c.startswith("converged_")
+            and c not in {"final objective", "solver termination", "solve_time"}
+        ]
+        n_restarts = results_df.shape[0]
+        sampler = (
+            "user_provided_df"
+            if user_provided_df is not None
+            else multistart_sampling_method
+        )
+
+        # Each _Q_opt call overwrites ef_instance, estimated_theta and
+        # obj_value. Save them so they can be restored if no start converges.
+        state_attrs = ("ef_instance", "estimated_theta", "obj_value")
+        prior_state = {a: self.__dict__[a] for a in state_attrs if a in self.__dict__}
+
+        # Solve each start, as (row index, objective, termination, solve time,
+        # theta_hat)
+        results = []
+        # Best optimal start, as (row index, objective, solved model). The
+        # model is kept so that the best solution can be restored after all
+        # starts are solved, without solving it again.
+        best_start = None
+        for i in range(n_restarts):
+            Theta = {name: float(results_df.iloc[i][name]) for name in theta_names}
+            t0 = time.time()
+            try:
+                final_obj, theta_hat, termination = self._Q_opt(
+                    theta_vals=Theta, multistart=True
+                )
+                solve_time = time.time() - t0
+                if theta_hat is None:
+                    final_obj = np.nan
+                elif best_start is None or final_obj < best_start[1]:
+                    best_start = (i, final_obj, self.ef_instance)
+                results.append((i, final_obj, str(termination), solve_time, theta_hat))
+            except Exception as exc:
+                solve_time = time.time() - t0
+                logger.warning(
+                    "theta_est_multistart: start %d (sampler=%s) raised an "
+                    "exception: %s",
+                    i,
+                    sampler,
+                    exc,
+                )
+                results.append(
+                    (
+                        i,
+                        np.nan,
+                        f"exception(start={i}, sampler={sampler}): {exc}",
+                        solve_time,
+                        None,
+                    )
+                )
+
+        # Fill results_df
+        for i, final_obj, term, solve_time, theta_hat in results:
+            results_df.at[i, "final objective"] = final_obj
+            results_df.at[i, "solver termination"] = term
+            results_df.at[i, "solve_time"] = solve_time
+
+            if theta_hat is not None:
+                for name in theta_names:
+                    if name in theta_hat:
+                        results_df.at[i, f"converged_{name}"] = float(theta_hat[name])
+
+        # Best solution: minimum objective among starts that terminated
+        # optimally. Objectives of non-optimal starts are not comparable (an
+        # infeasible point can have a lower SSE than any solution), so those
+        # starts are never selected.
+        acceptable_terms = {
+            str(pyo.TerminationCondition.optimal),
+            str(pyo.TerminationCondition.locallyOptimal),
+            str(pyo.TerminationCondition.globallyOptimal),
+        }
+        finite_obj_mask = np.isfinite(
+            results_df["final objective"].to_numpy(dtype=float)
+        )
+        acceptable_mask = results_df["solver termination"].isin(acceptable_terms)
+        ranked = results_df[finite_obj_mask & acceptable_mask]
+
+        if ranked.empty:
+            logger.warning(
+                "theta_est_multistart: none of the %d starts terminated "
+                "optimally, so no best theta is returned. See the 'solver "
+                "termination' column of the results for details.",
+                n_restarts,
+            )
+            best_theta = None
+            best_obj = np.nan
+            for a in state_attrs:
+                if a in prior_state:
+                    setattr(self, a, prior_state[a])
+                else:
+                    self.__dict__.pop(a, None)
+        else:
+            best_idx = ranked["final objective"].astype(float).idxmin()
+            best_obj = float(results_df.loc[best_idx, "final objective"])
+            best_theta = {
+                name: float(results_df.loc[best_idx, f"converged_{name}"])
+                for name in theta_names
+            }
+            # Restore the best start's solution so that ef_instance,
+            # estimated_theta and obj_value (used by cov_est and other
+            # methods) describe the best start, not the last one solved.
+            # best_start keeps the earliest of tied objectives, as idxmin does,
+            # so it holds the model for best_idx.
+            self.ef_instance = best_start[2]
+            self.estimated_theta = dict(best_theta)
+            self.obj_value = best_obj
+
+        if save_results:
+            results_df.to_csv(file_name, index=False)
+
+        return results_df, best_theta, best_obj
 
     def _normalize_theta_dataframe(self, theta_values):
         """
