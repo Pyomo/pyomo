@@ -63,6 +63,7 @@ from pyomo.environ import (
 from pyomo.common.errors import PyomoException
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
+from pyomo.core.base.initializer import InitializerBase
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.set import SetData
 from pyomo.core.base.units_container import units, pint_available, UnitsError
@@ -105,7 +106,7 @@ class ParamTester:
             self.assertRaises(TypeError, float, self.instance.A)
             self.assertRaises(TypeError, int, self.instance.A)
 
-        if self.instance.A._default_val is NoValue:
+        if self.instance.A._default is None:
             val_list = self.sparse_data.items()
         else:
             val_list = self.data.items()
@@ -236,7 +237,7 @@ class ParamTester:
         if len(keys) == len(sparse_keys):
             # No default value possible
             return
-        if self.instance.A._default_val is NoValue:
+        if self.instance.A._default is None:
             # No default value defined
             return
 
@@ -245,12 +246,15 @@ class ParamTester:
             if not idx in sparse_keys:
                 break
 
-        self.assertEqual(value(self.instance.A[idx]), self.instance.A._default_val)
+        self.assertEqual(
+            value(self.instance.A[idx]), self.instance.A._default(self.instance.A, idx)
+        )
         if self.instance.A.mutable:
             self.assertIsInstance(self.instance.A[idx], ParamData)
         else:
             self.assertEqual(
-                type(self.instance.A[idx]), type(value(self.instance.A._default_val))
+                type(self.instance.A[idx]),
+                type(value(self.instance.A._default(self.instance.A, idx))),
             )
 
         try:
@@ -314,7 +318,7 @@ class ParamTester:
     def test_keys(self):
         test = self.instance.A.keys()
         # self.assertEqual( type(test), list )
-        if self.instance.A._default_val is NoValue:
+        if self.instance.A._default is None:
             self.assertEqual(sorted(test), sorted(self.sparse_data.keys()))
         else:
             self.assertEqual(sorted(test), sorted(self.data.keys()))
@@ -327,7 +331,7 @@ class ParamTester:
             test = self.instance.A.values()
             # self.assertEqual( type(test), list )
             test = zip(self.instance.A.keys(), test)
-            if self.instance.A._default_val is NoValue:
+            if self.instance.A._default is None:
                 self.validateDict(self.sparse_data.items(), test)
             else:
                 self.validateDict(self.data.items(), test)
@@ -339,12 +343,12 @@ class ParamTester:
     def test_items(self):
         expectException = False
         #                  len(self.sparse_data) < len(self.data) and \
-        #                  not self.instance.A._default_val is NoValue and \
+        #                  not self.instance.A._default is None and \
         #                  not self.instance.A.mutable
         try:
             test = self.instance.A.items()
             # self.assertEqual( type(test), list )
-            if self.instance.A._default_val is NoValue:
+            if self.instance.A._default is None:
                 self.validateDict(self.sparse_data.items(), test)
             else:
                 self.validateDict(self.data.items(), test)
@@ -403,7 +407,7 @@ class ParamTester:
         self.assertEqual(list(test), list(self.instance.A.sparse_items()))
 
     def test_extract_values(self):
-        if self.instance.A._default_val is NoValue:
+        if self.instance.A._default is None:
             ref = self.sparse_data
         else:
             ref = self.data
@@ -411,16 +415,28 @@ class ParamTester:
         self.assertEqual(ref, vals)
         for k, v in vals.items():
             self.assertIsInstance(v, (float, int))
+        with self.assertRaisesRegex(KeyError, '12345.6'):
+            vals[12345.6]
 
     def test_extract_values_sparse(self):
         vals = self.instance.A.extract_values_sparse()
         self.assertEqual(self.sparse_data, vals)
         for k, v in vals.items():
             self.assertIsInstance(v, (float, int))
+        with self.assertRaisesRegex(KeyError, '12345.6'):
+            vals[12345.6]
+        if self.data != self.sparse_data:
+            keys = set(self.data) - set(self.sparse_data)
+            for key in keys:
+                if self.data[key] is NoValue:
+                    with self.assertRaisesRegex(KeyError, str(key)):
+                        vals[key]
+                else:
+                    self.assertEqual(self.data[key], vals[key])
 
     def test_len(self):
         # """Check the use of len"""
-        if self.instance.A._default_val is NoValue:
+        if self.instance.A._default is None:
             self.assertEqual(len(self.instance.A), len(self.sparse_data))
             self.assertEqual(len(list(self.instance.A.keys())), len(self.sparse_data))
         else:
@@ -440,17 +456,19 @@ class ParamTester:
             return
         idx = list(set(self.data) - set(self.sparse_data))[0]
         expectException = (
-            self.instance.A._default_val is NoValue and not self.instance.A.mutable
+            self.instance.A._default is None and not self.instance.A.mutable
         )
         try:
             test = self.instance.A[idx]
             if expectException:
                 self.fail("Expected the test to raise an exception")
             self.assertFalse(expectException)
-            expectException = self.instance.A._default_val is NoValue
+            expectException = self.instance.A._default is None
             try:
                 ans = value(test)
-                self.assertEqual(ans, value(self.instance.A._default_val))
+                self.assertEqual(
+                    ans, value(self.instance.A._default(self.instance.A, None))
+                )
                 self.assertFalse(expectException)
             except:
                 if not expectException:
@@ -937,7 +955,7 @@ class ScalarTester(ParamTester):
         self.assertEqual(self.instance.A.dim(), 0)
 
     def test_extract_values(self):
-        if self.instance.A._default_val is NoValue:
+        if self.instance.A._default is None:
             ref = self.sparse_data
         else:
             ref = self.data
@@ -1324,6 +1342,32 @@ class MiscParamTests(unittest.TestCase):
         ):
             model.p = Param(default=-1, within=NonNegativeIntegers)
 
+    def test_default_getter(self):
+        # Verify that we can initialize a parameter with an empty set.
+        m = ConcreteModel()
+        m.p = Param(mutable=True)
+        # No default returns NoValue
+        self.assertIs(m.p.default(), NoValue)
+        # Constant default returns the constant (either numeric
+        # constant, or a constant function)
+        m.p.set_default(1)
+        self.assertEqual(m.p.default(), 1)
+
+        def foo(m):
+            return 10
+
+        m.p.set_default(foo)
+        self.assertEqual(m.p.default(), 10)
+
+        # Other functions / values return an initializer
+        def foo(m, i):
+            return 20
+
+        m.p.set_default(foo)
+        self.assertIsInstance(m.p.default(), InitializerBase)
+        m.p.set_default({1: 2, 3: 4})
+        self.assertIsInstance(m.p.default(), InitializerBase)
+
     def test_invalid_data(self):
         # Verify that we can initialize a parameter with an empty set.
         model = AbstractModel()
@@ -1706,6 +1750,17 @@ q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
             "      1 :     2\n"
             "      a :     3\n"
             "     bb :     4\n",
+        )
+
+        # Test a default callback function
+        m.s = Param(Any, mutable=True, initialize={1: 2}, default=lambda m, i: i)
+        OUT = StringIO()
+        m.s.pprint(OUT)
+        self.assertEqual(
+            OUT.getvalue(),
+            "s : Size=inf, Index=Any, Domain=Any, Default=(function), Mutable=True\n"
+            "    Key : Value\n"
+            "      1 :     2\n",
         )
 
     def test_invalid_exception_argument(self):
@@ -2366,6 +2421,327 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         self.assertIs(m.p[1], None)
         self.assertEqual(len(m.p), 2)
         self.assertEqual(len(m.p._data), 0)
+
+    def test_immutable_nonfinite_indexing_sets(self):
+        m = ConcreteModel()
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, initialize={0: 1, 2: 3})
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0], 1)
+        with self.assertRaisesRegex(
+            ValueError, 'The Param value is undefined and no default value '
+        ):
+            m.p[1]
+        self.assertEqual(m.p[2], 3)
+        self.assertEqual(len(m.p._data), 2)
+
+        m = ConcreteModel()
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, initialize={0: 1, 2: 3}, default=4)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0], 1)
+        self.assertEqual(m.p[1], 4)
+        self.assertEqual(m.p[2], 3)
+        self.assertEqual(len(m.p._data), 2)
+
+        m = ConcreteModel()
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, initialize={0: 1, 2: 3}, default=lambda m, i: i * 10)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0], 1)
+        self.assertEqual(m.p[1], 10)
+        self.assertEqual(m.p[2], 3)
+        self.assertEqual(len(m.p._data), 2)
+
+        m = ConcreteModel()
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, initialize=lambda m, i: i * 10, default=100)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Declaring Param 'p' with a universal initializer "
+            "(constant or callback function) completely masks the default value\n",
+        )
+        self.assertEqual(len(m.p._data), 0)
+        self.assertEqual(m.p[0], 0)
+        self.assertEqual(m.p[1], 10)
+        self.assertEqual(m.p[2], 20)
+        self.assertEqual(len(m.p._data), 3)  # initialize inserts values into the _data
+
+        m = ConcreteModel()
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, initialize=10, default=100)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Declaring Param 'p' with a universal initializer "
+            "(constant or callback function) completely masks the default value\n",
+        )
+        self.assertEqual(len(m.p._data), 0)
+        self.assertEqual(m.p[0], 10)
+        self.assertEqual(m.p[1], 10)
+        self.assertEqual(m.p[2], 10)
+        self.assertEqual(len(m.p._data), 3)  # initialize inserts values into the _data
+
+        m = ConcreteModel()
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, default=100)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(len(m.p._data), 0)
+        self.assertEqual(m.p[0], 100)
+        self.assertEqual(m.p[1], 100)
+        self.assertEqual(m.p[2], 100)
+        self.assertEqual(len(m.p._data), 0)
+
+    def test_mutable_nonfinite_indexing_sets(self):
+        m = ConcreteModel()
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, mutable=True, initialize={0: 1, 2: 3})
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0].value, 1)
+        with self.assertRaisesRegex(
+            ValueError, 'The Param value is currently set to an invalid value'
+        ):
+            m.p[1].value
+        self.assertEqual(m.p[2].value, 3)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, mutable=True, initialize={0: 1, 2: 3}, default=4)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0].value, 1)
+        self.assertEqual(m.p[1].value, 4)
+        self.assertEqual(m.p[2].value, 3)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        with LoggingIntercept() as LOG:
+            m.p = Param(
+                Integers,
+                mutable=True,
+                initialize={0: 1, 2: 3},
+                default=lambda m, i: i * 10,
+            )
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0].value, 1)
+        self.assertEqual(m.p[1].value, 10)
+        self.assertEqual(m.p[2].value, 3)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        with LoggingIntercept() as LOG:
+            m.p = Param(
+                Integers, mutable=True, initialize=lambda m, i: i * 10, default=100
+            )
+        self.assertEqual(
+            LOG.getvalue(),
+            "Declaring Param 'p' with a universal initializer "
+            "(constant or callback function) completely masks the default value\n",
+        )
+        self.assertEqual(len(m.p._data), 0)
+        self.assertEqual(m.p[0].value, 0)
+        self.assertEqual(m.p[1].value, 10)
+        self.assertEqual(m.p[2].value, 20)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, mutable=True, initialize=10, default=100)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Declaring Param 'p' with a universal initializer "
+            "(constant or callback function) completely masks the default value\n",
+        )
+        self.assertEqual(len(m.p._data), 0)
+        self.assertEqual(m.p[0].value, 10)
+        self.assertEqual(m.p[1].value, 10)
+        self.assertEqual(m.p[2].value, 10)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        with LoggingIntercept() as LOG:
+            m.p = Param(Integers, mutable=True, default=100)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(len(m.p._data), 0)
+        self.assertEqual(m.p[0].value, 100)
+        self.assertEqual(m.p[1].value, 100)
+        self.assertEqual(m.p[2].value, 100)
+        self.assertEqual(len(m.p._data), 3)
+
+    def test_immutable_dynamic_indexing_sets(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, initialize={0: 1, 2: 3})
+        self.assertEqual(LOG.getvalue(), "")
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0], 1)
+        with self.assertRaisesRegex(
+            ValueError, 'The Param value is undefined and no default value '
+        ):
+            m.p[1]
+        self.assertEqual(m.p[2], 3)
+        self.assertEqual(len(m.p._data), 2)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, initialize={0: 1, 2: 3}, default=4)
+        self.assertEqual(LOG.getvalue(), "")
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0], 1)
+        self.assertEqual(m.p[1], 4)
+        self.assertEqual(m.p[2], 3)
+        self.assertEqual(len(m.p._data), 2)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, initialize={0: 1, 2: 3}, default=lambda m, i: i * 10)
+        self.assertEqual(LOG.getvalue(), "")
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0], 1)
+        self.assertEqual(m.p[1], 10)
+        self.assertEqual(m.p[2], 3)
+        self.assertEqual(len(m.p._data), 2)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, initialize=lambda m, i: i * 10, default=100)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Declaring Param 'p' with a universal initializer "
+            "(constant or callback function) completely masks the default value\n",
+        )
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0], 0)
+        self.assertEqual(m.p[1], 10)
+        self.assertEqual(m.p[2], 20)
+        self.assertEqual(len(m.p._data), 3)  # initialize inserts values into the _data
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, initialize=10, default=100)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Declaring Param 'p' with a universal initializer "
+            "(constant or callback function) completely masks the default value\n",
+        )
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0], 10)
+        self.assertEqual(m.p[1], 10)
+        self.assertEqual(m.p[2], 10)
+        self.assertEqual(len(m.p._data), 3)  # initialize inserts values into the _data
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, default=100)
+        self.assertEqual(LOG.getvalue(), "")
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 0)
+        self.assertEqual(m.p[0], 100)
+        self.assertEqual(m.p[1], 100)
+        self.assertEqual(m.p[2], 100)
+        self.assertEqual(len(m.p._data), 0)
+
+    def test_mutable_dynamic_indexing_sets(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, mutable=True, initialize={0: 1, 2: 3})
+        self.assertEqual(LOG.getvalue(), "")
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0].value, 1)
+        with self.assertRaisesRegex(
+            ValueError, 'The Param value is currently set to an invalid value'
+        ):
+            m.p[1].value
+        self.assertEqual(m.p[2].value, 3)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, mutable=True, initialize={0: 1, 2: 3}, default=4)
+        self.assertEqual(LOG.getvalue(), "")
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0].value, 1)
+        self.assertEqual(m.p[1].value, 4)
+        self.assertEqual(m.p[2].value, 3)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        with LoggingIntercept() as LOG:
+            m.p = Param(
+                m.I, mutable=True, initialize={0: 1, 2: 3}, default=lambda m, i: i * 10
+            )
+        self.assertEqual(LOG.getvalue(), "")
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0].value, 1)
+        self.assertEqual(m.p[1].value, 10)
+        self.assertEqual(m.p[2].value, 3)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, mutable=True, initialize=lambda m, i: i * 10, default=100)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Declaring Param 'p' with a universal initializer "
+            "(constant or callback function) completely masks the default value\n",
+        )
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0].value, 0)
+        self.assertEqual(m.p[1].value, 10)
+        self.assertEqual(m.p[2].value, 20)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, mutable=True, initialize=10, default=100)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Declaring Param 'p' with a universal initializer "
+            "(constant or callback function) completely masks the default value\n",
+        )
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 2)
+        self.assertEqual(m.p[0].value, 10)
+        self.assertEqual(m.p[1].value, 10)
+        self.assertEqual(m.p[2].value, 10)
+        self.assertEqual(len(m.p._data), 3)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[0, 2])
+        with LoggingIntercept() as LOG:
+            m.p = Param(m.I, mutable=True, default=100)
+        self.assertEqual(LOG.getvalue(), "")
+        m.I.add(1)
+        self.assertEqual(len(m.p._data), 0)
+        self.assertEqual(m.p[0].value, 100)
+        self.assertEqual(m.p[1].value, 100)
+        self.assertEqual(m.p[2].value, 100)
+        self.assertEqual(len(m.p._data), 3)
 
 
 # Add test methods for all intrinsic functions
