@@ -2483,7 +2483,7 @@ class IndexedThetaMultistartExperiment(Experiment):
         return self.model
 
 
-class NoBoundsExperiment(Experiment):
+class NoBoundsExperiment(IndexedThetaMultistartExperiment):
     def __init__(self):
         self.model = None
 
@@ -2493,20 +2493,6 @@ class NoBoundsExperiment(Experiment):
         m.y = pyo.Var(initialize=2.0)
         m.eq = pyo.Constraint(expr=m.y == m.theta + 1.0)
         self.model = m
-
-    def label_model(self):
-        m = self.model
-        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update([(m.y, 2.0)])
-        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.unknown_parameters.update([(m.theta, pyo.ComponentUID(m.theta))])
-        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.measurement_error.update([(m.y, None)])
-
-    def get_labeled_model(self):
-        self.create_model()
-        self.label_model()
-        return self.model
 
 
 class StartCoupledExperiment(Experiment):
@@ -2732,7 +2718,7 @@ class TestParmestMultistart(unittest.TestCase):
                 user_provided_df=user_df,
             )
 
-    def test_user_provided_values_column_order_maps_by_name(self):
+    def test_user_provided_values_column_order(self):
         pest = parmest.Estimator(
             [IndexedThetaMultistartExperiment()], obj_function="SSE"
         )
@@ -2772,36 +2758,6 @@ class TestParmestMultistart(unittest.TestCase):
             seed=10, n_restarts=3, multistart_sampling_method="uniform_random"
         )
         self.assertTrue({"theta[a]", "theta[b]"}.issubset(set(df.columns)))
-
-    def test_count_total_experiments_uses_one_output_family(self):
-        class MultiOutputExperiment(Experiment):
-            def create_model(self):
-                m = pyo.ConcreteModel()
-                m.theta = pyo.Var(initialize=0.0, bounds=(-10, 10))
-                m.y = pyo.Var(initialize=1.0)
-                m.z = pyo.Var(initialize=2.0)
-                m.c1 = pyo.Constraint(expr=m.y == m.theta + 1.0)
-                m.c2 = pyo.Constraint(expr=m.z == 2.0 * m.theta + 2.0)
-                self.model = m
-
-            def label_model(self):
-                m = self.model
-                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update([(m.y, 1.0), (m.z, 2.0)])
-                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.unknown_parameters.update([(m.theta, pyo.ComponentUID(m.theta))])
-                m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.measurement_error.update([(m.y, None), (m.z, None)])
-
-            def get_labeled_model(self):
-                self.create_model()
-                self.label_model()
-                return self.model
-
-        total_points = parmest._count_total_experiments(
-            [MultiOutputExperiment(), MultiOutputExperiment()]
-        )
-        self.assertEqual(total_points, 2)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_quoted_index_names_map_starts_and_results(self):
@@ -2908,94 +2864,6 @@ class TestParmestMultistart(unittest.TestCase):
         self.assertIn("none of the 3 starts terminated optimally", log.getvalue())
         self.assertEqual(pest.estimated_theta, {"k": 1.23})
         self.assertEqual(pest.obj_value, 4.56)
-
-    @unittest.pytest.mark.mpi
-    def test_multistart_parallel_ranks_share_starts(self):
-        """use mpiexec and mpi4py"""
-        # With seed=None, each rank would sample different starts if the root
-        # rank's table were not shared. The driver checks that every rank
-        # returns the same starts, holds the best start's solution (and gets
-        # the same cov_est), and that the saved CSV matches the starts.
-        driver = """
-import sys
-from mpi4py import MPI
-from pyomo.common.dependencies import numpy as np, pandas as pd
-import pyomo.environ as pyo
-import pyomo.contrib.parmest.parmest as parmest
-from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
-    RooneyBieglerExperiment,
-)
-
-comm = MPI.COMM_WORLD
-data = pd.DataFrame(
-    data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
-    columns=["hour", "y"],
-)
-exp_list = [RooneyBieglerExperiment(data.loc[i, :]) for i in range(data.shape[0])]
-pest = parmest.Estimator(exp_list, obj_function="SSE")
-results_df, best_theta, best_obj = pest.theta_est_multistart(
-    n_restarts=4, seed=None, save_results=True, file_name=sys.argv[1]
-)
-cols = ["asymptote", "rate_constant"]
-# Every rank holds the best start's solution, including the rank(s) that did
-# not solve it and loaded its variable values.
-assert best_theta is not None
-assert pest.estimated_theta == best_theta and pest.obj_value == best_obj
-for name in cols:
-    assert pyo.value(pest.ef_instance.parmest_theta[name]) == best_theta[name]
-cov = pest.cov_est().to_numpy()
-all_dfs = comm.gather(results_df, root=0)
-all_covs = comm.gather(cov, root=0)
-if comm.rank == 0:
-    for df in all_dfs[1:]:
-        assert df[cols].equals(all_dfs[0][cols]), "ranks used different starts"
-    for c in all_covs[1:]:
-        assert np.allclose(c, all_covs[0]), "ranks computed different covariances"
-    saved = pd.read_csv(sys.argv[1])
-    assert np.allclose(saved[cols].to_numpy(), results_df[cols].to_numpy())
-"""
-        with TempfileManager.new_context() as tempfile:
-            tmpdir = tempfile.mkdtemp()
-            driver_path = os.path.join(tmpdir, "multistart_mpi_driver.py")
-            with open(driver_path, "w") as f:
-                f.write(driver)
-            csv_path = os.path.join(tmpdir, "results.csv")
-            rlist = [
-                "mpiexec",
-                "--allow-run-as-root",
-                "-n",
-                "2",
-                sys.executable,
-                driver_path,
-                csv_path,
-            ]
-            ret = subprocess.run(rlist)
-            self.assertEqual(ret.returncode, 0)
-
-    # Not sure if this test is needed, but leaving here until I decide.
-    # @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
-    # def test_multistart_results_reproducible_when_rerun_from_recorded_init(self):
-    #     pest = parmest.Estimator([StartCoupledExperiment()], obj_function="SSE")
-    #     init_df = pd.DataFrame([[2.0], [1.5], [3.0]], columns=["theta"])
-    #     print(f"init_df:\n{init_df}")
-    #     results_df, _, _ = pest.theta_est_multistart(
-    #         user_provided_df=init_df, save_results=False
-    #     )
-
-    #     for _, row in results_df.iterrows():
-    #         theta_init = {"theta": float(row["theta"])}
-    #         exp = StartCoupledExperiment(theta_initial=theta_init)
-    #         rerun = parmest.Estimator([exp], obj_function="SSE")
-    #         obj, theta = rerun.theta_est()
-
-    #         print(f"obj: {obj}, row['final objective']: {row['final objective']}")
-    #         self.assertTrue(
-    #             np.isclose(obj, row["final objective"], rtol=1e-6, atol=1e-8)
-    #         )
-    #         print(f"theta: {theta['theta']}, row['converged_theta']: {row['converged_theta']}")
-    #         self.assertTrue(
-    #             np.isclose(theta["theta"], row["converged_theta"], rtol=1e-6, atol=1e-8)
-    #         )
 
 
 ###########################

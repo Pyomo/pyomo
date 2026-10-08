@@ -40,6 +40,7 @@ from enum import Enum
 import re
 import importlib as im
 import logging
+import time
 import types
 import json
 from collections.abc import Callable
@@ -2533,9 +2534,9 @@ class Estimator:
 
         Each start is solved in the same way as theta_est, starting from its
         theta values. Starts are sampled within the theta bounds or given by
-        user_provided_df, and can be solved in parallel with MPI. Every theta
-        must have finite lower and upper bounds, including when
-        user_provided_df is given.
+        user_provided_df, and are solved one after another. Every theta must
+        have finite lower and upper bounds, including when user_provided_df is
+        given.
 
         Parameters
         ----------
@@ -2589,11 +2590,6 @@ class Estimator:
         is kept while the starts are solved and restored afterwards, so it is
         not solved again. If no start terminated optimally, these are left as
         they were before the call.
-
-        Under MPI, starts are generated on the root rank and shared with all
-        ranks, and only the root rank writes ``file_name``. The rank that
-        solved the best start shares its variable values, so every rank holds
-        the same solution.
         """
         if self.pest_deprecated is not None:
             raise RuntimeError(
@@ -2605,10 +2601,6 @@ class Estimator:
             if n_restarts <= 0:
                 raise ValueError("n_restarts must be greater than zero.")
 
-        # Under MPI, every rank must work from the same table of starts. With
-        # seed=None each rank would sample different starts, so all ranks use
-        # the root rank's table.
-        mpi_interface = utils.MPIInterface()
         n_restarts_for_generation = None if user_provided_df is not None else n_restarts
         results_df = self._generate_initial_theta(
             seed=seed,
@@ -2617,8 +2609,6 @@ class Estimator:
             user_provided_df=user_provided_df,
             experiment_number=0,
         )
-        if mpi_interface.have_mpi:
-            results_df = mpi_interface.comm.bcast(results_df, root=0)
         theta_names = [
             c
             for c in results_df.columns
@@ -2637,24 +2627,15 @@ class Estimator:
         state_attrs = ("ef_instance", "estimated_theta", "obj_value")
         prior_state = {a: self.__dict__[a] for a in state_attrs if a in self.__dict__}
 
-        # Convert each row to (row_index, theta_dict)
-        tasks = []
-        for i in range(results_df.shape[0]):
+        # Solve each start, as (row index, objective, termination, solve time,
+        # theta_hat)
+        results = []
+        # Best optimal start, as (row index, objective, solved model). The
+        # model is kept so that the best solution can be restored after all
+        # starts are solved, without solving it again.
+        best_start = None
+        for i in range(n_restarts):
             Theta = {name: float(results_df.iloc[i][name]) for name in theta_names}
-            tasks.append((i, Theta))
-
-        task_mgr = utils.ParallelTaskManager(len(tasks), mpi_interface=mpi_interface)
-        local_tasks = task_mgr.global_to_local_data(tasks)
-
-        # Solve in parallel
-        local_results = []
-        # Best optimal start solved by this process, as (row index, objective,
-        # solved model). The model is kept so that the best solution can be
-        # restored after all starts are solved, without solving it again.
-        best_local = None
-        for i, Theta in local_tasks:
-            import time
-
             t0 = time.time()
             try:
                 final_obj, theta_hat, termination = self._Q_opt(
@@ -2663,11 +2644,9 @@ class Estimator:
                 solve_time = time.time() - t0
                 if theta_hat is None:
                     final_obj = np.nan
-                elif best_local is None or final_obj < best_local[1]:
-                    best_local = (i, final_obj, self.ef_instance)
-                local_results.append(
-                    (i, final_obj, str(termination), solve_time, theta_hat)
-                )
+                elif best_start is None or final_obj < best_start[1]:
+                    best_start = (i, final_obj, self.ef_instance)
+                results.append((i, final_obj, str(termination), solve_time, theta_hat))
             except Exception as exc:
                 solve_time = time.time() - t0
                 logger.warning(
@@ -2677,7 +2656,7 @@ class Estimator:
                     sampler,
                     exc,
                 )
-                local_results.append(
+                results.append(
                     (
                         i,
                         np.nan,
@@ -2687,10 +2666,8 @@ class Estimator:
                     )
                 )
 
-        global_results = task_mgr.allgather_global_data(local_results)
-
         # Fill results_df
-        for i, final_obj, term, solve_time, theta_hat in global_results:
+        for i, final_obj, term, solve_time, theta_hat in results:
             results_df.at[i, "final objective"] = final_obj
             results_df.at[i, "solver termination"] = term
             results_df.at[i, "solve_time"] = solve_time
@@ -2739,33 +2716,13 @@ class Estimator:
             # Restore the best start's solution so that ef_instance,
             # estimated_theta and obj_value (used by cov_est and other
             # methods) describe the best start, not the last one solved.
-            # best_local keeps the earliest of tied objectives, as idxmin does,
-            # so exactly one process holds the model for best_idx.
-            owner = best_local is not None and best_local[0] == best_idx
-            best_model = best_local[2] if owner else None
-            if mpi_interface.have_mpi:
-                # Pyomo models built by parmest cannot be pickled (their rules
-                # are local functions), so the process that solved the best
-                # start shares its variable values instead. The other
-                # processes build the same model and load those values.
-                values = None
-                if owner:
-                    values = {
-                        v.name: v.value
-                        for v in best_model.component_data_objects(pyo.Var)
-                    }
-                values = next(
-                    v for v in mpi_interface.comm.allgather(values) if v is not None
-                )
-                if not owner:
-                    best_model = self._create_scenario_blocks(theta_vals=best_theta)
-                    for v in best_model.component_data_objects(pyo.Var):
-                        v.set_value(values[v.name], skip_validation=True)
-            self.ef_instance = best_model
+            # best_start keeps the earliest of tied objectives, as idxmin does,
+            # so it holds the model for best_idx.
+            self.ef_instance = best_start[2]
             self.estimated_theta = dict(best_theta)
             self.obj_value = best_obj
 
-        if save_results and task_mgr.is_root():
+        if save_results:
             results_df.to_csv(file_name, index=False)
 
         return results_df, best_theta, best_obj

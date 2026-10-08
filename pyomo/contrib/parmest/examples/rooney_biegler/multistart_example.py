@@ -28,10 +28,6 @@ def main():
     for i in range(data.shape[0]):
         exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
 
-    # View one model
-    # exp0_model = exp_list[0].get_labeled_model()
-    # exp0_model.pprint()
-
     # Solver options belong here (Ipopt options shown as example)
     solver_options = {"max_iter": 1000, "tol": 1e-6}
 
@@ -49,7 +45,7 @@ def main():
         n_restarts=10,
         multistart_sampling_method="uniform_random",
         seed=42,
-        save_results=False,  # True if you want CSV via file_name=
+        save_results=False,  # True if you want CSV via file_name
     )
 
     print("\nMultistart best objective:", best_obj)
