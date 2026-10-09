@@ -27,7 +27,6 @@ from pyomo.core.expr.numeric_expr import (
     NPV_UnaryFunctionExpression,
 )
 from pyomo.core.base.units_container import _PyomoUnit
-import pyomo.environ as pyo
 
 from pyomo.repn.util import ExitNodeDispatcher
 from pyomo.core.base import (
