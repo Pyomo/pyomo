@@ -274,10 +274,7 @@ def _handle_pow(node, data, visitor):
 def _handle_named_expression(node, data, visitor):
     assert len(data) == 1
     res = data[0]
-    # node.expr = data[0]
     visitor.substitution_map[node] = res
-    # visitor.node_to_var_map[res] = visitor.node_to_var_map[data[0]]
-    # visitor.degree_map[res] = visitor.degree_map[data[0]]
     return res
 
 
@@ -390,14 +387,8 @@ class _UnivariateNonlinearDecompositionVisitor(StreamBasedExpressionVisitor):
             return expr
         else:
             x = self.block.x.add()
-            # initialize from the current expression value, if possible
-            # try:
-            #     x.set_value(pyo.value(expr, exception=True))
-            # except:
-            #     x.set_value(None)
             self.substitution_map[expr] = x
             c = self.block.c.add(x == expr)
-            # c.pprint()
             # we need to compute bounds on x now because some of the
             # handlers depend on variable bounds (e.g., division)
             xl, xu = self._interval_visitor.walk_expression(expr)
