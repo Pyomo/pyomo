@@ -56,6 +56,7 @@ from pyomo.devel.initialization.utils import (
     fix_vars_with_equal_bounds,
     get_vars,
     shallow_clone,
+    get_solution_limit_options,
 )
 from pyomo.repn.util import ExitNodeDispatcher
 from pyomo.contrib.solver.common.results import Results
@@ -196,7 +197,7 @@ class _PWLRefinementVisitor(StreamBasedExpressionVisitor):
         return False, new_expr.expr
 
 
-def _refine_pwl_approx(
+def _is_refineable_pwl_approx(
     m: BlockData,
     pwl_expr_to_con_map: MutableMapping[
         PiecewiseLinearExpression, Sequence[ConstraintData]
@@ -230,11 +231,12 @@ def _refine_pwl_approx(
     violations.sort(key=lambda i: i[0], reverse=True)
 
     if len(violations) == 0:
-        raise RuntimeError(
+        logger.warning(
             'We have not found a feasible solution to the problem yet, but the '
             'solution to piecewise linear approximation did not have any violations, '
-            'so there is nothing to refine.'
+            'so there is nothing to refine. Ending refinement loop.'
         )
+        return False
 
     tol = 1e-5
     if math.isclose(violations[0][0], 0, abs_tol=tol):
@@ -256,12 +258,15 @@ def _refine_pwl_approx(
         cons = pwl_expr_to_con_map.pop(e1)
         pwl_expr_to_con_map[e2] = cons
 
+    return True
+
 
 def _initialize_with_piecewise_linear_approximation(
     nlp: BlockData,
     mip_solver: SolverBase,
     nlp_solver: SolverBase,
     default_bound=1.0e8,
+    num_initial_points=2,
     max_iter=100,
     num_cons_to_refine_per_iter=5,
     aggressive_substitution=True,
@@ -297,10 +302,11 @@ def _initialize_with_piecewise_linear_approximation(
 
     # build the PWL approximation
     trans = pyo.TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
-    trans.apply_to(pwl, num_points=2, additively_decompose=False)
+    trans.apply_to(pwl, num_points=num_initial_points, additively_decompose=False)
     logger.info('replaced nonlinear expressions with piecewise linear expressions')
 
     """
+    Check if the PWL approximation can be refined.
     Now we want to 
     1. solve the PWL approximation
     2. Initialize the NLP to the solution
@@ -311,6 +317,7 @@ def _initialize_with_piecewise_linear_approximation(
     pwl_expr_to_con_map = _get_pwl_constraints(pwl)
     solved = False
     last_nlp_res = None
+
     for _iter in range(max_iter):
         logger.info(f'PWL initialization: iter {_iter}')
 
@@ -324,9 +331,16 @@ def _initialize_with_piecewise_linear_approximation(
         del _pwl.orig_vars
         logger.info('applied the disaggregated logarithmic transformation')
 
+        if max_iter == 1:
+            solver_options = get_solution_limit_options(mip_solver)
+        else:
+            solver_options = {}
         # solve the MILP
         res = mip_solver.solve(
-            _pwl, load_solutions=False, raise_exception_on_nonoptimal_result=False
+            _pwl,
+            load_solutions=False,
+            raise_exception_on_nonoptimal_result=False,
+            solver_options=get_solution_limit_options,
         )
         logger.info(f'solved MILP: {res.solution_status}, {res.termination_condition}')
         if res.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
@@ -335,15 +349,6 @@ def _initialize_with_piecewise_linear_approximation(
         # load the variable values back into orig_vars
         for ov, nv in zip(orig_vars, new_vars):
             ov.set_value(nv.value, skip_validation=True)
-
-        # refine the PWL approximation
-        _refine_pwl_approx(
-            pwl,
-            pwl_expr_to_con_map=pwl_expr_to_con_map,
-            num_to_refine=num_cons_to_refine_per_iter,
-            bounds_tol=bounds_tol,
-        )
-        logger.info('refined PWL approximation')
 
         # try solving the NLP
         res = nlp_solver.solve(
@@ -354,6 +359,23 @@ def _initialize_with_piecewise_linear_approximation(
         if res.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
             solved = True
             res.solution_loader.load_vars()
+            break
+
+        # load the variable values back into orig_vars
+        for ov, nv in zip(orig_vars, new_vars):
+            ov.set_value(nv.value, skip_validation=True)
+
+        # check if the PWL approximation can be refined, use this check to decide whether to break
+        refined = _is_refineable_pwl_approx(
+            pwl,
+            pwl_expr_to_con_map=pwl_expr_to_con_map,
+            num_to_refine=num_cons_to_refine_per_iter,
+            bounds_tol=bounds_tol,
+        )
+
+        if refined:
+            logger.info('refined PWL approximation')
+        else:
             break
 
     if not solved:
