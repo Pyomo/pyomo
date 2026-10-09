@@ -272,9 +272,9 @@ def _handle_pow(node, data, visitor):
 
 def _handle_named_expression(node, data, visitor):
     assert len(data) == 1
-    node.expr = data[0]
-    visitor.substitution_map[node] = node
-    return node
+    res = data[0]
+    visitor.substitution_map[node] = res
+    return res
 
 
 def _handle_negation(node, data, visitor):
