@@ -353,7 +353,6 @@ class _Evaluator:
     def __call__(self, *args):
         for i, v in enumerate(self.expr_vars):
             v.value = args[i]
-
         return value(self.expr)
 
 
