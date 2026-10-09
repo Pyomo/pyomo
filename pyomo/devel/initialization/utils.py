@@ -30,11 +30,11 @@ def get_vars(m: BlockData):
 
 def get_solution_limit_options(solver):
     opts = {}
-    if isinstance(mip_solver, (ScipDirect, ScipPersistent)):
+    if isinstance(solver, (ScipDirect, ScipPersistent)):
         opts['limits/solutions'] = 1
-    elif isinstance(mip_solver, GurobiDirectBase):
+    elif isinstance(solver, GurobiDirectBase):
         opts['SolutionLimit'] = 1
-    elif isinstance(mip_solver, Highs):
+    elif isinstance(solver, Highs):
         opts['mip_max_improving_sols'] = 1
     else:
         raise NotImplementedError(
