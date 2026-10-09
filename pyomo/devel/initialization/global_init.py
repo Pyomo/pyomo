@@ -32,7 +32,10 @@ def _initialize_with_global_solver(
     solver_options = get_solution_limit_options(global_solver)
 
     res = global_solver.solve(
-        nlp, load_solutions=False, raise_exception_on_nonoptimal_result=False, solver_options=solver_options,
+        nlp,
+        load_solutions=False,
+        raise_exception_on_nonoptimal_result=False,
+        solver_options=solver_options,
     )
     logger.info(
         f'solved NLP with {global_solver.name}: {res.solution_status}, {res.termination_condition}'
