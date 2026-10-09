@@ -19,11 +19,6 @@ from pyomo.contrib.piecewise.piecewise_linear_expression import (
     PiecewiseLinearExpression,
 )
 from pyomo.contrib.piecewise.piecewise_linear_function import PiecewiseLinearFunction
-from pyomo.contrib.solver.solvers.scip.scip_direct import ScipDirect
-from pyomo.contrib.solver.solvers.scip.scip_persistent import ScipPersistent
-from pyomo.contrib.solver.solvers.gurobi.gurobi_direct_minlp import GurobiDirectMINLP
-from pyomo.contrib.solver.solvers.gurobi.gurobi_persistent import GurobiPersistent
-from pyomo.contrib.solver.solvers.highs import Highs
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.results import SolutionStatus
 from pyomo.core.base.block import BlockData
@@ -61,6 +56,7 @@ from pyomo.devel.initialization.utils import (
     fix_vars_with_equal_bounds,
     get_vars,
     shallow_clone,
+    get_solution_limit_options,
 )
 from pyomo.repn.util import ExitNodeDispatcher
 from pyomo.contrib.solver.common.results import Results
@@ -265,22 +261,6 @@ def _is_refineable_pwl_approx(
     return True
 
 
-def _set_mip_solver_solution_limit(mip_solver):
-    # Set solver specific option for solution limit
-    if isinstance(mip_solver, (ScipDirect, ScipPersistent)):
-        mip_solver.config.solver_options['limits/solutions'] = 1
-    elif isinstance(mip_solver, (GurobiDirectMINLP, GurobiPersistent)):
-        mip_solver.config.solver_options['SolutionLimit'] = 1
-    elif isinstance(mip_solver, Highs):
-        mip_solver.config.solver_options['mip_max_improving_sols'] = 1
-    else:
-        raise NotImplementedError(
-            'Currently, the initialization module only works with new solver '
-            'interfaces, so the mip solvers are limited to Highs, ScipDirect, '
-            'ScipPersistent, GurobiDirectMINLP, and GurobiPersistent.'
-        )
-
-
 def _initialize_with_piecewise_linear_approximation(
     nlp: BlockData,
     mip_solver: SolverBase,
@@ -352,10 +332,12 @@ def _initialize_with_piecewise_linear_approximation(
         logger.info('applied the disaggregated logarithmic transformation')
 
         if max_iter == 1:
-            _set_mip_solver_solution_limit(mip_solver)
+            solver_options = get_solution_limit_options(mip_solver)
+        else:
+            solver_options = {}
         # solve the MILP
         res = mip_solver.solve(
-            _pwl, load_solutions=False, raise_exception_on_nonoptimal_result=False
+            _pwl, load_solutions=False, raise_exception_on_nonoptimal_result=False, solver_options=get_solution_limit_options,
         )
         logger.info(f'solved MILP: {res.solution_status}, {res.termination_condition}')
         if res.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
