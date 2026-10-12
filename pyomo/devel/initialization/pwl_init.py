@@ -340,7 +340,7 @@ def _initialize_with_piecewise_linear_approximation(
             _pwl,
             load_solutions=False,
             raise_exception_on_nonoptimal_result=False,
-            solver_options=get_solution_limit_options,
+            solver_options=solver_options,
         )
         logger.info(f'solved MILP: {res.solution_status}, {res.termination_condition}')
         if res.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:

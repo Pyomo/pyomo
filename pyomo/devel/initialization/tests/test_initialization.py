@@ -269,9 +269,6 @@ class TestInit(unittest.TestCase):
         self.assertAlmostEqual(results.incumbent_objective, 1, 5)
 
     # Test solver support for global and pwl with no refinement
-    @unittest.skipUnless(highs.available(), 'highs is not available')
-    @unittest.skipUnless(scip.available(), 'scip is not available')
-    @unittest.skipUnless(gurobi.available(), 'gurobi is not available')
     def test_pwl_solver_solution_limit(self):
 
         # Check supported solvers
@@ -286,8 +283,10 @@ class TestInit(unittest.TestCase):
 
         for solver in solver_list:
             mip_solver = SolverFactory(solver)
-            mip_solver_opts = get_solution_limit_options(global_solver)
-            if solver in {"gurobi_direct_minlp", "gurobi_persistent"}:
+            if not mip_solver.available():
+                continue
+            mip_solver_opts = get_solution_limit_options(mip_solver)
+            if solver in {"gurobi_direct_minlp", "gurobi_persistent", "gurobi_direct"}:
                 self.assertEqual(mip_solver_opts['SolutionLimit'], 1)
             elif solver in {"scip_direct", "scip_persistent"}:
                 self.assertEqual(mip_solver_opts['limits/solutions'], 1)
