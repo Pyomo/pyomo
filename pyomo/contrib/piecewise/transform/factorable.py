@@ -272,9 +272,11 @@ def _handle_pow(node, data, visitor):
 
 def _handle_named_expression(node, data, visitor):
     assert len(data) == 1
-    res = data[0]
-    visitor.substitution_map[node] = res
-    return res
+    node.expr = data[0]
+    visitor.substitution_map[node] = node
+    visitor.node_to_var_map[node] = visitor.node_to_var_map[node.expr]
+    visitor.degree_map[node] = visitor.degree_map[node.expr]
+    return node
 
 
 def _handle_negation(node, data, visitor):
@@ -379,7 +381,7 @@ class _UnivariateNonlinearDecompositionVisitor(StreamBasedExpressionVisitor):
         return False
 
     def create_aux_var(self, expr):
-        if expr in self.substitution_map:
+        if expr in self.substitution_map and isinstance(self.substitution_map[expr], VarData):
             x = self.substitution_map[expr]
         elif self._is_leaf(expr):
             self.substitution_map[expr] = expr
@@ -387,6 +389,9 @@ class _UnivariateNonlinearDecompositionVisitor(StreamBasedExpressionVisitor):
         else:
             x = self.block.x.add()
             self.substitution_map[expr] = x
+            self.substitution_map[x] = x
+            self.degree_map[x] = 1
+            self.node_to_var_map[x] = (x,)
             c = self.block.c.add(x == expr)
             # we need to compute bounds on x now because some of the
             # handlers depend on variable bounds (e.g., division)

@@ -174,3 +174,33 @@ class TestUnivariateNonlinearDecomposition(TestCase):
 
         assertExpressionsEqual(self, m.c.expr, 2.5 * pyo.log(aux.x[1]) <= 0)
         assertExpressionsEqual(self, aux.c[1].expr, aux.x[1] == m.x + m.y)
+
+    def test_named_expression(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.z = pyo.Var()
+        m.e = pyo.Expression(expr=m.x + m.y)
+        m.c1 = pyo.Constraint(expr=m.e*m.z == 1)
+        m.c2 = pyo.Constraint(expr=m.e + m.z == 1)
+        m.c3 = pyo.Constraint(expr=pyo.log(m.e**m.z) == 1)
+
+        trans = _get_trans()
+        trans.apply_to(m, aggressive_substitution=True)
+        aux = m.auxiliary
+
+        assertExpressionsEqual(self, m.c1.body, aux.x[1]*m.z)
+        assertExpressionsEqual(self, m.c2.body, aux.x[1] + m.z)
+        assertExpressionsEqual(self, m.c3.body, pyo.log(aux.x[2]))
+        assertExpressionsEqual(self, aux.c[1].body, aux.x[1] - m.e)
+        assertExpressionsEqual(self, aux.c[2].body, aux.x[2] - aux.x[1]**m.z)
+        self.assertAlmostEqual(m.c1.lb, 1)
+        self.assertAlmostEqual(m.c2.lb, 1)
+        self.assertAlmostEqual(m.c3.lb, 1)
+        self.assertAlmostEqual(aux.c[1].lb, 0)
+        self.assertAlmostEqual(aux.c[2].lb, 0)
+        self.assertAlmostEqual(m.c1.ub, 1)
+        self.assertAlmostEqual(m.c2.ub, 1)
+        self.assertAlmostEqual(m.c3.ub, 1)
+        self.assertAlmostEqual(aux.c[1].ub, 0)
+        self.assertAlmostEqual(aux.c[2].ub, 0)
