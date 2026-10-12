@@ -13,7 +13,6 @@ from pyomo.devel.initialization.utils import get_vars
 import logging
 import math
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -49,8 +48,10 @@ def bound_all_nonlinear_variables(m: BlockData, default_bound: float = 1.0e8):
                     f'Could not obtain an upper bound for {str(v)} better than {default_bound}; setting the upper bound to {default_bound}'
                 )
                 v.setub(max(default_bound, lb))
-            if v.lb > v.ub + 1e-6 + 1e-6*v.ub:
-                raise RuntimeError(f'Unexpectedly set invalid bounds for {str(v)}: ({v.lb}, {v.ub})')
+            if v.lb > v.ub + 1e-6 + 1e-6 * v.ub:
+                raise RuntimeError(
+                    f'Unexpectedly set invalid bounds for {str(v)}: ({v.lb}, {v.ub})'
+                )
     fbbt(m)
     # Slightly shift the bounds to prevent math domain error in log or exp functions
     for v in get_vars(m):

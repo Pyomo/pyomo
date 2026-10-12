@@ -381,7 +381,9 @@ class _UnivariateNonlinearDecompositionVisitor(StreamBasedExpressionVisitor):
         return False
 
     def create_aux_var(self, expr):
-        if expr in self.substitution_map and isinstance(self.substitution_map[expr], VarData):
+        if expr in self.substitution_map and isinstance(
+            self.substitution_map[expr], VarData
+        ):
             x = self.substitution_map[expr]
         elif self._is_leaf(expr):
             self.substitution_map[expr] = expr

@@ -181,7 +181,7 @@ class TestUnivariateNonlinearDecomposition(TestCase):
         m.y = pyo.Var()
         m.z = pyo.Var()
         m.e = pyo.Expression(expr=m.x + m.y)
-        m.c1 = pyo.Constraint(expr=m.e*m.z == 1)
+        m.c1 = pyo.Constraint(expr=m.e * m.z == 1)
         m.c2 = pyo.Constraint(expr=m.e + m.z == 1)
         m.c3 = pyo.Constraint(expr=pyo.log(m.e**m.z) == 1)
 
@@ -189,11 +189,11 @@ class TestUnivariateNonlinearDecomposition(TestCase):
         trans.apply_to(m, aggressive_substitution=True)
         aux = m.auxiliary
 
-        assertExpressionsEqual(self, m.c1.body, aux.x[1]*m.z)
+        assertExpressionsEqual(self, m.c1.body, aux.x[1] * m.z)
         assertExpressionsEqual(self, m.c2.body, aux.x[1] + m.z)
         assertExpressionsEqual(self, m.c3.body, pyo.log(aux.x[2]))
         assertExpressionsEqual(self, aux.c[1].body, aux.x[1] - m.e)
-        assertExpressionsEqual(self, aux.c[2].body, aux.x[2] - aux.x[1]**m.z)
+        assertExpressionsEqual(self, aux.c[2].body, aux.x[2] - aux.x[1] ** m.z)
         self.assertAlmostEqual(m.c1.lb, 1)
         self.assertAlmostEqual(m.c2.lb, 1)
         self.assertAlmostEqual(m.c3.lb, 1)
