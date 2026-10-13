@@ -9,6 +9,7 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+"""Global Outer Approximation strategy implementation for MindtPy."""
 
 from pyomo.core import ConstraintList
 from pyomo.opt import SolverFactory
@@ -36,6 +37,7 @@ class MindtPy_GOA_Solver(_MindtPyAlgorithm):
     CONFIG = _get_MindtPy_GOA_config()
 
     def check_config(self):
+        """Validate and normalize GOA-specific configuration values."""
         config = self.config
         config.add_slack = False
         config.use_mcpp = True
@@ -76,4 +78,19 @@ class MindtPy_GOA_Solver(_MindtPyAlgorithm):
         cb_opt=None,
         nlp=None,
     ):
+        """Add GOA affine cuts to the current main problem.
+
+        Parameters
+        ----------
+        dual_values : list, optional
+            Unused for GOA affine cuts.
+        linearize_active : bool, optional
+            Unused placeholder for shared strategy interface.
+        linearize_violated : bool, optional
+            Unused placeholder for shared strategy interface.
+        cb_opt : SolverFactory, optional
+            Unused callback optimizer for GOA affine cuts.
+        nlp : Block, optional
+            Unused NLP model placeholder.
+        """
         add_affine_cuts(self.mip, self.config, self.timing)
