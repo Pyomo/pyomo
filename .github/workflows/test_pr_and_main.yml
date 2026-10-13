@@ -529,13 +529,19 @@ jobs:
             # The CPLEX and CP Optimizer Python interfaces are no longer
             # delivered inside CPLEX Optimization Studio, but can be
             # installed directly from PyPI.
-            PYPI_DEPENDENCIES="$PYPI_DEPENDENCIES cplex docplex"
+            OPTIONAL_PYPI_DEPENDENCIES="$OPTIONAL_PYPI_DEPENDENCIES cplex docplex"
         fi
         # Re-try Pyomo (optional) dependencies with pip
         echo ""
         echo "Installing packages only available on PyPI"
         if test -n "$PYPI_DEPENDENCIES"; then
             python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES
+        fi
+        if test -n "$OPTIONAL_PYPI_DEPENDENCIES"; then
+            for DEPENDENCY in $OPTIONAL_PYPI_DEPENDENCIES; do
+                python -m pip install --cache-dir cache/pip $DEPENDENCY || \
+                    echo "WARNING: installing $DEPENDENCY failed"
+            done
         fi
         # remember this python interpreter
         python -c 'import sys; print("PYTHON_EXE=%s" \
