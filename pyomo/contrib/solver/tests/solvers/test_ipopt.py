@@ -218,8 +218,9 @@ class TestIpoptInterface(unittest.TestCase):
                 # occasionally exceed the 2-second version timeout,
                 # which made this test intermittently fail
                 shell = Executable('bash').path() or Executable('sh').path()
-                if shell is None:
-                    self.skipTest("Neither bash nor sh found on this system")
+                self.assertIsNotNone(
+                    shell, "An appropriate shell executable was not found"
+                )
 
                 # File exists, but is not executable
                 ipopt.Ipopt._exe_cache = {}
