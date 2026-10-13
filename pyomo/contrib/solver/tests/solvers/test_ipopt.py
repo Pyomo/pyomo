@@ -222,7 +222,7 @@ class TestIpoptInterface(unittest.TestCase):
                     shell, "An appropriate shell executable was not found"
                 )
 
-                # File exists, but is not executable
+                # Ipopt "executable" file exists, but is not executable
                 ipopt.Ipopt._exe_cache = {}
                 fname = os.path.join(dname, 'test2')
                 with open(fname, 'w') as F:
