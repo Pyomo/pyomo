@@ -427,11 +427,15 @@ jobs:
         # HACK: Remove problem packages on conda+Linux
         if test "${{matrix.TARGET}}" == linux; then
             EXCLUDE="casadi numdifftools $EXCLUDE"
+        fi
         # HACK: Some packages have not been released for 3.15
         # (but don't accidentally add casadi back for linux)
-        elif test "${{matrix.python}}" == 3.15; then
-            EXCLUDE="casadi $EXCLUDE"
-            OPTIONAL="casadi $OPTIONAL"
+        if test "${{matrix.python}}" == 3.15; then
+            if test `echo "$EXCLUDE" | grep casadi | wc -l` -eq 0; then
+                OPTIONAL="casadi $OPTIONAL"
+            fi
+            OPTIONAL="qtconsole $OPTIONAL"
+            EXCLUDE="casadi qtconsole $EXCLUDE"
         fi
         EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
