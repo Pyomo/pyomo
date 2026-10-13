@@ -29,7 +29,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         arch: [all]
-        wheel-version: ['cp310*', 'cp311*', 'cp312*', 'cp313*', 'cp314*']
+        wheel-version: ['cp310*', 'cp311*', 'cp312*', 'cp313*', 'cp314*', 'cp315*']
 
         include:
         - wheel-version: 'cp310*'
@@ -47,6 +47,9 @@ jobs:
         - wheel-version: 'cp314*'
           TARGET: 'py314'
           GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
+        - wheel-version: 'cp315*'
+          TARGET: 'py315'
+          GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
 
         # We use pure python for any Windows/python greater than 3.10
         exclude:
@@ -57,6 +60,8 @@ jobs:
         - wheel-version: 'cp313*'
           os: windows-latest
         - wheel-version: 'cp314*'
+          os: windows-latest
+        - wheel-version: 'cp315*'
           os: windows-latest
 
     steps:
@@ -92,7 +97,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         arch: [all]
-        wheel-version: ['cp310*', 'cp311*', 'cp312*', 'cp313*', 'cp314*']
+        wheel-version: ['cp310*', 'cp311*', 'cp312*', 'cp313*', 'cp314*', 'cp315*']
 
         include:
         - wheel-version: 'cp310*'
@@ -109,6 +114,9 @@ jobs:
           GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
         - wheel-version: 'cp314*'
           TARGET: 'py314'
+          GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
+        - wheel-version: 'cp315*'
+          TARGET: 'py315'
           GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
     steps:
       - uses: actions/checkout@v6
