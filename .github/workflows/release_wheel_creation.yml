@@ -65,7 +65,7 @@ jobs:
           os: windows-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Update README.md
         shell: bash
         run: |
@@ -119,7 +119,7 @@ jobs:
           TARGET: 'py315'
           GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Update README.md
         shell: bash
         run: |
@@ -127,7 +127,7 @@ jobs:
           mv README.new README.md
       - name: Set up QEMU
         if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: all
       - name: Build wheels
@@ -153,14 +153,14 @@ jobs:
       matrix:
         python-version: ['3.12']
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Update README.md
         shell: bash
         run: |
           sed '1,/REMOVE-EVERYTHING-BEFORE-THIS-LINE/d' README.md > README.new
           mv README.new README.md
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
@@ -190,14 +190,14 @@ jobs:
           TARGET: generic_tarball
         python-version: ['3.10']
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: Update README.md
       shell: bash
       run: |
         sed '1,/REMOVE-EVERYTHING-BEFORE-THIS-LINE/d' README.md > README.new
         mv README.new README.md
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
