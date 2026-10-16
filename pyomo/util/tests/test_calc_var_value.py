@@ -8,6 +8,7 @@
 # ____________________________________________________________________________________
 
 import logging
+import re
 from io import StringIO
 
 import pyomo.common.unittest as unittest
@@ -24,6 +25,7 @@ from pyomo.environ import (
     exp,
     NonNegativeReals,
     Binary,
+    Suffix,
 )
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.core.expr.calculus.diff_with_sympy import differentiate_available
@@ -35,6 +37,10 @@ all_diff_modes = [
     differentiate.Modes.reverse_symbolic,
     differentiate.Modes.reverse_numeric,
 ]
+
+# This regex was written with Google Gemini 3.5 to match an arbitrary
+# floating point number in scientific notation
+SCIENTIFIC_NOTATION_REGEX = r"[+-]?(?:\d+(?:\.\d*)?)[eE][+-]?\d+"
 
 
 def sum_sq(args, fixed, fgh):
@@ -240,7 +246,84 @@ class Test_calc_var(unittest.TestCase):
                     m.x, m.f, linesearch=False, diff_mode=mode
                 )
 
-        # Calculate the bubble point of Benzene.  THe first step
+        # Test whether scaling is being correctly applied
+        m.scaling_factor = Suffix(direction=Suffix.EXPORT)
+        m.scaling_factor[m.e] = 1e4
+        for mode in all_diff_modes:
+            m.x.set_value(3.1)
+            calculate_variable_from_constraint(
+                m.x, m.e, eps=1e-4, diff_mode=mode, scale_problem=False
+            )
+            # Without scaling, we should stop at x = 3 + 1.028e-5
+            assert value(m.x) - 3 > 1e-5
+
+        for mode in all_diff_modes:
+            m.x.set_value(3.1)
+            calculate_variable_from_constraint(
+                m.x, m.e, eps=1e-6, diff_mode=mode, scale_problem=True
+            )
+            # With scaling, we should stop at x = 3 + 5.288-11
+            self.assertAlmostEqual(value(m.x), 3, places=9)
+
+        # Check whether scaling factors are being used when calculating
+        # problem derivatives
+        # Here, the variable scaling causes a failure because the scaled
+        # derivative is near-zero
+        m.rhs = Param(initialize=3, mutable=True)
+        m.g = Constraint(expr=m.x**2 + m.x == m.rhs)
+        m.scaling_factor[m.x] = 1e16
+        for mode in all_diff_modes:
+            m.x.set_value(1)
+            with self.assertRaisesRegex(
+                ValueError,
+                "Initial value for variable 'x' results in a "
+                "derivative value for constraint 'g' that is very close to zero.",
+            ):
+                calculate_variable_from_constraint(
+                    m.x, m.g, diff_mode=mode, scale_problem=True
+                )
+
+        # Here, the constraint scaling factor causes a failure because the
+        # scaled derivative is near-zero
+        del m.scaling_factor[m.x]
+        # Set rhs to large value to make sure we don't terminate due to a small
+        # constraint residual in any of the shortcut steps
+        m.rhs.set_value(1e16)
+        m.scaling_factor[m.g] = 1e-16
+        for mode in all_diff_modes:
+            m.x.set_value(1)
+            with self.assertRaisesRegex(
+                ValueError,
+                "Initial value for variable 'x' results in a "
+                "derivative value for constraint 'g' that is very close to zero.",
+            ):
+                calculate_variable_from_constraint(
+                    m.x, m.g, diff_mode=mode, scale_problem=True
+                )
+        # Here, because both the variable and constraint are scaled, we don't terminate due to
+        # a zero derivative. It still raises an error on some platforms, however, because we're
+        # asking for an unreasonable amount of precision
+        m.scaling_factor[m.x] = 1e16
+        m.scaling_factor[m.g] = 1e16
+        m.rhs.set_value(3)
+        for mode in all_diff_modes:
+            m.x.set_value(1)
+
+            try:
+                calculate_variable_from_constraint(
+                    m.x, m.g, diff_mode=mode, scale_problem=True
+                )
+            except IterationLimitError as err:
+                out = re.match(
+                    "Linesearch iteration limit reached solving for variable 'x' using "
+                    "constraint 'g'; remaining residual = "
+                    + SCIENTIFIC_NOTATION_REGEX
+                    + r"\.",
+                    err.message,
+                )
+                assert out is not None
+
+        # Calculate the bubble point of Benzene.  The first step
         # computed by calculate_variable_from_constraint will make the
         # second term become complex, and the evaluation will fail.
         # This tests that the algorithm cleanly continues
@@ -412,6 +495,35 @@ class Test_calc_var(unittest.TestCase):
             r"Setting Var 'x' to a value `[0-9\.]+` \(float\) not in domain Binary.",
         )
         self.assertAlmostEqual(value(m.x), 3.5, 3)
+
+    @unittest.skipUnless(differentiate_available, "this test requires sympy")
+    def test_clip_bounds_nonlinear(self):
+
+        m = ConcreteModel()
+        # The first step of Newton's method will overshoot the root
+        # and subsequent steps will be negative.
+        m.x = Var(initialize=1, bounds=(0, None))
+        m.c = Constraint(expr=-1.5 * m.x**2 + 3.5 * m.x == 0)
+
+        with LoggingIntercept() as LOG:
+            calculate_variable_from_constraint(m.x, m.c, eps=1e-6, linesearch=False)
+        self.assertRegex(
+            LOG.getvalue().strip(),
+            r"Setting Var 'x' to a numeric value `"
+            + SCIENTIFIC_NOTATION_REGEX
+            + "` outside the "
+            r"bounds \(0, None\).",
+        )
+        self.assertAlmostEqual(value(m.x), 0)
+        assert value(m.x) < 0
+
+        m.x.set_value(1)
+        with LoggingIntercept() as LOG:
+            calculate_variable_from_constraint(
+                m.x, m.c, eps=1e-6, linesearch=False, clip_to_bounds=True
+            )
+        assert len(LOG.getvalue().strip()) == 0
+        assert value(m.x) == 0
 
     @unittest.skipUnless(differentiate_available, "this test requires sympy")
     def test_nonlinear_overflow(self):
