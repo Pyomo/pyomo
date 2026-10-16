@@ -205,6 +205,19 @@ def div(xl, xu, yl, yu, feasibility_tol):
     return mul(xl, xu, *inv(yl, yu, feasibility_tol))
 
 
+def pow_or_inf(x, y):
+    try:
+        z = x**y
+    except OverflowError:
+        if x > 0:
+            z = inf
+        elif x < 0:
+            z = -inf
+        else:
+            raise ValueError(f"Unexpected overflow error: {x}**{y}")
+    return z
+
+
 def power(xl, xu, yl, yu, feasibility_tol):
     """
     Compute bounds on x**y.
@@ -213,18 +226,18 @@ def power(xl, xu, yl, yu, feasibility_tol):
         # If x is always positive, things are simple. We only need to
         # worry about the sign of y.
         if yl < 0 < yu:
-            lb = min(xu**yl, xl**yu)
-            ub = max(xl**yl, xu**yu)
+            lb = min(pow_or_inf(xu, yl), pow_or_inf(xl, yu))
+            ub = max(pow_or_inf(xl, yl), pow_or_inf(xu, yu))
         elif yl >= 0:
-            lb = min(xl**yl, xl**yu)
-            ub = max(xu**yl, xu**yu)
+            lb = min(pow_or_inf(xl, yl), pow_or_inf(xl, yu))
+            ub = max(pow_or_inf(xu, yl), pow_or_inf(xu, yu))
         else:  # yu <= 0:
-            lb = min(xu**yl, xu**yu)
-            ub = max(xl**yl, xl**yu)
+            lb = min(pow_or_inf(xu, yl), pow_or_inf(xu, yu))
+            ub = max(pow_or_inf(xl, yl), pow_or_inf(xl, yu))
     elif xl == 0:
         if yl >= 0:
-            lb = min(xl**yl, xl**yu)
-            ub = max(xu**yl, xu**yu)
+            lb = min(pow_or_inf(xl, yl), pow_or_inf(xl, yu))
+            ub = max(pow_or_inf(xu, yl), pow_or_inf(xu, yu))
         elif yu <= 0:
             lb, ub = inv(
                 *power(xl, xu, *sub(0, 0, yl, yu), feasibility_tol), feasibility_tol
