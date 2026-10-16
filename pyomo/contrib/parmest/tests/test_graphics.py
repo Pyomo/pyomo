@@ -69,8 +69,11 @@ class TestGraphics(unittest.TestCase):
                 "lr_stat": [3.0, 0.0, 4.0],
                 "success": [True, True, False],
             }
-        )
-        graphics.profile_likelihood_plot({"profiles": prof}, alpha=0.95)
+        ).set_index(["profiled_theta", "theta_value"])
+        intervals = pd.DataFrame(
+            {"profiled_theta": ["theta"], "alpha": [0.95], "threshold": [3.84]}
+        ).set_index(["profiled_theta", "alpha"])
+        graphics.profile_likelihood_plot(prof, intervals)
 
     def test_profile_plot_smoke_multi_parameter(self):
         prof = pd.DataFrame(
@@ -80,8 +83,8 @@ class TestGraphics(unittest.TestCase):
                 "lr_stat": [2.0, 0.0, 1.0, 0.0],
                 "success": [True, True, True, True],
             }
-        )
-        graphics.profile_likelihood_plot({"profiles": prof}, alpha=0.9)
+        ).set_index(["profiled_theta", "theta_value"])
+        graphics.profile_likelihood_plot(prof)
 
 
 if __name__ == '__main__':

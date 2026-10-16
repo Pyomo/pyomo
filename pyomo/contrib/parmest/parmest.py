@@ -2732,6 +2732,64 @@ class Estimator:
             n_residuals += len(_get_labeled_model(exp).experiment_outputs)
         return n_residuals * np.log(obj / obj_hat)
 
+    def _profile_intervals(self, profiles, profiled_theta_list, theta_hat, thresholds):
+        """
+        Profile confidence interval of each theta (see profile_likelihood).
+
+        Parameters
+        ----------
+        profiles: pd.DataFrame
+            Profiles indexed by profiled theta and value, with lr_stat and
+            success columns.
+        profiled_theta_list: list of str
+            Names of the profiled thetas.
+        theta_hat: dict
+            Baseline theta values keyed by theta name.
+        thresholds: dict
+            Chi-square threshold of lr_stat keyed by alpha.
+
+        Returns
+        -------
+        intervals: pd.DataFrame
+            One row per profiled theta and alpha (see profile_likelihood).
+        """
+        rows = []
+        for pname in profiled_theta_list:
+            prof = profiles.loc[pname]
+            prof = prof[prof["success"] & prof["lr_stat"].notna()]
+            values = prof.index.to_numpy(dtype=float)
+            lr = prof["lr_stat"].to_numpy(dtype=float)
+            for alpha, threshold in thresholds.items():
+                bounds = {"lower": np.nan, "upper": np.nan}
+                if len(values) > 0:
+                    # Walk outward from the grid value closest to theta_hat
+                    # until lr_stat reaches the threshold
+                    center = int(np.argmin(np.abs(values - theta_hat[pname])))
+                    if lr[center] < threshold:
+                        for side, step in (("lower", -1), ("upper", 1)):
+                            i = center
+                            while 0 <= i + step < len(values):
+                                j = i + step
+                                if lr[j] >= threshold:
+                                    bounds[side] = values[i] + (threshold - lr[i]) * (
+                                        values[j] - values[i]
+                                    ) / (lr[j] - lr[i])
+                                    break
+                                i = j
+                rows.append(
+                    {
+                        "profiled_theta": pname,
+                        "alpha": alpha,
+                        "theta_hat": theta_hat[pname],
+                        "lower": bounds["lower"],
+                        "upper": bounds["upper"],
+                        "threshold": threshold,
+                        "lower_bounded": not np.isnan(bounds["lower"]),
+                        "upper_bounded": not np.isnan(bounds["upper"]),
+                    }
+                )
+        return pd.DataFrame(rows).set_index(["profiled_theta", "alpha"])
+
     def _profile_sweep(
         self,
         profiled_theta_list,
@@ -2824,7 +2882,7 @@ class Estimator:
                     }
                     if return_theta_paths and success:
                         for tname, tval in theta_conv.items():
-                            row[f"theta__{tname}"] = tval
+                            row[tname] = tval
                     rows.append(row)
 
                     # Stop this side of the profile (the other side is
@@ -2839,6 +2897,7 @@ class Estimator:
     def profile_likelihood(
         self,
         profiled_theta,
+        alphas=None,
         grid=None,
         n_grid=21,
         theta_hat=None,
@@ -2866,6 +2925,9 @@ class Estimator:
         profiled_theta: str or list of str
             Name(s) of the theta(s) to profile, as returned by theta_est. Each
             theta is profiled separately.
+        alphas: list of float, optional
+            Confidence levels (between 0 and 1) of the profile confidence
+            intervals. Default is None ([0.95]).
         grid: list, np.ndarray, pd.Series, dict or None, optional
             Values of the profiled theta, or a dict of values keyed by theta
             name. If None (or a theta is missing from the dict), n_grid evenly
@@ -2897,7 +2959,7 @@ class Estimator:
             this many consecutive failed solves. Default is None (no limit).
         return_theta_paths: bool, optional
             If True, include the estimated value of every theta at each grid
-            value (``theta__<theta name>`` columns). Default is True.
+            value (one column per theta name). Default is True.
         max_rebaseline: int, optional
             Maximum number of times the profiles are solved again from a new
             baseline, when a lower objective is found. Default is 0 (the
@@ -2905,26 +2967,29 @@ class Estimator:
 
         Returns
         -------
-        results: dict
-            ``profiles``: pd.DataFrame with one row per grid value solved,
-            sorted by profiled theta and value: ``profiled_theta``,
-            ``theta_value``, ``obj`` (NaN if the solve failed), ``status``
-            (termination condition or exception message), ``success``,
-            ``solve_time`` (seconds), ``delta_obj`` (obj - obj_hat),
-            ``lr_stat`` and, if return_theta_paths is True,
-            ``theta__<theta name>``. For S experiments with N residuals,
-            lr_stat is 2 * S * (obj - obj_hat) for "SSE_weighted" and
-            N * log(obj / obj_hat) for "SSE" (variance profiled out); it is
-            NaN for other objectives, with regularization, or for "SSE" when
-            obj_hat is 0.
-
-            ``baseline``: dict with ``theta_hat``, ``obj_hat``, ``solver``,
-            ``used_multistart`` and ``rebaselined`` (True if a lower objective
-            replaced the initial baseline).
-
-            ``metadata``: dict with ``grid_strategy`` ("user_provided" or
-            "auto_bounds"), ``warmstart``, ``profiled_theta``,
-            ``started_at_epoch`` and ``finished_at_epoch``.
+        profiles: pd.DataFrame
+            One row per grid value solved, indexed by ``profiled_theta`` and
+            ``theta_value``, with columns ``obj`` (NaN if the solve failed),
+            ``status`` (termination condition or exception message),
+            ``success``, ``solve_time`` (seconds), ``lr_stat``, one column per
+            alpha (True if lr_stat is below the threshold) and, if
+            return_theta_paths is True, one column per theta name. For S
+            experiments with N residuals, lr_stat is 2 * S * (obj - obj_hat)
+            for "SSE_weighted" and N * log(obj / obj_hat) for "SSE" (variance
+            profiled out); it is NaN for other objectives, with
+            regularization, or for "SSE" when obj_hat is 0.
+        intervals: pd.DataFrame
+            Profile confidence interval of each theta, indexed by
+            ``profiled_theta`` and ``alpha``, with columns ``theta_hat``,
+            ``lower``, ``upper``, ``threshold`` (chi-square with 1 degree of
+            freedom), ``lower_bounded`` and ``upper_bounded``. The bounds are
+            linearly interpolated where lr_stat crosses the threshold on each
+            side of theta_hat. If it does not cross within the grid, the
+            bound is NaN and the bounded column is False.
+        theta_hat: dict
+            Baseline theta values (updated if a lower objective is found).
+        obj_hat: float
+            Objective value at theta_hat.
         """
         if self.pest_deprecated is not None:
             raise RuntimeError(
@@ -2955,6 +3020,13 @@ class Estimator:
                 raise ValueError("max_consecutive_failures must be greater than zero.")
         if not isinstance(return_theta_paths, bool):
             raise TypeError("return_theta_paths must be a bool.")
+        if alphas is None:
+            alphas = [0.95]
+        if not isinstance(alphas, (list, tuple)) or len(alphas) == 0:
+            raise TypeError("alphas must be a non-empty list of floats.")
+        for a in alphas:
+            if not isinstance(a, (int, float)) or not 0 < a < 1:
+                raise ValueError("Each alpha must be between 0 and 1.")
         if not isinstance(max_rebaseline, int):
             raise TypeError("max_rebaseline must be an integer.")
         if max_rebaseline < 0:
@@ -2967,8 +3039,21 @@ class Estimator:
                 f"Unknown profile theta name(s): {sorted(unknown_requested)}. "
                 f"Known names: {theta_names}."
             )
+        reserved = {
+            "profiled_theta",
+            "theta_value",
+            "obj",
+            "status",
+            "success",
+            "solve_time",
+            "lr_stat",
+        }
+        if return_theta_paths and reserved.intersection(theta_names):
+            raise ValueError(
+                f"Theta name(s) {sorted(reserved.intersection(theta_names))} "
+                f"match profiles column names; use return_theta_paths=False."
+            )
 
-        used_multistart = False
         if theta_hat is None or obj_hat is None:
             if use_multistart_for_baseline:
                 if baseline_multistart_kwargs is None:
@@ -2980,15 +3065,12 @@ class Estimator:
                     raise RuntimeError(
                         "Failed to compute baseline from multistart: no feasible solution found."
                     )
-                used_multistart = True
             else:
                 obj_hat, theta_hat = self.theta_est(solver=solver)
 
         theta_hat = {k: float(v) for k, v in theta_hat.items()}
         obj_hat = float(obj_hat)
 
-        started_at = time.time()
-        rebaselined = False
         n_rebaseline = 0
 
         # Profile solves overwrite the estimate; restore it afterwards (e.g.,
@@ -3025,7 +3107,6 @@ class Estimator:
                     f"{action}. The Estimator estimate is not updated; re-run "
                     f"theta_est from this theta to update it."
                 )
-                rebaselined = True
                 theta_hat = {k: float(v) for k, v in best_theta.items()}
                 obj_hat = float(best_obj)
                 if not resolve:
@@ -3036,34 +3117,18 @@ class Estimator:
 
         # Every grid has at least the theta_hat value, so rows is not empty
         profiles = pd.DataFrame(rows)
-        profiles = profiles.sort_values(
-            by=["profiled_theta", "theta_value"], kind="stable"
-        ).reset_index(drop=True)
-        profiles["delta_obj"] = profiles["obj"] - obj_hat
-        profiles["lr_stat"] = self._profile_lr_stat(profiles["obj"], obj_hat)
+        profiles = profiles.set_index(["profiled_theta", "theta_value"])
+        profiles = profiles.sort_index(kind="stable")
+        profiles.insert(4, "lr_stat", self._profile_lr_stat(profiles["obj"], obj_hat))
+        thresholds = {a: scipy.stats.chi2.ppf(a, df=1) for a in alphas}
+        for i, a in enumerate(alphas):
+            profiles.insert(5 + i, a, profiles["lr_stat"] < thresholds[a])
 
-        if grid is None:
-            grid_strategy = "auto_bounds"
-        else:
-            grid_strategy = "user_provided"
+        intervals = self._profile_intervals(
+            profiles, profiled_theta_list, theta_hat, thresholds
+        )
 
-        return {
-            "profiles": profiles,
-            "baseline": {
-                "theta_hat": theta_hat,
-                "obj_hat": obj_hat,
-                "solver": solver,
-                "used_multistart": used_multistart,
-                "rebaselined": rebaselined,
-            },
-            "metadata": {
-                "grid_strategy": grid_strategy,
-                "warmstart": warmstart,
-                "profiled_theta": profiled_theta_list,
-                "started_at_epoch": started_at,
-                "finished_at_epoch": time.time(),
-            },
-        }
+        return profiles, intervals, theta_hat, obj_hat
 
     def _normalize_theta_dataframe(self, theta_values, model=None):
         """

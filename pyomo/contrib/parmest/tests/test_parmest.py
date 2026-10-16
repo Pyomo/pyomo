@@ -2939,38 +2939,51 @@ class TestParmestProfileLikelihood(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_profile_likelihood_results(self):
         pest = _build_two_theta_estimator()
-        res = pest.profile_likelihood(
+        prof, intervals, theta_hat, obj_hat = pest.profile_likelihood(
             "theta_a",
+            alphas=[0.9, 0.95],
             grid=[1.2, 2.4, 2.0],
             theta_hat={"theta_a": 2.0, "theta_b": 1.0},
             obj_hat=0.0,
         )
-        prof = res["profiles"]
+        self.assertEqual(prof.index.names, ["profiled_theta", "theta_value"])
         self.assertEqual(
             list(prof.columns),
             [
-                "profiled_theta",
-                "theta_value",
                 "obj",
                 "status",
                 "success",
                 "solve_time",
-                "theta__theta_a",
-                "theta__theta_b",
-                "delta_obj",
                 "lr_stat",
+                0.9,
+                0.95,
+                "theta_a",
+                "theta_b",
             ],
         )
+        self.assertEqual(intervals.index.names, ["profiled_theta", "alpha"])
+        self.assertEqual(
+            list(intervals.columns),
+            [
+                "theta_hat",
+                "lower",
+                "upper",
+                "threshold",
+                "lower_bounded",
+                "upper_bounded",
+            ],
+        )
+        self.assertEqual(list(intervals.index), [("theta_a", 0.9), ("theta_a", 0.95)])
         # The user grid is sorted
-        self.assertEqual(prof["theta_value"].tolist(), [1.2, 2.0, 2.4])
+        prof = prof.loc["theta_a"]
+        self.assertEqual(prof.index.tolist(), [1.2, 2.0, 2.4])
         self.assertTrue(prof["success"].all())
         # theta_a is fixed at each grid value, and theta_b is re-estimated
-        np.testing.assert_allclose(prof["theta__theta_a"], prof["theta_value"])
-        np.testing.assert_allclose(
-            prof["theta__theta_b"], 5.0 - 2.0 * prof["theta_value"], atol=1e-6
-        )
+        np.testing.assert_allclose(prof["theta_a"], prof.index)
+        np.testing.assert_allclose(prof["theta_b"], 5.0 - 2.0 * prof.index, atol=1e-6)
         # The baseline is the profile minimum
-        self.assertAlmostEqual(prof["obj"].min(), res["baseline"]["obj_hat"], places=8)
+        self.assertAlmostEqual(prof["obj"].min(), obj_hat, places=8)
+        self.assertEqual(theta_hat, {"theta_a": 2.0, "theta_b": 1.0})
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_profile_warmstart_neighbor_values_used(self):
@@ -3005,7 +3018,7 @@ class TestParmestProfileLikelihood(unittest.TestCase):
         # theta_a = 5.0 is outside the model bounds (0, 4), so that solve
         # fails while the neighboring grid points still succeed.
         with LoggingIntercept(level=logging.WARNING) as LOG:
-            res = pest.profile_likelihood(
+            prof, _, _, _ = pest.profile_likelihood(
                 "theta_a",
                 grid=[1.9, 5.0, 2.1],
                 theta_hat={"theta_a": 2.0, "theta_b": 1.0},
@@ -3013,7 +3026,7 @@ class TestParmestProfileLikelihood(unittest.TestCase):
             )
         self.assertIn("outside the bounds", LOG.getvalue())
 
-        prof = res["profiles"].set_index("theta_value")
+        prof = prof.loc["theta_a"]
         self.assertEqual(len(prof), 4)
         self.assertIn("exception", str(prof.loc[5.0, "status"]))
         self.assertFalse(bool(prof.loc[5.0, "success"]))
@@ -3025,13 +3038,12 @@ class TestParmestProfileLikelihood(unittest.TestCase):
         pest = _build_two_theta_estimator(solver_options={"max_iter": 1})
         # Solves that stop at the iteration limit are recorded with their
         # termination condition, not as exceptions.
-        res = pest.profile_likelihood(
+        prof, _, _, _ = pest.profile_likelihood(
             "theta_a",
             grid=[1.9, 2.1],
             theta_hat={"theta_a": 2.0, "theta_b": 1.0},
             obj_hat=0.0,
         )
-        prof = res["profiles"]
         self.assertEqual(len(prof), 3)
         self.assertTrue(
             (prof["status"] == str(pyo.TerminationCondition.maxIterations)).all()
@@ -3042,7 +3054,7 @@ class TestParmestProfileLikelihood(unittest.TestCase):
     def test_profile_all_failures_returns_structure(self):
         pest = _build_two_theta_estimator()
         # An unknown solver makes every profile solve raise.
-        res = pest.profile_likelihood(
+        prof, intervals, _, _ = pest.profile_likelihood(
             "theta_a",
             grid=[1.9, 2.0, 2.1],
             theta_hat={"theta_a": 2.0, "theta_b": 0.0},
@@ -3050,8 +3062,11 @@ class TestParmestProfileLikelihood(unittest.TestCase):
             solver="not_a_solver",
         )
 
-        prof = res["profiles"]
         self.assertEqual(len(prof), 3)
+        self.assertFalse(prof[0.95].any())
+        self.assertTrue(intervals[["lower", "upper"]].isna().all().all())
+        self.assertFalse(intervals["lower_bounded"].any())
+        self.assertFalse(intervals["upper_bounded"].any())
         self.assertFalse(prof["success"].any())
         self.assertTrue(prof["status"].astype(str).str.contains("exception").all())
         self.assertTrue(prof["obj"].isna().all())
@@ -3070,7 +3085,7 @@ class TestParmestProfileLikelihood(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_profile_baseline_from_multistart(self):
         pest = _build_two_theta_estimator()
-        res = pest.profile_likelihood(
+        prof, _, _, obj_hat = pest.profile_likelihood(
             profiled_theta="theta_a",
             n_grid=5,
             use_multistart_for_baseline=True,
@@ -3080,9 +3095,8 @@ class TestParmestProfileLikelihood(unittest.TestCase):
                 "seed": 7,
             },
         )
-        self.assertTrue(np.isfinite(res["baseline"]["obj_hat"]))
-        self.assertTrue(res["baseline"]["used_multistart"])
-        self.assertGreaterEqual(res["profiles"].shape[0], 1)
+        self.assertTrue(np.isfinite(obj_hat))
+        self.assertGreaterEqual(prof.shape[0], 1)
 
     @parameterized.expand([("SSE", None), ("SSE_weighted", 0.5)])
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
@@ -3102,8 +3116,9 @@ class TestParmestProfileLikelihood(unittest.TestCase):
             ],
             obj_function=obj_function,
         )
-        res = pest.profile_likelihood("asymptote", grid=[16.0, 18.0, 22.0])
-        prof = res["profiles"]
+        prof, _, theta_hat, _ = pest.profile_likelihood(
+            "asymptote", grid=[16.0, 18.0, 22.0]
+        )
         self.assertTrue(prof["success"].all())
 
         # Independent calculation from the model y = a * (1 - exp(-b * t))
@@ -3112,13 +3127,9 @@ class TestParmestProfileLikelihood(unittest.TestCase):
         def ssr(a, b):
             return np.sum((y - a * (1 - np.exp(-b * t))) ** 2)
 
-        theta_hat = res["baseline"]["theta_hat"]
         ssr_hat = ssr(theta_hat["asymptote"], theta_hat["rate_constant"])
         ssr_prof = np.array(
-            [
-                ssr(a, b)
-                for a, b in zip(prof["theta__asymptote"], prof["theta__rate_constant"])
-            ]
+            [ssr(a, b) for a, b in zip(prof["asymptote"], prof["rate_constant"])]
         )
         if obj_function == "SSE":
             # unknown variance profiled out: N * log(SSR / SSR_hat)
@@ -3132,7 +3143,7 @@ class TestParmestProfileLikelihood(unittest.TestCase):
     def test_profile_lr_stat_undefined_for_custom_objective(self):
         pest = _build_two_theta_estimator(obj_function=parmest.SSE)
         with LoggingIntercept(level=logging.WARNING) as LOG:
-            res = pest.profile_likelihood(
+            prof, _, _, _ = pest.profile_likelihood(
                 "theta_a",
                 grid=[1.9, 2.1],
                 theta_hat={"theta_a": 2.0, "theta_b": 1.0},
@@ -3144,8 +3155,8 @@ class TestParmestProfileLikelihood(unittest.TestCase):
             "NaN.",
             LOG.getvalue(),
         )
-        self.assertTrue(res["profiles"]["success"].all())
-        self.assertTrue(res["profiles"]["lr_stat"].isna().all())
+        self.assertTrue(prof["success"].all())
+        self.assertTrue(prof["lr_stat"].isna().all())
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_profile_lr_stat_perfect_fit(self):
@@ -3153,7 +3164,7 @@ class TestParmestProfileLikelihood(unittest.TestCase):
         # ratio is not defined for the SSE objective.
         pest = _build_two_theta_estimator()
         with LoggingIntercept(level=logging.WARNING) as LOG:
-            res = pest.profile_likelihood(
+            prof, _, _, _ = pest.profile_likelihood(
                 "theta_a",
                 grid=[1.9, 2.1],
                 theta_hat={"theta_a": 2.0, "theta_b": 1.0},
@@ -3165,8 +3176,8 @@ class TestParmestProfileLikelihood(unittest.TestCase):
             "set to NaN.",
             LOG.getvalue(),
         )
-        self.assertTrue(res["profiles"]["success"].all())
-        self.assertTrue(res["profiles"]["lr_stat"].isna().all())
+        self.assertTrue(prof["success"].all())
+        self.assertTrue(prof["lr_stat"].isna().all())
 
     def test_split_grid_at_center(self):
         pest = _build_two_theta_estimator()
@@ -3187,31 +3198,37 @@ class TestParmestProfileLikelihood(unittest.TestCase):
         # 4.2 fails, which stops the upper side, while every value below
         # theta_hat is still solved.
         with LoggingIntercept(level=logging.WARNING):
-            res = pest.profile_likelihood(
+            prof, _, _, _ = pest.profile_likelihood(
                 "theta_a",
                 grid=[3.0, 3.4, 3.8, 4.2, 4.4],
                 theta_hat={"theta_a": 3.9, "theta_b": 5.0 - 2.0 * 3.9},
                 obj_hat=0.0,
                 max_consecutive_failures=1,
             )
-        prof = res["profiles"].set_index("theta_value")
+        prof = prof.loc["theta_a"]
         self.assertEqual(sorted(prof.index), [3.0, 3.4, 3.8, 3.9, 4.2])
         self.assertFalse(bool(prof.loc[4.2, "success"]))
         self.assertTrue(prof.loc[[3.0, 3.4, 3.8, 3.9], "success"].all())
         for a in (3.0, 3.4, 3.8):
-            self.assertAlmostEqual(prof.loc[a, "theta__theta_b"], 5.0 - 2.0 * a, 6)
+            self.assertAlmostEqual(prof.loc[a, "theta_b"], 5.0 - 2.0 * a, 6)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_profile_given_baseline_does_not_use_multistart(self):
         pest = _build_two_theta_estimator()
-        res = pest.profile_likelihood(
+
+        def fail_multistart(**kwargs):
+            self.fail("theta_est_multistart was called.")
+
+        pest.theta_est_multistart = fail_multistart
+        _, _, theta_hat, obj_hat = pest.profile_likelihood(
             "theta_a",
             grid=[1.9, 2.1],
             theta_hat={"theta_a": 2.0, "theta_b": 1.0},
             obj_hat=0.0,
             use_multistart_for_baseline=True,
         )
-        self.assertFalse(res["baseline"]["used_multistart"])
+        self.assertEqual(theta_hat, {"theta_a": 2.0, "theta_b": 1.0})
+        self.assertEqual(obj_hat, 0.0)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_profile_restores_estimator_state(self):
@@ -3249,7 +3266,7 @@ class TestParmestProfileLikelihood(unittest.TestCase):
         # The given obj_hat is too high, so the solve at theta_hat finds a
         # lower objective.
         with LoggingIntercept(level=logging.WARNING) as LOG:
-            res = pest.profile_likelihood(
+            prof, _, new_theta_hat, new_obj_hat = pest.profile_likelihood(
                 "asymptote",
                 grid=[16.0, 22.0],
                 theta_hat=theta_hat,
@@ -3257,20 +3274,17 @@ class TestParmestProfileLikelihood(unittest.TestCase):
             )
         self.assertIn(
             f"profile_likelihood: a profile solve found a lower objective "
-            f"({res['baseline']['obj_hat']}) than the baseline ({obj_hat + 1.0}) "
-            f"at theta = {res['baseline']['theta_hat']}, so it becomes the "
+            f"({new_obj_hat}) than the baseline ({obj_hat + 1.0}) "
+            f"at theta = {new_theta_hat}, so it becomes the "
             f"baseline and lr_stat is computed from it. The Estimator estimate "
             f"is not updated; re-run theta_est from this theta to update it.",
             LOG.getvalue(),
         )
 
-        baseline = res["baseline"]
-        self.assertTrue(baseline["rebaselined"])
-        self.assertAlmostEqual(baseline["obj_hat"], obj_hat, places=6)
+        self.assertAlmostEqual(new_obj_hat, obj_hat, places=6)
         for name, val in theta_hat.items():
-            self.assertAlmostEqual(baseline["theta_hat"][name], val, places=4)
+            self.assertAlmostEqual(new_theta_hat[name], val, places=4)
         # lr_stat is measured from the lowest objective, so it is not negative
-        prof = res["profiles"]
         self.assertAlmostEqual(prof["lr_stat"].min(), 0.0, places=8)
         self.assertTrue((prof["lr_stat"] > -1e-8).all())
         # The Estimator keeps its estimate
@@ -3285,7 +3299,7 @@ class TestParmestProfileLikelihood(unittest.TestCase):
         bad_theta_hat = dict(theta_hat)
         bad_theta_hat["rate_constant"] = 1.0
         with LoggingIntercept(level=logging.WARNING) as LOG:
-            res = pest.profile_likelihood(
+            prof, _, _, new_obj_hat = pest.profile_likelihood(
                 "asymptote",
                 grid=[16.0, 22.0],
                 theta_hat=bad_theta_hat,
@@ -3297,8 +3311,7 @@ class TestParmestProfileLikelihood(unittest.TestCase):
             LOG.getvalue(),
         )
         self.assertNotIn("lr_stat is computed from it", LOG.getvalue())
-        self.assertTrue(res["baseline"]["rebaselined"])
-        self.assertAlmostEqual(res["baseline"]["obj_hat"], obj_hat, places=6)
+        self.assertAlmostEqual(new_obj_hat, obj_hat, places=6)
 
         # Each of the 2 sweeps solves the 3 grid values; the second starts
         # from the new baseline.
@@ -3309,14 +3322,14 @@ class TestParmestProfileLikelihood(unittest.TestCase):
             inits[3]["rate_constant"], theta_hat["rate_constant"], places=4
         )
         # Only the rows of the second sweep are returned
-        self.assertEqual(len(res["profiles"]), 3)
+        self.assertEqual(len(prof), 3)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_profile_no_lower_objective_keeps_baseline(self):
         pest = self._build_rooney_biegler_estimator()
         obj_hat, theta_hat = pest.theta_est()
         with LoggingIntercept(level=logging.WARNING) as LOG:
-            res = pest.profile_likelihood(
+            _, _, new_theta_hat, new_obj_hat = pest.profile_likelihood(
                 "asymptote",
                 grid=[16.0, 22.0],
                 theta_hat=dict(theta_hat),
@@ -3324,8 +3337,51 @@ class TestParmestProfileLikelihood(unittest.TestCase):
                 max_rebaseline=1,
             )
         self.assertNotIn("found a lower objective", LOG.getvalue())
-        self.assertFalse(res["baseline"]["rebaselined"])
-        self.assertEqual(res["baseline"]["obj_hat"], obj_hat)
+        self.assertEqual(new_obj_hat, obj_hat)
+        self.assertEqual(new_theta_hat, dict(theta_hat))
+
+    def test_profile_intervals_interpolated(self):
+        pest = _build_two_theta_estimator()
+        profiles = pd.DataFrame(
+            {
+                "profiled_theta": ["theta_a"] * 6,
+                "theta_value": [0.0, 0.5, 1.0, 2.0, 3.0, 4.0],
+                "lr_stat": [5.0, np.nan, 2.0, 0.0, 1.0, 2.0],
+                "success": [True, False, True, True, True, True],
+            }
+        ).set_index(["profiled_theta", "theta_value"])
+        intervals = pest._profile_intervals(
+            profiles, ["theta_a"], {"theta_a": 2.0, "theta_b": 1.0}, {0.9: 3.0}
+        )
+        row = intervals.loc[("theta_a", 0.9)]
+        self.assertEqual(row["theta_hat"], 2.0)
+        self.assertEqual(row["threshold"], 3.0)
+        # The failed solve at 0.5 is skipped: lr_stat crosses 3.0 between 0.0
+        # (5.0) and 1.0 (2.0)
+        self.assertAlmostEqual(row["lower"], 1.0 - 1.0 / 3.0)
+        self.assertTrue(row["lower_bounded"])
+        # lr_stat stays below 3.0 above theta_hat
+        self.assertTrue(np.isnan(row["upper"]))
+        self.assertFalse(row["upper_bounded"])
+
+    def test_profile_theta_name_matches_column(self):
+        pest = _build_two_theta_estimator()
+        pest._expanded_theta_info = lambda model: (["theta_a", "obj"], None)
+        with self.assertRaisesRegex(
+            ValueError,
+            "Theta name\\(s\\) \\['obj'\\] match profiles column names; use "
+            "return_theta_paths=False.",
+        ):
+            pest.profile_likelihood("theta_a")
+
+    def test_profile_alphas_validation(self):
+        pest = _build_two_theta_estimator()
+        with self.assertRaisesRegex(
+            TypeError, "alphas must be a non-empty list of floats."
+        ):
+            pest.profile_likelihood("theta_a", alphas=0.95)
+        with self.assertRaisesRegex(ValueError, "Each alpha must be between 0 and 1."):
+            pest.profile_likelihood("theta_a", alphas=[95])
 
     def test_profile_max_rebaseline_validation(self):
         pest = _build_two_theta_estimator()

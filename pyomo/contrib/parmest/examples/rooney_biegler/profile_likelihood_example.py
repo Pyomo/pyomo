@@ -29,8 +29,9 @@ def main():
 
     # Compute profile likelihood for both unknown parameters.
     # Use a small grid for quick terminal runs.
-    profile_results = pest.profile_likelihood(
+    profiles, intervals, theta_hat, obj_hat = pest.profile_likelihood(
         profiled_theta=["asymptote", "rate_constant"],
+        alphas=[0.9, 0.95],
         n_grid=9,
         solver="ef_ipopt",
         warmstart="neighbor",
@@ -43,30 +44,16 @@ def main():
         },
     )
 
-    # Display a compact summary table
-    profiles = profile_results["profiles"]
     print("\nBaseline:")
-    print(profile_results["baseline"])
-    print("\nProfile results (first 12 rows):")
-    print(
-        profiles[
-            [
-                "profiled_theta",
-                "theta_value",
-                "obj",
-                "delta_obj",
-                "lr_stat",
-                "status",
-                "success",
-            ]
-        ].head(12)
-    )
+    print(theta_hat, obj_hat)
+    print("\nProfile of asymptote:")
+    print(profiles.loc["asymptote", ["obj", "lr_stat", 0.95, "success"]])
+    print("\nProfile confidence intervals:")
+    print(intervals)
 
     # Plot profile curves to file for terminal/non-GUI usage
     out_file = "rooney_biegler_profile_likelihood.png"
-    parmest.graphics.profile_likelihood_plot(
-        profile_results, alpha=0.95, filename=out_file
-    )
+    parmest.graphics.profile_likelihood_plot(profiles, intervals, filename=out_file)
     print(f"\nSaved plot to: {out_file}")
 
 

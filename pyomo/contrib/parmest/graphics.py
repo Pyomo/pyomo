@@ -489,28 +489,21 @@ def pairwise_plot(
 
 
 def profile_likelihood_plot(
-    profile_results,
-    alpha=None,
-    filename=None,
-    by="profiled_theta",
-    y="lr_stat",
-    ylabel=None,
-    show=True,
+    profiles, intervals=None, filename=None, y="lr_stat", ylabel=None, show=True
 ):
     """
     Plot profile likelihood curves from Estimator.profile_likelihood results.
 
     Parameters
     ----------
-    profile_results: dict or DataFrame
-        Result dict returned by ``Estimator.profile_likelihood()`` or the
-        ``profiles`` DataFrame directly.
-    alpha: float, optional
-        If provided, draw the chi-square threshold line using dof=1.
+    profiles: DataFrame
+        Profiles returned by ``Estimator.profile_likelihood()``, indexed by
+        ``profiled_theta`` and ``theta_value``.
+    intervals: DataFrame, optional
+        Intervals returned by ``Estimator.profile_likelihood()``. If provided,
+        draw the chi-square threshold line of each alpha.
     filename: string, optional
         Filename used to save the figure.
-    by: string, optional
-        Grouping column for separate panels. Default is ``profiled_theta``.
     y: string, optional
         Y-axis column to plot. Default is ``lr_stat``.
     ylabel: string, optional
@@ -522,58 +515,38 @@ def profile_likelihood_plot(
     -------
     tuple containing the figure and axes objects
     """
-    assert isinstance(profile_results, (dict, pd.DataFrame))
-    assert isinstance(alpha, (type(None), int, float))
+    assert isinstance(profiles, pd.DataFrame)
+    assert isinstance(intervals, (type(None), pd.DataFrame))
     assert isinstance(filename, (type(None), str))
-    assert isinstance(by, str)
     assert isinstance(y, str)
     assert isinstance(ylabel, (type(None), str))
 
-    if isinstance(profile_results, dict):
-        if "profiles" not in profile_results:
-            raise KeyError("profile_results dict must contain 'profiles'.")
-        profiles = profile_results["profiles"]
-    else:
-        profiles = profile_results
-
-    if not isinstance(profiles, pd.DataFrame):
-        raise TypeError("profiles must be a pandas DataFrame.")
     if profiles.empty:
         raise ValueError("profiles DataFrame is empty.")
-    required_cols = {"theta_value", y, by}
-    missing = required_cols.difference(profiles.columns)
-    if missing:
-        raise KeyError(
-            f"profiles DataFrame is missing required columns: {sorted(missing)}"
-        )
+    if y not in profiles.columns:
+        raise KeyError(f"profiles DataFrame is missing the '{y}' column.")
 
-    groups = list(profiles[by].dropna().unique())
-    if len(groups) == 0:
-        raise ValueError(f"No non-null group values found in '{by}'.")
+    thetas = list(profiles.index.unique(level="profiled_theta"))
 
     fig, axes = plt.subplots(
-        nrows=len(groups),
+        nrows=len(thetas),
         ncols=1,
-        figsize=(6.5, max(3.0, 2.8 * len(groups))),
+        figsize=(6.5, max(3.0, 2.8 * len(thetas))),
         squeeze=False,
     )
-
-    threshold = None
-    if alpha is not None:
-        threshold = stats.chi2.ppf(float(alpha), df=1)
 
     if ylabel is None:
         ylabel = y
 
-    for i, grp in enumerate(groups):
+    for i, theta in enumerate(thetas):
         ax = axes[i, 0]
-        subset = profiles[profiles[by] == grp].sort_values("theta_value")
-        ax.plot(subset["theta_value"], subset[y], marker="o", linewidth=1.5)
+        subset = profiles.loc[theta]
+        ax.plot(subset.index, subset[y], marker="o", linewidth=1.5)
         if "success" in subset.columns:
             failed = subset[~subset["success"].astype(bool)]
             if len(failed) > 0:
                 ax.scatter(
-                    failed["theta_value"],
+                    failed.index,
                     failed[y],
                     marker="x",
                     color="tab:red",
@@ -581,11 +554,12 @@ def profile_likelihood_plot(
                     label="failed",
                 )
                 ax.legend(loc="best", prop={"size": 8})
-        if threshold is not None:
-            ax.axhline(threshold, color="tab:orange", linestyle="--", linewidth=1.0)
-        ax.set_xlabel(str(grp))
+        if intervals is not None:
+            for threshold in intervals.loc[theta, "threshold"]:
+                ax.axhline(threshold, color="tab:orange", linestyle="--", linewidth=1.0)
+        ax.set_xlabel(str(theta))
         ax.set_ylabel(ylabel)
-        ax.set_title(f"{by}: {grp}")
+        ax.set_title(f"profiled_theta: {theta}")
 
     if filename is not None:
         fig.savefig(filename)
