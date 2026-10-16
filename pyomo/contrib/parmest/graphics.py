@@ -515,6 +515,8 @@ def profile_likelihood_plot(
         Y-axis column to plot. Default is ``lr_stat``.
     ylabel: string, optional
         Y-axis label. Default is the value of ``y``.
+    show: bool, optional
+        If True and filename is not given, show the figure. Default is True.
 
     Returns
     -------
@@ -560,6 +562,9 @@ def profile_likelihood_plot(
     if alpha is not None:
         threshold = stats.chi2.ppf(float(alpha), df=1)
 
+    if ylabel is None:
+        ylabel = y
+
     for i, grp in enumerate(groups):
         ax = axes[i, 0]
         subset = profiles[profiles[by] == grp].sort_values("theta_value")
@@ -575,16 +580,12 @@ def profile_likelihood_plot(
                     s=24,
                     label="failed",
                 )
+                ax.legend(loc="best", prop={"size": 8})
         if threshold is not None:
             ax.axhline(threshold, color="tab:orange", linestyle="--", linewidth=1.0)
         ax.set_xlabel(str(grp))
-        ax.set_ylabel(ylabel if ylabel is not None else y)
+        ax.set_ylabel(ylabel)
         ax.set_title(f"{by}: {grp}")
-        if (
-            "success" in subset.columns
-            and len(subset[~subset["success"].astype(bool)]) > 0
-        ):
-            ax.legend(loc="best", prop={"size": 8})
 
     if filename is not None:
         fig.savefig(filename)
