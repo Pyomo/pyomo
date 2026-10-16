@@ -9,7 +9,7 @@
 
 from collections import namedtuple
 from heapq import heappush, heappop
-import traceback
+
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import document_kwargs_from_configdict
@@ -419,41 +419,25 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
         model_utils = model.component(self.original_util_block.name)
         subprob_utils = subproblem.component(self.original_util_block.name)
 
-        try:
-            with SuppressInfeasibleWarning():
-                try:
-                    fbbt(subproblem, integer_tol=config.integer_tolerance)
-                except InfeasibleConstraintException:
-                    # copy variable values, even if errored
-                    copy_var_list_values(
-                        from_list=subprob_utils.algebraic_variable_list,
-                        to_list=model_utils.algebraic_variable_list,
-                        config=config,
-                        ignore_integrality=True,
-                    )
-                    return float('inf'), float('inf')
-                minlp_args = dict(config.minlp_solver_args)
-                if config.time_limit is not None and config.minlp_solver == 'gams':
-                    elapsed = get_main_elapsed_time(self.timing)
-                    remaining = max(config.time_limit - elapsed, 1)
-                    minlp_args['add_options'] = minlp_args.get('add_options', [])
-                    minlp_args['add_options'].append('option reslim=%s;' % remaining)
-                result = SolverFactory(config.minlp_solver).solve(
-                    subproblem, **minlp_args
+        with SuppressInfeasibleWarning():
+            try:
+                fbbt(subproblem, integer_tol=config.integer_tolerance)
+            except InfeasibleConstraintException:
+                # copy variable values, even if errored
+                copy_var_list_values(
+                    from_list=subprob_utils.algebraic_variable_list,
+                    to_list=model_utils.algebraic_variable_list,
+                    config=config,
+                    ignore_integrality=True,
                 )
-        except RuntimeError as e:
-            config.logger.warning(
-                "Solver encountered RuntimeError. Treating as infeasible. "
-                "Msg: %s\n%s" % (str(e), traceback.format_exc())
-            )
-            copy_var_list_values(  # copy variable values, even if errored
-                from_list=subprob_utils.algebraic_variable_list,
-                to_list=model_utils.algebraic_variable_list,
-                config=config,
-                ignore_integrality=True,
-            )
-            return float('inf'), float('inf')
-
+                return float('inf'), float('inf')
+            minlp_args = dict(config.minlp_solver_args)
+            if config.time_limit is not None and config.minlp_solver == 'gams':
+                elapsed = get_main_elapsed_time(self.timing)
+                remaining = max(config.time_limit - elapsed, 1)
+                minlp_args['add_options'] = minlp_args.get('add_options', [])
+                minlp_args['add_options'].append('option reslim=%s;' % remaining)
+            result = SolverFactory(config.minlp_solver).solve(subproblem, **minlp_args)
         term_cond = result.solver.termination_condition
         if term_cond == tc.optimal:
             assert result.solver.status is SolverStatus.ok
@@ -523,32 +507,17 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
 
     def _solve_local_rnGDP_subproblem(self, model, config):
         # TODO: The returns of this method should be improved. Currently, it
-        # returns trivial bounds (LB, UB) = (-inf, inf) if there is an error in
-        # the solve, if the problem is infeasible, or if the problem is
-        # unbounded.
+        # returns trivial bounds (LB, UB) = (-inf, inf) if the problem is
+        # infeasible or unbounded.
         subproblem = TransformationFactory('gdp.bigm').create_using(model)
         obj_sense_correction = self.objective_sense != minimize
         subprob_utils = subproblem.component(self.original_util_block.name)
         model_utils = model.component(self.original_util_block.name)
 
-        try:
-            with SuppressInfeasibleWarning():
-                result = SolverFactory(config.local_minlp_solver).solve(
-                    subproblem, **config.local_minlp_solver_args
-                )
-        except RuntimeError as e:
-            config.logger.warning(
-                "Solver encountered RuntimeError. Treating as infeasible. "
-                "Msg: %s\n%s" % (str(e), traceback.format_exc())
+        with SuppressInfeasibleWarning():
+            result = SolverFactory(config.local_minlp_solver).solve(
+                subproblem, **config.local_minlp_solver_args
             )
-            copy_var_list_values(  # copy variable values, even if errored
-                from_list=subprob_utils.algebraic_variable_list,
-                to_list=model_utils.algebraic_variable_list,
-                config=config,
-                ignore_integrality=True,
-            )
-            return float('-inf'), float('inf')
-
         term_cond = result.solver.termination_condition
         if term_cond == tc.optimal:
             assert result.solver.status is SolverStatus.ok
