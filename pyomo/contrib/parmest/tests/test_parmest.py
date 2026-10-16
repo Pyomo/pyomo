@@ -2727,26 +2727,26 @@ class TestParmestMultistart(unittest.TestCase):
         user_df = pd.DataFrame(
             [[0.3, 4.2], [0.4, 4.1]], columns=["theta[b]", "theta[a]"]
         )
-        results_df, _, _ = pest.theta_est_multistart(
+        multistart_result, _, _ = pest.theta_est_multistart(
             n_restarts=2, user_supplied_vals=user_df
         )
-        self.assertAlmostEqual(results_df.loc[0, "theta[a]"], 4.2, places=12)
-        self.assertAlmostEqual(results_df.loc[0, "theta[b]"], 0.3, places=12)
+        self.assertAlmostEqual(multistart_result.loc[0, "theta[a]"], 4.2, places=12)
+        self.assertAlmostEqual(multistart_result.loc[0, "theta[b]"], 0.3, places=12)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_state_isolation_between_starts(self):
         pest = _build_linear_estimator()
         init = pd.DataFrame([[-9.0], [9.0]], columns=["theta"])
-        results_df, _, _ = pest.theta_est_multistart(
+        multistart_result, _, _ = pest.theta_est_multistart(
             user_supplied_vals=init, save_results=False
         )
         # Initial starts should remain exactly as supplied.
-        self.assertAlmostEqual(results_df.loc[0, "theta"], -9.0, places=12)
-        self.assertAlmostEqual(results_df.loc[1, "theta"], 9.0, places=12)
+        self.assertAlmostEqual(multistart_result.loc[0, "theta"], -9.0, places=12)
+        self.assertAlmostEqual(multistart_result.loc[1, "theta"], 9.0, places=12)
         # Both starts reach the same optimum (no state leaks between starts)
         self.assertAlmostEqual(
-            results_df.loc[0, "converged_theta"],
-            results_df.loc[1, "converged_theta"],
+            multistart_result.loc[0, "converged_theta"],
+            multistart_result.loc[1, "converged_theta"],
             places=8,
         )
 
@@ -2767,19 +2767,19 @@ class TestParmestMultistart(unittest.TestCase):
         starts = pd.DataFrame(
             [[4.2, 0.3], [0.1, 4.5]], columns=["theta['2']", "theta['1']"]
         )
-        results_df, best_theta, best_obj = pest.theta_est_multistart(
+        multistart_result, best_theta, best_obj = pest.theta_est_multistart(
             user_supplied_vals=starts
         )
         # Columns and best_theta use the same names as theta_est.
         self.assertEqual(set(best_theta), set(theta_single))
-        self.assertAlmostEqual(results_df.loc[0, "theta['1']"], 0.3, places=12)
-        self.assertAlmostEqual(results_df.loc[1, "theta['2']"], 0.1, places=12)
+        self.assertAlmostEqual(multistart_result.loc[0, "theta['1']"], 0.3, places=12)
+        self.assertAlmostEqual(multistart_result.loc[1, "theta['2']"], 0.1, places=12)
         for i in range(2):
             self.assertAlmostEqual(
-                results_df.loc[i, "converged_theta['1']"], 2.5, places=6
+                multistart_result.loc[i, "converged_theta['1']"], 2.5, places=6
             )
             self.assertAlmostEqual(
-                results_df.loc[i, "converged_theta['2']"], 1.5, places=6
+                multistart_result.loc[i, "converged_theta['2']"], 1.5, places=6
             )
         self.assertAlmostEqual(best_theta["theta['1']"], 2.5, places=6)
         self.assertAlmostEqual(best_theta["theta['2']"], 1.5, places=6)
@@ -2930,12 +2930,12 @@ class TestParmestMultistart(unittest.TestCase):
         pest = _build_sine_estimator(noise=0.02)
         # Best start first, so leftover state from the last solve is detected
         starts = pd.DataFrame({"k": [2.3, 6.0]})
-        results_df, best_theta, best_obj = pest.theta_est_multistart(
+        multistart_result, best_theta, best_obj = pest.theta_est_multistart(
             user_supplied_vals=starts
         )
-        self.assertAlmostEqual(results_df.loc[1, "converged_k"], 6.18, places=1)
+        self.assertAlmostEqual(multistart_result.loc[1, "converged_k"], 6.18, places=1)
         self.assertAlmostEqual(best_theta["k"], 2.0, delta=0.01)
-        self.assertLess(best_obj, results_df.loc[1, "final objective"])
+        self.assertLess(best_obj, multistart_result.loc[1, "final objective"])
         # The best start's solution is restored as-is, not solved again.
         self.assertEqual(pest.estimated_theta, best_theta)
         self.assertEqual(pest.obj_value, best_obj)
@@ -2966,16 +2966,16 @@ class TestParmestMultistart(unittest.TestCase):
         pest.obj_value = 4.56
         log = io.StringIO()
         with LoggingIntercept(log, "pyomo.contrib.parmest", logging.WARNING):
-            results_df, best_theta, best_obj = pest.theta_est_multistart(
+            multistart_result, best_theta, best_obj = pest.theta_est_multistart(
                 n_restarts=3, seed=3
             )
         self.assertTrue(
             (
-                results_df["solver termination"]
+                multistart_result["solver termination"]
                 == str(pyo.TerminationCondition.maxIterations)
             ).all()
         )
-        self.assertTrue(results_df["final objective"].isna().all())
+        self.assertTrue(multistart_result["final objective"].isna().all())
         self.assertIsNone(best_theta)
         self.assertTrue(np.isnan(best_obj))
         self.assertIn(
