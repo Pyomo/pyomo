@@ -604,17 +604,14 @@ def _sample_initial_theta(
     return lower_bound + (upper_bound - lower_bound) * samples
 
 
-def _build_multistart_table(theta_starts, lower_bound, upper_bound):
+def _build_multistart_table(theta_starts):
     """
-    Check the starting theta values and add the result columns filled in by
-    theta_est_multistart.
+    Add the result columns filled in by theta_est_multistart.
 
     Parameters
     ----------
     theta_starts : pd.DataFrame
         Starting values, one row per start and one column per theta.
-    lower_bound, upper_bound : np.ndarray
-        Theta bounds, in column order.
 
     Returns
     -------
@@ -622,15 +619,8 @@ def _build_multistart_table(theta_starts, lower_bound, upper_bound):
         Starting values plus empty ``converged_<theta>``, ``final objective``,
         ``solver termination`` and ``solve_time`` columns.
     """
-    theta_names = list(theta_starts.columns)
-    theta_arr = theta_starts.to_numpy(dtype=float)
-    if not np.isfinite(theta_arr).all():
-        raise ValueError("Initial theta values must be finite.")
-    if np.any(theta_arr < lower_bound) or np.any(theta_arr > upper_bound):
-        raise ValueError("Initial theta values must be within model bounds.")
-
-    multistart_table = pd.DataFrame(theta_arr, columns=theta_names)
-    for name in theta_names:
+    multistart_table = theta_starts.copy()
+    for name in theta_starts.columns:
         multistart_table[f"converged_{name}"] = np.nan
     multistart_table["final objective"] = np.nan
     multistart_table["solver termination"] = ""
@@ -1596,8 +1586,8 @@ class Estimator:
         seed : int, optional
             Random seed for sampling. Default is None.
         n_restarts : int, optional
-            Number of starts to sample. If given with user_supplied_vals, it
-            must match the number of starts. Default is None.
+            Number of starts to sample. Not used with user_supplied_vals.
+            Default is None.
         multistart_sampling_method : str or MultistartSamplingMethod, optional
             See theta_est_multistart. Default is None (uniform_random).
         user_supplied_vals : dict or pd.DataFrame, optional
@@ -1606,21 +1596,17 @@ class Estimator:
         Returns
         -------
         pd.DataFrame
-            One row per start; see _build_multistart_table.
+            Starting values, one row per start and one column per theta (in
+            model order).
         """
         parmest_model = self._create_parmest_model(0)
 
         # Same theta names as _Q_opt uses
         theta_names = list(self._expanded_theta_info(parmest_model)[0])
+        # E.g., an indexed theta and one of its elements both labeled
         if len(theta_names) != len(set(theta_names)):
             raise ValueError(f"Duplicate theta names are not allowed: {theta_names}")
-
         theta_vars = [parmest_model.find_component(name) for name in theta_names]
-        if any(v is None for v in theta_vars):
-            raise RuntimeError(
-                "Failed to locate one or more theta components on model."
-            )
-
         lower_bound = np.array([v.lb for v in theta_vars], dtype=float)
         upper_bound = np.array([v.ub for v in theta_vars], dtype=float)
 
@@ -1656,17 +1642,20 @@ class Estimator:
                 raise TypeError(
                     "user_supplied_vals must be a dict or a pandas DataFrame."
                 )
-            # Match to the model theta names and order
+            # Match to the model theta names and order; results are filled by
+            # row position, so the user's index is dropped
             theta_starts = self._normalize_theta_dataframe(
                 user_supplied_vals, model=parmest_model
-            )
+            ).reset_index(drop=True)
             if theta_starts.shape[0] == 0:
                 raise ValueError(
                     "user_supplied_vals must contain at least one starting value."
                 )
-            if n_restarts is not None and n_restarts != theta_starts.shape[0]:
+            # Also rejects NaN, which fails both comparisons
+            theta_arr = theta_starts.to_numpy(dtype=float)
+            if not np.all((theta_arr >= lower_bound) & (theta_arr <= upper_bound)):
                 raise ValueError(
-                    "n_restarts must match the number of starts in user_supplied_vals."
+                    "user_supplied_vals must be finite and within the theta bounds."
                 )
         else:
             if multistart_sampling_method is None:
@@ -1682,7 +1671,7 @@ class Estimator:
                 columns=theta_names,
             )
 
-        return _build_multistart_table(theta_starts, lower_bound, upper_bound)
+        return theta_starts
 
     def _Q_opt(
         self,
@@ -2500,7 +2489,8 @@ class Estimator:
         Parameters
         ----------
         n_restarts: int, optional
-            Number of starts to sample. Default is 20.
+            Number of starts to sample. Not used with user_supplied_vals.
+            Default is 20.
         multistart_sampling_method: str or MultistartSamplingMethod, optional
             "uniform_random", "latin_hypercube" or "sobol_sampling". Ignored,
             with a warning, if user_supplied_vals is given. Default is None
@@ -2532,79 +2522,50 @@ class Estimator:
                 "Multistart is not supported in the deprecated parmest interface."
             )
 
-        multistart_result = self._generate_initial_theta(
+        theta_starts = self._generate_initial_theta(
             seed=seed,
-            n_restarts=None if user_supplied_vals is not None else n_restarts,
+            n_restarts=n_restarts,
             multistart_sampling_method=multistart_sampling_method,
             user_supplied_vals=user_supplied_vals,
         )
-        theta_names = [
-            c
-            for c in multistart_result.columns
-            if not c.startswith("converged_")
-            and c not in {"final objective", "solver termination", "solve_time"}
-        ]
-        n_restarts = multistart_result.shape[0]
+        theta_names = list(theta_starts.columns)
+        multistart_result = _build_multistart_table(theta_starts)
 
         # _Q_opt overwrites these; restore them if no start is optimal
         state_attrs = ("ef_instance", "estimated_theta", "obj_value")
         prior_state = {a: self.__dict__[a] for a in state_attrs if a in self.__dict__}
 
-        # (row, objective, termination, solve time, theta_hat) per start
-        results = []
-        # (row, objective, solved model) of the best optimal start so far
+        # (objective, theta, solved model) of the best optimal start so far.
+        # Non-optimal objectives (e.g., at infeasible points) are not
+        # comparable, so only optimal starts are considered.
         best_start = None
-        for i in range(n_restarts):
-            Theta = {
-                name: float(multistart_result.iloc[i][name]) for name in theta_names
-            }
+        for i in range(len(theta_starts)):
+            theta_vals = {name: float(theta_starts.at[i, name]) for name in theta_names}
             t0 = time.time()
             try:
-                final_obj, theta_hat, termination = self._Q_opt(
-                    theta_vals=Theta, multistart=True
+                obj, theta_hat, termination = self._Q_opt(
+                    theta_vals=theta_vals, multistart=True
                 )
-                solve_time = time.time() - t0
-                if theta_hat is None:
-                    final_obj = np.nan
-                elif best_start is None or final_obj < best_start[1]:
-                    best_start = (i, final_obj, self.ef_instance)
-                results.append((i, final_obj, str(termination), solve_time, theta_hat))
+                multistart_result.at[i, "solver termination"] = str(termination)
             except Exception as exc:
-                solve_time = time.time() - t0
                 logger.warning(
                     f"theta_est_multistart: start {i} raised an exception: {exc}"
                 )
-                results.append((i, np.nan, f"exception: {exc}", solve_time, None))
+                theta_hat = None
+                multistart_result.at[i, "solver termination"] = f"exception: {exc}"
+            multistart_result.at[i, "solve_time"] = time.time() - t0
 
-        # Fill multistart_result
-        for i, final_obj, term, solve_time, theta_hat in results:
-            multistart_result.at[i, "final objective"] = final_obj
-            multistart_result.at[i, "solver termination"] = term
-            multistart_result.at[i, "solve_time"] = solve_time
-
+            # theta_hat is None unless the solve terminated optimally
             if theta_hat is not None:
+                multistart_result.at[i, "final objective"] = obj
                 for name in theta_names:
-                    if name in theta_hat:
-                        multistart_result.at[i, f"converged_{name}"] = float(
-                            theta_hat[name]
-                        )
+                    multistart_result.at[i, f"converged_{name}"] = theta_hat[name]
+                if best_start is None or obj < best_start[0]:
+                    best_start = (obj, theta_hat, self.ef_instance)
 
-        # Best start: smallest objective among optimal starts (non-optimal
-        # objectives, e.g., at infeasible points, are not comparable)
-        acceptable_terms = {
-            str(pyo.TerminationCondition.optimal),
-            str(pyo.TerminationCondition.locallyOptimal),
-            str(pyo.TerminationCondition.globallyOptimal),
-        }
-        finite_obj_mask = np.isfinite(
-            multistart_result["final objective"].to_numpy(dtype=float)
-        )
-        acceptable_mask = multistart_result["solver termination"].isin(acceptable_terms)
-        ranked = multistart_result[finite_obj_mask & acceptable_mask]
-
-        if ranked.empty:
+        if best_start is None:
             logger.warning(
-                f"theta_est_multistart: none of the {n_restarts} starts "
+                f"theta_est_multistart: none of the {len(theta_starts)} starts "
                 "terminated optimally."
             )
             best_theta = None
@@ -2615,15 +2576,8 @@ class Estimator:
                 else:
                     self.__dict__.pop(a, None)
         else:
-            best_idx = ranked["final objective"].astype(float).idxmin()
-            best_obj = float(multistart_result.loc[best_idx, "final objective"])
-            best_theta = {
-                name: float(multistart_result.loc[best_idx, f"converged_{name}"])
-                for name in theta_names
-            }
-            # Keep the best start's solution (e.g., for cov_est). best_start
-            # and idxmin both keep the first of tied objectives.
-            self.ef_instance = best_start[2]
+            # Keep the best start's solution (e.g., for cov_est)
+            best_obj, best_theta, self.ef_instance = best_start
             self.estimated_theta = dict(best_theta)
             self.obj_value = best_obj
 

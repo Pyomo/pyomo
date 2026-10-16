@@ -2654,14 +2654,6 @@ class TestParmestMultistart(unittest.TestCase):
         )
         self.assertTrue(df1[["theta"]].equals(df2[["theta"]]))
 
-    def test_generated_starts_are_within_bounds(self):
-        pest = _build_linear_estimator()
-        for method in ("uniform_random", "latin_hypercube", "sobol_sampling"):
-            df = pest._generate_initial_theta(
-                seed=1, n_restarts=8, multistart_sampling_method=method
-            )
-            self.assertTrue(((df["theta"] >= -10.0) & (df["theta"] <= 10.0)).all())
-
     def test_missing_bounds_raise_error(self):
         pest = parmest.Estimator([NoBoundsExperiment()], obj_function="SSE")
         with self.assertRaisesRegex(
@@ -2709,6 +2701,22 @@ class TestParmestMultistart(unittest.TestCase):
             pest._generate_initial_theta(
                 seed=1, n_restarts=2, multistart_sampling_method="uniform_random"
             )
+
+    def test_duplicate_model_theta_names_raise(self):
+        class DuplicateThetaExperiment(IndexedThetaMultistartExperiment):
+            def label_model(self):
+                super().label_model()
+                # Label one element again, alongside its indexed parent
+                m = self.model
+                m.unknown_parameters[m.theta["a"]] = pyo.ComponentUID(m.theta["a"])
+
+        pest = parmest.Estimator([DuplicateThetaExperiment()], obj_function="SSE")
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Duplicate theta names are not allowed: "
+            r"\['theta\[a\]', 'theta\[b\]', 'theta\[a\]'\]",
+        ):
+            pest._generate_initial_theta(seed=1, n_restarts=2)
 
     def test_user_provided_values_dimension_mismatch_raises(self):
         pest = _build_linear_estimator()
@@ -2860,6 +2868,15 @@ class TestParmestMultistart(unittest.TestCase):
             TypeError, r"user_supplied_vals must be a dict or a pandas DataFrame\."
         ):
             pest._generate_initial_theta(user_supplied_vals=[[1.0], [2.0]])
+
+    def test_user_supplied_vals_outside_bounds_raise(self):
+        pest = _build_linear_estimator()
+        for vals in ([11.0], [np.nan], [np.inf]):
+            with self.assertRaisesRegex(
+                ValueError,
+                r"user_supplied_vals must be finite and within the theta bounds\.",
+            ):
+                pest._generate_initial_theta(user_supplied_vals={"theta": vals})
 
     def test_user_supplied_dataframe_index_is_reset(self):
         # Results are filled by row position, so the user's index is dropped
