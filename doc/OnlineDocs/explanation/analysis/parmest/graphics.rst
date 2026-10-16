@@ -8,6 +8,7 @@ parmest includes the following functions to help visualize results:
 * :class:`~pyomo.contrib.parmest.graphics.grouped_boxplot`
 * :class:`~pyomo.contrib.parmest.graphics.grouped_violinplot`
 * :class:`~pyomo.contrib.parmest.graphics.pairwise_plot`
+* :class:`~pyomo.contrib.parmest.graphics.profile_likelihood_plot`
    
 Grouped boxplots and violinplots are used to compare datasets, generally
 before and after data reconciliation.  Pairwise plots are used to
@@ -25,6 +26,12 @@ include the following optional information:
 * Filled contour lines for objective values at a specified level
   (i.e. 0.8).  For plots with more than 2 parameters, theta* is used to
   extract a slice of the contour lines for each pairwise plot.
+
+Profile likelihood plots show the likelihood ratio statistic of each
+profiled parameter from
+:class:`~pyomo.contrib.parmest.parmest.Estimator.profile_likelihood`, with
+the chi-square threshold of each confidence level. The confidence interval of
+a parameter is where the statistic is below the threshold.
 
 The following examples were generated using the reactor design example.
 :numref:`fig-boxplot` uses output from data reconciliation, 
