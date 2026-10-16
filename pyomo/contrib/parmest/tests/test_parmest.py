@@ -2939,6 +2939,21 @@ def _build_two_theta_estimator(
     return estimator_class(exp_list, obj_function=obj_function, **kwargs)
 
 
+def _build_rooney_biegler_estimator(estimator_class=parmest.Estimator):
+    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+        RooneyBieglerExperiment,
+    )
+
+    data = pd.DataFrame(
+        data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
+        columns=["hour", "y"],
+    )
+    return estimator_class(
+        [RooneyBieglerExperiment(data.loc[i, :]) for i in range(data.shape[0])],
+        obj_function="SSE",
+    )
+
+
 @unittest.skipIf(
     not parmest.parmest_available,
     "Cannot test parmest: required dependencies are missing",
@@ -3064,16 +3079,16 @@ class TestParmestProfileLikelihood(unittest.TestCase):
         self.assertFalse(intervals["lower_bounded"].any())
         self.assertFalse(intervals["upper_bounded"].any())
 
-    def test_profile_auto_grid_includes_theta_hat(self):
+    def test_profile_auto_grid_from_bounds(self):
         pest = _build_two_theta_estimator()
         # theta_a bounds are (0, 4)
         grid = pest._build_profile_grid(
             profiled_theta="theta_a",
             grid=None,
             n_grid=5,
-            theta_hat={"theta_a": 2.2, "theta_b": 0.0},
+            model=pest._create_parmest_model(0),
         )
-        self.assertEqual(grid, [0.0, 1.0, 2.0, 2.2, 3.0, 4.0])
+        self.assertEqual(grid.tolist(), [0.0, 1.0, 2.0, 3.0, 4.0])
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_profile_baseline_from_multistart(self):
@@ -3232,23 +3247,9 @@ class TestParmestProfileLikelihood(unittest.TestCase):
         # cov_est reads only these, so it is unchanged by profiling.
         self.assertEqual(pest.obj_value, state[2])
 
-    def _build_rooney_biegler_estimator(self, estimator_class=parmest.Estimator):
-        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
-            RooneyBieglerExperiment,
-        )
-
-        data = pd.DataFrame(
-            data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
-            columns=["hour", "y"],
-        )
-        return estimator_class(
-            [RooneyBieglerExperiment(data.loc[i, :]) for i in range(data.shape[0])],
-            obj_function="SSE",
-        )
-
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_profile_lower_objective_updates_baseline(self):
-        pest = self._build_rooney_biegler_estimator()
+        pest = _build_rooney_biegler_estimator()
         obj_hat, theta_hat = pest.theta_est()
         theta_hat = dict(theta_hat)
         # The given obj_hat is too high, so the solve at theta_hat finds a
@@ -3279,7 +3280,7 @@ class TestParmestProfileLikelihood(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_profile_max_rebaseline_solves_again(self):
-        pest = self._build_rooney_biegler_estimator(_InitRecordingEstimator)
+        pest = _build_rooney_biegler_estimator(_InitRecordingEstimator)
         obj_hat, theta_hat = pest.theta_est()
         # theta_hat["rate_constant"] is off, so the first side starts away
         # from the baseline solution, and obj_hat is too high.
@@ -3313,7 +3314,7 @@ class TestParmestProfileLikelihood(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_profile_no_lower_objective_keeps_baseline(self):
-        pest = self._build_rooney_biegler_estimator()
+        pest = _build_rooney_biegler_estimator()
         obj_hat, theta_hat = pest.theta_est()
         with LoggingIntercept(level=logging.WARNING) as LOG:
             _, _, new_theta_hat, new_obj_hat = pest.profile_likelihood(
@@ -3378,6 +3379,12 @@ class TestParmestProfileLikelihood(unittest.TestCase):
             TypeError, r"Each profiled theta name must be a string\."
         ):
             pest.profile_likelihood(["theta_a", 1])
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Duplicate profiled theta names are not allowed: "
+            r"\['theta_a', 'theta_a'\]",
+        ):
+            pest.profile_likelihood(["theta_a", "theta_a"])
         with self.assertRaisesRegex(TypeError, r"n_grid must be an integer\."):
             pest.profile_likelihood("theta_a", n_grid=2.0)
         with self.assertRaisesRegex(ValueError, r"n_grid must be at least 2\."):
@@ -3404,6 +3411,10 @@ class TestParmestProfileLikelihood(unittest.TestCase):
             ValueError, r"Each alpha must be between 0 and 1\."
         ):
             pest.profile_likelihood("theta_a", alphas=[95])
+        with self.assertRaisesRegex(
+            ValueError, r"Duplicate alphas are not allowed: \[0\.95, 0\.95\]"
+        ):
+            pest.profile_likelihood("theta_a", alphas=[0.95, 0.95])
         with self.assertRaisesRegex(TypeError, r"max_rebaseline must be an integer\."):
             pest.profile_likelihood("theta_a", max_rebaseline=1.0)
         with self.assertRaisesRegex(
@@ -3417,18 +3428,27 @@ class TestParmestProfileLikelihood(unittest.TestCase):
         ):
             pest.profile_likelihood("theta_c")
 
-        # Grid checks run after the baseline, which is given here
-        baseline = {"theta_hat": {"theta_a": 2.0, "theta_b": 1.0}, "obj_hat": 0.0}
+        with self.assertRaisesRegex(
+            ValueError,
+            r"grid key\(s\) \['theta_c'\] are not profiled thetas: " r"\['theta_a'\]\.",
+        ):
+            pest.profile_likelihood("theta_a", grid={"theta_c": [1.0]})
+
+        # theta_est fails with one iteration, so the grid checks run before
+        # the baseline is computed
+        pest = _build_two_theta_estimator(solver_options={"max_iter": 1})
         with self.assertRaisesRegex(
             TypeError, r"grid must be a sequence of numeric values or None\."
         ):
-            pest.profile_likelihood("theta_a", grid="2.0", **baseline)
+            pest.profile_likelihood("theta_a", grid="2.0")
         with self.assertRaisesRegex(
             ValueError, r"Provided grid must contain at least one value\."
         ):
-            pest.profile_likelihood("theta_a", grid=[], **baseline)
+            pest.profile_likelihood("theta_a", grid=[])
         with self.assertRaisesRegex(
-            ValueError, r"theta_hat does not include 'theta_a'\."
+            ValueError,
+            r"Provided theta values \['theta_b'\] do not match expected theta "
+            r"names \['theta_a', 'theta_b'\]\.",
         ):
             pest.profile_likelihood(
                 "theta_a", grid=[1.9], theta_hat={"theta_b": 1.0}, obj_hat=0.0

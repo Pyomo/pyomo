@@ -66,14 +66,25 @@ class TestGraphics(unittest.TestCase):
             {
                 "profiled_theta": ["theta"] * 3,
                 "theta_value": [0.8, 1.0, 1.2],
-                "lr_stat": [3.0, 0.0, 4.0],
+                "obj": [2.5, 1.0, float("nan")],
+                "lr_stat": [3.0, 0.0, float("nan")],
                 "success": [True, True, False],
             }
         ).set_index(["profiled_theta", "theta_value"])
         intervals = pd.DataFrame(
             {"profiled_theta": ["theta"], "alpha": [0.95], "threshold": [3.84]}
         ).set_index(["profiled_theta", "alpha"])
-        graphics.profile_likelihood_plot(prof, intervals)
+        _, axes = graphics.profile_likelihood_plot(prof, intervals)
+        ax = axes[0, 0]
+        # The failed solve is marked on the x-axis
+        self.assertEqual(ax.collections[0].get_offsets()[:, 0].tolist(), [1.2])
+        # Profile line and threshold line
+        self.assertEqual(len(ax.lines), 2)
+        self.assertEqual(ax.lines[1].get_ydata()[0], 3.84)
+
+        # The lr_stat threshold is not drawn on the objective axis
+        _, axes = graphics.profile_likelihood_plot(prof, intervals, y="obj")
+        self.assertEqual(len(axes[0, 0].lines), 1)
 
     def test_profile_plot_smoke_multi_parameter(self):
         prof = pd.DataFrame(

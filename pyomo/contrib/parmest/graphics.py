@@ -500,8 +500,8 @@ def profile_likelihood_plot(
         Profiles returned by ``Estimator.profile_likelihood()``, indexed by
         ``profiled_theta`` and ``theta_value``.
     intervals: DataFrame, optional
-        Intervals returned by ``Estimator.profile_likelihood()``. If provided,
-        draw the chi-square threshold line of each alpha.
+        Intervals returned by ``Estimator.profile_likelihood()``. If provided
+        and y is ``lr_stat``, draw the chi-square threshold line of each alpha.
     filename: string, optional
         Filename used to save the figure.
     y: string, optional
@@ -542,19 +542,22 @@ def profile_likelihood_plot(
         ax = axes[i, 0]
         subset = profiles.loc[theta]
         ax.plot(subset.index, subset[y], marker="o", linewidth=1.5)
-        if "success" in subset.columns:
-            failed = subset[~subset["success"].astype(bool)]
-            if len(failed) > 0:
-                ax.scatter(
-                    failed.index,
-                    failed[y],
-                    marker="x",
-                    color="tab:red",
-                    s=24,
-                    label="failed",
-                )
-                ax.legend(loc="best", prop={"size": 8})
-        if intervals is not None:
+        failed = subset[~subset["success"]]
+        if len(failed) > 0:
+            # Failed solves have no y value, so mark them on the x-axis
+            ax.scatter(
+                failed.index,
+                np.zeros(len(failed)),
+                marker="x",
+                color="tab:red",
+                s=24,
+                label="failed",
+                transform=ax.get_xaxis_transform(),
+                clip_on=False,
+            )
+            ax.legend(loc="best", prop={"size": 8})
+        # The thresholds are on the lr_stat scale
+        if intervals is not None and y == "lr_stat":
             for threshold in intervals.loc[theta, "threshold"]:
                 ax.axhline(threshold, color="tab:orange", linestyle="--", linewidth=1.0)
         ax.set_xlabel(str(theta))
