@@ -751,8 +751,9 @@ class TestModelVariants(unittest.TestCase):
         def rooney_biegler_vars(data):
             model = pyo.ConcreteModel()
 
-            model.asymptote = pyo.Var(initialize=15)
-            model.rate_constant = pyo.Var(initialize=0.5)
+            # Bounds, as in the rooney_biegler example, are needed for multistart
+            model.asymptote = pyo.Var(initialize=15, bounds=(0.1, 100))
+            model.rate_constant = pyo.Var(initialize=0.5, bounds=(0, 10))
             model.asymptote.fixed = True  # parmest will unfix theta variables
             model.rate_constant.fixed = True
 
@@ -804,7 +805,9 @@ class TestModelVariants(unittest.TestCase):
 
             model.var_names = pyo.Set(initialize=["asymptote", "rate_constant"])
             model.theta = pyo.Var(
-                model.var_names, initialize={"asymptote": 15, "rate_constant": 0.5}
+                model.var_names,
+                initialize={"asymptote": 15, "rate_constant": 0.5},
+                bounds={"asymptote": (0.1, 100), "rate_constant": (0, 10)},
             )
             model.theta["asymptote"].fixed = (
                 True  # parmest will unfix theta variables, even when they are indexed
@@ -973,6 +976,59 @@ class TestModelVariants(unittest.TestCase):
             self.check_rooney_biegler_results(objval, cov)
 
             self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
+
+    def test_theta_est_multistart(self):
+        for model_type, parmest_input in self.input.items():
+            pest = parmest.Estimator(
+                parmest_input["exp_list"], obj_function=self.objective_function
+            )
+
+            # Params have no bounds, which multistart needs
+            if model_type.startswith("param"):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    r"The lower and upper bounds for the theta values must be "
+                    r"defined\.",
+                ):
+                    pest.theta_est_multistart(n_restarts=2, seed=0)
+                continue
+
+            # Starts keyed by this variant's theta names (plain, quoted or
+            # unquoted indices), or by theta_vals for the indexed variant
+            theta_names = parmest_input["theta_names"]
+            if len(theta_names) == 2:
+                starts = {theta_names[0]: [20.0, 10.0], theta_names[1]: [1.0, 0.2]}
+            else:
+                starts = parmest_input["theta_vals"]
+
+            multistart_result, best_theta, best_obj = pest.theta_est_multistart(
+                user_supplied_vals=starts
+            )
+            objval, thetavals = pest.theta_est()
+
+            # Results use the same theta names as theta_est
+            self.assertEqual(list(best_theta), list(thetavals))
+            self.assertAlmostEqual(best_obj, objval, places=6)
+            for name in thetavals:
+                self.assertAlmostEqual(best_theta[name], thetavals[name], places=4)
+
+    def test_multistart_starts_initialize_ef_model(self):
+        pest = parmest.Estimator(
+            self.input["vars_index"]["exp_list"], obj_function=self.objective_function
+        )
+        # Quoted names, in a different order from the model
+        starts = {"theta['rate_constant']": 0.4, "theta['asymptote']": 21.0}
+        theta_starts = pest._generate_initial_theta(user_supplied_vals=starts)
+        self.assertEqual(
+            list(theta_starts.columns), ["theta[asymptote]", "theta[rate_constant]"]
+        )
+
+        # theta_est_multistart passes each row as theta_vals
+        model = pest._create_scenario_blocks(theta_vals=theta_starts.loc[0].to_dict())
+        self.assertEqual(pyo.value(model.parmest_theta["theta[asymptote]"]), 21.0)
+        child = model.exp_scenarios[0]
+        self.assertEqual(pyo.value(child.theta["asymptote"]), 21.0)
+        self.assertEqual(pyo.value(child.theta["rate_constant"]), 0.4)
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_square_problem_solve_no_theta_vals(self):
@@ -2450,110 +2506,6 @@ class TestCountTotalExperiments(unittest.TestCase):
             parmest._count_total_experiments(exp_list)
 
 
-class IndexedThetaMultistartExperiment(Experiment):
-    def __init__(self):
-        self.model = None
-
-    def create_model(self):
-        m = pyo.ConcreteModel()
-        m.I = pyo.Set(initialize=["a", "b"])
-        m.theta = pyo.Var(m.I, initialize={"a": 1.0, "b": 2.0})
-        m.theta["a"].setlb(0.0)
-        m.theta["a"].setub(5.0)
-        m.theta["b"].setlb(0.0)
-        m.theta["b"].setub(5.0)
-        m.theta["a"].fix()
-        m.theta["b"].fix()
-        m.y = pyo.Var(initialize=3.0)
-        m.eq = pyo.Constraint(expr=m.y == m.theta["a"] + m.theta["b"])
-        self.model = m
-
-    def label_model(self):
-        m = self.model
-        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update([(m.y, 3.0)])
-        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.unknown_parameters.update([(m.theta, pyo.ComponentUID(m.theta))])
-        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.measurement_error.update([(m.y, None)])
-
-    def get_labeled_model(self):
-        self.create_model()
-        self.label_model()
-        return self.model
-
-
-class NoBoundsExperiment(IndexedThetaMultistartExperiment):
-    def create_model(self):
-        m = pyo.ConcreteModel()
-        m.theta = pyo.Var(initialize=1.0)
-        m.y = pyo.Var(initialize=2.0)
-        m.eq = pyo.Constraint(expr=m.y == m.theta + 1.0)
-        self.model = m
-
-
-class StartCoupledExperiment(Experiment):
-    """
-    Fixed "bias" term set from theta_initial at build time, to detect stale
-    models in multistart.
-    """
-
-    def __init__(self, theta_initial=None):
-        self.theta_initial = (
-            theta_initial if theta_initial is not None else {"theta": 0.0}
-        )
-        self.model = None
-
-    def create_model(self):
-        m = pyo.ConcreteModel()
-        m.theta = pyo.Var(
-            initialize=float(self.theta_initial["theta"]), bounds=(-10.0, 10.0)
-        )
-        m.bias = pyo.Param(initialize=float(self.theta_initial["theta"]), mutable=False)
-        m.y = pyo.Var(initialize=0.0)
-        m.eq = pyo.Constraint(expr=m.y == m.theta + m.bias)
-        self.model = m
-
-    def label_model(self):
-        m = self.model
-        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update([(m.y, 0.0)])
-        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.unknown_parameters.update([(m.theta, pyo.ComponentUID(m.theta))])
-        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.measurement_error.update([(m.y, None)])
-
-    def get_labeled_model(self):
-        if self.model is None:
-            self.create_model()
-            self.label_model()
-        return self.model
-
-
-class QuotedIndexExperiment(Experiment):
-    """
-    Theta indexed by strings that Pyomo quotes (theta['1'], theta['2']).
-    Optimum: theta['1'] = 2.5, theta['2'] = 1.5.
-    """
-
-    def get_labeled_model(self):
-        m = pyo.ConcreteModel()
-        m.I = pyo.Set(initialize=["1", "2"])
-        m.theta = pyo.Var(m.I, initialize=1.0, bounds=(0.0, 5.0))
-        m.theta.fix()
-        m.y = pyo.Var(initialize=0.0)
-        m.z = pyo.Var(initialize=0.0)
-        m.y_link = pyo.Constraint(expr=m.y == m.theta["1"] + m.theta["2"])
-        m.z_link = pyo.Constraint(expr=m.z == m.theta["1"] - m.theta["2"])
-        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.experiment_outputs.update([(m.y, 4.0), (m.z, 1.0)])
-        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.unknown_parameters.update([(m.theta, pyo.ComponentUID(m.theta))])
-        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-        m.measurement_error.update([(m.y, None), (m.z, None)])
-        return m
-
-
 class SineExperiment(Experiment):
     """
     One point of y = sin(k x); the SSE has several local minima in k.
@@ -2589,9 +2541,25 @@ def _build_sine_estimator(solver_options=None, noise=0.0):
     )
 
 
-def _build_linear_estimator():
-    exp_list = [LinearThetaExperiment(1.0, 2.0), LinearThetaExperiment(2.0, 3.0)]
-    return parmest.Estimator(exp_list, obj_function="SSE")
+_LINEAR_DATA = [(1.0, 2.0), (2.0, 3.0)]
+
+
+class _FailingStartsEstimator(parmest.Estimator):
+    """
+    Estimator whose solve fails for chosen starts: a non-optimal termination
+    for starts in nonoptimal_starts and an exception for starts in
+    exception_starts (keyed by the "theta" start value).
+    """
+
+    nonoptimal_starts = ()
+    exception_starts = ()
+
+    def _Q_opt(self, theta_vals=None, **kwargs):
+        if theta_vals["theta"] in self.nonoptimal_starts:
+            return None, None, pyo.TerminationCondition.maxIterations
+        if theta_vals["theta"] in self.exception_starts:
+            raise RuntimeError("solver failed")
+        return super()._Q_opt(theta_vals=theta_vals, **kwargs)
 
 
 @unittest.skipIf(
@@ -2599,38 +2567,22 @@ def _build_linear_estimator():
     "Cannot test parmest: required dependencies are missing",
 )
 class TestParmestMultistart(unittest.TestCase):
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
-    def test_multistart_baseline_equivalence_n1(self):
-        pest = _build_linear_estimator()
-        obj1, theta1 = pest.theta_est()
-        _, best_theta, best_obj = pest.theta_est_multistart(n_restarts=1, seed=7)
-        self.assertAlmostEqual(obj1, best_obj, places=7)
-        self.assertAlmostEqual(theta1["theta"], best_theta["theta"], places=7)
-
     def test_sampling_changes_with_different_seed(self):
-        pest = _build_linear_estimator()
+        pest = _build_estimator(_LINEAR_DATA)
         theta_starts_1 = pest._generate_initial_theta(seed=4, n_restarts=5)
         theta_starts_2 = pest._generate_initial_theta(seed=5, n_restarts=5)
         self.assertFalse(theta_starts_1.equals(theta_starts_2))
 
-    def test_missing_bounds_raises(self):
-        pest = parmest.Estimator([NoBoundsExperiment()], obj_function="SSE")
-        with self.assertRaisesRegex(
-            ValueError,
-            r"The lower and upper bounds for the theta values must be defined\.",
-        ):
-            pest._generate_initial_theta(seed=1, n_restarts=2)
-
     def test_invalid_bounds_raises(self):
-        class InvalidBoundsExperiment(IndexedThetaMultistartExperiment):
+        class InvalidBoundsExperiment(LinearThetaExperiment):
             def create_model(self):
-                m = pyo.ConcreteModel()
-                m.theta = pyo.Var(initialize=1.0, bounds=(2.0, 1.0))
-                m.y = pyo.Var(initialize=2.0)
-                m.eq = pyo.Constraint(expr=m.y == m.theta + 1.0)
-                self.model = m
+                super().create_model()
+                self.model.theta.setlb(2.0)
+                self.model.theta.setub(1.0)
 
-        pest = parmest.Estimator([InvalidBoundsExperiment()], obj_function="SSE")
+        pest = parmest.Estimator(
+            [InvalidBoundsExperiment(1.0, 2.0)], obj_function="SSE"
+        )
         with self.assertRaisesRegex(
             ValueError,
             r"Each lower bound must be less than or equal to the corresponding "
@@ -2639,14 +2591,16 @@ class TestParmestMultistart(unittest.TestCase):
             pest._generate_initial_theta(seed=1, n_restarts=2)
 
     def test_duplicate_model_theta_names_raises(self):
-        class DuplicateThetaExperiment(IndexedThetaMultistartExperiment):
+        class DuplicateThetaExperiment(IndexedThetaExperiment):
             def label_model(self):
                 super().label_model()
                 # Label one element again, alongside its indexed parent
                 m = self.model
                 m.unknown_parameters[m.theta["a"]] = pyo.ComponentUID(m.theta["a"])
 
-        pest = parmest.Estimator([DuplicateThetaExperiment()], obj_function="SSE")
+        pest = parmest.Estimator(
+            [DuplicateThetaExperiment(1.0, 2.0)], obj_function="SSE"
+        )
         with self.assertRaisesRegex(
             ValueError,
             r"Duplicate theta names are not allowed: "
@@ -2655,7 +2609,7 @@ class TestParmestMultistart(unittest.TestCase):
             pest._generate_initial_theta(seed=1, n_restarts=2)
 
     def test_user_supplied_names_mismatch_raises(self):
-        pest = _build_linear_estimator()
+        pest = _build_estimator(_LINEAR_DATA)
         starts = pd.DataFrame([[1.0, 2.0]], columns=["theta", "extra"])
         with self.assertRaisesRegex(
             ValueError,
@@ -2666,7 +2620,7 @@ class TestParmestMultistart(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_state_isolation_between_starts(self):
-        pest = _build_linear_estimator()
+        pest = _build_estimator(_LINEAR_DATA)
         starts = pd.DataFrame({"theta": [-9.0, 9.0]})
         multistart_result, _, _ = pest.theta_est_multistart(user_supplied_vals=starts)
         # Initial starts should remain exactly as supplied.
@@ -2680,74 +2634,22 @@ class TestParmestMultistart(unittest.TestCase):
         )
 
     def test_indexed_unknown_parameters_supported_in_sampling(self):
-        pest = parmest.Estimator(
-            [IndexedThetaMultistartExperiment()], obj_function="SSE"
-        )
+        pest = _build_indexed_theta_estimator(_LINEAR_DATA)
         theta_starts = pest._generate_initial_theta(seed=10, n_restarts=3)
         self.assertEqual(list(theta_starts.columns), ["theta[a]", "theta[b]"])
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
-    def test_quoted_index_names_map_starts_and_results(self):
-        pest = parmest.Estimator([QuotedIndexExperiment()], obj_function="SSE")
-        _, theta_single = pest.theta_est()
-        # Columns use the theta_est names, given in a different order.
-        starts = pd.DataFrame(
-            [[4.2, 0.3], [0.1, 4.5]], columns=["theta['2']", "theta['1']"]
-        )
-        multistart_result, best_theta, best_obj = pest.theta_est_multistart(
-            user_supplied_vals=starts
-        )
-        # Columns and best_theta use the same names as theta_est.
-        self.assertEqual(set(best_theta), set(theta_single))
-        self.assertAlmostEqual(multistart_result.loc[0, "theta['1']"], 0.3, places=12)
-        self.assertAlmostEqual(multistart_result.loc[1, "theta['2']"], 0.1, places=12)
-        for i in range(2):
-            self.assertAlmostEqual(
-                multistart_result.loc[i, "converged_theta['1']"], 2.5, places=6
-            )
-            self.assertAlmostEqual(
-                multistart_result.loc[i, "converged_theta['2']"], 1.5, places=6
-            )
-        self.assertAlmostEqual(best_theta["theta['1']"], 2.5, places=6)
-        self.assertAlmostEqual(best_theta["theta['2']"], 1.5, places=6)
-        self.assertAlmostEqual(best_obj, 0.0, places=8)
-
-    def test_quoted_index_starts_initialize_ef_model(self):
-        pest = parmest.Estimator([QuotedIndexExperiment()], obj_function="SSE")
-        starts = pd.DataFrame([[0.3, 4.2]], columns=["theta['1']", "theta['2']"])
-        theta_starts = pest._generate_initial_theta(user_supplied_vals=starts)
-        # theta_est_multistart passes each row as theta_vals
-        theta_vals = theta_starts.loc[0].to_dict()
-        model = pest._create_scenario_blocks(theta_vals=theta_vals)
-        self.assertEqual(pyo.value(model.parmest_theta["theta['1']"]), 0.3)
-        self.assertEqual(pyo.value(model.parmest_theta["theta['2']"]), 4.2)
-        child = model.exp_scenarios[0]
-        self.assertEqual(pyo.value(child.theta["1"]), 0.3)
-        self.assertEqual(pyo.value(child.theta["2"]), 4.2)
-
-    def test_user_supplied_names_match_without_quotes(self):
-        pest = parmest.Estimator([QuotedIndexExperiment()], obj_function="SSE")
-        starts = pd.DataFrame([[4.2, 0.3]], columns=["theta[2]", "theta[1]"])
-        theta_starts = pest._generate_initial_theta(user_supplied_vals=starts)
-        # Columns use the model theta names, in model order
-        self.assertEqual(list(theta_starts.columns), ["theta['1']", "theta['2']"])
-        self.assertEqual(theta_starts.loc[0, "theta['1']"], 0.3)
-        self.assertEqual(theta_starts.loc[0, "theta['2']"], 4.2)
-
     def test_user_supplied_duplicate_names_raises(self):
-        pest = parmest.Estimator([QuotedIndexExperiment()], obj_function="SSE")
-        starts = pd.DataFrame([[0.3, 4.2]], columns=["theta['1']", "theta['1']"])
+        pest = _build_indexed_theta_estimator(_LINEAR_DATA)
+        starts = pd.DataFrame([[0.3, 4.2]], columns=["theta[a]", "theta[a]"])
         with self.assertRaisesRegex(
             ValueError,
             r"Duplicate theta names are not allowed: "
-            r"\['theta\[1\]', 'theta\[1\]'\]",
+            r"\['theta\[a\]', 'theta\[a\]'\]",
         ):
             pest._generate_initial_theta(user_supplied_vals=starts)
 
     def test_user_supplied_dict_matches_dataframe(self):
-        pest = parmest.Estimator(
-            [IndexedThetaMultistartExperiment()], obj_function="SSE"
-        )
+        pest = _build_indexed_theta_estimator(_LINEAR_DATA)
         from_dict = pest._generate_initial_theta(
             user_supplied_vals={"theta[b]": [0.3, 0.4], "theta[a]": [4.2, 4.1]}
         )
@@ -2759,9 +2661,7 @@ class TestParmestMultistart(unittest.TestCase):
         pd.testing.assert_frame_equal(from_dict, from_df)
 
     def test_user_supplied_dict_of_scalars_is_one_start(self):
-        pest = parmest.Estimator(
-            [IndexedThetaMultistartExperiment()], obj_function="SSE"
-        )
+        pest = _build_indexed_theta_estimator(_LINEAR_DATA)
         theta_starts = pest._generate_initial_theta(
             user_supplied_vals={"theta[a]": 4.2, "theta[b]": 0.3}
         )
@@ -2770,9 +2670,7 @@ class TestParmestMultistart(unittest.TestCase):
         self.assertEqual(theta_starts.loc[0, "theta[b]"], 0.3)
 
     def test_user_supplied_dict_unequal_lengths_raises(self):
-        pest = parmest.Estimator(
-            [IndexedThetaMultistartExperiment()], obj_function="SSE"
-        )
+        pest = _build_indexed_theta_estimator(_LINEAR_DATA)
         with self.assertRaisesRegex(
             ValueError,
             r"Each theta in user_supplied_vals must have the same number of "
@@ -2783,14 +2681,14 @@ class TestParmestMultistart(unittest.TestCase):
             )
 
     def test_user_supplied_invalid_type_raises(self):
-        pest = _build_linear_estimator()
+        pest = _build_estimator(_LINEAR_DATA)
         with self.assertRaisesRegex(
             TypeError, r"user_supplied_vals must be a dict or a pandas DataFrame\."
         ):
             pest._generate_initial_theta(user_supplied_vals=[[1.0], [2.0]])
 
     def test_user_supplied_outside_bounds_raises(self):
-        pest = _build_linear_estimator()
+        pest = _build_estimator(_LINEAR_DATA)
         for vals in ([11.0], [np.nan], [np.inf]):
             with self.assertRaisesRegex(
                 ValueError,
@@ -2800,7 +2698,7 @@ class TestParmestMultistart(unittest.TestCase):
 
     def test_user_supplied_dataframe_index_is_reset(self):
         # Results are filled by row position, so the user's index is dropped
-        pest = _build_linear_estimator()
+        pest = _build_estimator(_LINEAR_DATA)
         starts = pd.DataFrame({"theta": [-9.0, 9.0]}, index=["first", "second"])
         theta_starts = pest._generate_initial_theta(user_supplied_vals=starts)
         self.assertEqual(list(theta_starts.index), [0, 1])
@@ -2819,7 +2717,7 @@ class TestParmestMultistart(unittest.TestCase):
 
     def test_sampling_is_deterministic_for_enum_or_string(self):
         # Same seed, so an Enum and its string value give the same starts
-        pest = _build_linear_estimator()
+        pest = _build_estimator(_LINEAR_DATA)
         for method in parmest.MultistartSamplingMethod:
             from_enum = pest._generate_initial_theta(
                 seed=3, n_restarts=4, multistart_sampling_method=method
@@ -2830,7 +2728,7 @@ class TestParmestMultistart(unittest.TestCase):
             pd.testing.assert_frame_equal(from_enum, from_str)
 
     def test_default_sampling_method_is_uniform_random(self):
-        pest = _build_linear_estimator()
+        pest = _build_estimator(_LINEAR_DATA)
         from_default = pest._generate_initial_theta(seed=3, n_restarts=4)
         from_uniform = pest._generate_initial_theta(
             seed=3, n_restarts=4, multistart_sampling_method="uniform_random"
@@ -2838,7 +2736,7 @@ class TestParmestMultistart(unittest.TestCase):
         pd.testing.assert_frame_equal(from_default, from_uniform)
 
     def test_invalid_sampling_method_raises(self):
-        pest = _build_linear_estimator()
+        pest = _build_estimator(_LINEAR_DATA)
         with self.assertRaisesRegex(
             ValueError,
             r"Invalid multistart_sampling_method: 'bad_method'\. Choose from: "
@@ -2849,7 +2747,7 @@ class TestParmestMultistart(unittest.TestCase):
             )
 
     def test_sampling_method_with_user_supplied_vals_warns(self):
-        pest = _build_linear_estimator()
+        pest = _build_estimator(_LINEAR_DATA)
         starts = pd.DataFrame({"theta": [-9.0, 9.0]})
         log = io.StringIO()
         with LoggingIntercept(log, "pyomo.contrib.parmest", logging.WARNING):
@@ -2898,7 +2796,38 @@ class TestParmestMultistart(unittest.TestCase):
             )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
-    def test_nonoptimal_starts_record_termination_and_keep_state(self):
+    def test_some_starts_fail(self):
+        # Start -9 is not optimal and start 0 raises, so the best start is the
+        # only optimal one (9), and the failed starts are recorded, not raised
+        exp_list = [LinearThetaExperiment(x, y) for x, y in _LINEAR_DATA]
+        pest = _FailingStartsEstimator(exp_list, obj_function="SSE")
+        pest.nonoptimal_starts = (-9.0,)
+        pest.exception_starts = (0.0,)
+        log = io.StringIO()
+        with LoggingIntercept(log, "pyomo.contrib.parmest", logging.WARNING):
+            multistart_result, best_theta, best_obj = pest.theta_est_multistart(
+                user_supplied_vals={"theta": [-9.0, 0.0, 9.0]}
+            )
+        self.assertEqual(
+            multistart_result["solver_termination"].tolist(),
+            [
+                str(pyo.TerminationCondition.maxIterations),
+                "exception: solver failed",
+                str(pyo.TerminationCondition.optimal),
+            ],
+        )
+        self.assertTrue(multistart_result["final_objective"][:2].isna().all())
+        self.assertTrue(multistart_result["converged_theta"][:2].isna().all())
+        self.assertIn("Start 1 raised an exception: solver failed", log.getvalue())
+        self.assertAlmostEqual(best_theta["theta"], 1.0, places=6)
+        self.assertAlmostEqual(
+            best_obj, multistart_result.loc[2, "final_objective"], places=12
+        )
+        self.assertEqual(pest.estimated_theta, best_theta)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_all_starts_fail_returns_none_and_keeps_state(self):
+        # best_theta is None only when every start fails
         pest = _build_sine_estimator(solver_options={"max_iter": 1})
         # Earlier state is kept when no start converges
         pest.estimated_theta = {"k": 1.23}
