@@ -616,16 +616,16 @@ def _build_multistart_table(theta_starts):
     Returns
     -------
     pd.DataFrame
-        Starting values plus empty ``converged_<theta>``, ``final objective``,
-        ``solver termination`` and ``solve_time`` columns.
+        Starting values plus empty ``converged_<theta>``, ``final_objective``,
+        ``solver_termination`` and ``solve_time`` columns.
     """
-    multistart_table = theta_starts.copy()
+    multistart_result = theta_starts.copy()
     for name in theta_starts.columns:
-        multistart_table[f"converged_{name}"] = np.nan
-    multistart_table["final objective"] = np.nan
-    multistart_table["solver termination"] = ""
-    multistart_table["solve_time"] = np.nan
-    return multistart_table
+        multistart_result[f"converged_{name}"] = np.nan
+    multistart_result["final_objective"] = np.nan
+    multistart_result["solver_termination"] = ""
+    multistart_result["solve_time"] = np.nan
+    return multistart_result
 
 
 # Compute the Jacobian matrix of measured variables with respect to the parameters
@@ -1636,8 +1636,8 @@ class Estimator:
                 starts = {}
                 for name, vals in user_supplied_vals.items():
                     starts[name] = np.atleast_1d(vals)
-                n_starts = {len(vals) for vals in starts.values()}
-                if len(n_starts) > 1:
+                start_counts = {len(vals) for vals in starts.values()}
+                if len(start_counts) > 1:
                     raise ValueError(
                         "Each theta in user_supplied_vals must have the same "
                         "number of starting values."
@@ -1653,7 +1653,7 @@ class Estimator:
             )
             # Results are filled by row position, so drop the user's index
             theta_starts = theta_starts.reset_index(drop=True)
-            if theta_starts.shape[0] == 0:
+            if len(theta_starts) == 0:
                 raise ValueError(
                     "user_supplied_vals must contain at least one starting value."
                 )
@@ -2518,7 +2518,7 @@ class Estimator:
         -------
         multistart_result: pd.DataFrame
             One row per start: starting and converged (``converged_<theta>``)
-            theta values, ``final objective``, ``solver termination`` and
+            theta values, ``final_objective``, ``solver_termination`` and
             ``solve_time`` (seconds).
         best_theta: dict or None
             Theta values of the best start. None if no start is optimal.
@@ -2560,18 +2560,16 @@ class Estimator:
                 obj, theta_hat, termination = self._Q_opt(
                     theta_vals=theta_vals, multistart=True
                 )
-                multistart_result.at[i, "solver termination"] = str(termination)
+                multistart_result.at[i, "solver_termination"] = str(termination)
             except Exception as exc:
-                logger.warning(
-                    f"theta_est_multistart: start {i} raised an exception: {exc}"
-                )
+                logger.warning(f"Start {i} raised an exception: {exc}")
                 theta_hat = None
-                multistart_result.at[i, "solver termination"] = f"exception: {exc}"
+                multistart_result.at[i, "solver_termination"] = f"exception: {exc}"
             multistart_result.at[i, "solve_time"] = time.time() - t0
 
             # theta_hat is None unless the solve terminated optimally
             if theta_hat is not None:
-                multistart_result.at[i, "final objective"] = obj
+                multistart_result.at[i, "final_objective"] = obj
                 for name in theta_names:
                     multistart_result.at[i, f"converged_{name}"] = theta_hat[name]
                 if best_theta is None or obj < best_obj:
@@ -2581,8 +2579,7 @@ class Estimator:
 
         if best_theta is None:
             logger.warning(
-                f"theta_est_multistart: none of the {len(theta_starts)} starts "
-                "terminated optimally."
+                f"None of the {len(theta_starts)} starts terminated optimally."
             )
             for attr in state_attrs:
                 if attr in prior_state:
@@ -2592,7 +2589,7 @@ class Estimator:
         else:
             # Keep the best start's solution (e.g., for cov_est)
             self.ef_instance = best_model
-            self.estimated_theta = dict(best_theta)
+            self.estimated_theta = best_theta
             self.obj_value = best_obj
 
         if save_results:
