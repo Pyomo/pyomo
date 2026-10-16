@@ -129,6 +129,7 @@ the following methods:
 
    ~pyomo.contrib.parmest.parmest.Estimator.theta_est
    ~pyomo.contrib.parmest.parmest.Estimator.theta_est_multistart
+   ~pyomo.contrib.parmest.parmest.Estimator.profile_likelihood
    ~pyomo.contrib.parmest.parmest.Estimator.cov_est
    ~pyomo.contrib.parmest.parmest.Estimator.theta_est_bootstrap
    ~pyomo.contrib.parmest.parmest.Estimator.theta_est_leaveNout
@@ -146,6 +147,7 @@ results and fit distributions to theta values.
    ~pyomo.contrib.parmest.graphics.pairwise_plot
    ~pyomo.contrib.parmest.graphics.grouped_boxplot
    ~pyomo.contrib.parmest.graphics.grouped_violinplot
+   ~pyomo.contrib.parmest.graphics.profile_likelihood_plot
    ~pyomo.contrib.parmest.graphics.fit_rect_dist
    ~pyomo.contrib.parmest.graphics.fit_mvn_dist
    ~pyomo.contrib.parmest.graphics.fit_kde_dist
