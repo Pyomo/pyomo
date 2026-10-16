@@ -2894,7 +2894,8 @@ class TestParmestMultistart(unittest.TestCase):
                 method, 8, lower_bound, upper_bound, seed=0
             )
             self.assertEqual(samples.shape, (8, 2))
-            self.assertTrue(((samples >= lower_bound) & (samples <= upper_bound)).all())
+            self.assertTrue((samples >= lower_bound).all())
+            self.assertTrue((samples <= upper_bound).all())
 
     def test_sampling_method_accepts_enum_or_string(self):
         pest = _build_linear_estimator()

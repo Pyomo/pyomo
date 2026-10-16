@@ -586,21 +586,21 @@ def _sample_initial_theta(
     if n_restarts <= 0:
         raise ValueError("n_restarts must be greater than zero.")
 
+    # Each method gives samples in [0, 1], shape (n_restarts, n_theta)
     n_theta = len(lower_bound)
     if multistart_sampling_method == MultistartSamplingMethod.uniform_random:
         # Local RNG, so the global random state is unchanged
         rng = np.random.default_rng(seed)
-        return rng.uniform(
-            low=lower_bound, high=upper_bound, size=(n_restarts, n_theta)
-        )
-
-    if multistart_sampling_method == MultistartSamplingMethod.latin_hypercube:
+        samples = rng.random((n_restarts, n_theta))
+    elif multistart_sampling_method == MultistartSamplingMethod.latin_hypercube:
         sampler = scipy.stats.qmc.LatinHypercube(d=n_theta, seed=seed)
+        samples = sampler.random(n=n_restarts)
     else:
         # Scrambled, so the first point is not the origin
         sampler = scipy.stats.qmc.Sobol(d=n_theta, scramble=True, seed=seed)
-    # Scale samples from [0, 1] to the theta bounds
-    samples = sampler.random(n=n_restarts)
+        samples = sampler.random(n=n_restarts)
+
+    # Scale the samples to the theta bounds
     return lower_bound + (upper_bound - lower_bound) * samples
 
 
@@ -1606,9 +1606,15 @@ class Estimator:
         # E.g., an indexed theta and one of its elements both labeled
         if len(theta_names) != len(set(theta_names)):
             raise ValueError(f"Duplicate theta names are not allowed: {theta_names}")
-        theta_vars = [parmest_model.find_component(name) for name in theta_names]
-        lower_bound = np.array([v.lb for v in theta_vars], dtype=float)
-        upper_bound = np.array([v.ub for v in theta_vars], dtype=float)
+        lower_bound = []
+        upper_bound = []
+        for name in theta_names:
+            theta_var = parmest_model.find_component(name)
+            lower_bound.append(theta_var.lb)
+            upper_bound.append(theta_var.ub)
+        # Missing bounds (None) become NaN
+        lower_bound = np.array(lower_bound, dtype=float)
+        upper_bound = np.array(upper_bound, dtype=float)
 
         if np.any(np.isnan(lower_bound)) or np.any(np.isnan(upper_bound)):
             raise ValueError(
@@ -1626,34 +1632,36 @@ class Estimator:
                     "user_supplied_vals is given."
                 )
             if isinstance(user_supplied_vals, dict):
-                try:
-                    user_supplied_vals = pd.DataFrame(
-                        {
-                            name: np.atleast_1d(vals)
-                            for name, vals in user_supplied_vals.items()
-                        }
-                    )
-                except ValueError:
+                # A single value per theta is one start
+                starts = {}
+                for name, vals in user_supplied_vals.items():
+                    starts[name] = np.atleast_1d(vals)
+                n_starts = {len(vals) for vals in starts.values()}
+                if len(n_starts) > 1:
                     raise ValueError(
                         "Each theta in user_supplied_vals must have the same "
                         "number of starting values."
                     )
+                user_supplied_vals = pd.DataFrame(starts)
             if not isinstance(user_supplied_vals, pd.DataFrame):
                 raise TypeError(
                     "user_supplied_vals must be a dict or a pandas DataFrame."
                 )
-            # Match to the model theta names and order; results are filled by
-            # row position, so the user's index is dropped
+            # Match to the model theta names and order
             theta_starts = self._normalize_theta_dataframe(
                 user_supplied_vals, model=parmest_model
-            ).reset_index(drop=True)
+            )
+            # Results are filled by row position, so drop the user's index
+            theta_starts = theta_starts.reset_index(drop=True)
             if theta_starts.shape[0] == 0:
                 raise ValueError(
                     "user_supplied_vals must contain at least one starting value."
                 )
-            # Also rejects NaN, which fails both comparisons
+            # NaN fails both comparisons, so it is also rejected
             theta_arr = theta_starts.to_numpy(dtype=float)
-            if not np.all((theta_arr >= lower_bound) & (theta_arr <= upper_bound)):
+            above_lower = theta_arr >= lower_bound
+            below_upper = theta_arr <= upper_bound
+            if not (above_lower & below_upper).all():
                 raise ValueError(
                     "user_supplied_vals must be finite and within the theta bounds."
                 )
@@ -2533,14 +2541,20 @@ class Estimator:
 
         # _Q_opt overwrites these; restore them if no start is optimal
         state_attrs = ("ef_instance", "estimated_theta", "obj_value")
-        prior_state = {a: self.__dict__[a] for a in state_attrs if a in self.__dict__}
+        prior_state = {}
+        for attr in state_attrs:
+            if hasattr(self, attr):
+                prior_state[attr] = getattr(self, attr)
 
-        # (objective, theta, solved model) of the best optimal start so far.
-        # Non-optimal objectives (e.g., at infeasible points) are not
-        # comparable, so only optimal starts are considered.
-        best_start = None
+        # Best optimal start so far. Non-optimal objectives (e.g., at
+        # infeasible points) are not comparable, so only optimal starts count.
+        best_obj = np.nan
+        best_theta = None
+        best_model = None
         for i in range(len(theta_starts)):
-            theta_vals = {name: float(theta_starts.at[i, name]) for name in theta_names}
+            theta_vals = {}
+            for name in theta_names:
+                theta_vals[name] = float(theta_starts.at[i, name])
             t0 = time.time()
             try:
                 obj, theta_hat, termination = self._Q_opt(
@@ -2560,24 +2574,24 @@ class Estimator:
                 multistart_result.at[i, "final objective"] = obj
                 for name in theta_names:
                     multistart_result.at[i, f"converged_{name}"] = theta_hat[name]
-                if best_start is None or obj < best_start[0]:
-                    best_start = (obj, theta_hat, self.ef_instance)
+                if best_theta is None or obj < best_obj:
+                    best_obj = obj
+                    best_theta = theta_hat
+                    best_model = self.ef_instance
 
-        if best_start is None:
+        if best_theta is None:
             logger.warning(
                 f"theta_est_multistart: none of the {len(theta_starts)} starts "
                 "terminated optimally."
             )
-            best_theta = None
-            best_obj = np.nan
-            for a in state_attrs:
-                if a in prior_state:
-                    setattr(self, a, prior_state[a])
-                else:
-                    self.__dict__.pop(a, None)
+            for attr in state_attrs:
+                if attr in prior_state:
+                    setattr(self, attr, prior_state[attr])
+                elif hasattr(self, attr):
+                    delattr(self, attr)
         else:
             # Keep the best start's solution (e.g., for cov_est)
-            best_obj, best_theta, self.ef_instance = best_start
+            self.ef_instance = best_model
             self.estimated_theta = dict(best_theta)
             self.obj_value = best_obj
 
@@ -2599,7 +2613,10 @@ class Estimator:
         """
         assert isinstance(theta_values, pd.DataFrame)
 
-        template_model = model if model is not None else self._create_parmest_model(0)
+        if model is not None:
+            template_model = model
+        else:
+            template_model = self._create_parmest_model(0)
         expected_theta_names, _ = self._expanded_theta_info(template_model)
         expected_theta_names = list(expected_theta_names)
 
