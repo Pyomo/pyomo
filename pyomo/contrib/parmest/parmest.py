@@ -2739,8 +2739,8 @@ class Estimator:
         Parameters
         ----------
         profiles: pd.DataFrame
-            Profiles indexed by profiled theta and value, with lr_stat and
-            success columns.
+            Profiles indexed by profiled theta and value, with an lr_stat
+            column (NaN where the solve failed).
         profiled_theta_list: list of str
             Names of the profiled thetas.
         theta_hat: dict
@@ -2756,7 +2756,7 @@ class Estimator:
         rows = []
         for pname in profiled_theta_list:
             prof = profiles.loc[pname]
-            prof = prof[prof["success"] & prof["lr_stat"].notna()]
+            prof = prof[prof["lr_stat"].notna()]
             values = prof.index.to_numpy(dtype=float)
             lr = prof["lr_stat"].to_numpy(dtype=float)
             for alpha, threshold in thresholds.items():
@@ -3107,8 +3107,8 @@ class Estimator:
                     f"{action}. The Estimator estimate is not updated; re-run "
                     f"theta_est from this theta to update it."
                 )
-                theta_hat = {k: float(v) for k, v in best_theta.items()}
-                obj_hat = float(best_obj)
+                theta_hat = best_theta
+                obj_hat = best_obj
                 if not resolve:
                     break
                 n_rebaseline += 1

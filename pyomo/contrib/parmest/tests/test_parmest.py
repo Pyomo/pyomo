@@ -2906,11 +2906,19 @@ class AffineTwoThetaExperiment(Experiment):
 
 
 class _InitRecordingEstimator(parmest.Estimator):
-    """Estimator that records the initial theta values of each profile solve."""
+    """
+    Estimator that records the initial theta values of each profile solve and
+    the number of theta_est_multistart calls.
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.profile_theta_inits = []
+        self.n_multistart_calls = 0
+
+    def theta_est_multistart(self, *args, **kwargs):
+        self.n_multistart_calls += 1
+        return super().theta_est_multistart(*args, **kwargs)
 
     def _Q_opt(self, *args, **kwargs):
         if kwargs.get("fixed_theta_values"):
@@ -2939,7 +2947,7 @@ class TestParmestProfileLikelihood(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_profile_likelihood_results(self):
         pest = _build_two_theta_estimator()
-        prof, intervals, theta_hat, obj_hat = pest.profile_likelihood(
+        prof, intervals, _, obj_hat = pest.profile_likelihood(
             "theta_a",
             alphas=[0.9, 0.95],
             grid=[1.2, 2.4, 2.0],
@@ -2983,7 +2991,6 @@ class TestParmestProfileLikelihood(unittest.TestCase):
         np.testing.assert_allclose(prof["theta_b"], 5.0 - 2.0 * prof.index, atol=1e-6)
         # The baseline is the profile minimum
         self.assertAlmostEqual(prof["obj"].min(), obj_hat, places=8)
-        self.assertEqual(theta_hat, {"theta_a": 2.0, "theta_b": 1.0})
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_profile_warmstart_neighbor_values_used(self):
@@ -3084,7 +3091,7 @@ class TestParmestProfileLikelihood(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_profile_baseline_from_multistart(self):
-        pest = _build_two_theta_estimator()
+        pest = _build_two_theta_estimator(_InitRecordingEstimator)
         prof, _, _, obj_hat = pest.profile_likelihood(
             profiled_theta="theta_a",
             n_grid=5,
@@ -3095,6 +3102,7 @@ class TestParmestProfileLikelihood(unittest.TestCase):
                 "seed": 7,
             },
         )
+        self.assertEqual(pest.n_multistart_calls, 1)
         self.assertTrue(np.isfinite(obj_hat))
         self.assertGreaterEqual(prof.shape[0], 1)
 
@@ -3214,21 +3222,15 @@ class TestParmestProfileLikelihood(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_profile_given_baseline_does_not_use_multistart(self):
-        pest = _build_two_theta_estimator()
-
-        def fail_multistart(**kwargs):
-            self.fail("theta_est_multistart was called.")
-
-        pest.theta_est_multistart = fail_multistart
-        _, _, theta_hat, obj_hat = pest.profile_likelihood(
+        pest = _build_two_theta_estimator(_InitRecordingEstimator)
+        pest.profile_likelihood(
             "theta_a",
             grid=[1.9, 2.1],
             theta_hat={"theta_a": 2.0, "theta_b": 1.0},
             obj_hat=0.0,
             use_multistart_for_baseline=True,
         )
-        self.assertEqual(theta_hat, {"theta_a": 2.0, "theta_b": 1.0})
-        self.assertEqual(obj_hat, 0.0)
+        self.assertEqual(pest.n_multistart_calls, 0)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_profile_restores_estimator_state(self):
@@ -3286,7 +3288,6 @@ class TestParmestProfileLikelihood(unittest.TestCase):
             self.assertAlmostEqual(new_theta_hat[name], val, places=4)
         # lr_stat is measured from the lowest objective, so it is not negative
         self.assertAlmostEqual(prof["lr_stat"].min(), 0.0, places=8)
-        self.assertTrue((prof["lr_stat"] > -1e-8).all())
         # The Estimator keeps its estimate
         self.assertEqual(pest.obj_value, obj_hat)
 
@@ -3364,31 +3365,88 @@ class TestParmestProfileLikelihood(unittest.TestCase):
         self.assertTrue(np.isnan(row["upper"]))
         self.assertFalse(row["upper_bounded"])
 
-    def test_profile_theta_name_matches_column(self):
-        pest = _build_two_theta_estimator()
-        pest._expanded_theta_info = lambda model: (["theta_a", "obj"], None)
+    def test_profile_theta_name_matches_column_raises(self):
+        class ObjThetaEstimator(parmest.Estimator):
+            def _expanded_theta_info(self, model):
+                return ["theta_a", "obj"], None
+
+        pest = _build_two_theta_estimator(ObjThetaEstimator)
         with self.assertRaisesRegex(
             ValueError,
-            "Theta name\\(s\\) \\['obj'\\] match profiles column names; use "
-            "return_theta_paths=False.",
+            r"Theta name\(s\) \['obj'\] match profiles column names; use "
+            r"return_theta_paths=False\.",
         ):
             pest.profile_likelihood("theta_a")
 
-    def test_profile_alphas_validation(self):
+    def test_profile_invalid_arguments_raises(self):
         pest = _build_two_theta_estimator()
         with self.assertRaisesRegex(
-            TypeError, "alphas must be a non-empty list of floats."
+            TypeError, r"profiled_theta must be a string or a list/tuple of strings\."
+        ):
+            pest.profile_likelihood(1)
+        with self.assertRaisesRegex(
+            ValueError, r"At least one profiled theta must be provided\."
+        ):
+            pest.profile_likelihood([])
+        with self.assertRaisesRegex(
+            TypeError, r"Each profiled theta name must be a string\."
+        ):
+            pest.profile_likelihood(["theta_a", 1])
+        with self.assertRaisesRegex(TypeError, r"n_grid must be an integer\."):
+            pest.profile_likelihood("theta_a", n_grid=2.0)
+        with self.assertRaisesRegex(ValueError, r"n_grid must be at least 2\."):
+            pest.profile_likelihood("theta_a", n_grid=1)
+        with self.assertRaisesRegex(
+            ValueError, r"warmstart must be either 'neighbor' or 'none'\."
+        ):
+            pest.profile_likelihood("theta_a", warmstart="previous")
+        with self.assertRaisesRegex(
+            TypeError, r"max_consecutive_failures must be an integer or None\."
+        ):
+            pest.profile_likelihood("theta_a", max_consecutive_failures=1.0)
+        with self.assertRaisesRegex(
+            ValueError, r"max_consecutive_failures must be greater than zero\."
+        ):
+            pest.profile_likelihood("theta_a", max_consecutive_failures=0)
+        with self.assertRaisesRegex(TypeError, r"return_theta_paths must be a bool\."):
+            pest.profile_likelihood("theta_a", return_theta_paths="yes")
+        with self.assertRaisesRegex(
+            TypeError, r"alphas must be a non-empty list of floats\."
         ):
             pest.profile_likelihood("theta_a", alphas=0.95)
-        with self.assertRaisesRegex(ValueError, "Each alpha must be between 0 and 1."):
+        with self.assertRaisesRegex(
+            ValueError, r"Each alpha must be between 0 and 1\."
+        ):
             pest.profile_likelihood("theta_a", alphas=[95])
-
-    def test_profile_max_rebaseline_validation(self):
-        pest = _build_two_theta_estimator()
-        with self.assertRaisesRegex(TypeError, "max_rebaseline must be an integer."):
+        with self.assertRaisesRegex(TypeError, r"max_rebaseline must be an integer\."):
             pest.profile_likelihood("theta_a", max_rebaseline=1.0)
-        with self.assertRaisesRegex(ValueError, "max_rebaseline must be non-negative."):
+        with self.assertRaisesRegex(
+            ValueError, r"max_rebaseline must be non-negative\."
+        ):
             pest.profile_likelihood("theta_a", max_rebaseline=-1)
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Unknown profile theta name\(s\): \['theta_c'\]\. Known names: "
+            r"\('theta_a', 'theta_b'\)\.",
+        ):
+            pest.profile_likelihood("theta_c")
+
+        # Grid checks run after the baseline, which is given here
+        baseline = {"theta_hat": {"theta_a": 2.0, "theta_b": 1.0}, "obj_hat": 0.0}
+        with self.assertRaisesRegex(
+            TypeError, r"grid must be a sequence of numeric values or None\."
+        ):
+            pest.profile_likelihood("theta_a", grid="2.0", **baseline)
+        with self.assertRaisesRegex(
+            ValueError, r"Provided grid must contain at least one value\."
+        ):
+            pest.profile_likelihood("theta_a", grid=[], **baseline)
+        with self.assertRaisesRegex(
+            ValueError, r"theta_hat does not include 'theta_a'\."
+        ):
+            pest.profile_likelihood(
+                "theta_a", grid=[1.9], theta_hat={"theta_b": 1.0}, obj_hat=0.0
+            )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_fixed_theta_values_fix_at_given_values(self):

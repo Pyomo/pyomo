@@ -59,6 +59,14 @@ class TestRooneyBieglerExamples(unittest.TestCase):
 
         multistart_example.main()
 
+    @unittest.skipUnless(matplotlib_available, "test requires matplotlib")
+    def test_profile_likelihood_example(self):
+        from pyomo.contrib.parmest.examples.rooney_biegler import (
+            profile_likelihood_example,
+        )
+
+        profile_likelihood_example.main()
+
     def test_regularization_example(self):
         from pyomo.contrib.parmest.examples.rooney_biegler import regularization_example
 

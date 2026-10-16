@@ -51,10 +51,8 @@ def main():
     print("\nProfile confidence intervals:")
     print(intervals)
 
-    # Plot profile curves to file for terminal/non-GUI usage
-    out_file = "rooney_biegler_profile_likelihood.png"
-    parmest.graphics.profile_likelihood_plot(profiles, intervals, filename=out_file)
-    print(f"\nSaved plot to: {out_file}")
+    # Plot the profiles with the threshold of each alpha
+    parmest.graphics.profile_likelihood_plot(profiles, intervals)
 
 
 if __name__ == "__main__":
