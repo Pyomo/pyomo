@@ -14,6 +14,7 @@ from pyomo.common.config import (
     In,
     NonNegativeFloat,
     NonNegativeInt,
+    PositiveFloat,
     PositiveInt,
 )
 from pyomo.common.deprecation import deprecation_warning
@@ -50,6 +51,13 @@ def _init_strategy_deprecation(strategy):
     return In(valid_init_strategies)(strategy)
 
 
+def _positive_time_limit(value):
+    try:
+        return PositiveInt(value)
+    except (TypeError, ValueError):
+        return PositiveFloat(value)
+
+
 def _get_algorithm_config():
     CONFIG = ConfigBlock("GDPoptAlgorithm")
     CONFIG.declare(
@@ -82,7 +90,7 @@ def _add_common_configs(CONFIG):
         "time_limit",
         ConfigValue(
             default=None,
-            domain=PositiveInt,
+            domain=_positive_time_limit,
             description="Time limit (seconds, default=600)",
             doc="""
             Seconds allowed until terminated. Note that the time limit can
