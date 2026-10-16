@@ -657,20 +657,23 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
     @staticmethod
     def record_monomial(visitor, result, coef, var):
         _id = id(var)
+        if var.fixed:
+            # Fixed variables contribute constants even if they were
+            # already registered in the var_map earlier while still
+            # free (gh-3851)
+            var = check_constant(var.value, var, visitor)
+            if not coef and var.__class__ is InvalidNumber:
+                deprecation_warning(
+                    f"Encountered {coef}*{val2str(var)} in expression "
+                    "tree.  Mapping the NaN result to 0 for compatibility "
+                    "with the lp_v1 writer.  In the future, this NaN "
+                    "will be preserved/emitted to comply with IEEE-754.",
+                    version='6.6.0',
+                )
+            else:
+                result.constant += coef * var
+            return
         if _id not in visitor.var_map:
-            if var.fixed:
-                var = check_constant(var.value, var, visitor)
-                if not coef and var.__class__ is InvalidNumber:
-                    deprecation_warning(
-                        f"Encountered {coef}*{val2str(var)} in expression "
-                        "tree.  Mapping the NaN result to 0 for compatibility "
-                        "with the lp_v1 writer.  In the future, this NaN "
-                        "will be preserved/emitted to comply with IEEE-754.",
-                        version='6.6.0',
-                    )
-                else:
-                    result.constant += coef * var
-                return
             visitor.var_recorder.add(var)
         if _id in result.linear:
             result.linear[_id] += coef
