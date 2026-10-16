@@ -2735,6 +2735,25 @@ class TestParmestMultistart(unittest.TestCase):
         )
         pd.testing.assert_frame_equal(from_default, from_uniform)
 
+    def test_n_restarts_not_integer_raises(self):
+        pest = _build_estimator(_LINEAR_DATA)
+        with self.assertRaisesRegex(TypeError, r"n_restarts must be an integer\."):
+            pest._generate_initial_theta(seed=1, n_restarts=2.0)
+
+    def test_n_restarts_not_positive_raises(self):
+        pest = _build_estimator(_LINEAR_DATA)
+        with self.assertRaisesRegex(
+            ValueError, r"n_restarts must be greater than zero\."
+        ):
+            pest._generate_initial_theta(seed=1, n_restarts=0)
+
+    def test_user_supplied_empty_raises(self):
+        pest = _build_estimator(_LINEAR_DATA)
+        with self.assertRaisesRegex(
+            ValueError, r"user_supplied_vals must contain at least one starting value\."
+        ):
+            pest._generate_initial_theta(user_supplied_vals={"theta": []})
+
     def test_invalid_sampling_method_raises(self):
         pest = _build_estimator(_LINEAR_DATA)
         with self.assertRaisesRegex(

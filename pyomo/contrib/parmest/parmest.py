@@ -1622,7 +1622,8 @@ class Estimator:
             )
         if np.any(lower_bound > upper_bound):
             raise ValueError(
-                "Each lower bound must be less than or equal to the corresponding upper bound."
+                "Each lower bound must be less than or equal to the corresponding "
+                "upper bound."
             )
 
         if user_supplied_vals is not None:
