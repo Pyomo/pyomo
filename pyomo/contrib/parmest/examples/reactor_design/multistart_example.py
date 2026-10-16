@@ -7,8 +7,7 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-from pyomo.common.dependencies import numpy as np, pandas as pd
-from itertools import product
+from pyomo.common.dependencies import pandas as pd
 from os.path import join, abspath, dirname
 import pyomo.contrib.parmest.parmest as parmest
 from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
@@ -26,7 +25,7 @@ def main():
     # Create an experiment list
     exp_list = [ReactorDesignExperiment(data, i) for i in range(data.shape[0])]
 
-    # Solver options belong here (Ipopt options shown as example)
+    # Ipopt options
     solver_options = {"max_iter": 1000, "tol": 1e-6}
 
     pest = parmest.Estimator(
@@ -39,17 +38,14 @@ def main():
     print("Single-start theta:\n", theta)
 
     # Multistart estimation
-    results_df, best_theta, best_obj = pest.theta_est_multistart(
-        n_restarts=10,
-        multistart_sampling_method="uniform_random",
-        seed=42,
-        save_results=False,  # True if you want CSV via file_name=
+    multistart_result, best_theta, best_obj = pest.theta_est_multistart(
+        n_restarts=10, multistart_sampling_method="uniform_random", seed=42
     )
 
     print("\nMultistart best objective:", best_obj)
     print("Multistart best theta:", best_theta)
     print("\nAll multistart results:")
-    print(results_df)
+    print(multistart_result)
 
 
 if __name__ == "__main__":
