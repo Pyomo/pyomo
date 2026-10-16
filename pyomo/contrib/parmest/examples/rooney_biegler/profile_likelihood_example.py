@@ -33,7 +33,6 @@ def main():
         profiled_theta=["asymptote", "rate_constant"],
         alphas=[0.9, 0.95],
         n_grid=9,
-        solver="ef_ipopt",
         warmstart="neighbor",
         # Demonstrate baseline from multistart integration:
         use_multistart_for_baseline=True,

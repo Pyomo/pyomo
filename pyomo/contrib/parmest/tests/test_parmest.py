@@ -3045,7 +3045,7 @@ class TestParmestProfileLikelihood(unittest.TestCase):
         pest = _build_two_theta_estimator(solver_options={"max_iter": 1})
         # Solves that stop at the iteration limit are recorded with their
         # termination condition, not as exceptions.
-        prof, _, _, _ = pest.profile_likelihood(
+        prof, intervals, _, _ = pest.profile_likelihood(
             "theta_a",
             grid=[1.9, 2.1],
             theta_hat={"theta_a": 2.0, "theta_b": 1.0},
@@ -3057,26 +3057,12 @@ class TestParmestProfileLikelihood(unittest.TestCase):
         )
         self.assertFalse(prof["success"].any())
         self.assertTrue(prof["obj"].isna().all())
-
-    def test_profile_all_failures_returns_structure(self):
-        pest = _build_two_theta_estimator()
-        # An unknown solver makes every profile solve raise.
-        prof, intervals, _, _ = pest.profile_likelihood(
-            "theta_a",
-            grid=[1.9, 2.0, 2.1],
-            theta_hat={"theta_a": 2.0, "theta_b": 0.0},
-            obj_hat=1.0,
-            solver="not_a_solver",
-        )
-
-        self.assertEqual(len(prof), 3)
+        # With every solve failed, no point is in the region and no interval
+        # is bounded
         self.assertFalse(prof[0.95].any())
         self.assertTrue(intervals[["lower", "upper"]].isna().all().all())
         self.assertFalse(intervals["lower_bounded"].any())
         self.assertFalse(intervals["upper_bounded"].any())
-        self.assertFalse(prof["success"].any())
-        self.assertTrue(prof["status"].astype(str).str.contains("exception").all())
-        self.assertTrue(prof["obj"].isna().all())
 
     def test_profile_auto_grid_includes_theta_hat(self):
         pest = _build_two_theta_estimator()

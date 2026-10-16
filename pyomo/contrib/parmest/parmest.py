@@ -2796,7 +2796,6 @@ class Estimator:
         grid,
         n_grid,
         theta_hat,
-        solver,
         warmstart,
         max_consecutive_failures,
         return_theta_paths,
@@ -2848,9 +2847,7 @@ class Estimator:
                     t0 = time.time()
                     try:
                         obj_val, theta_conv, term = self._Q_opt(
-                            theta_vals=init_theta,
-                            fixed_theta_values={pname: g},
-                            solver=solver,
+                            theta_vals=init_theta, fixed_theta_values={pname: g}
                         )
                         status = str(term)
                     except Exception as exc:
@@ -2904,7 +2901,6 @@ class Estimator:
         obj_hat=None,
         use_multistart_for_baseline=False,
         baseline_multistart_kwargs=None,
-        solver="ef_ipopt",
         warmstart="neighbor",
         max_consecutive_failures=None,
         return_theta_paths=True,
@@ -2947,8 +2943,6 @@ class Estimator:
             Default is False.
         baseline_multistart_kwargs: dict, optional
             Keyword arguments for theta_est_multistart. Default is None.
-        solver: str, optional
-            Currently only "ef_ipopt" is supported. Default is "ef_ipopt".
         warmstart: str, optional
             "neighbor" solves the grid values outward from theta_hat, upward
             then downward, each starting from the last successful solution on
@@ -3066,7 +3060,7 @@ class Estimator:
                         "Failed to compute baseline from multistart: no feasible solution found."
                     )
             else:
-                obj_hat, theta_hat = self.theta_est(solver=solver)
+                obj_hat, theta_hat = self.theta_est()
 
         theta_hat = {k: float(v) for k, v in theta_hat.items()}
         obj_hat = float(obj_hat)
@@ -3083,7 +3077,6 @@ class Estimator:
                     grid=grid,
                     n_grid=n_grid,
                     theta_hat=theta_hat,
-                    solver=solver,
                     warmstart=warmstart,
                     max_consecutive_failures=max_consecutive_failures,
                     return_theta_paths=return_theta_paths,
