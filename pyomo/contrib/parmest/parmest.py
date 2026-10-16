@@ -2732,6 +2732,110 @@ class Estimator:
             n_residuals += len(_get_labeled_model(exp).experiment_outputs)
         return n_residuals * np.log(obj / obj_hat)
 
+    def _profile_sweep(
+        self,
+        profiled_theta_list,
+        grid,
+        n_grid,
+        theta_hat,
+        solver,
+        warmstart,
+        max_consecutive_failures,
+        return_theta_paths,
+    ):
+        """
+        Solve every grid value of each profiled theta (see profile_likelihood).
+
+        Returns
+        -------
+        rows: list of dict
+            One row of the profiles DataFrame per grid value solved.
+        best_obj: float or None
+            Lowest objective value of the successful solves (None if every
+            solve failed).
+        best_theta: dict or None
+            Estimated value of every theta at best_obj.
+        """
+        rows = []
+        best_obj = None
+        best_theta = None
+        for pname in profiled_theta_list:
+            if isinstance(grid, dict):
+                grid_spec = grid.get(pname)
+            else:
+                grid_spec = grid
+            grid_values = self._build_profile_grid(
+                profiled_theta=pname, grid=grid_spec, n_grid=n_grid, theta_hat=theta_hat
+            )
+
+            if warmstart == "neighbor":
+                branches = self._split_grid_at_center(
+                    grid_values, center=theta_hat[pname]
+                )
+            else:
+                branches = [grid_values]
+
+            # Solution at the first value solved (closest to theta_hat),
+            # used to start the second side
+            center_theta = theta_hat
+            center_value = branches[0][0]
+            for branch in branches:
+                previous_theta = center_theta
+                consecutive_failures = 0
+
+                for g in branch:
+                    init_theta = dict(previous_theta)
+                    init_theta[pname] = g
+
+                    t0 = time.time()
+                    try:
+                        obj_val, theta_conv, term = self._Q_opt(
+                            theta_vals=init_theta,
+                            fixed_theta_values={pname: g},
+                            solver=solver,
+                        )
+                        status = str(term)
+                    except Exception as exc:
+                        theta_conv = None
+                        status = f"exception: {exc}"
+
+                    # theta_conv is None unless the solve terminated optimally
+                    success = theta_conv is not None
+                    if success:
+                        consecutive_failures = 0
+                        if warmstart == "neighbor":
+                            previous_theta = theta_conv
+                            if g == center_value:
+                                center_theta = theta_conv
+                        if best_obj is None or obj_val < best_obj:
+                            best_obj = obj_val
+                            best_theta = dict(theta_conv)
+                    else:
+                        obj_val = np.nan
+                        consecutive_failures += 1
+
+                    row = {
+                        "profiled_theta": pname,
+                        "theta_value": g,
+                        "obj": obj_val,
+                        "status": status,
+                        "success": success,
+                        "solve_time": time.time() - t0,
+                    }
+                    if return_theta_paths and success:
+                        for tname, tval in theta_conv.items():
+                            row[f"theta__{tname}"] = tval
+                    rows.append(row)
+
+                    # Stop this side of the profile (the other side is
+                    # still solved)
+                    if (
+                        max_consecutive_failures is not None
+                        and consecutive_failures >= max_consecutive_failures
+                    ):
+                        break
+        return rows, best_obj, best_theta
+
     def profile_likelihood(
         self,
         profiled_theta,
@@ -2745,14 +2849,17 @@ class Estimator:
         warmstart="neighbor",
         max_consecutive_failures=None,
         return_theta_paths=True,
+        max_rebaseline=0,
     ):
         """
         Profile likelihood for one or more thetas, fixing each profiled theta
         at a grid of values and re-estimating the other thetas
 
-        Each grid value is solved as in theta_est. The Estimator keeps the
-        estimate it held before the call (or the baseline estimate, if it is
-        computed here).
+        Each grid value is solved as in theta_est. If a solve finds a lower
+        objective than obj_hat, a warning is logged and that solution becomes
+        the baseline. The Estimator keeps the estimate it held before the call
+        (or the baseline estimate, if it is computed here), even if a lower
+        objective is found.
 
         Parameters
         ----------
@@ -2791,6 +2898,10 @@ class Estimator:
         return_theta_paths: bool, optional
             If True, include the estimated value of every theta at each grid
             value (``theta__<theta name>`` columns). Default is True.
+        max_rebaseline: int, optional
+            Maximum number of times the profiles are solved again from a new
+            baseline, when a lower objective is found. Default is 0 (the
+            baseline is updated, but the profiles are not solved again).
 
         Returns
         -------
@@ -2807,8 +2918,9 @@ class Estimator:
             NaN for other objectives, with regularization, or for "SSE" when
             obj_hat is 0.
 
-            ``baseline``: dict with ``theta_hat``, ``obj_hat``, ``solver`` and
-            ``used_multistart``.
+            ``baseline``: dict with ``theta_hat``, ``obj_hat``, ``solver``,
+            ``used_multistart`` and ``rebaselined`` (True if a lower objective
+            replaced the initial baseline).
 
             ``metadata``: dict with ``grid_strategy`` ("user_provided" or
             "auto_bounds"), ``warmstart``, ``profiled_theta``,
@@ -2843,6 +2955,10 @@ class Estimator:
                 raise ValueError("max_consecutive_failures must be greater than zero.")
         if not isinstance(return_theta_paths, bool):
             raise TypeError("return_theta_paths must be a bool.")
+        if not isinstance(max_rebaseline, int):
+            raise TypeError("max_rebaseline must be an integer.")
+        if max_rebaseline < 0:
+            raise ValueError("max_rebaseline must be non-negative.")
 
         theta_names, _ = self._expanded_theta_info(self._create_parmest_model(0))
         unknown_requested = set(profiled_theta_list).difference(theta_names)
@@ -2871,88 +2987,50 @@ class Estimator:
         theta_hat = {k: float(v) for k, v in theta_hat.items()}
         obj_hat = float(obj_hat)
 
-        rows = []
         started_at = time.time()
+        rebaselined = False
+        n_rebaseline = 0
 
         # Profile solves overwrite the estimate; restore it afterwards (e.g.,
         # for cov_est)
         prior_state = self._save_estimation_state()
         try:
-            for pname in profiled_theta_list:
-                if isinstance(grid, dict):
-                    grid_spec = grid.get(pname)
-                else:
-                    grid_spec = grid
-                grid_values = self._build_profile_grid(
-                    profiled_theta=pname,
-                    grid=grid_spec,
+            while True:
+                rows, best_obj, best_theta = self._profile_sweep(
+                    profiled_theta_list=profiled_theta_list,
+                    grid=grid,
                     n_grid=n_grid,
                     theta_hat=theta_hat,
+                    solver=solver,
+                    warmstart=warmstart,
+                    max_consecutive_failures=max_consecutive_failures,
+                    return_theta_paths=return_theta_paths,
                 )
+                # Relative tolerance, so solver noise does not count as a
+                # lower objective
+                if best_obj is None or best_obj >= obj_hat - 1e-8 * max(
+                    1.0, abs(obj_hat)
+                ):
+                    break
 
-                if warmstart == "neighbor":
-                    branches = self._split_grid_at_center(
-                        grid_values, center=theta_hat[pname]
-                    )
+                resolve = n_rebaseline < max_rebaseline
+                if resolve:
+                    action = "the profiles are solved again from it"
                 else:
-                    branches = [grid_values]
-
-                # Solution at the first value solved (closest to theta_hat),
-                # used to start the second side
-                center_theta = theta_hat
-                center_value = branches[0][0]
-                for branch in branches:
-                    previous_theta = center_theta
-                    consecutive_failures = 0
-
-                    for g in branch:
-                        init_theta = dict(previous_theta)
-                        init_theta[pname] = g
-
-                        t0 = time.time()
-                        try:
-                            obj_val, theta_conv, term = self._Q_opt(
-                                theta_vals=init_theta,
-                                fixed_theta_values={pname: g},
-                                solver=solver,
-                            )
-                            status = str(term)
-                        except Exception as exc:
-                            theta_conv = None
-                            status = f"exception: {exc}"
-
-                        # theta_conv is None unless the solve terminated optimally
-                        success = theta_conv is not None
-                        if success:
-                            consecutive_failures = 0
-                            if warmstart == "neighbor":
-                                previous_theta = theta_conv
-                                if g == center_value:
-                                    center_theta = theta_conv
-                        else:
-                            obj_val = np.nan
-                            consecutive_failures += 1
-
-                        row = {
-                            "profiled_theta": pname,
-                            "theta_value": g,
-                            "obj": obj_val,
-                            "status": status,
-                            "success": success,
-                            "solve_time": time.time() - t0,
-                        }
-                        if return_theta_paths and success:
-                            for tname, tval in theta_conv.items():
-                                row[f"theta__{tname}"] = tval
-                        rows.append(row)
-
-                        # Stop this side of the profile (the other side is
-                        # still solved)
-                        if (
-                            max_consecutive_failures is not None
-                            and consecutive_failures >= max_consecutive_failures
-                        ):
-                            break
+                    action = "lr_stat is computed from it"
+                logger.warning(
+                    f"profile_likelihood: a profile solve found a lower "
+                    f"objective ({best_obj}) than the baseline ({obj_hat}) at "
+                    f"theta = {best_theta}, so it becomes the baseline and "
+                    f"{action}. The Estimator estimate is not updated; re-run "
+                    f"theta_est from this theta to update it."
+                )
+                rebaselined = True
+                theta_hat = {k: float(v) for k, v in best_theta.items()}
+                obj_hat = float(best_obj)
+                if not resolve:
+                    break
+                n_rebaseline += 1
         finally:
             self._restore_estimation_state(prior_state)
 
@@ -2976,6 +3054,7 @@ class Estimator:
                 "obj_hat": obj_hat,
                 "solver": solver,
                 "used_multistart": used_multistart,
+                "rebaselined": rebaselined,
             },
             "metadata": {
                 "grid_strategy": grid_strategy,

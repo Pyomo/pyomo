@@ -3227,6 +3227,113 @@ class TestParmestProfileLikelihood(unittest.TestCase):
         # cov_est reads only these, so it is unchanged by profiling.
         self.assertEqual(pest.obj_value, state[2])
 
+    def _build_rooney_biegler_estimator(self, estimator_class=parmest.Estimator):
+        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+            RooneyBieglerExperiment,
+        )
+
+        data = pd.DataFrame(
+            data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
+            columns=["hour", "y"],
+        )
+        return estimator_class(
+            [RooneyBieglerExperiment(data.loc[i, :]) for i in range(data.shape[0])],
+            obj_function="SSE",
+        )
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_profile_lower_objective_updates_baseline(self):
+        pest = self._build_rooney_biegler_estimator()
+        obj_hat, theta_hat = pest.theta_est()
+        theta_hat = dict(theta_hat)
+        # The given obj_hat is too high, so the solve at theta_hat finds a
+        # lower objective.
+        with LoggingIntercept(level=logging.WARNING) as LOG:
+            res = pest.profile_likelihood(
+                "asymptote",
+                grid=[16.0, 22.0],
+                theta_hat=theta_hat,
+                obj_hat=obj_hat + 1.0,
+            )
+        self.assertIn(
+            f"profile_likelihood: a profile solve found a lower objective "
+            f"({res['baseline']['obj_hat']}) than the baseline ({obj_hat + 1.0}) "
+            f"at theta = {res['baseline']['theta_hat']}, so it becomes the "
+            f"baseline and lr_stat is computed from it. The Estimator estimate "
+            f"is not updated; re-run theta_est from this theta to update it.",
+            LOG.getvalue(),
+        )
+
+        baseline = res["baseline"]
+        self.assertTrue(baseline["rebaselined"])
+        self.assertAlmostEqual(baseline["obj_hat"], obj_hat, places=6)
+        for name, val in theta_hat.items():
+            self.assertAlmostEqual(baseline["theta_hat"][name], val, places=4)
+        # lr_stat is measured from the lowest objective, so it is not negative
+        prof = res["profiles"]
+        self.assertAlmostEqual(prof["lr_stat"].min(), 0.0, places=8)
+        self.assertTrue((prof["lr_stat"] > -1e-8).all())
+        # The Estimator keeps its estimate
+        self.assertEqual(pest.obj_value, obj_hat)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_profile_max_rebaseline_solves_again(self):
+        pest = self._build_rooney_biegler_estimator(_InitRecordingEstimator)
+        obj_hat, theta_hat = pest.theta_est()
+        # theta_hat["rate_constant"] is off, so the first side starts away
+        # from the baseline solution, and obj_hat is too high.
+        bad_theta_hat = dict(theta_hat)
+        bad_theta_hat["rate_constant"] = 1.0
+        with LoggingIntercept(level=logging.WARNING) as LOG:
+            res = pest.profile_likelihood(
+                "asymptote",
+                grid=[16.0, 22.0],
+                theta_hat=bad_theta_hat,
+                obj_hat=obj_hat + 1.0,
+                max_rebaseline=1,
+            )
+        self.assertIn(
+            "so it becomes the baseline and the profiles are solved " "again from it.",
+            LOG.getvalue(),
+        )
+        self.assertNotIn("lr_stat is computed from it", LOG.getvalue())
+        self.assertTrue(res["baseline"]["rebaselined"])
+        self.assertAlmostEqual(res["baseline"]["obj_hat"], obj_hat, places=6)
+
+        # Each of the 2 sweeps solves the 3 grid values; the second starts
+        # from the new baseline.
+        inits = pest.profile_theta_inits
+        self.assertEqual(len(inits), 6)
+        self.assertEqual(inits[0]["rate_constant"], 1.0)
+        self.assertAlmostEqual(
+            inits[3]["rate_constant"], theta_hat["rate_constant"], places=4
+        )
+        # Only the rows of the second sweep are returned
+        self.assertEqual(len(res["profiles"]), 3)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_profile_no_lower_objective_keeps_baseline(self):
+        pest = self._build_rooney_biegler_estimator()
+        obj_hat, theta_hat = pest.theta_est()
+        with LoggingIntercept(level=logging.WARNING) as LOG:
+            res = pest.profile_likelihood(
+                "asymptote",
+                grid=[16.0, 22.0],
+                theta_hat=dict(theta_hat),
+                obj_hat=obj_hat,
+                max_rebaseline=1,
+            )
+        self.assertNotIn("found a lower objective", LOG.getvalue())
+        self.assertFalse(res["baseline"]["rebaselined"])
+        self.assertEqual(res["baseline"]["obj_hat"], obj_hat)
+
+    def test_profile_max_rebaseline_validation(self):
+        pest = _build_two_theta_estimator()
+        with self.assertRaisesRegex(TypeError, "max_rebaseline must be an integer."):
+            pest.profile_likelihood("theta_a", max_rebaseline=1.0)
+        with self.assertRaisesRegex(ValueError, "max_rebaseline must be non-negative."):
+            pest.profile_likelihood("theta_a", max_rebaseline=-1)
+
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_fixed_theta_values_fix_at_given_values(self):
         pest = _build_two_theta_estimator()
