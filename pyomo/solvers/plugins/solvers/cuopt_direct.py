@@ -593,7 +593,6 @@ class CUOPTDirect(DirectSolver):
             logger.warning(
                 "Cannot get reduced costs for problems with quadratic "
                 "constraints in cuOpt."
-            )
         else:
             self._load_rc(vars_to_load)
 
