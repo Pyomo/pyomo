@@ -339,10 +339,20 @@ class FIMExternalGreyBox(
         M_rows = np.zeros((len(jac_M.flatten()), 1)).flatten()
         M_cols = np.arange(len(jac_M.flatten()))
 
+        # The Jacobian could be a complex type (see
+        # :py:meth:`numpy.linalg.eig`).  If it is equivalent to it's
+        # floating point representation, then return it as a float (this
+        # is for compatibility with examples that assume the result will
+        # always be float).  If it really is complex, then return the
+        # complex type (which will likely lead to a validation error in
+        # BlockMatrix later)
+        ans = jac_M.flatten()
+        real_ans = ans.real
+        if np.all(ans == real_ans):
+            ans = real_ans
+
         # Returns coo_matrix of the correct shape
-        return scipy.sparse.coo_matrix(
-            (jac_M.flatten(), (M_rows, M_cols)), shape=(1, len(jac_M.flatten()))
-        )
+        return scipy.sparse.coo_matrix((ans, (M_rows, M_cols)), shape=(1, len(ans)))
 
     # Beyond here is for Hessian information
     def set_equality_constraint_multipliers(self, eq_con_multiplier_values):
@@ -822,8 +832,19 @@ class FIMExternalGreyBox(
         else:
             ObjectiveLib(self.objective_option)
 
+        # The Hessian could be a complex type (see
+        # :py:meth:`numpy.linalg.eig`).  If it is equivalent to it's
+        # floating point representation, then return it as a float (this
+        # is for compatibility with examples that assume the result will
+        # always be float).  If it really is complex, then return the
+        # complex type (which will likely lead to a validation error in
+        # BlockMatrix later)
+        ans = np.asarray(hess_vals)
+        real_ans = ans.real
+        if np.all(ans == real_ans):
+            ans = real_ans
+
         # Returns coo_matrix of the correct shape
         return scipy.sparse.coo_matrix(
-            (np.asarray(hess_vals), (hess_rows, hess_cols)),
-            shape=(self._n_inputs, self._n_inputs),
+            (ans, (hess_rows, hess_cols)), shape=(self._n_inputs, self._n_inputs)
         )
