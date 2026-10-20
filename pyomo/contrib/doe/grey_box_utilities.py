@@ -46,7 +46,7 @@ def np_linalg_eig(a):
 
     The :py:func:`numpy.linalg.eig` documentation states that the return
     values will be vectors / arrays of real numbers if there is no
-    imaginaty component and complex numbers otherwise.  Beginning in
+    imaginary component and complex numbers otherwise.  Beginning in
     NumPy 2.5.0 the function behavior changed to always return complex
     numbers.  This wrapper restores the original functionality (as DoE
     assumes that the results will be real).
