@@ -41,6 +41,29 @@ if scipy_available and numpy_available:
 import pyomo.environ as pyo
 
 
+def np_linalg_eig(a):
+    """:py:func:`numpy.linalg.eig` wrapper to cast results to real (if possible)
+
+    The :py:func:`numpy.linalg.eig` documentation states that the return
+    values will be vectors / arrays of real numbers if there is no
+    imaginaty component and complex numbers otherwise.  Beginning in
+    NumPy 2.5.0 the function behavior changed to always return complex
+    numbers.  This wrapper restores the original functionality (as DoE
+    assumes that the results will be real).
+
+    If :py:func:`numpy.linalg.eig` returns complex numbers with an
+    imaginary component, they will pass through this function and
+    (eventually) raise exceptions in DoE.
+
+    """
+    vals, vec = np.linalg.eig(a)
+    if np.all(vals == vals.real):
+        vals = vals.real
+    if np.all(vec == vec.real):
+        vec = vec.real
+    return vals, vec
+
+
 class FIMExternalGreyBox(
     ExternalGreyBoxModel if (scipy_available and numpy_available) else object
 ):
@@ -206,10 +229,10 @@ class FIMExternalGreyBox(
             sign, logdet = np.linalg.slogdet(M)
             obj_value = logdet
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
-            eig, _ = np.linalg.eig(M)
+            eig, _ = np_linalg_eig(M)
             obj_value = np.min(eig)
         elif self.objective_option == ObjectiveLib.condition_number:
-            eig, _ = np.linalg.eig(M)
+            eig, _ = np_linalg_eig(M)
             obj_value = np.log(np.abs(np.max(eig) / np.min(eig)))
         else:
             ObjectiveLib(self.objective_option)
@@ -264,7 +287,7 @@ class FIMExternalGreyBox(
 
         # TODO: Add inertia correction for
         #       negative/small eigenvalues
-        eig_vals, eig_vecs = np.linalg.eig(M)
+        eig_vals, eig_vecs = np_linalg_eig(M)
         if min(eig_vals) <= 1e-3:
             pass
 
@@ -339,20 +362,9 @@ class FIMExternalGreyBox(
         M_rows = np.zeros((len(jac_M.flatten()), 1)).flatten()
         M_cols = np.arange(len(jac_M.flatten()))
 
-        # The Jacobian could be a complex type (see
-        # :py:meth:`numpy.linalg.eig`).  If it is equivalent to it's
-        # floating point representation, then return it as a float (this
-        # is for compatibility with examples that assume the result will
-        # always be float).  If it really is complex, then return the
-        # complex type (which will likely lead to a validation error in
-        # BlockMatrix later)
-        ans = jac_M.flatten()
-        real_ans = ans.real
-        if np.all(ans == real_ans):
-            ans = real_ans
-
         # Returns coo_matrix of the correct shape
-        return scipy.sparse.coo_matrix((ans, (M_rows, M_cols)), shape=(1, len(ans)))
+        jac = jac_M.flatten()
+        return scipy.sparse.coo_matrix((jac, (M_rows, M_cols)), shape=(1, len(jac)))
 
     # Beyond here is for Hessian information
     def set_equality_constraint_multipliers(self, eq_con_multiplier_values):
@@ -565,7 +577,7 @@ class FIMExternalGreyBox(
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
             # Grab eigenvalues and eigenvectors
             # Also need the min location
-            all_eig_vals, all_eig_vecs = np.linalg.eig(M)
+            all_eig_vals, all_eig_vecs = np_linalg_eig(M)
             min_eig_loc = np.argmin(all_eig_vals)
 
             # Grabbing min eigenvalue and corresponding
@@ -667,7 +679,7 @@ class FIMExternalGreyBox(
             #
             # Grab eigenvalues and eigenvectors
             # Also need the max and min locations
-            all_eig_vals, all_eig_vecs = np.linalg.eig(M)
+            all_eig_vals, all_eig_vecs = np_linalg_eig(M)
             min_eig_loc = np.argmin(all_eig_vals)
             max_eig_loc = np.argmax(all_eig_vals)
 
@@ -832,19 +844,8 @@ class FIMExternalGreyBox(
         else:
             ObjectiveLib(self.objective_option)
 
-        # The Hessian could be a complex type (see
-        # :py:meth:`numpy.linalg.eig`).  If it is equivalent to it's
-        # floating point representation, then return it as a float (this
-        # is for compatibility with examples that assume the result will
-        # always be float).  If it really is complex, then return the
-        # complex type (which will likely lead to a validation error in
-        # BlockMatrix later)
-        ans = np.asarray(hess_vals)
-        real_ans = ans.real
-        if np.all(ans == real_ans):
-            ans = real_ans
-
         # Returns coo_matrix of the correct shape
+        hes = np.asarray(hess_vals)
         return scipy.sparse.coo_matrix(
-            (ans, (hess_rows, hess_cols)), shape=(self._n_inputs, self._n_inputs)
+            (hes, (hess_rows, hess_cols)), shape=(self._n_inputs, self._n_inputs)
         )
