@@ -18,10 +18,14 @@ from pyomo.devel.initialization.pwl_init import (
 from pyomo.devel.initialization.lp_approx_init import _initialize_with_LP_approximation
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.devel.initialization.global_init import _initialize_with_global_solver
+from pyomo.devel.initialization.multistart_init import (
+    _initialize_with_multistart_solver,
+)
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import Results
 import logging
 from pyomo.contrib.solver.common.results import SolutionStatus
+import pyomo.environ as pyo
 
 logger = logging.getLogger(__name__)
 
@@ -308,6 +312,76 @@ def initialize_with_global_opt(
     try:
         res = _initialize_with_global_solver(
             nlp=nlp, global_solver=global_solver, nlp_solver=nlp_solver
+        )
+    finally:
+        _cleanup(orig_var_data)
+
+    nlp_res = _retry_nlp_solve(nlp, nlp_solver)
+
+    return nlp_res
+
+
+def initialize_with_multistart_opt(
+    nlp: BlockData,
+    nlp_solver: SolverBase | None = None,
+    multistart_solver=None,
+    skip_initial_nlp_solve: bool = False,
+    default_bound: float = 1e8,
+    seed=0,
+    use_univariate_nonlinear_decomposition: bool = False,
+    aggressive_substitution: bool = True,
+) -> Results:
+    """
+    Attempt to initialize and subsequently solve the model given by ``nlp``.
+    The basic idea is to apply some method to find good initial values for
+    the variables and then try to solve the problem with ``nlp_solver``.
+
+    Parameters
+    ----------
+    nlp: BlockData
+        The pyomo model to be initialized.
+    nlp_solver: Optional[SolverBase]
+        A solver interface appropriate for NLPs.
+        Default: ipopt
+    multistart_solver: Optional[SolverFactory]
+        A configured multistart solver object for performing multistart optimization
+    skip_initial_nlp_solve: bool
+        If True, the initial attempt at solving the NLP without initialization
+        will be skipped.
+    seed: 0
+        Set reproducibility seed to make result deterministic.
+
+    Returns
+    -------
+    res: pyomo.contrib.solver.common.results.Results
+        The results object obtained the last time the nlp_solver was used to
+        try and solve the model.
+    """
+
+    if nlp_solver is None:
+        nlp_solver = _get_solver('ipopt', 'local NLP solver')
+
+    if multistart_solver is None:
+        multistart_solver = pyo.SolverFactory("multistart")
+        multistart_solver.config.seed = seed
+        multistart_solver.config.sampling_method = "lhs"
+        multistart_solver.config.break_on_solution = True
+
+    if not skip_initial_nlp_solve:
+        res = _try_nlp_solve(nlp, nlp_solver)
+        if res.solution_status == SolutionStatus.optimal:
+            return res
+
+    orig_var_data = _setup(nlp)
+
+    try:
+        res = _initialize_with_multistart_solver(
+            nlp=nlp,
+            multistart_solver=multistart_solver,
+            seed=seed,
+            default_bound=default_bound,
+            use_univariate_nonlinear_decomposition=use_univariate_nonlinear_decomposition,
+            aggressive_substitution=aggressive_substitution,
         )
     finally:
         _cleanup(orig_var_data)
