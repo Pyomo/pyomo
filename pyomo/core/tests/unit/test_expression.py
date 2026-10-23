@@ -297,27 +297,27 @@ class TestExpressionData(unittest.TestCase):
         ee = m.e.create_node_with_local_data([5])
         self.assertIsNot(m.e, ee)
         self.assertIs(type(ee), ExpressionData)
-        self.assertEqual(ee._args_, [5])
+        self.assertEqual(ee.args, (5,))
 
         m.f = Expression([0], rule=lambda m, i: m.x)
         ff = m.f[0].create_node_with_local_data([5])
         self.assertIsNot(m.f, ff)
         self.assertIsNot(m.f[0], ff)
         self.assertIs(type(ff), ExpressionData)
-        self.assertEqual(ff._args_, [5])
+        self.assertEqual(ff.args, (5,))
 
         m.g = Objective(expr=m.x)
         gg = m.g.create_node_with_local_data([5])
         self.assertIsNot(m.g, gg)
         self.assertIs(type(gg), ObjectiveData)
-        self.assertEqual(gg._args_, [5])
+        self.assertEqual(gg.args, (5,))
 
         m.h = Objective([0], rule=lambda m, i: m.x)
         hh = m.h[0].create_node_with_local_data([5])
         self.assertIsNot(m.h, hh)
         self.assertIsNot(m.h[0], hh)
         self.assertIs(type(hh), ObjectiveData)
-        self.assertEqual(hh._args_, [5])
+        self.assertEqual(hh.args, (5,))
 
 
 class TestExpression(unittest.TestCase):
