@@ -23,7 +23,8 @@ from pyomo.environ import (
 )
 from pyomo.opt import SolverFactory, TerminationCondition
 
-knitroampl_available = SolverFactory('knitroampl').available(False)
+knitroampl = SolverFactory('knitroampl')
+knitroampl_available = knitroampl.available(False) and knitroampl.license_is_valid()
 
 
 class TestKNITROAMPLDefaultExecutable(unittest.TestCase):
