@@ -128,6 +128,7 @@ the following methods:
    :nosignatures:
 
    ~pyomo.contrib.parmest.parmest.Estimator.theta_est
+   ~pyomo.contrib.parmest.parmest.Estimator.theta_est_multistart
    ~pyomo.contrib.parmest.parmest.Estimator.cov_est
    ~pyomo.contrib.parmest.parmest.Estimator.theta_est_bootstrap
    ~pyomo.contrib.parmest.parmest.Estimator.theta_est_leaveNout
