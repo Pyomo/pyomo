@@ -519,7 +519,10 @@ def update_solver_timelimit(opt, solver_name, timing, config):
         The specific configurations for MindtPy.
     """
     elapsed = get_main_elapsed_time(timing)
-    remaining = math.ceil(max(config.time_limit - elapsed, 1))
+    if config.time_limit:
+        remaining = math.ceil(max(config.time_limit - elapsed, 1))
+    else:
+        remaining = None
     if solver_name in {
         'cplex',
         'appsi_cplex',

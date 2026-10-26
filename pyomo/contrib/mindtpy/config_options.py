@@ -17,6 +17,7 @@ from pyomo.common.config import (
     In,
     PositiveFloat,
     PositiveInt,
+    NonNegativeFloat,
     NonNegativeInt,
 )
 from pyomo.contrib.gdpopt.util import _DoNothing, a_logger
@@ -312,7 +313,7 @@ def _add_common_configs(CONFIG):
         'time_limit',
         ConfigValue(
             default=600,
-            domain=PositiveInt,
+            domain=NonNegativeFloat,
             description='Time limit (seconds, default=600)',
             doc='Seconds allowed until terminated. Note that the time limit can'
             'currently only be enforced between subsolver invocations. You may'
