@@ -487,9 +487,14 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             )
             if threads > 1:
                 with self._setup_pool(threads, instance, len(jobs)) as pool:
-                    results = pool.starmap(func=_calc_M, iterable=jobs_by_name)
-                    pool.close()
-                    pool.join()
+                    try:
+                        results = pool.starmap(func=_calc_M, iterable=jobs_by_name)
+                        pool.close()
+                    except:
+                        pool.terminate()
+                        raise
+                    finally:
+                        pool.join()
             else:
                 _thread_local.model = instance
                 _thread_local.solver = self._config.solver
