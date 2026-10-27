@@ -20,7 +20,7 @@ you will need (at least) one local nonlinear programming (NLP) solver
 and (at least) one global NLP solver
 (e.g.,
 `BARON <https://minlp.com/baron-solver>`__,
-`COUENNE <https://www.coin-or.org/Couenne/>`__,
+`COUENNE <https://github.com/coin-or/Couenne>`__,
 `SCIP <https://www.scipopt.org>`__)
 installed and licensed on your system.
 
