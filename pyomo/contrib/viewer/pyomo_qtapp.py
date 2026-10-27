@@ -104,3 +104,7 @@ except NameError:
         widget = super().new_frontend_master()
         self.kernel_pyomo_init(widget.kernel_client)
         return widget
+
+    def shutdown(self):
+        self.kernel_client.stop_channels()
+        self.kernel_manager.shutdown_kernel()
