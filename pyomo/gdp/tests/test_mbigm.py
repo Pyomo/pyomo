@@ -1094,6 +1094,7 @@ class CoreFunctions(unittest.TestCase):
                     pool = mbm._setup_pool(1, block, 2)
                 self.assertIsInstance(pool, multiprocessing.pool.Pool)
                 pool.close()
+                pool.join()
                 self.assertEqual(
                     LOG.getvalue().strip(),
                     "Running 2 jobs on 1 worker processes with "
@@ -1121,6 +1122,7 @@ class CoreFunctions(unittest.TestCase):
                 pool = mbm._setup_pool(1, block, 2)
             self.assertIsInstance(pool, multiprocessing.pool.Pool)
             pool.close()
+            pool.join()
             self.assertEqual(
                 LOG.getvalue().strip(),
                 "Running 2 jobs on 1 worker processes with ProcessStartMethod.fork.",
@@ -1136,6 +1138,7 @@ class CoreFunctions(unittest.TestCase):
                     pool = mbm._setup_pool(1, block, 2)
                 self.assertIsInstance(pool, multiprocessing.pool.Pool)
                 pool.close()
+                pool.join()
                 self.assertEqual(
                     LOG.getvalue().strip(),
                     "Running 2 jobs on 1 worker processes with "
@@ -1167,6 +1170,7 @@ class CoreFunctions(unittest.TestCase):
                 pool = mbm._setup_pool(1, block, 2)
             self.assertIsInstance(pool, multiprocessing.pool.Pool)
             pool.close()
+            pool.join()
             self.assertEqual(
                 LOG.getvalue().strip(),
                 "Running 2 jobs on 1 worker processes with ProcessStartMethod.spawn.",
