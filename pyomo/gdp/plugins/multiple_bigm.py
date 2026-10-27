@@ -823,19 +823,14 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         return transformed_constraints
 
     def _setup_pool(self, threads, instance, num_jobs):
-        method = (
-            self._config.process_start_method
-            if self._config.process_start_method is not None
-            else (
-                ProcessStartMethod.spawn
-                if os.name == 'nt'
-                else (
-                    ProcessStartMethod.forkserver
-                    if len(threading.enumerate()) > 1
-                    else ProcessStartMethod.fork
-                )
-            )
-        )
+        if self._config.process_start_method is not None:
+            method = self._config.process_start_method
+        elif os.name == 'nt':
+            method = ProcessStartMethod.spawn
+        elif len(threading.enumerate()) > 1:
+            method = ProcessStartMethod.forkserver
+        else:
+            method = ProcessStartMethod.fork
         logger.info(
             f"Running {num_jobs} jobs on {threads} worker "
             f"processes with process start method {method}."
