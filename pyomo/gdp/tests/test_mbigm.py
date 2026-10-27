@@ -1121,7 +1121,6 @@ class CoreFunctions(unittest.TestCase):
                 pool = mbm._setup_pool(1, block, 2)
             self.assertIsInstance(pool, multiprocessing.pool.Pool)
             pool.close()
-            self.assertIsInstance(pool, multiprocessing.pool.Pool)
             self.assertEqual(
                 LOG.getvalue().strip(),
                 "Running 2 jobs on 1 worker processes with process start "
