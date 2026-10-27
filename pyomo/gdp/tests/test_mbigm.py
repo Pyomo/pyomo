@@ -1096,8 +1096,8 @@ class CoreFunctions(unittest.TestCase):
                 pool.close()
                 self.assertEqual(
                     LOG.getvalue().strip(),
-                    "Running 2 jobs on 1 worker processes with process start "
-                    "method ProcessStartMethod.spawn.",
+                    "Running 2 jobs on 1 worker processes with "
+                    "ProcessStartMethod.spawn.",
                 )
             else:
                 with LoggingIntercept(level=logging.INFO) as LOG:
@@ -1110,8 +1110,8 @@ class CoreFunctions(unittest.TestCase):
                         mbm._setup_pool(1, block, 2)
                 self.assertEqual(
                     LOG.getvalue().strip(),
-                    "Running 2 jobs on 1 worker processes with process start "
-                    "method ProcessStartMethod.spawn.\n"
+                    "Running 2 jobs on 1 worker processes with "
+                    "ProcessStartMethod.spawn.\n"
                     "Dill is required when spawning processes using "
                     "methods 'spawn' or 'forkserver', but it could "
                     "not be imported.",
@@ -1123,8 +1123,7 @@ class CoreFunctions(unittest.TestCase):
             pool.close()
             self.assertEqual(
                 LOG.getvalue().strip(),
-                "Running 2 jobs on 1 worker processes with process start "
-                "method ProcessStartMethod.fork.",
+                "Running 2 jobs on 1 worker processes with ProcessStartMethod.fork.",
             )
 
         # Test creation of a forkserver
@@ -1139,8 +1138,8 @@ class CoreFunctions(unittest.TestCase):
                 pool.close()
                 self.assertEqual(
                     LOG.getvalue().strip(),
-                    "Running 2 jobs on 1 worker processes with process start "
-                    "method ProcessStartMethod.forkserver.",
+                    "Running 2 jobs on 1 worker processes with "
+                    "ProcessStartMethod.forkserver.",
                 )
             else:
                 with LoggingIntercept(level=logging.INFO) as LOG:
@@ -1152,8 +1151,8 @@ class CoreFunctions(unittest.TestCase):
                         mbm._setup_pool(1, block, 2)
                 self.assertEqual(
                     LOG.getvalue().strip(),
-                    "Running 2 jobs on 1 worker processes with process start "
-                    "method ProcessStartMethod.forkserver.\n"
+                    "Running 2 jobs on 1 worker processes with "
+                    "ProcessStartMethod.forkserver.\n"
                     "Dill is required when spawning processes using "
                     "methods 'spawn' or 'forkserver', but it could "
                     "not be imported.",
@@ -1170,8 +1169,7 @@ class CoreFunctions(unittest.TestCase):
             pool.close()
             self.assertEqual(
                 LOG.getvalue().strip(),
-                "Running 2 jobs on 1 worker processes with process start "
-                "method ProcessStartMethod.spawn.",
+                "Running 2 jobs on 1 worker processes with ProcessStartMethod.spawn.",
             )
         else:
             with LoggingIntercept(level=logging.INFO) as LOG:
@@ -1183,8 +1181,7 @@ class CoreFunctions(unittest.TestCase):
                     mbm._setup_pool(1, block, 2)
             self.assertEqual(
                 LOG.getvalue().strip(),
-                "Running 2 jobs on 1 worker processes with process start "
-                "method ProcessStartMethod.spawn.\n"
+                "Running 2 jobs on 1 worker processes with ProcessStartMethod.spawn.\n"
                 "Dill is required when spawning processes using "
                 "methods 'spawn' or 'forkserver', but it could "
                 "not be imported.",
