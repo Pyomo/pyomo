@@ -840,7 +840,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             or method == ProcessStartMethod.forkserver
         ):
             if not dill_available:
-                raise GDP_Error(
+                logger.error(
                     "Dill is required when spawning processes using "
                     "methods 'spawn' or 'forkserver', but it could "
                     "not be imported."
