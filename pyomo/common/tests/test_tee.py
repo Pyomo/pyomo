@@ -14,6 +14,7 @@ import logging
 import os
 import platform
 import time
+import threading
 import sys
 
 from io import StringIO, BytesIO
@@ -119,7 +120,11 @@ class TestTeeStream(unittest.TestCase):
         with self.assertRaisesRegex(
             AttributeError, '.*(is not writable)|(readonly attribute)'
         ):
-            tee.TeeStream().STDOUT.name = 'foo'
+            ts = tee.TeeStream()
+            try:
+                ts.STDOUT.name = 'foo'
+            finally:
+                ts.close()
 
     @unittest.skipIf(
         not tee._peek_available,
@@ -575,7 +580,11 @@ class TestCapture(unittest.TestCase):
                 a.reset()
         finally:
             # Clear b so that it doesn't call __exit__ and corrupt stdout/stderr
+            b_TeeStream = b.tee
             b.tee = None
+            # Close the b handles so the threads are cleaned up
+            for h in b_TeeStream._handles:
+                h.close()
             os.dup2(old_fd[0], 1)
             os.dup2(old_fd[1], 2)
             sys.stdout, sys.stderr = old
@@ -681,10 +690,13 @@ class TestCapture(unittest.TestCase):
 
     def test_deadlock(self):
         class MockStream:
+            def __init__(self, event):
+                self._stop = event
+
             def write(self, data):
                 # This test will kill the write before this sleep is
                 # done, so a long sleep won't impact suite run time.
-                time.sleep(1)
+                self._stop.wait(1)
 
             def flush(self):
                 pass
@@ -692,12 +704,13 @@ class TestCapture(unittest.TestCase):
         _save = tee._poll_timeout, tee._poll_timeout_deadlock
         tee._poll_timeout = tee._poll_interval * 2**5  # 0.0032
         tee._poll_timeout_deadlock = tee._poll_interval * 2**7  # 0.0128
+        stop_thread = threading.Event()
         try:
             with (
                 LoggingIntercept() as LOG,
                 self.assertRaisesRegex(RuntimeError, 'deadlock'),
             ):
-                with tee.TeeStream(MockStream()) as t:
+                with tee.TeeStream(MockStream(stop_thread)) as t:
                     t.STDERR.write('*')
             self.assertEqual(
                 'Significant delay observed waiting to join reader '
@@ -707,21 +720,29 @@ class TestCapture(unittest.TestCase):
             )
         finally:
             tee._poll_timeout, tee._poll_timeout_deadlock = _save
+            stop_thread.set()
 
         _save = tee._poll_timeout, tee._poll_timeout_deadlock
         tee._poll_timeout = tee._poll_interval * 2**5  # 0.0032
         tee._poll_timeout_deadlock = tee._poll_interval * 2**7  # 0.0128
+        stop_thread = threading.Event()
         try:
             with (
                 LoggingIntercept() as LOG,
                 self.assertRaisesRegex(ValueError, 'testing'),
             ):
-                with tee.TeeStream(MockStream()) as t:
+                with tee.TeeStream(MockStream(stop_thread)) as t:
                     t.STDERR.write('*')
                     raise ValueError('testing')
             self.assertEqual("", LOG.getvalue())
         finally:
             tee._poll_timeout, tee._poll_timeout_deadlock = _save
+            stop_thread.set()
+
+        # Clean up remaining threads
+        for thread in threading.enumerate():
+            if '_mergedReader' in thread.name:
+                thread.join()
 
     def test_capture_output_override(self):
         capture1 = tee.capture_output(capture_fd=True)
