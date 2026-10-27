@@ -481,3 +481,29 @@ class TestQuadratic(unittest.TestCase):
             },
         )
         self.assertEqual(repn.nonlinear, InvalidNumber(None))
+
+    def test_product_invalid_linear_times_zero_constant(self):
+        # (p*x) * y: the linear term of the first factor is multiplied by
+        # the (zero) constant of the second factor, and any InvalidNumber
+        # coefficients must be preserved
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.p = Param(mutable=True, within=Any, initialize=float('nan'))
+        e = (m.p * m.x) * m.y
+
+        cfg = VisitorConfig()
+        repn = QuadraticRepnVisitor(**cfg).walk_expression(e)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y})
+        self.assertEqual(cfg.var_order, {id(m.x): 0, id(m.y): 1})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertStructuredAlmostEqual(
+            repn.linear, {id(m.x): InvalidNumber(float('nan'))}
+        )
+        self.assertStructuredAlmostEqual(
+            cfg.order_quadratic(repn.quadratic),
+            {(id(m.x), id(m.y)): InvalidNumber(float('nan'))},
+        )
+        self.assertEqual(repn.nonlinear, None)
