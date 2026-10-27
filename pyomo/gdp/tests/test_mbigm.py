@@ -8,10 +8,13 @@
 # ____________________________________________________________________________________
 
 from io import StringIO
-import logging
 from os.path import join, normpath
-import pickle
+import logging
+import multiprocessing
 import os
+import pickle
+import time
+import threading
 
 from pyomo.common.dependencies import dill_available
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
@@ -1074,6 +1077,119 @@ class IndexedDisjunction(unittest.TestCase):
         self.assertEqual(len(cons_again), 2)
         self.assertIs(cons_again[0], cons[0])
         self.assertIs(cons_again[1], cons[1])
+
+
+class CoreFunctions(unittest.TestCase):
+
+    def test_setup_pool(self):
+        block = Block()
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm._process_arguments(block)
+        self.assertIsNone(mbm._config.process_start_method)
+        self.assertEqual(threading.active_count(), 1)
+        # Test default behavior...
+        if os.name == 'nt':
+            if dill_available:
+                with LoggingIntercept(level=logging.INFO) as LOG:
+                    pool = mbm._setup_pool(1, block, 2)
+                self.assertIsInstance(pool, multiprocessing.pool.Pool)
+                pool.close()
+                self.assertEqual(
+                    LOG.getvalue().strip(),
+                    "Running 2 jobs on 1 worker processes with process start "
+                    "method ProcessStartMethod.spawn.",
+                )
+            else:
+                with LoggingIntercept(level=logging.INFO) as LOG:
+                    with self.assertRaisesRegex(
+                        ImportError,
+                        r"The dill module \(an optional Pyomo dependency\) "
+                        "failed to import",
+                    ):
+
+                        mbm._setup_pool(1, block, 2)
+                self.assertEqual(
+                    LOG.getvalue().strip(),
+                    "Running 2 jobs on 1 worker processes with process start "
+                    "method ProcessStartMethod.spawn.\n"
+                    "Dill is required when spawning processes using "
+                    "methods 'spawn' or 'forkserver', but it could "
+                    "not be imported.",
+                )
+        else:
+            with LoggingIntercept(level=logging.INFO) as LOG:
+                pool = mbm._setup_pool(1, block, 2)
+            self.assertIsInstance(pool, multiprocessing.pool.Pool)
+            pool.close()
+            self.assertIsInstance(pool, multiprocessing.pool.Pool)
+            self.assertEqual(
+                LOG.getvalue().strip(),
+                "Running 2 jobs on 1 worker processes with process start "
+                "method ProcessStartMethod.fork.",
+            )
+
+        # Test creation of a forkserver
+        if os.name != 'nt':
+            me = threading.Thread(target=time.sleep, args=[0.1])
+            me.start()
+            self.assertGreaterEqual(threading.active_count(), 2)
+            if dill_available:
+                with LoggingIntercept(level=logging.INFO) as LOG:
+                    pool = mbm._setup_pool(1, block, 2)
+                self.assertIsInstance(pool, multiprocessing.pool.Pool)
+                pool.close()
+                self.assertEqual(
+                    LOG.getvalue().strip(),
+                    "Running 2 jobs on 1 worker processes with process start "
+                    "method ProcessStartMethod.forkserver.",
+                )
+            else:
+                with LoggingIntercept(level=logging.INFO) as LOG:
+                    with self.assertRaisesRegex(
+                        ImportError,
+                        r"The dill module \(an optional Pyomo dependency\) "
+                        "failed to import",
+                    ):
+                        mbm._setup_pool(1, block, 2)
+                self.assertEqual(
+                    LOG.getvalue().strip(),
+                    "Running 2 jobs on 1 worker processes with process start "
+                    "method ProcessStartMethod.forkserver.\n"
+                    "Dill is required when spawning processes using "
+                    "methods 'spawn' or 'forkserver', but it could "
+                    "not be imported.",
+                )
+            me.join()
+            self.assertEqual(threading.active_count(), 1)
+
+        # Test explicit spawn... it will work everywhere, but needs to test for dill
+        mbm._config.process_start_method = 'spawn'
+        if dill_available:
+            with LoggingIntercept(level=logging.INFO) as LOG:
+                pool = mbm._setup_pool(1, block, 2)
+            self.assertIsInstance(pool, multiprocessing.pool.Pool)
+            pool.close()
+            self.assertEqual(
+                LOG.getvalue().strip(),
+                "Running 2 jobs on 1 worker processes with process start "
+                "method ProcessStartMethod.spawn.",
+            )
+        else:
+            with LoggingIntercept(level=logging.INFO) as LOG:
+                with self.assertRaisesRegex(
+                    ImportError,
+                    r"The dill module \(an optional Pyomo dependency\) "
+                    "failed to import",
+                ):
+                    mbm._setup_pool(1, block, 2)
+            self.assertEqual(
+                LOG.getvalue().strip(),
+                "Running 2 jobs on 1 worker processes with process start "
+                "method ProcessStartMethod.spawn.\n"
+                "Dill is required when spawning processes using "
+                "methods 'spawn' or 'forkserver', but it could "
+                "not be imported.",
+            )
 
 
 @unittest.skipUnless(dill_available, "Dill is not available")
