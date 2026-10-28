@@ -839,7 +839,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         else:
             method = ProcessStartMethod.fork
         logger.info(
-            f"Running {num_jobs} jobs on {threads} worker " f"processes with {method}."
+            f"Running {num_jobs} jobs on {threads} worker processes with {method}."
         )
         if (
             method == ProcessStartMethod.spawn
