@@ -51,7 +51,7 @@ class MockNLPSolver(SolverBase):
         self.iter += 1
         for v, val in zip(self.varlist, expected):
             self.test.assertStructuredAlmostEqual(
-                v.value,val, reltol=rel_tol, abstol=abs_tol
+                v.value, val, reltol=rel_tol, abstol=abs_tol
             )
 
     def solve(self, model, **kwds) -> Results:
