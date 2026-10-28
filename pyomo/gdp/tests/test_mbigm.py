@@ -1208,6 +1208,7 @@ class EdgeCases(unittest.TestCase):
 
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_calculate_Ms_infeasible_Disjunct(self):
+        self.assertEqual(threading.active_count(), 1)
         m = self.make_infeasible_disjunct_model()
         out = StringIO()
         mbm = TransformationFactory('gdp.mbigm')
@@ -1249,6 +1250,7 @@ class EdgeCases(unittest.TestCase):
             cons[1].expr,
             m.x - (m.y - 9) <= -12.0 * m.disjunction_disjuncts[1].binary_indicator_var,
         )
+        self.assertEqual(threading.active_count(), 1)
 
     @unittest.skipUnless(
         SolverFactory('ipopt').available(exception_flag=False), "Ipopt is not available"
@@ -1258,6 +1260,7 @@ class EdgeCases(unittest.TestCase):
         "tests using multiprocessing stall on pypy; this will no longer be tested.",
     )
     def test_calculate_Ms_infeasible_Disjunct_local_solver(self):
+        self.assertEqual(threading.active_count(), 1)
         m = self.make_infeasible_disjunct_model()
         # When multiple exceptions are raised during a
         # multiprocessing.Pool.map call, it is indeterminate which
@@ -1275,9 +1278,11 @@ class EdgeCases(unittest.TestCase):
                 reduce_bound_constraints=False,
                 use_primal_bound=True,
             )
+        self.assertEqual(threading.active_count(), 1)
 
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_politely_ignore_BigM_Suffix(self):
+        self.assertEqual(threading.active_count(), 1)
         m = self.make_infeasible_disjunct_model()
         m.disjunction.disjuncts[0].deactivate()
         m.disjunction.disjuncts[1].BigM = Suffix(direction=Suffix.LOCAL)
@@ -1294,9 +1299,11 @@ class EdgeCases(unittest.TestCase):
             r"this Suffix.",
             warnings,
         )
+        self.assertEqual(threading.active_count(), 1)
 
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_complain_for_unrecognized_Suffix(self):
+        self.assertEqual(threading.active_count(), 1)
         m = self.make_infeasible_disjunct_model()
         m.disjunction.disjuncts[0].deactivate()
         m.disjunction.disjuncts[1].HiThere = Suffix(direction=Suffix.LOCAL)
@@ -1310,6 +1317,7 @@ class EdgeCases(unittest.TestCase):
             TransformationFactory('gdp.mbigm').apply_to(
                 m, reduce_bound_constraints=False
             )
+        self.assertEqual(threading.active_count(), 1)
 
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_transform_on_block(self):
