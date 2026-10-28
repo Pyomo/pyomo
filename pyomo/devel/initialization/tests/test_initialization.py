@@ -26,7 +26,6 @@ from pyomo.contrib.solver.common.results import (
     TerminationCondition,
 )
 from pyomo.contrib.solver.common.base import Availability, SolverBase
-from pyomo.common.unittest import pytest
 
 scip = SolverFactory('scip_direct')
 ipopt = SolverFactory('ipopt')
@@ -34,8 +33,9 @@ highs = SolverFactory('highs')
 
 
 class MockNLPSolver(SolverBase):
-    def __init__(self, varlist, sol_map, **kwds) -> None:
+    def __init__(self, test, varlist, sol_map, **kwds) -> None:
         super().__init__(**kwds)
+        self.test = test
         self.varlist = varlist
         self.sol_map = sol_map
         self.iter = 0
@@ -50,7 +50,9 @@ class MockNLPSolver(SolverBase):
         expected, rel_tol, abs_tol = self.sol_map[self.iter]
         self.iter += 1
         for v, val in zip(self.varlist, expected):
-            assert v.value == pytest.approx(val, rel=rel_tol, abs=abs_tol)
+            self.test.assertStructuredAlmostEqual(
+                v.value,val, reltol=rel_tol, abstol=abs_tol
+            )
 
     def solve(self, model, **kwds) -> Results:
         self.check_solution()
@@ -118,6 +120,7 @@ class TestInit(unittest.TestCase):
 
         # all the actual testing happens in the MockNLPSolver
         nlp_solver = MockNLPSolver(
+            self,
             varlist=[m.x1, m.x2],
             sol_map={0: ([None, None], 0, 0), 1: ([1, 3], 1e-6, 1e-6)},
         )
@@ -145,6 +148,7 @@ class TestInit(unittest.TestCase):
 
         # all the actual testing happens in the MockNLPSolver
         nlp_solver = MockNLPSolver(
+            self,
             varlist=[m.x1, m.x2],
             sol_map={0: ([None, None], 0, 0), 1: ([1, 3], 1e-6, 1e-6)},
         )
@@ -166,6 +170,7 @@ class TestInit(unittest.TestCase):
 
         # all the actual testing happens in the MockNLPSolver
         nlp_solver = MockNLPSolver(
+            self,
             varlist=[m.x],
             sol_map={
                 0: ([None], 0, 0),
