@@ -486,15 +486,10 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 else os.cpu_count() - 1
             )
             if threads > 1:
+                # Note: using the pool as a context manager ensures
+                # close() and join() are called.
                 with self._setup_pool(threads, instance, len(jobs)) as pool:
-                    try:
-                        results = pool.starmap(func=_calc_M, iterable=jobs_by_name)
-                        pool.close()
-                    except:
-                        pool.terminate()
-                        raise
-                    finally:
-                        pool.join()
+                    results = pool.starmap(func=_calc_M, iterable=jobs_by_name)
             else:
                 _thread_local.model = instance
                 _thread_local.solver = self._config.solver
