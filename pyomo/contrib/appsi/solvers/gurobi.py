@@ -257,7 +257,6 @@ class Gurobi(PersistentBase, PersistentSolver):
             self.__class__._available = self._check_license()
         return self._available
 
-
     def _check_license(self):
         if not gurobipy_available:
             return Gurobi.Availability.NotFound
