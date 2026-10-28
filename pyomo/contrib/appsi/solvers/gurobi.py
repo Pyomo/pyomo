@@ -42,20 +42,7 @@ import sys
 
 logger = logging.getLogger(__name__)
 
-
-def _import_gurobipy():
-    try:
-        import gurobipy
-    except ImportError:
-        Gurobi._available = Gurobi.Availability.NotFound
-        raise
-    if gurobipy.GRB.VERSION_MAJOR < 7:
-        Gurobi._available = Gurobi.Availability.BadVersion
-        raise ImportError('The APPSI Gurobi interface requires gurobipy>=7.0.0')
-    return gurobipy
-
-
-gurobipy, gurobipy_available = attempt_import('gurobipy', importer=_import_gurobipy)
+gurobipy, gurobipy_available = attempt_import('gurobipy')
 
 
 class DegreeError(PyomoException):
@@ -266,46 +253,30 @@ class Gurobi(PersistentBase, PersistentSolver):
         self._last_results_object: Optional[GurobiResults] = None
 
     def available(self):
-        if not gurobipy_available:  # this triggers the deferred import
-            return self.Availability.NotFound
-        elif self._available == self.Availability.BadVersion:
-            return self.Availability.BadVersion
-        else:
-            return self._check_license()
+        if self._available is None:
+            self.__class__._available = self._check_license()
+        return self._available
+
 
     def _check_license(self):
-        avail = False
+        if not gurobipy_available:
+            return Gurobi.Availability.NotFound
+        elif gurobipy.GRB.VERSION_MAJOR < 7:
+            return Gurobi.Availability.BadVersion
         try:
             # Gurobipy writes out license file information when creating
             # the environment
             with capture_output(capture_fd=True):
                 m = gurobipy.Model()
-            if self._solver_model is None:
-                self._solver_model = m
-            avail = True
+                m.setParam('OutputFlag', 0)
         except gurobipy.GurobiError:
-            avail = False
-
-        if avail:
-            if self._available is None:
-                res = Gurobi._check_full_license()
-                self._available = res
-                return res
-            else:
-                return self._available
-        else:
             return self.Availability.BadLicense
-
-    @classmethod
-    def _check_full_license(cls):
-        m = gurobipy.Model()
-        m.setParam('OutputFlag', 0)
         try:
             m.addVars(range(2001))
             m.optimize()
-            return cls.Availability.FullLicense
+            return self.Availability.FullLicense
         except gurobipy.GurobiError:
-            return cls.Availability.LimitedLicense
+            return self.Availability.LimitedLicense
 
     def release_license(self):
         self._reinit()
