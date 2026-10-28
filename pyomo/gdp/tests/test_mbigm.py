@@ -1272,9 +1272,14 @@ class EdgeCases(unittest.TestCase):
             r"on Disjunct 'disjunction_disjuncts\[\d+\]' when "
             r"Disjunct 'disjunction_disjuncts\[\d+\]' is selected.",
         ):
+            # Note: for reasons we don't quite understand, this test can
+            # hang indefinitely on OSX/python 3.12 and 3.13.  We will
+            # run this test serially to avoid invoking the
+            # multiprocessing Pool.
             TransformationFactory('gdp.mbigm').apply_to(
                 m,
                 solver=SolverFactory('ipopt'),
+                threads=1,
                 reduce_bound_constraints=False,
                 use_primal_bound=True,
             )
