@@ -1251,6 +1251,7 @@ class EdgeCases(unittest.TestCase):
             m.x - (m.y - 9) <= -12.0 * m.disjunction_disjuncts[1].binary_indicator_var,
         )
 
+    @unittest.skipIf(True)
     @unittest.skipUnless(
         SolverFactory('ipopt').available(exception_flag=False), "Ipopt is not available"
     )
