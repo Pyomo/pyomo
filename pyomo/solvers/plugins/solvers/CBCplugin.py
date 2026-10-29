@@ -815,6 +815,9 @@ class CBCSHELL(SystemCallSolver):
         )
         header_processed = False
         optim_value = None
+        # number of rows / columns that CBC flagged as infeasible
+        n_infeasible_rows = 0
+        n_infeasible_cols = 0
 
         try:
             INPUT = open(self._soln_file, "r")
@@ -828,6 +831,13 @@ class CBCSHELL(SystemCallSolver):
 
         for line in INPUT:
             tokens = tuple(re.split('[ \t]+', line.strip()))
+            # CBC prefixes rows and columns whose values violate their
+            # bounds (or integrality) with "**".  Strip the marker
+            # here so that the row / column index is parsed correctly
+            # (including index 0, which marks the start of a section).
+            infeasible = tokens[0] == "**" and len(tokens) > 1
+            if infeasible:
+                tokens = tokens[1:]
             n_tokens = len(tokens)
             #
             # These are the only header entries CBC will generate
@@ -994,12 +1004,14 @@ class CBCSHELL(SystemCallSolver):
                         }
                     header_processed = True
 
+            if infeasible:
+                if processing_constraints is True:
+                    n_infeasible_rows += 1
+                elif processing_constraints is False:
+                    n_infeasible_cols += 1
+
             if (processing_constraints is True) and (extract_duals is True):
-                if n_tokens == 4:
-                    pass
-                elif (n_tokens == 5) and tokens[0] == "**":
-                    tokens = tokens[1:]
-                else:
+                if n_tokens != 4:
                     raise RuntimeError(
                         "Unexpected line format encountered in CBC solution file - line="
                         + line
@@ -1036,11 +1048,7 @@ class CBCSHELL(SystemCallSolver):
                         }
 
             elif processing_constraints is False:
-                if n_tokens == 4:
-                    pass
-                elif (n_tokens == 5) and tokens[0] == "**":
-                    tokens = tokens[1:]
-                else:
+                if n_tokens != 4:
                     raise RuntimeError(
                         "Unexpected line format encountered "
                         "in CBC solution file - line=" + line
@@ -1071,6 +1079,14 @@ class CBCSHELL(SystemCallSolver):
 
         if not type(INPUT) is list:
             INPUT.close()
+
+        if n_infeasible_rows or n_infeasible_cols:
+            logger.warning(
+                f"CBC marked {n_infeasible_rows} constraint(s) and "
+                f"{n_infeasible_cols} variable(s) as infeasible ('**') in the "
+                f"solution file {self._soln_file}; the returned solution "
+                "violates the model constraints or variable bounds."
+            )
 
         if len(results.solution) == 0 and solution.status in [
             SolutionStatus.optimal,
