@@ -1981,7 +1981,10 @@ class _MindtPyAlgorithm:
             config.logger.error(e, exc_info=True)
             if config.single_tree:
                 config.logger.warning('Single tree terminate.')
-                if get_main_elapsed_time(self.timing) >= config.time_limit:
+                if (
+                    config.time_limit
+                    and get_main_elapsed_time(self.timing) >= config.time_limit
+                ):
                     config.logger.warning('due to the timelimit.')
                     self.results.solver.termination_condition = tc.maxTimeLimit
                 if config.strategy == 'GOA' or config.add_no_good_cuts:
@@ -3507,6 +3510,8 @@ class _MindtPyAlgorithm:
 
     def reached_time_limit(self):
         """Check whether the configured time limit has been reached."""
+        if not self.config.time_limit:
+            return False
         if get_main_elapsed_time(self.timing) >= self.config.time_limit:
             self.config.logger.info(
                 'MindtPy unable to converge bounds '

@@ -800,7 +800,9 @@ jobs:
       run: |
         sudo apt-get -y install graphviz latexmk texlive texlive-latex-extra \
             texlive-pictures
+        echo "Build HTML docs..."
         make -C doc/OnlineDocs html
+        echo "Build PDF docs..."
         make -C doc/OnlineDocs latexpdf
         # Run the doc tests (some check the html output for correctness)
         $PYTHON_EXE -m pytest -v -W ignore::Warning \

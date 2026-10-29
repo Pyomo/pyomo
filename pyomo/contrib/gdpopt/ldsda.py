@@ -262,7 +262,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
             except InfeasibleConstraintException:
                 return False, None
             minlp_args = dict(config.minlp_solver_args)
-            if config.time_limit is not None and config.minlp_solver == 'gams':
+            if config.time_limit and config.minlp_solver == 'gams':
                 elapsed = get_main_elapsed_time(self.timing)
                 remaining = max(config.time_limit - elapsed, 1)
                 minlp_args['add_options'] = minlp_args.get('add_options', [])
