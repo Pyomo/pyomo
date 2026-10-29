@@ -1076,6 +1076,7 @@ class IndexedDisjunction(unittest.TestCase):
         self.assertIs(cons_again[1], cons[1])
 
 
+@unittest.skipUnless(dill_available, "Dill is not available")
 class EdgeCases(unittest.TestCase):
     def make_infeasible_disjunct_model(self):
         m = ConcreteModel()
