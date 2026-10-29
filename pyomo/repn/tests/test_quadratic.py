@@ -7,6 +7,8 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+import math
+
 from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
 
@@ -499,11 +501,11 @@ class TestQuadratic(unittest.TestCase):
         self.assertEqual(cfg.var_order, {id(m.x): 0, id(m.y): 1})
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
-        self.assertStructuredAlmostEqual(
-            repn.linear, {id(m.x): InvalidNumber(float('nan'))}
-        )
-        self.assertStructuredAlmostEqual(
-            cfg.order_quadratic(repn.quadratic),
-            {(id(m.x), id(m.y)): InvalidNumber(float('nan'))},
-        )
+        # nan != nan, so check the InvalidNumber values explicitly
+        self.assertEqual(list(repn.linear), [id(m.x)])
+        self.assertIs(type(repn.linear[id(m.x)]), InvalidNumber)
+        self.assertTrue(math.isnan(repn.linear[id(m.x)].value))
+        self.assertEqual(list(repn.quadratic), [(id(m.x), id(m.y))])
+        self.assertIs(type(repn.quadratic[id(m.x), id(m.y)]), InvalidNumber)
+        self.assertTrue(math.isnan(repn.quadratic[id(m.x), id(m.y)].value))
         self.assertEqual(repn.nonlinear, None)
