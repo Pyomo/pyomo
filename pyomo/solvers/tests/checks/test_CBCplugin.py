@@ -9,12 +9,10 @@
 
 import os
 import sys
-from io import StringIO
+from unittest import mock
 from os.path import dirname, abspath
 
 import pyomo.common.unittest as unittest
-from pyomo.common.log import LoggingIntercept
-from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.environ import (
     ConcreteModel,
@@ -30,7 +28,14 @@ from pyomo.environ import (
     maximize,
     minimize,
 )
-from pyomo.opt import SolverFactory, SolverResults, TerminationCondition, SolverStatus
+from pyomo.opt import (
+    SolverFactory,
+    SolverResults,
+    Solution,
+    SolutionStatus,
+    TerminationCondition,
+    SolverStatus,
+)
 from pyomo.solvers.plugins.solvers.CBCplugin import CBCSHELL
 
 cbc_available = SolverFactory('cbc', solver_io='lp').available(exception_flag=False)
@@ -448,72 +453,61 @@ class TestCBCUsingMock(unittest.TestCase):
         cbc_shell = CBCSHELL()
         cbc_shell._version = (2, 10, 12)
         cbc_shell._suffixes = list(suffixes)
+        cbc_shell._soln_file = 'test.soln'
         results = SolverResults()
-        log = StringIO()
-        with TempfileManager.new_context() as tempfile:
-            cbc_shell._soln_file = tempfile.create_tempfile(suffix='.soln')
-            with open(cbc_shell._soln_file, 'w') as f:
-                f.write(soln_text)
-            with LoggingIntercept(log, 'pyomo.solvers'):
-                cbc_shell.process_soln_file(results)
-        return results.solution(0), log.getvalue()
+        # process_logfile() has already stored the (time limit) solution
+        results.solution.insert(Solution())
+        results.solution(0).status = SolutionStatus.stoppedByLimit
+        with mock.patch(
+            'pyomo.solvers.plugins.solvers.CBCplugin.open',
+            mock.mock_open(read_data=soln_text),
+            create=True,
+        ):
+            cbc_shell.process_soln_file(results)
+        return results
 
-    def test_process_soln_file_infeasible_marker(self):
-        # A time-limited solve whose solution file flags a variable
-        # value as infeasible (see #4057)
-        solution, log = self._process_soln_text(
+    def test_process_soln_file_stopped_on_time(self):
+        results = self._process_soln_text(
+            "Stopped on time - objective value -3.00000000\n"
+            "      0 c_u_c_                   0.5                      0\n"
+            "      0 x                          1                      0\n"
+            "      1 y                       -0.5                      0\n"
+        )
+        self.assertEqual(len(results.solution), 1)
+        solution = results.solution(0)
+        self.assertEqual(solution.status, SolutionStatus.stoppedByLimit)
+        self.assertEqual(solution.variable['x']['Value'], 1)
+        self.assertEqual(solution.variable['y']['Value'], -0.5)
+
+    def test_process_soln_file_infeasible_variable(self):
+        # The "**" lines use the layout written by CBC for values that
+        # violate their bounds (see #4057)
+        results = self._process_soln_text(
             "Stopped on time - objective value -3.00000000\n"
             "      0 c_u_c_                     2                      0\n"
             "      0 x                          1                      0\n"
-            "**    1 y                          1                      0\n"
+            "**       1 y                      2.5                      0\n"
         )
-        self.assertEqual(solution.variable['x']['Value'], 1)
-        self.assertEqual(solution.variable['y']['Value'], 1)
-        self.assertIn("CBC marked 0 constraint(s) and 1 variable(s) as infeasible", log)
+        self.assertEqual(len(results.solution), 0)
+        self.assertEqual(
+            results.solver.termination_message,
+            "Optimization terminated because the time expended exceeded the "
+            "value specified in the seconds parameter. CBC marked the values "
+            "in the solution file as infeasible.",
+        )
 
-    def test_process_soln_file_infeasible_marker_first_entry(self):
-        # A "**" marker on index 0 must not hide the start of the
-        # constraint or variable section
-        for soln_text, n_rows, n_cols in (
-            (
+    def test_process_soln_file_infeasible_first_row(self):
+        # A "**" on row 0 must not hide the start of the constraint
+        # section (see #4066)
+        for suffixes in ((), ('dual', 'rc')):
+            results = self._process_soln_text(
                 "Stopped on time - objective value -3.00000000\n"
-                "**    0 c_u_c_                     2                      0\n"
+                "**       0 c_u_c_                     2                      0\n"
                 "      0 x                          1                      0\n"
-                "      1 y                          1                      0\n",
-                1,
-                0,
-            ),
-            (
-                "Stopped on time - objective value -3.00000000\n"
-                "      0 c_u_c_                     2                      0\n"
-                "**    0 x                          1                      0\n"
-                "**    1 y                          1                      0\n",
-                0,
-                2,
-            ),
-        ):
-            for suffixes in ((), ('dual', 'rc')):
-                solution, log = self._process_soln_text(soln_text, suffixes)
-                self.assertEqual(solution.variable['x']['Value'], 1)
-                self.assertEqual(solution.variable['y']['Value'], 1)
-                if suffixes:
-                    self.assertEqual(solution.constraint['c_u_c_']['Dual'], 0)
-                self.assertIn(
-                    f"CBC marked {n_rows} constraint(s) and "
-                    f"{n_cols} variable(s) as infeasible",
-                    log,
-                )
-
-    def test_process_soln_file_no_infeasible_marker(self):
-        solution, log = self._process_soln_text(
-            "Optimal - objective value -3.00000000\n"
-            "      0 c_u_c_                     1                      0\n"
-            "      0 x                          0                      0\n"
-            "      1 y                          1                      0\n"
-        )
-        self.assertEqual(solution.variable['x']['Value'], 0)
-        self.assertEqual(solution.variable['y']['Value'], 1)
-        self.assertEqual(log, "")
+                "      1 y                        2.5                      0\n",
+                suffixes,
+            )
+            self.assertEqual(len(results.solution), 0)
 
     def test_process_logfile_gap_inf(self):
         cbc_shell = CBCSHELL()

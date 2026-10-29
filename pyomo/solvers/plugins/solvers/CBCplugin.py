@@ -815,9 +815,8 @@ class CBCSHELL(SystemCallSolver):
         )
         header_processed = False
         optim_value = None
-        # number of rows / columns that CBC flagged as infeasible
-        n_infeasible_rows = 0
-        n_infeasible_cols = 0
+        # CBC flags rows / columns that violate their bounds with "**"
+        infeasible_point = False
 
         try:
             INPUT = open(self._soln_file, "r")
@@ -831,13 +830,6 @@ class CBCSHELL(SystemCallSolver):
 
         for line in INPUT:
             tokens = tuple(re.split('[ \t]+', line.strip()))
-            # CBC prefixes rows and columns whose values violate their
-            # bounds (or integrality) with "**".  Strip the marker
-            # here so that the row / column index is parsed correctly
-            # (including index 0, which marks the start of a section).
-            infeasible = tokens[0] == "**" and len(tokens) > 1
-            if infeasible:
-                tokens = tokens[1:]
             n_tokens = len(tokens)
             #
             # These are the only header entries CBC will generate
@@ -970,6 +962,14 @@ class CBCSHELL(SystemCallSolver):
                         'line is: {}'.format(tokens[0], line.strip())
                     )
 
+            # CBC prefixes rows / columns whose values violate their
+            # bounds with "**".  Strip the marker before reading the row
+            # number, as row number 0 marks the start of a section.
+            if n_tokens == 5 and tokens[0] == "**":
+                infeasible_point = True
+                tokens = tokens[1:]
+                n_tokens = 4
+
             # most of the first tokens should be integers
             # if it's not an integer, only then check the list of results
             try:
@@ -1003,12 +1003,6 @@ class CBCSHELL(SystemCallSolver):
                             'Value': optim_value
                         }
                     header_processed = True
-
-            if infeasible:
-                if processing_constraints is True:
-                    n_infeasible_rows += 1
-                elif processing_constraints is False:
-                    n_infeasible_cols += 1
 
             if (processing_constraints is True) and (extract_duals is True):
                 if n_tokens != 4:
@@ -1080,13 +1074,15 @@ class CBCSHELL(SystemCallSolver):
         if not type(INPUT) is list:
             INPUT.close()
 
-        if n_infeasible_rows or n_infeasible_cols:
-            logger.warning(
-                f"CBC marked {n_infeasible_rows} constraint(s) and "
-                f"{n_infeasible_cols} variable(s) as infeasible ('**') in the "
-                f"solution file {self._soln_file}; the returned solution "
-                "violates the model constraints or variable bounds."
-            )
+        if infeasible_point:
+            # The point in the solution file is not feasible: do not
+            # return it as a solution that can be loaded into the model
+            solution.status = SolutionStatus.infeasible
+            results.solution.clear()
+            results.solver.termination_message = (
+                (results.solver.termination_message or "")
+                + " CBC marked the values in the solution file as infeasible."
+            ).strip()
 
         if len(results.solution) == 0 and solution.status in [
             SolutionStatus.optimal,
