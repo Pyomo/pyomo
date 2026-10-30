@@ -622,8 +622,9 @@ class PiecewiseLinearFunction(Block):
         obj = handler(self, obj, parent, nonlinear_function)
 
         # Update convexity info
-        obj.function_type = FunctionType.UNSPECIFIED
-        if self._func_type_rule is not None:
+        if self._func_type_rule is None:
+            obj.function_type = FunctionType.UNSPECIFIED
+        else:
             obj.function_type = self._func_type_rule(parent, index)
 
         return obj
