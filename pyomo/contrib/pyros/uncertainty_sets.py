@@ -3844,9 +3844,8 @@ class IntersectionSet(UncertaintySet):
 
     def __init__(self, *args, **kwargs):
         """Initialize self (see class docstring)."""
-        if args:
-            self.all_sets = args
-        else:
+        self.all_sets = args
+        if kwargs:
             deprecation_warning(
                 (
                     f"Specifying {type(self).__name__} operand uncertainty "
@@ -3856,7 +3855,7 @@ class IntersectionSet(UncertaintySet):
                 ),
                 version="6.10.2.dev0",
             )
-            self.all_sets = kwargs.values()
+            self.all_sets += tuple(kwargs.values())
 
     @property
     def type(self):
