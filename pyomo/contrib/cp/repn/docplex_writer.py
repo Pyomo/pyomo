@@ -94,6 +94,7 @@ from pyomo.network import Port
 
 ###
 
+
 # These are things that don't need special handling:
 class _GENERAL:
     pass
