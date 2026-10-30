@@ -253,7 +253,9 @@ setup_kwargs = dict(
             # install on PyPy (binary wheels are not available), so we
             # will only "require" them on other (CPython) platforms:
             'casadi; implementation_name!="pypy"',  # dae
-            'dill; implementation_name!="pypy"',  # No direct use, but improves lambda pickle
+            # Dill: No direct use, but improves lambda pickle
+            # [Oct 26] dill does not yet support Python 3.15
+            'dill; implementation_name!="pypy" and python_version<"3.15"',
             'numdifftools; implementation_name!="pypy"',  # pynumero
             'pandas; implementation_name!="pypy"',
             'seaborn; implementation_name!="pypy"',  # parmest.graphics
