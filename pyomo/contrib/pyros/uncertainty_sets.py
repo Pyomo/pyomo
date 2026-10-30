@@ -3432,10 +3432,9 @@ class EllipsoidalSet(UncertaintySet):
             (lower, upper) bound pairs.
         """
         max_abs_deviations = np.sqrt(self.scale * np.diag(self.shape_matrix))
-        return [
-            (ctr - max_abs_dev, ctr + max_abs_dev)
-            for ctr, max_abs_dev in zip(self.center, max_abs_deviations)
-        ]
+        return list(
+            zip(self.center - max_abs_deviations, self.center + max_abs_deviations)
+        )
 
     @copy_docstring(UncertaintySet.point_in_set)
     def point_in_set(self, point):
