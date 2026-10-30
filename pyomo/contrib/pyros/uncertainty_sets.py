@@ -3084,9 +3084,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
             (lower, upper) bound pairs.
         """
         center, half_lengths = self.center, self.half_lengths
-        return [
-            (lb, ub) for lb, ub in zip(center - half_lengths, center + half_lengths)
-        ]
+        return list(zip(center - half_lengths, center + half_lengths))
 
     @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, uncertain_params=None, block=None):
