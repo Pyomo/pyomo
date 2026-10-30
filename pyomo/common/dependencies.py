@@ -976,7 +976,13 @@ def _finalize_multiprocessing(module, available):
     # triggers the multiprocessing import.
 
     global capture_output_lock
-    capture_output_lock = module.Lock()
+    try:
+        capture_output_lock = module.Lock()
+    except OSError:
+        # Platforms without shared memory (e.g., AWS Lambda has no
+        # /dev/shm) cannot create a multiprocessing.Lock.  Keep the
+        # threading.Lock instead of failing the import.
+        pass
 
 
 def _finalize_scipy(module, available):

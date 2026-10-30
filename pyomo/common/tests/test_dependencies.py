@@ -12,6 +12,7 @@ import sys
 from importlib.machinery import PathFinder
 from io import StringIO
 
+import pyomo.common.dependencies as dependencies
 import pyomo.common.unittest as unittest
 
 from pyomo.common.log import LoggingIntercept
@@ -527,6 +528,22 @@ class TestDependencies(unittest.TestCase):
             r"'__there_is_no_module_named_this__'\)",
         ):
             A_Class.method()
+
+    def test_finalize_multiprocessing_lock_unavailable(self):
+        # Platforms without shared memory (e.g., AWS Lambda has no
+        # /dev/shm) raise OSError from multiprocessing.Lock(); importing
+        # multiprocessing must not fail, and we keep the threading.Lock
+        class _NoSharedMemory:
+            @staticmethod
+            def Lock():
+                raise PermissionError(13, 'Permission denied')
+
+        original = dependencies.capture_output_lock
+        try:
+            dependencies._finalize_multiprocessing(_NoSharedMemory, True)
+            self.assertIs(dependencies.capture_output_lock, original)
+        finally:
+            dependencies.capture_output_lock = original
 
     @unittest.pytest.mark.mpi
     def test_mpi4py_available(self):
