@@ -13,19 +13,11 @@ import pyomo.environ as pyo
 from pyomo.common.collections import ComponentSet
 from pyomo.core.base.block import BlockData
 from pyomo.core.expr.visitor import identify_variables
-from pyomo.util.vars_from_expressions import get_vars_from_components
 from pyomo.contrib.solver.solvers.scip.scip_direct import ScipDirect
 from pyomo.contrib.solver.solvers.scip.scip_persistent import ScipPersistent
 from pyomo.contrib.solver.solvers.gurobi.gurobi_direct_base import GurobiDirectBase
 from pyomo.contrib.solver.solvers.highs import Highs
-
-
-def get_vars(m: BlockData):
-    return ComponentSet(
-        get_vars_from_components(
-            m, ctype=(pyo.Constraint, pyo.Objective), include_fixed=False, active=True
-        )
-    )
+from pyomo.util.vars_from_expressions import get_vars
 
 
 def get_solution_limit_options(solver):

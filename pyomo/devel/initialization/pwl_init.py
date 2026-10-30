@@ -20,7 +20,7 @@ from pyomo.contrib.piecewise.piecewise_linear_expression import (
 )
 from pyomo.contrib.piecewise.piecewise_linear_function import PiecewiseLinearFunction
 from pyomo.contrib.solver.common.base import SolverBase
-from pyomo.contrib.solver.common.results import SolutionStatus
+from pyomo.contrib.solver.common.results import SolutionStatus, Results
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.expression import ExpressionData, ScalarExpression
@@ -54,12 +54,11 @@ from pyomo.devel.initialization.bounds.bound_variables import (
 )
 from pyomo.devel.initialization.utils import (
     fix_vars_with_equal_bounds,
-    get_vars,
     shallow_clone,
     get_solution_limit_options,
 )
 from pyomo.repn.util import ExitNodeDispatcher
-from pyomo.contrib.solver.common.results import Results
+from pyomo.util.vars_from_expressions import get_vars
 
 logger = logging.getLogger(__name__)
 
