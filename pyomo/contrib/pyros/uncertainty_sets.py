@@ -4145,16 +4145,13 @@ class CartesianProductSet(UncertaintySet):
         deprecation_version = "6.10.2.dev0"
 
         # resolve arguments
-        if args:
-            if len(args) == 1 and isinstance(args[0], Sequence):
-                # support old API: allow single positional argument
-                #                  of type `Sequence`
-                deprecation_warning(msg=deprecation_msg, version=deprecation_version)
-                all_sets = args[0]
-            else:
-                # current API
-                all_sets = args
-        elif kwargs:
+        all_sets = args
+        if len(args) == 1 and isinstance(args[0], Sequence):
+            # support old API: allow single positional argument
+            #                  of type `Sequence`
+            deprecation_warning(msg=deprecation_msg, version=deprecation_version)
+            all_sets = tuple(args[0])
+        if kwargs:
             # support old API: allow single keyword argument `all_sets`
             #                  of type `Sequence`
             deprecation_warning(msg=deprecation_msg, version=deprecation_version)
@@ -4172,8 +4169,8 @@ class CartesianProductSet(UncertaintySet):
                     f"Argument `all_sets` should be a {Sequence.__name__}-type "
                     f"iterable, but is of type {type(all_sets_kwarg).__name__}."
                 )
-            all_sets = tuple(all_sets_kwarg)
-        else:
+            all_sets += tuple(all_sets_kwarg)
+        if not all_sets:
             raise TypeError(
                 f"No arguments were passed to the {type(self).__name__} "
                 "constructor. Ensure that one or more positional arguments "
