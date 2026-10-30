@@ -46,8 +46,8 @@ class PWLToEpigraphOrHypograph(PiecewiseLinearTransformationBase):
         if ftype is FunctionType.CONVEX:
             # This will be epigraph
             epigraph = True
-        # this is the hypograph (the function is concave)
         elif ftype is FunctionType.CONCAVE:
+            # this is the hypograph (the function is concave)
             epigraph = False
         else:
             # we should autodetect if the dimension isn't insane, yell otherwise
