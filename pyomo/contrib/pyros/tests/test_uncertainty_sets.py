@@ -590,22 +590,18 @@ class TestBudgetSet(unittest.TestCase):
         """
         solver = SolverFactory("baron")
 
-        buset1 = BudgetSet([[1, 1], [0, 1]], rhs_vec=[2, 3], origin=None)
+        buset1 = BudgetSet([[1, 1, 0], [0, 1, 1]], rhs_vec=[2, 3], origin=None)
         np.testing.assert_allclose(
             buset1.parameter_bounds, buset1._compute_exact_parameter_bounds(solver)
         )
-
         # this also checks that the list entries are tuples
-        self.assertEqual(buset1.parameter_bounds, [(0, 2), (0, 2)])
+        self.assertEqual(buset1.parameter_bounds, [(0, 2), (0, 2), (0, 3)])
 
-        buset2 = BudgetSet([[1, 0], [1, 1]], rhs_vec=[3, 2], origin=[1, 2])
-        self.assertEqual(
-            buset2.parameter_bounds, buset2._compute_exact_parameter_bounds(solver)
-        )
+        buset2 = BudgetSet([[1, 0, 1], [1, 1, 0]], rhs_vec=[3.5, 2], origin=[1, 2, 3])
         np.testing.assert_allclose(
             buset2.parameter_bounds, buset2._compute_exact_parameter_bounds(solver)
         )
-        self.assertEqual(buset2.parameter_bounds, [(1, 3), (2, 4)])
+        self.assertEqual(buset2.parameter_bounds, [(1, 3), (2, 4), (3, 6.5)])
 
     def test_set_as_constraint(self):
         """

@@ -2410,13 +2410,10 @@ class BudgetSet(UncertaintySet):
             List, length `N`, of coordinate value
             (lower, upper) bound pairs.
         """
-        bounds = []
-        for orig_val, col in zip(self.origin, self.budget_membership_mat.T):
-            lb = orig_val
-            ub = orig_val + np.min(self.budget_rhs_vec[col == 1])
-            bounds.append((lb, ub))
-
-        return bounds
+        max_deviations = np.where(
+            self.budget_membership_mat == 1, self.budget_rhs_vec[:, np.newaxis], np.inf
+        ).min(axis=0)
+        return list(zip(self.origin, self.origin + max_deviations))
 
     @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, **kwargs):
