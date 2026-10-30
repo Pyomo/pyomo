@@ -94,6 +94,13 @@ from pyomo.network import Port
 
 ###
 
+# These will get populated when cp is finally imported, but we define them here
+# in case it is already imported
+_deferred_element_getattr_dispatcher = {}
+_before_dispatchers = {}
+_at_dispatchers = {}
+_time_point_dispatchers = {_GENERAL: lambda x: x, _ELEMENT_CONSTRAINT: lambda x: x}
+
 
 def _finalize_docplex(module, available):
     if not available:
@@ -320,8 +327,6 @@ _element_constraint_attr_dispatcher = {
     'xor': _XOR,
     'equivalent_to': _EQUIVALENT_TO,
 }
-# This will get populated when cp is finally imported
-_deferred_element_getattr_dispatcher = {}
 
 
 def _handle_getattr(visitor, node, obj, attr):
@@ -909,11 +914,6 @@ def _handle_call(visitor, node, *args):
 ##
 # Scheduling
 ##
-
-# This will get populated when cp is finally imported
-_before_dispatchers = {}
-_at_dispatchers = {}
-_time_point_dispatchers = {_GENERAL: lambda x: x, _ELEMENT_CONSTRAINT: lambda x: x}
 
 _non_precedence_types = {_GENERAL, _ELEMENT_CONSTRAINT}
 
