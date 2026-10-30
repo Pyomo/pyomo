@@ -28,7 +28,58 @@ from pyomo.opt import check_available_solvers
 from pyomo.common.tee import capture_output
 from pyomo.common.tempfiles import TempfileManager
 import pyomo.common.unittest as unittest
-from pyomo.solvers.plugins.solvers.cuopt_direct import cuopt_available, CUOPTDirect
+from pyomo.solvers.plugins.solvers.cuopt_direct import (
+    cuopt_available,
+    CUOPTDirect,
+    _get_cuopt_version,
+)
+
+
+class _FakeCuopt:
+    """Stand-in for the cuopt module, exposing only __version__."""
+
+    def __init__(self, version):
+        self.__version__ = version
+
+
+_unset = object()
+
+
+class TestGetCuoptVersion(unittest.TestCase):
+    def setUp(self):
+        # cuOpt may not be installed in this environment, in which case
+        # the attempt_import callback never ran and these class
+        # attributes were never set.
+        self._orig_version = CUOPTDirect.__dict__.get('_version', _unset)
+        self._orig_name = CUOPTDirect.__dict__.get('_name', _unset)
+
+    def tearDown(self):
+        if self._orig_version is _unset:
+            del CUOPTDirect._version
+        else:
+            CUOPTDirect._version = self._orig_version
+        if self._orig_name is _unset:
+            del CUOPTDirect._name
+        else:
+            CUOPTDirect._name = self._orig_name
+
+    def test_not_available(self):
+        CUOPTDirect._version = None
+        CUOPTDirect._name = None
+        _get_cuopt_version(_FakeCuopt("26.10.00"), False)
+        self.assertIsNone(CUOPTDirect._version)
+        self.assertIsNone(CUOPTDirect._name)
+
+    def test_version_formats(self):
+        cases = [
+            ("26.10.0a37.post260819050903", "cuOpt 26.10.0a37.post260819050903"),
+            ("26.10.00a37", "cuOpt 26.10.00a37"),
+            ("26.10.00", "cuOpt 26.10.00"),
+        ]
+        for version, expected_name in cases:
+            _get_cuopt_version(_FakeCuopt(version), True)
+            self.assertEqual(CUOPTDirect._version, tuple(version.split('.')))
+            self.assertEqual(CUOPTDirect._name, expected_name)
 
 
 def _cuopt_at_least(*required):
