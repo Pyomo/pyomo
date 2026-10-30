@@ -238,6 +238,7 @@ class TestInit(unittest.TestCase):
 
         # all the actual testing happens in the MockNLPSolver
         nlp_solver = MockNLPSolver(
+            self,
             varlist=[m.x],
             sol_map={
                 0: ([None], 0, 0),
