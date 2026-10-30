@@ -7,7 +7,7 @@
 [![Merged PRs](https://img.shields.io/github/issues-pr-closed-raw/pyomo/pyomo.svg?label=merged+PRs&color=44cc11)](https://github.com/pyomo/pyomo/pulls?q=is:pr+is:merged)
 
 <!-- NOTE: the Pyomo release process will REMOVE-EVERYTHING-BEFORE-THIS-LINE -->
-[![a COIN-OR project](https://www.coin-or.org/GitHub/coin-or-badge.png)](https://www.coin-or.org)
+[![a COIN-OR project](https://www.coin-or.org/coin-or-badge.png)](https://www.coin-or.org)
 
 ## Pyomo Overview
 
@@ -52,7 +52,7 @@ Pyomo is available under the BSD License - see the
 
 Pyomo is currently tested with the following Python implementations:
 
-* CPython: 3.10, 3.11, 3.12, 3.13, 3.14
+* CPython: 3.10, 3.11, 3.12, 3.13, 3.14, 3.15
 * PyPy: 3.11
 
 _Testing and support policy_:
