@@ -3801,8 +3801,8 @@ class IntersectionSet(UncertaintySet):
     **kwargs
         Included to support specification of the operand
         :class:`~UncertaintySet` objects using deprecated prior APIs.
-        Note that ``kwargs`` is ignored
-        if ``args`` has at least one entry.
+        Operands specified through ``kwargs`` are appended to
+        the operands specified through ``args``.
 
     Notes
     -----
@@ -3840,7 +3840,7 @@ class IntersectionSet(UncertaintySet):
 
     def __init__(self, *args, **kwargs):
         """Initialize self (see class docstring)."""
-        self.all_sets = args
+        all_sets = args
         if kwargs:
             deprecation_warning(
                 (
@@ -3851,7 +3851,8 @@ class IntersectionSet(UncertaintySet):
                 ),
                 version="6.10.2.dev0",
             )
-            self.all_sets += tuple(kwargs.values())
+            all_sets += tuple(kwargs.values())
+        self.all_sets = all_sets
 
     @property
     def type(self):
@@ -4085,8 +4086,8 @@ class CartesianProductSet(UncertaintySet):
     **kwargs
         Included to support specification of the operand
         :class:`~UncertaintySet` objects using deprecated prior APIs.
-        Note that ``kwargs`` is ignored
-        if ``args`` has at least one entry.
+        Operands specified through ``kwargs`` are appended to
+        the operands specified through ``args``.
 
     Raises
     ------
@@ -4129,28 +4130,17 @@ class CartesianProductSet(UncertaintySet):
     def __init__(self, *args, **kwargs):
         """Initialize self (see class docstring)."""
 
-        # deprecation warning settings for old API
-        deprecation_msg = (
-            f"Specifying {type(self).__name__} operand uncertainty "
-            "sets through a single positional/keyword argument `all_sets` "
-            "is deprecated. "
-            f"In subsequent usage of {type(self).__name__}, "
-            "pass each operand uncertainty set positionally; "
-            f"see the {type(self).__name__} documentation."
-        )
-        deprecation_version = "6.10.2.dev0"
-
         # resolve arguments
         all_sets = args
         if len(args) == 1 and isinstance(args[0], Sequence):
             # support old API: allow single positional argument
             #                  of type `Sequence`
-            deprecation_warning(msg=deprecation_msg, version=deprecation_version)
+            self._log_api_deprecation_warning()
             all_sets = tuple(args[0])
         if kwargs:
             # support old API: allow single keyword argument `all_sets`
             #                  of type `Sequence`
-            deprecation_warning(msg=deprecation_msg, version=deprecation_version)
+            self._log_api_deprecation_warning()
             all_sets_kwarg = kwargs.pop("all_sets", None)
             if kwargs:
                 raise TypeError(
@@ -4188,6 +4178,22 @@ class CartesianProductSet(UncertaintySet):
         # instances of the other (pre-implemented) uncertainty set
         # types are also of immutable dimension
         self._all_sets = all_sets
+
+    def _log_api_deprecation_warning(self):
+        """
+        Log deprecation warning for previous Cartesian product
+        set constructor interface.
+        """
+        deprecation_msg = (
+            f"Specifying {type(self).__name__} operand uncertainty "
+            "sets through a single positional/keyword argument `all_sets` "
+            "is deprecated. "
+            f"In subsequent usage of {type(self).__name__}, "
+            "pass each operand uncertainty set positionally; "
+            f"see the {type(self).__name__} documentation."
+        )
+        deprecation_version = "6.10.2.dev0"
+        deprecation_warning(msg=deprecation_msg, version=deprecation_version)
 
     @property
     def type(self):

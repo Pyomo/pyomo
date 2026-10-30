@@ -1353,16 +1353,13 @@ class TestIntersectionSet(unittest.TestCase):
             iset.scenarios
 
         # confirm that the old constructor interface still works
-        with LoggingIntercept(level=logging.WARNING) as LOG:
-            # since the second positional argument `gamma`
-            # is not a scalar, it is swapped with the third
-            # positional argument `positive_deviation`
+        with LoggingIntercept(level=logging.WARNING) as LOG_KW:
             iset_kw = IntersectionSet(box_set=bset, axis_aligned_set=aset)
         self.assertRegex(
-            LOG.getvalue(),
+            LOG_KW.getvalue(),
             re.compile(r"DEPRECATED.*Specifying.*keyword.*positionally", re.DOTALL),
         )
-        self.assertEqual(len(iset.all_sets), 2)
+        self.assertEqual(len(iset_kw.all_sets), 2)
         self.assertIs(iset_kw.all_sets[0], bset)
         self.assertIs(iset_kw.all_sets[1], aset)
         self.assertIs(iset_kw.geometry, Geometry.CONVEX_NONLINEAR)
@@ -1372,10 +1369,14 @@ class TestIntersectionSet(unittest.TestCase):
             iset_kw.compute_auxiliary_uncertain_param_vals([0] * 3).size, 0
         )
 
-        # test what happens if there are both positional and keyword
-        # arguments: the keywords should be ignored
-        iset3 = IntersectionSet(bset, aset, keyword_arg=1)
-        self.assertEqual(len(iset.all_sets), 2)
+        # concatenate operands specified by position and keyword
+        with LoggingIntercept(level=logging.WARNING) as LOG3:
+            iset3 = IntersectionSet(bset, set2=aset)
+        self.assertRegex(
+            LOG3.getvalue(),
+            re.compile(r"DEPRECATED.*Specifying.*keyword.*positionally", re.DOTALL),
+        )
+        self.assertEqual(len(iset3.all_sets), 2)
         self.assertIs(iset3.all_sets[0], bset)
         self.assertIs(iset3.all_sets[1], aset)
         self.assertIs(iset3.geometry, Geometry.CONVEX_NONLINEAR)
@@ -1424,9 +1425,8 @@ class TestIntersectionSet(unittest.TestCase):
         with self.assertRaisesRegex(TypeError, exc_str):
             IntersectionSet(bset=bset, aset=aset, invalid_arg=1)
 
-        # no error here: since positional arguments are passed,
-        # the keyword argument is ignored.
-        IntersectionSet(bset, aset, invalid_arg=1)
+        with self.assertRaisesRegex(TypeError, exc_str):
+            IntersectionSet(bset, aset, invalid_arg=1)
 
         # construct a valid intersection set
         iset = IntersectionSet(bset, aset)
@@ -3534,47 +3534,56 @@ class TestCartesianProductSet(unittest.TestCase):
         self.assertEqual(cpset.dim, 6)
 
         # check old API: single positional argument
-        with LoggingIntercept(level=logging.WARNING) as LOG:
-            cpset = CartesianProductSet([bset, aset])
+        with LoggingIntercept(level=logging.WARNING) as LOG2:
+            cpset2 = CartesianProductSet([bset, aset])
         self.assertRegex(
-            LOG.getvalue(),
+            LOG2.getvalue(),
             re.compile(
                 r"DEPRECATED.*Specifying.*single positional/keyword.*positionally",
                 re.DOTALL,
             ),
         )
-        self.assertEqual(len(cpset._all_sets), 2)
-        self.assertIs(cpset._all_sets[0], bset)
-        self.assertIs(cpset._all_sets[1], aset)
-        self.assertIs(cpset.geometry, Geometry.CONVEX_NONLINEAR)
-        self.assertEqual(cpset.type, "cartesian_product")
-        self.assertEqual(cpset.dim, 6)
+        self.assertEqual(len(cpset2._all_sets), 2)
+        self.assertIs(cpset2._all_sets[0], bset)
+        self.assertIs(cpset2._all_sets[1], aset)
+        self.assertIs(cpset2.geometry, Geometry.CONVEX_NONLINEAR)
+        self.assertEqual(cpset2.type, "cartesian_product")
+        self.assertEqual(cpset2.dim, 6)
 
         # check old API: single keyword argument
-        with LoggingIntercept(level=logging.WARNING) as LOG:
-            cpset = CartesianProductSet(all_sets=[bset, aset])
+        with LoggingIntercept(level=logging.WARNING) as LOG3:
+            cpset3 = CartesianProductSet(all_sets=[bset, aset])
         self.assertRegex(
-            LOG.getvalue(),
+            LOG3.getvalue(),
             re.compile(
                 r"DEPRECATED.*Specifying.*single positional/keyword.*positionally",
                 re.DOTALL,
             ),
         )
-        self.assertEqual(len(cpset._all_sets), 2)
-        self.assertIs(cpset._all_sets[0], bset)
-        self.assertIs(cpset._all_sets[1], aset)
-        self.assertIs(cpset.geometry, Geometry.CONVEX_NONLINEAR)
-        self.assertEqual(cpset.type, "cartesian_product")
-        self.assertEqual(cpset.dim, 6)
+        self.assertEqual(len(cpset3._all_sets), 2)
+        self.assertIs(cpset3._all_sets[0], bset)
+        self.assertIs(cpset3._all_sets[1], aset)
+        self.assertIs(cpset3.geometry, Geometry.CONVEX_NONLINEAR)
+        self.assertEqual(cpset3.type, "cartesian_product")
+        self.assertEqual(cpset3.dim, 6)
 
-        # ignore keyword arguments if a positional one was passed
-        cpset = CartesianProductSet(bset, aset, example=1)
-        self.assertEqual(len(cpset._all_sets), 2)
-        self.assertIs(cpset._all_sets[0], bset)
-        self.assertIs(cpset._all_sets[1], aset)
-        self.assertIs(cpset.geometry, Geometry.CONVEX_NONLINEAR)
-        self.assertEqual(cpset.type, "cartesian_product")
-        self.assertEqual(cpset.dim, 6)
+        # append keyword-based operands from old API
+        # to positional ones from new API
+        with LoggingIntercept(level=logging.WARNING) as LOG_COMBO:
+            cpset_combo = CartesianProductSet(bset, all_sets=[aset])
+        self.assertRegex(
+            LOG_COMBO.getvalue(),
+            re.compile(
+                r"DEPRECATED.*Specifying.*single positional/keyword.*positionally",
+                re.DOTALL,
+            ),
+        )
+        self.assertEqual(len(cpset_combo._all_sets), 2)
+        self.assertIs(cpset_combo._all_sets[0], bset)
+        self.assertIs(cpset_combo._all_sets[1], aset)
+        self.assertIs(cpset_combo.geometry, Geometry.CONVEX_NONLINEAR)
+        self.assertEqual(cpset_combo.type, "cartesian_product")
+        self.assertEqual(cpset_combo.dim, 6)
 
         exc_str = (
             r"CartesianProductSet.*received an operand 1.*not of type UncertaintySet"
@@ -3585,16 +3594,13 @@ class TestCartesianProductSet(unittest.TestCase):
         # old API: single Sequence-like positional argument;
         #          all entries of the sequence should be of type
         #          UncertaintySet
-        exc_str = (
-            r"CartesianProductSet.*received an operand 1.*not of type UncertaintySet"
-        )
         with (
-            LoggingIntercept(level=logging.WARNING) as LOG,
+            LoggingIntercept(level=logging.WARNING) as LOGEXC,
             self.assertRaisesRegex(TypeError, exc_str),
         ):
             CartesianProductSet([BoxSet([[0, 1]]), 1])
         self.assertRegex(
-            LOG.getvalue(),
+            LOGEXC.getvalue(),
             re.compile(
                 r"DEPRECATED.*Specifying.*single positional/keyword.*positionally",
                 re.DOTALL,
@@ -3603,14 +3609,14 @@ class TestCartesianProductSet(unittest.TestCase):
 
         # old API: single keyword argument; should be a Sequence
         with (
-            LoggingIntercept(level=logging.WARNING) as LOG,
+            LoggingIntercept(level=logging.WARNING) as LOG_SEQ,
             self.assertRaisesRegex(
                 TypeError, r"`all_sets`.*Sequence.*but is of type set"
             ),
         ):
             CartesianProductSet(all_sets={BoxSet([[0, 1]]), 1})
         self.assertRegex(
-            LOG.getvalue(),
+            LOG_SEQ.getvalue(),
             re.compile(
                 r"DEPRECATED.*Specifying.*single positional/keyword.*positionally",
                 re.DOTALL,
@@ -3619,16 +3625,21 @@ class TestCartesianProductSet(unittest.TestCase):
 
         # old API: `all_sets` is the only acceptable keyword
         with (
-            LoggingIntercept(level=logging.WARNING) as LOG,
+            LoggingIntercept(level=logging.WARNING) as LOGEXC2,
             self.assertRaisesRegex(
                 TypeError, r"got an unexpected keyword argument 'other'"
             ),
         ):
             CartesianProductSet(all_sets=[BoxSet([[0, 1]]), 1], other=1)
+        self.assertRegex(
+            LOGEXC2.getvalue(),
+            re.compile(
+                r"DEPRECATED.*Specifying.*single positional/keyword.*positionally",
+                re.DOTALL,
+            ),
+        )
 
-        # at least one argument required
         with (
-            LoggingIntercept(level=logging.WARNING) as LOG,
             self.assertRaisesRegex(TypeError, r"No arguments were passed.*constructor"),
         ):
             CartesianProductSet()
