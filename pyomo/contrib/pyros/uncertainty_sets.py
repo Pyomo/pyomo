@@ -1740,7 +1740,7 @@ class CardinalitySet(UncertaintySet):
         """
         lower_bounds = self.origin - min(self.gamma, 1) * self.negative_deviation
         upper_bounds = self.origin + min(self.gamma, 1) * self.positive_deviation
-        return [(lb, ub) for lb, ub in zip(lower_bounds, upper_bounds)]
+        return list(zip(lower_bounds, upper_bounds))
 
     @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, uncertain_params=None, block=None):
