@@ -13,8 +13,8 @@ import logging
 import multiprocessing
 import os
 import pickle
-import time
 import threading
+import time
 
 from pyomo.common.dependencies import dill_available
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
