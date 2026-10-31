@@ -129,6 +129,7 @@ jobs:
         - os: ubuntu-latest
           python: 3.11
           other: /mpi
+          category: "-m mpi"
           mpi: 3
           TARGET: linux
           PYENV: conda
@@ -797,10 +798,10 @@ jobs:
       if: ${{ matrix.mpi == 0 && matrix.category != 'notests' }}
       run: |
         export PATH=$PYOMO_PATH
-        $PYTHON_EXE -m pytest -v \
+        $PYTHON_EXE -m pytest -v --junitxml="TEST-pyomo.xml" \
             -W ignore::Warning ${{matrix.category}} \
             pyomo `pwd`/pyomo-model-libraries \
-            `pwd`/examples `pwd`/doc --junitxml="TEST-pyomo.xml"
+            `pwd`/examples `pwd`/doc
 
     - name: Run Pyomo MPI tests
       if: ${{ matrix.mpi != 0 && matrix.category != 'notests' }}
@@ -810,9 +811,13 @@ jobs:
         $PYTHON_EXE -c "from pyomo.dataportal.parse_datacmds import \
             parse_data_commands; parse_data_commands(data='')"
         # Note: if we are testing with openmpi, add '--oversubscribe'
-        mpirun -np ${{matrix.mpi}} -oversubscribe pytest -v \
-            --junit-xml=TEST-pyomo-mpi.xml \
-            -m "mpi" -W ignore::Warning \
+        # Note: we were seeing errors with "Message size 24 bigger then ... Max = 0"
+        #     Searches suggest openmpi is trying to use the mtl:ofi layer,
+        #     which doesn't exist on GHA.  Explicitly setting the byte
+        #     transfer layer with "--mca btl"
+        mpirun --mca btl tcp,self,vader -np ${{matrix.mpi}} -oversubscribe \
+            $PYTHON_EXE -m pytest -v --junit-xml=TEST-pyomo-mpi.xml \
+            -W ignore::Warning ${{matrix.category}} \
             pyomo `pwd`/pyomo-model-libraries
 
     - name: Build documentation

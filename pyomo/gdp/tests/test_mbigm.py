@@ -8,10 +8,13 @@
 # ____________________________________________________________________________________
 
 from io import StringIO
-import logging
 from os.path import join, normpath
-import pickle
+import logging
+import multiprocessing
 import os
+import pickle
+import threading
+import time
 
 from pyomo.common.dependencies import dill_available
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
@@ -1076,6 +1079,118 @@ class IndexedDisjunction(unittest.TestCase):
         self.assertIs(cons_again[1], cons[1])
 
 
+class CoreFunctions(unittest.TestCase):
+
+    def test_setup_pool(self):
+        block = Block()
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm._process_arguments(block)
+        self.assertIsNone(mbm._config.process_start_method)
+        self.assertEqual(threading.active_count(), 1)
+        # Test default behavior...
+        if os.name == 'nt':
+            if dill_available:
+                with LoggingIntercept(level=logging.INFO) as LOG:
+                    pool = mbm._setup_pool(1, block, 2)
+                self.assertIsInstance(pool, multiprocessing.pool.Pool)
+                pool.close()
+                pool.join()
+                self.assertEqual(
+                    LOG.getvalue().strip(),
+                    "Running 2 jobs on 1 worker processes with "
+                    "ProcessStartMethod.spawn.",
+                )
+            else:
+                with LoggingIntercept(level=logging.INFO) as LOG:
+                    with self.assertRaisesRegex(
+                        ImportError,
+                        r"The dill module \(an optional Pyomo dependency\) "
+                        "failed to import",
+                    ):
+                        mbm._setup_pool(1, block, 2)
+                self.assertEqual(
+                    LOG.getvalue().strip(),
+                    "Running 2 jobs on 1 worker processes with "
+                    "ProcessStartMethod.spawn.\n"
+                    "Dill is required when spawning processes using "
+                    "methods 'spawn' or 'forkserver', but it could "
+                    "not be imported.",
+                )
+        else:
+            with LoggingIntercept(level=logging.INFO) as LOG:
+                pool = mbm._setup_pool(1, block, 2)
+            self.assertIsInstance(pool, multiprocessing.pool.Pool)
+            pool.close()
+            pool.join()
+            self.assertEqual(
+                LOG.getvalue().strip(),
+                "Running 2 jobs on 1 worker processes with ProcessStartMethod.fork.",
+            )
+
+        # Test creation of a forkserver
+        if os.name != 'nt':
+            me = threading.Thread(target=time.sleep, args=[0.1])
+            me.start()
+            self.assertGreaterEqual(threading.active_count(), 2)
+            if dill_available:
+                with LoggingIntercept(level=logging.INFO) as LOG:
+                    pool = mbm._setup_pool(1, block, 2)
+                self.assertIsInstance(pool, multiprocessing.pool.Pool)
+                pool.close()
+                pool.join()
+                self.assertEqual(
+                    LOG.getvalue().strip(),
+                    "Running 2 jobs on 1 worker processes with "
+                    "ProcessStartMethod.forkserver.",
+                )
+            else:
+                with LoggingIntercept(level=logging.INFO) as LOG:
+                    with self.assertRaisesRegex(
+                        ImportError,
+                        r"The dill module \(an optional Pyomo dependency\) "
+                        "failed to import",
+                    ):
+                        mbm._setup_pool(1, block, 2)
+                self.assertEqual(
+                    LOG.getvalue().strip(),
+                    "Running 2 jobs on 1 worker processes with "
+                    "ProcessStartMethod.forkserver.\n"
+                    "Dill is required when spawning processes using "
+                    "methods 'spawn' or 'forkserver', but it could "
+                    "not be imported.",
+                )
+            me.join()
+            self.assertEqual(threading.active_count(), 1)
+
+        # Test explicit spawn... it will work everywhere, but needs to test for dill
+        mbm._config.process_start_method = 'spawn'
+        if dill_available:
+            with LoggingIntercept(level=logging.INFO) as LOG:
+                pool = mbm._setup_pool(1, block, 2)
+            self.assertIsInstance(pool, multiprocessing.pool.Pool)
+            pool.close()
+            pool.join()
+            self.assertEqual(
+                LOG.getvalue().strip(),
+                "Running 2 jobs on 1 worker processes with ProcessStartMethod.spawn.",
+            )
+        else:
+            with LoggingIntercept(level=logging.INFO) as LOG:
+                with self.assertRaisesRegex(
+                    ImportError,
+                    r"The dill module \(an optional Pyomo dependency\) "
+                    "failed to import",
+                ):
+                    mbm._setup_pool(1, block, 2)
+            self.assertEqual(
+                LOG.getvalue().strip(),
+                "Running 2 jobs on 1 worker processes with ProcessStartMethod.spawn.\n"
+                "Dill is required when spawning processes using "
+                "methods 'spawn' or 'forkserver', but it could "
+                "not be imported.",
+            )
+
+
 @unittest.skipUnless(dill_available, "Dill is not available")
 class EdgeCases(unittest.TestCase):
     def make_infeasible_disjunct_model(self):
@@ -1093,6 +1208,7 @@ class EdgeCases(unittest.TestCase):
 
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_calculate_Ms_infeasible_Disjunct(self):
+        self.assertEqual(threading.active_count(), 1)
         m = self.make_infeasible_disjunct_model()
         out = StringIO()
         mbm = TransformationFactory('gdp.mbigm')
@@ -1134,6 +1250,7 @@ class EdgeCases(unittest.TestCase):
             cons[1].expr,
             m.x - (m.y - 9) <= -12.0 * m.disjunction_disjuncts[1].binary_indicator_var,
         )
+        self.assertEqual(threading.active_count(), 1)
 
     @unittest.skipUnless(
         SolverFactory('ipopt').available(exception_flag=False), "Ipopt is not available"
@@ -1144,6 +1261,7 @@ class EdgeCases(unittest.TestCase):
         "tests using multiprocessing stall on pypy; this will no longer be tested.",
     )
     def test_calculate_Ms_infeasible_Disjunct_local_solver(self):
+        self.assertEqual(threading.active_count(), 1)
         m = self.make_infeasible_disjunct_model()
         # When multiple exceptions are raised during a
         # multiprocessing.Pool.map call, it is indeterminate which
@@ -1155,15 +1273,22 @@ class EdgeCases(unittest.TestCase):
             r"on Disjunct 'disjunction_disjuncts\[\d+\]' when "
             r"Disjunct 'disjunction_disjuncts\[\d+\]' is selected.",
         ):
+            # Note: for reasons we don't quite understand, this test can
+            # hang indefinitely on OSX/python 3.12 and 3.13.  We will
+            # run this test serially to avoid invoking the
+            # multiprocessing Pool.
             TransformationFactory('gdp.mbigm').apply_to(
                 m,
                 solver=SolverFactory('ipopt'),
+                threads=1,
                 reduce_bound_constraints=False,
                 use_primal_bound=True,
             )
+        self.assertEqual(threading.active_count(), 1)
 
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_politely_ignore_BigM_Suffix(self):
+        self.assertEqual(threading.active_count(), 1)
         m = self.make_infeasible_disjunct_model()
         m.disjunction.disjuncts[0].deactivate()
         m.disjunction.disjuncts[1].BigM = Suffix(direction=Suffix.LOCAL)
@@ -1180,9 +1305,11 @@ class EdgeCases(unittest.TestCase):
             r"this Suffix.",
             warnings,
         )
+        self.assertEqual(threading.active_count(), 1)
 
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_complain_for_unrecognized_Suffix(self):
+        self.assertEqual(threading.active_count(), 1)
         m = self.make_infeasible_disjunct_model()
         m.disjunction.disjuncts[0].deactivate()
         m.disjunction.disjuncts[1].HiThere = Suffix(direction=Suffix.LOCAL)
@@ -1196,6 +1323,7 @@ class EdgeCases(unittest.TestCase):
             TransformationFactory('gdp.mbigm').apply_to(
                 m, reduce_bound_constraints=False
             )
+        self.assertEqual(threading.active_count(), 1)
 
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_transform_on_block(self):
