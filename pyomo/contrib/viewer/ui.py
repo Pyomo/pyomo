@@ -166,6 +166,47 @@ class MainWindow(_MainWindow, _MainWindowUI):
         self._dialog_test_button = None  # button clicked on dialog in test mode
         self.mdiArea.setViewMode(myqt.QMdiArea.ViewMode.TabbedView)
 
+        view_menu = self.menuBar().actions()[0].menu()
+        view_menu.addSeparator()
+        font_menu = myqt.QMenu("Font", self)
+        menu_font_action = myqt.QAction("Menu", self)
+        tree_font_action = myqt.QAction("Tree View", self)
+        font_menu.addAction(menu_font_action)
+        font_menu.addAction(tree_font_action)
+        menu_font_action.triggered.connect(self.cb_set_menu_font)
+        tree_font_action.triggered.connect(self.cb_set_tree_font)
+        view_menu.addMenu(font_menu)
+
+    def cb_set_menu_font(self):
+        def _recursive_action_font(w, fnt):
+            w.setFont(fnt)
+            if (
+                hasattr(w, "actions")
+                and w.actions() is not None
+                and len(w.actions()) > 0
+            ):
+                for w2 in w.actions():
+                    _recursive_action_font(w2, fnt)
+            if (
+                hasattr(w, "menu")
+                and w.menu() is not None
+                and len(w.menu().actions()) > 0
+            ):
+                for w2 in w.menu().actions():
+                    _recursive_action_font(w2, fnt)
+
+        ok, fnt = myqt.QFontDialog().getFont()
+        if ok:
+            _recursive_action_font(self.menuBar(), fnt)
+
+    def cb_set_tree_font(self):
+        ok, fnt = myqt.QFontDialog().getFont()
+        if ok:
+            self.variables.setFont(fnt)
+            self.expressions.setFont(fnt)
+            self.parameters.setFont(fnt)
+            self.constraints.setFont(fnt)
+
     def toggle_tabs(self):
         if self.mdiArea.viewMode() == myqt.QMdiArea.ViewMode.SubWindowView:
             self.mdiArea.setViewMode(myqt.QMdiArea.ViewMode.TabbedView)

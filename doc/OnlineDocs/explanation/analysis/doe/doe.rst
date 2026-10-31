@@ -15,11 +15,10 @@ Significant improvements and extensions were contributed by **Dan Laky**, and
 `Process Optimization & Modeling for Minerals Sustainability (PrOMMiS) <https://www.netl.doe.gov/prommis>`_ project
 and the `University of Notre Dame <https://www.nd.edu/>`_.
 
-If you use Pyomo.DoE, please cite:
-
-[Wang and Dowling, 2022] Wang, Jialu, and Alexander W. Dowling.
-"Pyomo.DOE: An open‐source package for model‐based design of experiments in Python."
-AIChE Journal 68.12 (2022): e17813. `https://doi.org/10.1002/aic.17813`
+If you use Pyomo.DoE, please cite the [PyomoDOE-paper]_:
+   Wang, Jialu, and Alexander W. Dowling. "Pyomo.DOE: An open‐source
+   package for model‐based design of experiments in Python", *AIChE Journal*,
+   68(12), e17813. 2022. DOI `10.1002/aic.17813 <https://doi.org/10.1002/aic.17813>`_
 
 Index of Pyomo.DoE documentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -10,6 +10,19 @@
 from collections import defaultdict
 
 
+class _HashKey:
+    """Utility class to support hashing by object id()
+
+    This class should never be instantiated, and should never be
+    accessed referenced by user code.  Instead this provides a simple
+    :class:`type` that we can use as an internal flag to differentiate
+    between an :class:`int` key and the result from :func:`id()`.
+
+    """
+
+    pass
+
+
 class HashDispatcher(defaultdict):
     """Dispatch table for generating "universal" hashing of all Python objects.
 
@@ -25,11 +38,18 @@ class HashDispatcher(defaultdict):
     appropriate hashing strategy to each element within the tuple.
     """
 
+    __slots__ = ()
+
     def __init__(self, *args, **kwargs):
         super().__init__(lambda: self._missing_impl, *args, **kwargs)
         self[tuple] = self._tuple
 
     def _missing_impl(self, val):
+        # Inherit the hasher from a base class, if found
+        for _type in val.__class__.__mro__[1:]:
+            if _type in self:
+                self[val.__class__] = ans = self[_type]
+                return ans(val)
         try:
             hash(val)
             self[val.__class__] = self._hashable
@@ -43,10 +63,18 @@ class HashDispatcher(defaultdict):
 
     @staticmethod
     def _unhashable(val):
-        return id(val)
+        return _HashKey, id(val)
 
     def _tuple(self, val):
-        return tuple(self[i.__class__](i) for i in val)
+        try:
+            # if *this tuple* is hashable, then use it as the key
+            hash(val)
+            return val
+        except:
+            # duplicate the tuple, recursively processing all fields.
+            # The use of val.__class__ ensures that derived things (like
+            # namedtuples) have their class preserved.
+            return val.__class__(self[i.__class__](i) for i in val)
 
     def hashable(self, obj, hashable=None):
         if isinstance(obj, type):
@@ -59,6 +87,10 @@ class HashDispatcher(defaultdict):
                 raise KeyError(obj)
             return fcn is self._hashable
         self[cls] = self._hashable if hashable else self._unhashable
+
+    def __call__(self, obj):
+        # Make the dispatcher callable so that it can be used in place of id()
+        return self[obj.__class__](obj)
 
 
 #: The global 'hasher' instance for managing "universal" hashing.

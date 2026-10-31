@@ -43,7 +43,9 @@ class IncrementalMIPTransformation(PiecewiseLinearTransformationBase):
 
     # Implement to use PiecewiseLinearTransformationBase. This function returns the Var
     # that replaces the transformed piecewise linear expr
-    def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):
+    def _transform_multiple_segment_pw_linear_expr(
+        self, pw_expr, pw_linear_func, transformation_block
+    ):
         if pw_linear_func.triangulation not in (
             Triangulation.OrderedJ1,
             Triangulation.AssumeValid,

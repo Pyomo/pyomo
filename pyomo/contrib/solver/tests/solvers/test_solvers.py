@@ -2497,16 +2497,22 @@ class TestLegacySolverInterface(unittest.TestCase):
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
-        m.obj = pyo.Objective(expr=m.x)
+        m.y = pyo.Var(bounds=(0, None))
+        m.obj = pyo.Objective(expr=m.x + m.y)
         m.c = pyo.Constraint(expr=(-1, m.x, 1))
         if (name, opt_class) in dual_solvers:
             m.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+            m.rc = pyo.Suffix(direction=pyo.Suffix.IMPORT)
         res = opt.solve(m, load_solutions=False)
         pyo.assert_optimal_termination(res)
         self.assertIsNone(m.x.value)
+        self.assertIsNone(m.y.value)
         if (name, opt_class) in dual_solvers:
             self.assertNotIn(m.c, m.dual)
+            self.assertNotIn(m.y, m.rc)
         m.solutions.load_from(res)
         self.assertAlmostEqual(m.x.value, -1)
+        self.assertAlmostEqual(m.y.value, 0)
         if (name, opt_class) in dual_solvers:
             self.assertAlmostEqual(m.dual[m.c], 1)
+            self.assertAlmostEqual(m.rc[m.y], 1)

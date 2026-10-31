@@ -31,7 +31,7 @@ env:
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver linear-tree
   PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels linear-tree
-  CACHE_VER: v260512.3
+  CACHE_VER: v260804.0
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
   PYOMO_WORKFLOW: |
@@ -48,9 +48,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
     - name: Set up Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: 3.11
     - name: Black Formatting Check
@@ -60,7 +60,7 @@ jobs:
         pip install 'black!=24.4.1'
         black . --check --diff
     - name: Spell Check
-      uses: crate-ci/typos@master
+      uses: crate-ci/typos@main
       with:
         config: ./.github/workflows/typos.toml
     - name: Set DNS server
@@ -89,7 +89,8 @@ jobs:
         # Exclude:
         #  - Jenkins because it's behind a firewall
         #  - RTD because a magically-generated string triggers failures
-        exclude_urls: https://pyomo-jenkins.sandia.gov/,https://pyomo.readthedocs.io/en/%s/errors.html
+        #  - scipopt.org as they perform "validation" on the webclient (which fails)
+        exclude_urls: https://pyomo-jenkins.sandia.gov/,https://pyomo.readthedocs.io/en/%s/errors.html,https://www.scipopt.org
         # Exclude:
         #  - All gnu.org links because they consistently fail the checker
         #  - All lpsolve.sourceforge.net links because SF appears to reject from GHA
@@ -106,7 +107,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [ '3.10', 3.11, 3.12, 3.13, 3.14 ]
+        python: [ '3.10', 3.11, 3.12, 3.13, 3.14, 3.15 ]
         other: [""]
         category: [""]
 
@@ -161,6 +162,13 @@ jobs:
         - os: ubuntu-latest
           python: '3.10'
           other: /slim
+          slim: 2
+          TARGET: linux
+          PYENV: pip
+
+        - os: ubuntu-latest
+          python: 3.13
+          other: /nosolvers
           slim: 1
           TARGET: linux
           PYENV: pip
@@ -173,14 +181,6 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.12
-          other: /numpy2
-          slim: 1
-          TARGET: linux
-          PYENV: pip
-          PACKAGES: "gurobipy dill numpy>2.0 scipy networkx"
-
-        - os: ubuntu-latest
           python: '3.10'
           other: /pyutilib
           TARGET: linux
@@ -188,7 +188,7 @@ jobs:
           PACKAGES: pyutilib
 
         - os: ubuntu-latest
-          python: 'pypy-3.11-v7.3.20'  #FIXME: Temporary version pin to avoid PyPy 7.3.21
+          python: 'pypy-3.11'
           TARGET: linux
           PYENV: pip
 
@@ -203,7 +203,7 @@ jobs:
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Configure job parameters
       run: |
@@ -215,16 +215,20 @@ jobs:
             echo "GHA_JOBGROUP=other" >> $GITHUB_ENV
         fi
         EXTRAS=tests
-        if test -z "${{matrix.slim}}"; then
+        if test -z "${{matrix.slim}}" -o "${{matrix.slim}}" = 1; then
             EXTRAS="$EXTRAS,docs,optional"
         fi
         echo "EXTRAS=$EXTRAS" >> $GITHUB_ENV
+        echo "EXCLUDE=${{matrix.EXCLUDE}}" \
+            | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
+        echo "" >> $GITHUB_ENV
         PYTHON_PACKAGES="${{matrix.PACKAGES}}"
         echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
+        echo "" >> $GITHUB_ENV
 
     #- name: Pip package cache
-    #  uses: actions/cache@v5
+    #  uses: actions/cache@v6
     #  if: matrix.PYENV == 'pip'
     #  id: pip-cache
     #  with:
@@ -232,7 +236,7 @@ jobs:
     #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
 
     #- name: OS package cache
-    #  uses: actions/cache@v5
+    #  uses: actions/cache@v6
     #  if: matrix.TARGET != 'osx'
     #  id: os-cache
     #  with:
@@ -240,7 +244,7 @@ jobs:
     #    key: pkg-${{env.CACHE_VER}}.0-${{runner.os}}
 
     - name: TPL package download cache
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       if: ${{ ! matrix.slim }}
       id: download-cache
       with:
@@ -286,10 +290,11 @@ jobs:
         # Notes:
         #  - install glpk
         #  - ipopt needs: libopenblas-dev gfortran liblapack-dev
+        #  - building pillow (for pypy) needs: libjpeg-dev
         sudo apt-get update ca-certificates
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
             install libopenblas-dev gfortran liblapack-dev glpk-utils \
-            libginac-dev
+            libginac-dev libjpeg-dev
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
 
     - name: Update Windows
@@ -300,9 +305,10 @@ jobs:
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python }}
+        allow-prereleases: true
 
     - name: Set up Miniconda Python ${{ matrix.python }}
       if: matrix.PYENV == 'conda'
@@ -311,14 +317,14 @@ jobs:
         conda-remove-defaults: true
         auto-update-conda: false
         python-version: ${{ matrix.python }}
-        channels: conda-forge, gurobi, ibmdecisionoptimization, fico-xpress
+        channels: conda-forge, gurobi, fico-xpress
         use-mamba: true
 
     # This is necessary for qt (UI) tests; the package utilized here does not
     # have support for OSX.
     - name: Set up UI testing infrastructure
       if: ${{ matrix.TARGET != 'osx' }}
-      uses: pyvista/setup-headless-display-action@v3
+      uses: pyvista/setup-headless-display-action@v5
       with:
         qt: true
         pyvista: false
@@ -366,14 +372,7 @@ jobs:
         python -m pip install --cache-dir cache/pip pymysql || \
             python -m pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
-            # Disallow cplex 22.1.2.1 because it errors fatally when
-            #  computing IIS on python 3.13 and 3.14
-            if [[ ${{matrix.python}} =~ 3.1[34] ]]; then
-                CPLEX='cplex!=22.1.2.1'
-            else
-                CPLEX='cplex'
-            fi
-            python -m pip install --cache-dir cache/pip "$CPLEX" docplex \
+            python -m pip install --cache-dir cache/pip cplex docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
             python -m pip install --cache-dir cache/pip gurobipy \
                 || echo "WARNING: Gurobi is not available"
@@ -429,6 +428,15 @@ jobs:
         if test "${{matrix.TARGET}}" == linux; then
             EXCLUDE="casadi numdifftools $EXCLUDE"
         fi
+        # HACK: Some packages have not been released for 3.15
+        # (but don't accidentally add casadi back for linux)
+        if test "${{matrix.python}}" == 3.15; then
+            if test `echo "$EXCLUDE" | grep casadi | wc -l` -eq 0; then
+                OPTIONAL="casadi $OPTIONAL"
+            fi
+            OPTIONAL="qtconsole $OPTIONAL"
+            EXCLUDE="casadi qtconsole $EXCLUDE"
+        fi
         EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
             for WORD in $EXCLUDE; do
@@ -455,15 +463,6 @@ jobs:
             TIMEOUT_MSG="TIMEOUT: killing conda install process"
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
-            #
-            # Disallow cplex 22.1.2 and 22.1.2.1, as they error fatally when
-            #   computing IIS on Python 3.13 and 3.14
-            # Disallow cplex 12.9 (caused segfaults in tests)
-            if [[ ${{matrix.python}} =~ 3.1[34] ]]; then
-                CPLEX='cplex>=12.10,<22.1.2|>22.1.2.1'
-            else
-                CPLEX='cplex>=12.10'
-            fi
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
             # on GHA/Windows under Python 3.10 and 3.11.  Exclude that
             # release on that platform.
@@ -476,7 +475,7 @@ jobs:
             else
                 XPRESS='xpress'
             fi
-            for PKG in "$CPLEX" docplex gurobi "$XPRESS" cyipopt pymumps scip pyscipopt; do
+            for PKG in gurobi "$XPRESS" cyipopt pymumps scip pyscipopt $OPTIONAL; do
                 echo ""
                 echo "*** Install $PKG ***"
                 echo ""
@@ -525,12 +524,24 @@ jobs:
                     echo "WARNING: $PKG is not available"
                 fi
             done
+            # As of June 2026, cplex/docplex want their users to move towards
+            # pypi and away from conda. Particularly:
+            # The CPLEX and CP Optimizer Python interfaces are no longer
+            # delivered inside CPLEX Optimization Studio, but can be
+            # installed directly from PyPI.
+            OPTIONAL_PYPI_DEPENDENCIES="$OPTIONAL_PYPI_DEPENDENCIES cplex docplex"
         fi
         # Re-try Pyomo (optional) dependencies with pip
         echo ""
         echo "Installing packages only available on PyPI"
         if test -n "$PYPI_DEPENDENCIES"; then
             python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES
+        fi
+        if test -n "$OPTIONAL_PYPI_DEPENDENCIES"; then
+            for DEPENDENCY in $OPTIONAL_PYPI_DEPENDENCIES; do
+                python -m pip install --cache-dir cache/pip $DEPENDENCY || \
+                    echo "WARNING: installing $DEPENDENCY failed"
+            done
         fi
         # remember this python interpreter
         python -c 'import sys; print("PYTHON_EXE=%s" \
@@ -854,7 +865,9 @@ jobs:
       run: |
         sudo apt-get -y install graphviz latexmk texlive texlive-latex-extra \
             texlive-pictures
+        echo "Build HTML docs..."
         make -C doc/OnlineDocs html
+        echo "Build PDF docs..."
         make -C doc/OnlineDocs latexpdf
         # Run the doc tests (some check the html output for correctness)
         $PYTHON_EXE -m pytest -v -W ignore::Warning \
@@ -891,10 +904,10 @@ jobs:
     timeout-minutes: 10
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Set up Python 3.10
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: '3.10'
 
@@ -947,11 +960,11 @@ jobs:
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       # We need the source for .codecov.yml and running "coverage xml"
 
     #- name: Pip package cache
-    #  uses: actions/cache@v5
+    #  uses: actions/cache@v6
     #  id: pip-cache
     #  with:
     #    path: cache/pip
@@ -963,7 +976,7 @@ jobs:
         path: artifacts
 
     - name: Set up Python 3.12
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: 3.12
 
@@ -1041,7 +1054,7 @@ jobs:
       if: |
         env.PYOMO_WORKFLOW != 'branch' &&
         (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@v7
       with:
         files: coverage.xml
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
@@ -1054,7 +1067,7 @@ jobs:
         env.PYOMO_WORKFLOW != 'branch' &&
         hashFiles('coverage-other.xml') != '' &&
         (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@v7
       with:
         files: coverage-other.xml
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}

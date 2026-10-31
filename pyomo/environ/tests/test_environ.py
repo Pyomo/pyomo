@@ -10,6 +10,8 @@
 # Unit Tests for pyomo.base.misc
 #
 
+import math
+import os
 import re
 import sys
 import subprocess
@@ -20,25 +22,49 @@ import pyomo.common.unittest as unittest
 class ImportData:
     def __init__(self):
         self.tpl = {}
-        self.pyomo = {}
+        self.module = {}
 
     def update(self, other):
         self.tpl.update(other.tpl)
-        self.pyomo.update(other.pyomo)
+        self.module.update(other.module)
+
+    def imax(self, other):
+        for k, v in other.tpl.items():
+            if k in self.tpl:
+                v = max(v, self.tpl[k])
+            self.tpl[k] = v
+        self.module.update(other.module)
 
 
-def collect_import_time(module):
+def collect_import_time(module, preimport=""):
+    basemodule = module.split('.')[0]
+    if preimport:
+        cmd = f"{preimport}; import {module}"
+    else:
+        cmd = f"import {module}"
+    env = dict(os.environ)
+    env['PYTHONPATH'] = os.pathsep.join(filter(None, sys.path))
+    env.pop('COVERAGE_PROCESS_START', None)
     output = subprocess.check_output(
-        [sys.executable, '-X', 'importtime', '-c', 'import %s' % (module,)],
+        [sys.executable, '-S', '-X', 'importtime', '-c', cmd],
         stderr=subprocess.STDOUT,
+        env=env,
     )
     # Note: test only runs in PY3
     output = output.decode()
     line_re = re.compile(r'.*:\s*(\d+) \|\s*(\d+) \| ( *)([^ ]+)')
-    data = []
+    header_re = re.compile(r'.*:\s*(.*)')
+    results = []
+    data = None
     for line in output.splitlines():
         g = line_re.match(line)
         if not g:
+            g = header_re.match(line)
+            if g:
+                data = []
+                results.append(data)
+            else:
+                raise RuntimeError(f"Unrecognized line: '{line}'")
             continue
         _self = int(g.group(1))
         _cumul = int(g.group(2))
@@ -48,24 +74,95 @@ def collect_import_time(module):
         while len(data) < _level + 1:
             data.append(ImportData())
         if len(data) > _level + 1:
-            assert len(data) == _level + 2
+            if len(data) != _level + 2:
+                raise RuntimeError(
+                    f"Error processing line '{line}': unexpected unindent"
+                )
             inner = data.pop()
             inner.tpl = {
                 (k if '(from' in k else "%s (from %s)" % (k, _module), v)
                 for k, v in inner.tpl.items()
             }
-            if _module.startswith('pyomo'):
+            if _module.startswith(basemodule):
                 data[_level].update(inner)
-                data[_level].pyomo[_module] = _self
-            else:
-                if _level > 0:
-                    data[_level].tpl[_module] = _cumul
-        elif _module.startswith('pyomo'):
-            data[_level].pyomo[_module] = _self
-        elif _level > 0:
+                data[_level].module[_module] = _self
+            else:  # _level > 0:
+                data[_level].tpl[_module] = _cumul
+        elif _module.startswith(basemodule):
+            data[_level].module[_module] = _self
+        else:  # _level > 0:
             data[_level].tpl[_module] = _self
-    assert len(data) == 1
-    return data[0]
+    ans = None
+    for d in results:
+        assert len(d) == 1
+        d = d[0]
+        if not d.module:
+            continue
+        if ans:
+            raise RuntimeError(
+                "Multiple timing results imported target module '{module}'"
+            )
+        ans = d
+    return ans, output
+
+
+def summarize_import_time(module, data, raw_output):
+    print(raw_output)
+    print("\n")
+
+    modname = module.split('.')[0]
+
+    N = int(math.log10(max(max(data.module.values()), max(data.tpl.values())))) + 4
+    print(f"{modname.title()} (by module time):")
+    print(
+        "\n".join(
+            f"%{N}d: %s" % (v, k)
+            for k, v in sorted(data.module.items(), key=lambda x: x[1])
+        )
+    )
+    tpls = sorted(
+        (*_mod.split(' ', maxsplit=1), '', _time) for _mod, _time in data.tpl.items()
+    )
+    print("TPLS:")
+    _line_fmt = f"   %{max(len(l[0]) for l in tpls)}s: %6d %s"
+    print("\n".join(_line_fmt % (l[0], l[-1], l[1]) for l in tpls))
+    tpl = {}
+    for k, v in data.tpl.items():
+        _mod = k.split()[0].split('.')[0]
+        _base_time, _base_cat = tpl.get(_mod, (0, 0))
+        tpl[_mod] = _base_time + v, _base_cat | (1 if ' ' in k else 2)
+    tpl_by_time = sorted(tpl.items(), key=lambda x: x[1])
+
+    pyomo_time = sum(data.module.values())
+    tpl_time = sum(data.tpl.values())
+    total = float(pyomo_time + tpl_time)
+    python_time = sum(t for m, (t, s) in tpl_by_time if s & 1 == 0)
+    module_tpl_time = sum(t for m, (t, s) in tpl_by_time if s & 1)
+    assert abs(python_time + module_tpl_time - tpl_time) < 1
+
+    print("TPLS (by package time):")
+    _line_fmt = f"   %{max(len(k) for k in tpl)}s: %6d (%4.1f%%)%s"
+    source = {1: '', 2: ' *', 3: ' *+'}
+    print(
+        "\n".join(
+            _line_fmt % (m, t, 100 * t / total, source[s]) for m, (t, s) in tpl_by_time
+        )
+    )
+    N = len(modname) + 8
+    print(
+        f"\n%-{N}s %6d (%4.1f%%)"
+        % (f"{modname.title()}:", pyomo_time, 100 * pyomo_time / total)
+    )
+    print(
+        f"%-{N}s %6d (%4.1f%%)"
+        % (f"TPL ({modname}):", module_tpl_time, 100 * module_tpl_time / total)
+    )
+    print(
+        f"%-{N}s %6d (%4.1f%%)"
+        % ("TPL (python):", python_time, 100 * python_time / total)
+    )
+
+    return python_time, module_tpl_time, pyomo_time, tpl_by_time
 
 
 class TestPyomoEnviron(unittest.TestCase):
@@ -85,47 +182,29 @@ class TestPyomoEnviron(unittest.TestCase):
             )
 
     @unittest.skipIf(
-        'pypy_version_info' in dir(sys), "PyPy does not support '-X importtime"
+        'pypy_version_info' in dir(sys), "PyPy does not support '-X importtime'"
     )
     def test_tpl_import_time(self):
-        data = collect_import_time('pyomo.environ')
-        pyomo_time = sum(data.pyomo.values())
-        tpl_time = sum(data.tpl.values())
-        total = float(pyomo_time + tpl_time)
-        print("Pyomo (by module time):")
-        print(
-            "\n".join(
-                "   %s: %s" % i for i in sorted(data.pyomo.items(), key=lambda x: x[1])
-            )
+        data, output = collect_import_time(
+            'pyomo.environ',
+            # We used to pre-load and pre-start multiprocessing so that the
+            # asynchronous task triggered by creating a Lock will not be
+            # interleaved in the importtime report:
+            #
+            ##'import time, multiprocessing; multiprocessing.Lock(); time.sleep(0.25)',
+            #
+            # This is no longer needed as we have removed
+            # multiprocessing from the list of required modules for
+            # pyomo.environ.
         )
-        print("TPLS:")
-        _line_fmt = "   %%%ds: %%6d %%s" % (
-            max(len(k[: k.find(' ')]) for k in data.tpl),
+        python_time, module_tpl_time, pyomo_time, tpl_by_time = summarize_import_time(
+            'pyomo.environ', data, output
         )
-        print(
-            "\n".join(
-                _line_fmt % (k[: k.find(' ')], v, k[k.find(' ') :])
-                for k, v in sorted(data.tpl.items())
-            )
-        )
-        tpl = {}
-        for k, v in data.tpl.items():
-            _mod = k[: k.find(' ')].split('.')[0]
-            tpl[_mod] = tpl.get(_mod, 0) + v
-        tpl_by_time = sorted(tpl.items(), key=lambda x: x[1])
-        print("TPLS (by package time):")
-        print(
-            "\n".join(
-                "   %12s: %6d (%4.1f%%)" % (m, t, 100 * t / total)
-                for m, t in tpl_by_time
-            )
-        )
-        print("Pyomo:    %6d (%4.1f%%)" % (pyomo_time, 100 * pyomo_time / total))
-        print("TPL:      %6d (%4.1f%%)" % (tpl_time, 100 * tpl_time / total))
+
         # Arbitrarily choose a threshold 10% more than the expected
         # value (at time of writing, TPL imports were 52-57% of the
         # import time on a development machine)
-        self.assertLess(tpl_time / total, 0.65)
+        self.assertLess(module_tpl_time / (module_tpl_time + pyomo_time), 0.33)
         # Spot-check the (known) worst offenders.  The following are
         # modules from the "standard" library.  Their order in the list
         # of slow-loading TPLs can vary from platform to platform.
@@ -137,15 +216,18 @@ class TestPyomoEnviron(unittest.TestCase):
             'base64',  # Imported on Windows
             'bisect',  # Imported by dae, dataportal, contrib/mpc
             'cPickle',
+            'copy',  # Imported by ply, et al.
             'csv',
             'ctypes',  # mandatory import in core/base/external.py; TODO: fix this
             'datetime',  # imported by contrib.solver
             'decimal',
+            'encodings',  # We tabulate modules imported by python
             'gc',  # Imported on MacOS, Windows; Linux in 3.10
             'glob',
             'heapq',  # Added in Python 3.10
             'importlib',
             'inspect',
+            'io',
             'json',  # Imported on Windows
             'locale',  # Added in Python 3.9
             'logging',

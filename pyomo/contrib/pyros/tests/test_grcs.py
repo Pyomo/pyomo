@@ -262,6 +262,63 @@ def build_leyffer_two_cons_two_params():
     return m
 
 
+class TestPyROSSolveCardinalitySet(unittest.TestCase):
+    """
+    Test PyROS successfully solves model with cardinality-constrained
+    uncertainty set.
+    """
+
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
+    def test_cardinality_set_solve(self):
+        m = ConcreteModel()
+        m.q = Param(range(4), initialize=1, mutable=True)
+        m.x = Var(initialize=0, bounds=(0, None))
+        m.obj = Objective(expr=m.x)
+        m.ineq_con = Constraint(expr=m.x >= m.q[0] + m.q[1] - m.q[2] - m.q[3])
+
+        cset = CardinalitySet(
+            origin=[1] * 4, gamma=2, positive_deviation=[1, 0, 2, 0.5]
+        )
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=cset,
+            local_solver="ipopt",
+            global_solver="ipopt",
+            objective_focus="worst_case",
+            solve_master_globally=True,
+        )
+        self.assertEqual(res.iterations, 2)
+        # worst-case objective is just maximum sum of uncertain
+        # parameters (per cardinality constraints)
+        self.assertAlmostEqual(res.final_objective_value, 1)
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+
+        cset.negative_deviation = [0, 4.5, 0.5, 3]
+        res2 = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=cset,
+            local_solver="ipopt",
+            global_solver="ipopt",
+            objective_focus="worst_case",
+            solve_master_globally=True,
+        )
+        self.assertEqual(res2.iterations, 2)
+        # worst-case objective changes due to
+        # change of maximum negative deviations
+        self.assertAlmostEqual(res2.final_objective_value, 4)
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+
+
 class TestPyROSSolveFactorModelSet(unittest.TestCase):
     """
     Test PyROS successfully solves model with factor model uncertainty.
@@ -488,7 +545,7 @@ class TestPyROSSolveCartesianProductSet(unittest.TestCase):
                 FactorModelSet(
                     origin=[0, 0], number_of_factors=1, beta=1, psi_mat=[[1], [3]]
                 ),
-                CardinalitySet(origin=[0], positive_deviation=[0.5], gamma=1),
+                CardinalitySet(origin=[0], gamma=1, positive_deviation=[0.5]),
             ]
         )
         results = SolverFactory("pyros").solve(
@@ -3922,7 +3979,7 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
         # check number of lines is as expected
         self.assertEqual(
             len(intro_msg_lines),
-            14,
+            15,
             msg=(
                 "PyROS solver introductory message does not contain"
                 "the expected number of lines."
@@ -3936,16 +3993,17 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
         # check regex main text
         self.assertRegex(
             " ".join(intro_msg_lines[1:-1]),
-            r"PyROS: The Pyomo Robust Optimization Solver, v.* \(IDAES\)\.",
+            r"PyROS: The Pyomo Robust Optimization Solver, v.* \(CCSI2\) "
+            r"projects\.",
         )
 
-    def test_log_disclaimer(self):
+    def test_log_feedback_ref(self):
         """
-        Test logging of PyROS solver disclaimer messages.
+        Test logging of PyROS solver guidance on providing feedback.
         """
         pyros_solver = SolverFactory("pyros")
         with LoggingIntercept(level=logging.INFO) as LOG:
-            pyros_solver._log_disclaimer(logger=logger, level=logging.INFO)
+            pyros_solver._log_feedback_guidance(logger=logger, level=logging.INFO)
 
         disclaimer_msgs = LOG.getvalue()
 
@@ -3955,23 +4013,21 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
         # check number of lines is as expected
         self.assertEqual(
             len(disclaimer_msg_lines),
-            5,
+            3,
             msg=(
-                "PyROS solver disclaimer message does not contain"
+                "PyROS solver disclaimer message does not contain "
                 "the expected number of lines."
             ),
         )
 
         # regex first line of disclaimer section
-        self.assertRegex(disclaimer_msg_lines[0], r"=.* DISCLAIMER .*=")
         # check last line of disclaimer section
-        self.assertEqual(disclaimer_msg_lines[-1], "=" * 78)
-
         # check regex main text
         self.assertRegex(
-            " ".join(disclaimer_msg_lines[1:-1]),
-            r"PyROS is currently under active development.*ticket at.*",
+            " ".join(disclaimer_msg_lines[0:-1]),
+            r"Please provide feedback.*ticket at.*",
         )
+        self.assertEqual(disclaimer_msg_lines[-1], "=" * 78)
 
 
 class UnavailableSolver:

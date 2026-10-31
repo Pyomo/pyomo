@@ -114,6 +114,8 @@ else:
     QFileDialog = QtWidgets.QFileDialog
     QMainWindow = QtWidgets.QMainWindow
     QMdiArea = QtWidgets.QMdiArea
+    QMenu = QtWidgets.QMenu
+    QFontDialog = QtWidgets.QFontDialog
     QApplication = QtWidgets.QApplication
     QTableWidgetItem = QtWidgets.QTableWidgetItem
     QStatusBar = QtWidgets.QStatusBar
