@@ -7,11 +7,12 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-from pyomo.core.base.block import BlockData
-from pyomo.contrib.fbbt.fbbt import fbbt
-from pyomo.devel.initialization.utils import get_vars
 import logging
 import math
+
+from pyomo.contrib.fbbt.fbbt import fbbt
+from pyomo.core.base.block import BlockData
+from pyomo.util.vars_from_expressions import get_vars
 
 logger = logging.getLogger(__name__)
 
