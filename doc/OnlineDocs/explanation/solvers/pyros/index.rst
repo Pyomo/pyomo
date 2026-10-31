@@ -31,7 +31,7 @@ projects.
 Citing PyROS
 ============
 If you use PyROS in your research,
-please acknowledge PyROS by citing [IAE+21]_.
+please acknowledge PyROS by citing [SIS+26]_ and [IAE+21]_.
 
 
 Feedback and Reporting Issues

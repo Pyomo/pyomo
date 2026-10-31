@@ -34,10 +34,14 @@ def _get_cuopt_version(cuopt, avail):
     if not avail:
         return
     CUOPTDirect._version = tuple(cuopt.__version__.split('.'))
-    CUOPTDirect._name = "cuOpt %s.%s%s" % CUOPTDirect._version
+    CUOPTDirect._name = "cuOpt %s" % (cuopt.__version__,)
 
 
-cuopt, cuopt_available = attempt_import("cuopt", callback=_get_cuopt_version)
+# Note: catch RuntimeError as the base for CUDARuntimeError, which can
+# be raised, e.g., for CUDA driver version mismatches
+cuopt, cuopt_available = attempt_import(
+    "cuopt", callback=_get_cuopt_version, catch_exceptions=(ImportError, RuntimeError)
+)
 
 
 @SolverFactory.register("cuopt", doc="Direct python interface to CUOPT")

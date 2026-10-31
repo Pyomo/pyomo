@@ -263,6 +263,11 @@ class TestTransformPiecewiseModelToNestedInnerRepnMIP(unittest.TestCase):
             self, 'contrib.piecewise.disaggregated_logarithmic'
         )
 
+    def test_single_segment_no_disjunction(self):
+        ct.check_single_segment_no_disjunction(
+            self, 'contrib.piecewise.disaggregated_logarithmic'
+        )
+
     # Check solution of the log(x) model
     @unittest.skipUnless(SolverFactory('gurobi').available(), 'Gurobi is not available')
     @unittest.skipUnless(SolverFactory('gurobi').license_is_valid(), 'No license')

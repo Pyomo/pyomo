@@ -91,6 +91,28 @@ def rescale_FIM(FIM, param_vals):
     return scaled_FIM
 
 
+def regularize_fim_for_cholesky(FIM):
+    """
+    Add the smallest diagonal shift needed for a stable Cholesky factorization.
+
+    Parameters
+    ----------
+    FIM: ndarray
+        Fisher information matrix to regularize before Cholesky factorization.
+
+    Returns
+    -------
+    tuple
+        Pair ``(fim_pd, jitter)`` where ``fim_pd`` is the regularized matrix and
+        ``jitter`` is the nonnegative diagonal shift used to make the smallest
+        symmetric eigenvalue at least ``_SMALL_TOLERANCE_DEFINITENESS``.
+    """
+    min_eig = float(np.min(np.linalg.eigvalsh(FIM)))
+    jitter = max(0.0, _SMALL_TOLERANCE_DEFINITENESS - min_eig)
+    fim_pd = FIM + jitter * np.eye(FIM.shape[0])
+    return fim_pd, jitter
+
+
 def check_FIM(FIM):
     """
     Checks that the FIM is square, positive definite, and symmetric.

@@ -16,7 +16,6 @@ from io import StringIO
 import sys
 import struct
 import re
-import pathlib
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import InfeasibleConstraintException
@@ -352,9 +351,11 @@ class GAMS(SolverBase):
             exe_path = config.executable.path()
             command = [exe_path, output_filename, "o=" + lst, "curdir=" + dname]
 
-            # handled tee and logfile based on the length of list and
-            # string respectively
+            # log level from whether tee and logfile are set (see _log_levels)
             command.append(self._log_levels[(bool(config.tee), bool(config.logfile))])
+            if config.logfile:
+                # Absolute, because GAMS runs with curdir set to dname.
+                command.append("lf=" + os.path.abspath(config.logfile))
 
             ostreams = [StringIO()]
             if config.tee:
