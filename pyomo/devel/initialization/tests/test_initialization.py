@@ -16,7 +16,9 @@ from pyomo.devel.initialization.examples.init_polynomial_ex import (
     lp_init_ex,
     pwl_init_ex,
     global_init_ex,
+    run_example,
 )
+from pyomo.devel.initialization.utils import get_solution_limit_options
 from pyomo.common import unittest
 from pyomo.common.dependencies import scipy_available
 from pyomo.contrib.solver.common.factory import SolverFactory
@@ -30,6 +32,7 @@ from pyomo.contrib.solver.common.base import Availability, SolverBase
 scip = SolverFactory('scip_direct')
 ipopt = SolverFactory('ipopt')
 highs = SolverFactory('highs')
+gurobi = SolverFactory('gurobi_direct_minlp')
 
 
 class MockNLPSolver(SolverBase):
@@ -86,6 +89,15 @@ class TestExamples(unittest.TestCase):
         stat, x = lp_init_ex()
         self.assertEqual(stat, SolutionStatus.optimal)
         self.assertAlmostEqual(x, -9.920159607881597)
+
+    @unittest.skipUnless(highs.available(), 'highs is not available')
+    def test_run_example_and_unknown_method(self):
+        stat, x = run_example(method='lp')
+        self.assertEqual(stat, SolutionStatus.optimal)
+        self.assertAlmostEqual(x, -9.920159607881597)
+
+        with self.assertRaises(ValueError):
+            run_example(method='unknown')
 
 
 class TestInit(unittest.TestCase):
@@ -215,6 +227,36 @@ class TestInit(unittest.TestCase):
         )
 
     @unittest.skipUnless(highs.available(), 'highs is not available')
+    def test_pwl_init_single(self):
+        """
+        Same as test_pwl_init but with single iteration
+        """
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(-15, 5))
+        m.c = pyo.Constraint(expr=(m.x + 7) * (m.x + 5) * (m.x - 4) + 200 == 0)
+        m.obj = pyo.Objective(expr=m.x)
+
+        # all the actual testing happens in the MockNLPSolver
+        nlp_solver = MockNLPSolver(
+            self,
+            varlist=[m.x],
+            sol_map={
+                0: ([None], 0, 0),
+                1: ([-9.920096055464825], 1e-4, 1e-4),
+                2: ([-9.920096055464825], 1e-4, 1e-4),
+            },
+        )
+        mip_solver = SolverFactory('highs')
+        results = ini.initialize_with_piecewise_linear_approximation(
+            nlp=m,
+            nlp_solver=nlp_solver,
+            mip_solver=mip_solver,
+            num_initial_points=64,
+            max_pwl_refinement_iter=1,
+            aggressive_substitution=False,
+        )
+
+    @unittest.skipUnless(highs.available(), 'highs is not available')
     @unittest.skipUnless(ipopt.available(), 'ipopt is not available')
     def test_pwl_ineq(self):
         m = pyo.ConcreteModel()
@@ -231,6 +273,39 @@ class TestInit(unittest.TestCase):
 
         self.assertEqual(results.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(results.incumbent_objective, 1, 5)
+
+    # Test solver support for global and pwl with no refinement
+    def test_pwl_solver_solution_limit(self):
+
+        # Check supported solvers
+        solver_list = [
+            "scip_direct",
+            "scip_persistent",
+            "gurobi_direct_minlp",
+            "gurobi_persistent",
+            "gurobi_direct",
+            "highs",
+        ]
+
+        for solver in solver_list:
+            mip_solver = SolverFactory(solver)
+            if not mip_solver.available():
+                continue
+            mip_solver_opts = get_solution_limit_options(mip_solver)
+            if solver in {"gurobi_direct_minlp", "gurobi_persistent", "gurobi_direct"}:
+                self.assertEqual(mip_solver_opts['SolutionLimit'], 1)
+            elif solver in {"scip_direct", "scip_persistent"}:
+                self.assertEqual(mip_solver_opts['limits/solutions'], 1)
+            elif solver == "highs":
+                self.assertEqual(mip_solver_opts['mip_max_improving_sols'], 1)
+
+        # Check unsupported solver
+        with self.assertRaisesRegex(
+            NotImplementedError,
+            '.*Currently, the initialization module only works with new solver.*',
+        ):
+            wrong_solver = SolverFactory("multistart")
+            get_solution_limit_options(wrong_solver)
 
 
 if __name__ == '__main__':

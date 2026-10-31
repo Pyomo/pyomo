@@ -13,7 +13,28 @@ import pyomo.environ as pyo
 from pyomo.common.collections import ComponentSet
 from pyomo.core.base.block import BlockData
 from pyomo.core.expr.visitor import identify_variables
+from pyomo.contrib.solver.solvers.scip.scip_direct import ScipDirect
+from pyomo.contrib.solver.solvers.scip.scip_persistent import ScipPersistent
+from pyomo.contrib.solver.solvers.gurobi.gurobi_direct_base import GurobiDirectBase
+from pyomo.contrib.solver.solvers.highs import Highs
 from pyomo.util.vars_from_expressions import get_vars
+
+
+def get_solution_limit_options(solver):
+    opts = {}
+    if isinstance(solver, (ScipDirect, ScipPersistent)):
+        opts['limits/solutions'] = 1
+    elif isinstance(solver, GurobiDirectBase):
+        opts['SolutionLimit'] = 1
+    elif isinstance(solver, Highs):
+        opts['mip_max_improving_sols'] = 1
+    else:
+        raise NotImplementedError(
+            'Currently, the initialization module only works with new solver '
+            'interfaces, so the mip solvers are limited to Highs, ScipDirect, '
+            'ScipPersistent, GurobiDirect, GurobiDirectMINLP, and GurobiPersistent.'
+        )
+    return opts
 
 
 def shallow_clone(m1):
