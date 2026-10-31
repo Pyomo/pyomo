@@ -10,6 +10,7 @@
 #
 #
 import math
+import packaging.version as ver
 import pickle
 
 from pyomo.common.errors import PyomoException
@@ -1109,8 +1110,12 @@ class TestPyomoUnit(unittest.TestCase):
         self.assertEqual(q, None)
 
         q = as_quantity(str('aaa'))
-        self.assertIs(q.__class__, Quantity)
-        self.assertEqual(q, 'aaa' * _pint.dimensionless)
+        if ver.parse(pint_module.__version__) < ver.parse('0.26.2'):
+            self.assertIs(q.__class__, Quantity)
+            self.assertEqual(q, 'aaa' * _pint.dimensionless)
+        else:
+            self.assertIs(q.__class__, str)
+            self.assertEqual(q, 'aaa')
 
         q = as_quantity(True)
         self.assertIs(q.__class__, bool)
