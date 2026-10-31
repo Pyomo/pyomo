@@ -20,7 +20,15 @@ from pyomo.common.fileutils import import_file
 from pyomo.common.log import LoggingIntercept
 import pyomo.contrib.gdpopt.tests.common_tests as ct
 from pyomo.contrib.satsolver.satsolver import z3_available
-from pyomo.environ import SolverFactory, value, ConcreteModel, Var, Objective, maximize
+from pyomo.environ import (
+    SolverFactory,
+    value,
+    ConcreteModel,
+    Var,
+    Objective,
+    minimize,
+    maximize,
+)
 from pyomo.gdp import Disjunction
 from pyomo.opt import TerminationCondition
 
@@ -283,6 +291,70 @@ class TestGDPopt_LBB_Z3(unittest.TestCase):
         )
         objective_value = value(model.obj.expr)
         self.assertAlmostEqual(objective_value, 4.46, 2)
+
+
+class _FailingSolver:
+    """Stand-in solver that fails the way an infrastructure error would."""
+
+    def solve(self, model, **kwds):
+        raise RuntimeError("simulated solver infrastructure failure")
+
+
+class TestGDPoptLBBSubproblemErrors(unittest.TestCase):
+    """LBB must not report a solver failure as an infeasible bound."""
+
+    _failing_solver_name = '_gdpopt_lbb_test_failing_solver'
+
+    @classmethod
+    def setUpClass(cls):
+        SolverFactory.register(
+            cls._failing_solver_name, doc='Test solver that always fails'
+        )(_FailingSolver)
+
+    @classmethod
+    def tearDownClass(cls):
+        SolverFactory.unregister(cls._failing_solver_name)
+
+    def _make_solver_model_and_config(self):
+        model = ConcreteModel()
+        model.x = Var(bounds=(0, 1))
+        model.objective = Objective(expr=model.x, sense=minimize)
+
+        from pyomo.contrib.gdpopt.branch_and_bound import GDP_LBB_Solver
+        from pyomo.contrib.gdpopt.create_oa_subproblems import (
+            add_algebraic_variable_list,
+            add_util_block,
+        )
+        from pyomo.opt import SolverResults
+
+        solver = GDP_LBB_Solver()
+        solver.pyomo_results = SolverResults()
+        solver.pyomo_results.problem.sense = minimize
+        solver.original_util_block = add_util_block(model)
+        add_algebraic_variable_list(solver.original_util_block)
+
+        config = solver.CONFIG()
+        config.minlp_solver = self._failing_solver_name
+        config.minlp_solver_args = {}
+        config.local_minlp_solver = self._failing_solver_name
+        config.local_minlp_solver_args = {}
+        config.integer_tolerance = 1e-5
+        config.time_limit = None
+        return solver, model, config
+
+    def test_evaluated_node_solver_error_propagates(self):
+        solver, model, config = self._make_solver_model_and_config()
+        with self.assertRaisesRegex(
+            RuntimeError, "simulated solver infrastructure failure"
+        ):
+            solver._solve_rnGDP_subproblem(model, config)
+
+    def test_screening_solver_error_propagates(self):
+        solver, model, config = self._make_solver_model_and_config()
+        with self.assertRaisesRegex(
+            RuntimeError, "simulated solver infrastructure failure"
+        ):
+            solver._solve_local_rnGDP_subproblem(model, config)
 
 
 if __name__ == '__main__':
