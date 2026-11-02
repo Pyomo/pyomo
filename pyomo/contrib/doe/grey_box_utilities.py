@@ -41,6 +41,29 @@ if scipy_available and numpy_available:
 import pyomo.environ as pyo
 
 
+def np_linalg_eig(a):
+    """:py:func:`numpy.linalg.eig` wrapper to cast results to real (if possible)
+
+    The :py:func:`numpy.linalg.eig` documentation states that the return
+    values will be vectors / arrays of real numbers if there is no
+    imaginary component and complex numbers otherwise.  Beginning in
+    NumPy 2.5.0 the function behavior changed to always return complex
+    numbers.  This wrapper restores the original functionality (as DoE
+    assumes that the results will be real).
+
+    If :py:func:`numpy.linalg.eig` returns complex numbers with an
+    imaginary component, they will pass through this function and
+    (eventually) raise exceptions in DoE.
+
+    """
+    vals, vec = np.linalg.eig(a)
+    if np.all(vals == vals.real):
+        vals = vals.real
+    if np.all(vec == vec.real):
+        vec = vec.real
+    return vals, vec
+
+
 class FIMExternalGreyBox(
     ExternalGreyBoxModel if (scipy_available and numpy_available) else object
 ):
@@ -377,9 +400,8 @@ class FIMExternalGreyBox(
         M_cols = np.arange(len(jac_M.flatten()))
 
         # Returns coo_matrix of the correct shape
-        return scipy.sparse.coo_matrix(
-            (jac_M.flatten(), (M_rows, M_cols)), shape=(1, len(jac_M.flatten()))
-        )
+        jac = jac_M.flatten()
+        return scipy.sparse.coo_matrix((jac, (M_rows, M_cols)), shape=(1, len(jac)))
 
     # Beyond here is for Hessian information
     def set_equality_constraint_multipliers(self, eq_con_multiplier_values):
@@ -860,7 +882,7 @@ class FIMExternalGreyBox(
             ObjectiveLib(self.objective_option)
 
         # Returns coo_matrix of the correct shape
+        hes = np.asarray(hess_vals)
         return scipy.sparse.coo_matrix(
-            (np.asarray(hess_vals), (hess_rows, hess_cols)),
-            shape=(self._n_inputs, self._n_inputs),
+            (hes, (hess_rows, hess_cols)), shape=(self._n_inputs, self._n_inputs)
         )

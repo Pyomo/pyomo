@@ -397,7 +397,7 @@ class _GDPoptAlgorithm:
 
     def reached_time_limit(self, config):
         elapsed = get_main_elapsed_time(self.timing)
-        if config.time_limit is not None and elapsed >= config.time_limit:
+        if config.time_limit and elapsed >= config.time_limit:
             config.logger.info(
                 'GDPopt exiting--Did not converge bounds '
                 'before time limit of {} seconds. '.format(config.time_limit)
