@@ -1196,7 +1196,16 @@ class XpressDirect(DirectSolver):
                 try:
                     var_vals = xprob.getSolution(xpress_vars)
                     if extract_slacks:
-                        slacks = self._getSlacks(xprob, xpress_cons)
+                        # Beginning in Xpress 10.0.0, getSolution can
+                        # return a solution for unbounded problems, but
+                        # getSlacks() will raise a ModelError("Slack
+                        # values are not available").  We will suppress
+                        # that exception and just return an empty list
+                        # of slacks.
+                        try:
+                            slacks = self._getSlacks(xprob, xpress_cons)
+                        except xpress.ModelError:
+                            slacks = []
                 except xpress.ModelError:
                     # Xpress 9.5.0 has new behavior for unbounded
                     # problems that have mipsols > 0.  Previously
