@@ -59,8 +59,15 @@ def _finalize_xpress_import(xpress, avail):
     if not avail:
         return
     xp = xpress
-    XpressDirect._version = tuple(int(k) for k in xp.getversion().split('.'))
-    XpressDirect._name = "Xpress %s.%s.%s" % XpressDirect._version
+
+    try:
+        # getversion was renamed getVersion in 47.01.01:
+        _version_str = xp.getVersion()
+    except AttributeError:
+        # Pre 47.01.01 behavior
+        _version_str = xp.getversion()
+    XpressDirect._version = tuple(int(k) for k in _version_str.split('.'))
+    XpressDirect._name = f"Xpress {_version_str}"
     # In (pypi) versions prior to 8.13.0, the 'xp.rng' keyword was
     # 'xp.range'
     if not hasattr(xp, 'rng'):
