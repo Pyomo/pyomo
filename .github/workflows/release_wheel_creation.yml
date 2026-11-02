@@ -29,7 +29,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         arch: [all]
-        wheel-version: ['cp310*', 'cp311*', 'cp312*', 'cp313*', 'cp314*']
+        wheel-version: ['cp310*', 'cp311*', 'cp312*', 'cp313*', 'cp314*', 'cp315*']
 
         include:
         - wheel-version: 'cp310*'
@@ -47,6 +47,9 @@ jobs:
         - wheel-version: 'cp314*'
           TARGET: 'py314'
           GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
+        - wheel-version: 'cp315*'
+          TARGET: 'py315'
+          GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
 
         # We use pure python for any Windows/python greater than 3.10
         exclude:
@@ -58,9 +61,11 @@ jobs:
           os: windows-latest
         - wheel-version: 'cp314*'
           os: windows-latest
+        - wheel-version: 'cp315*'
+          os: windows-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Update README.md
         shell: bash
         run: |
@@ -92,7 +97,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         arch: [all]
-        wheel-version: ['cp310*', 'cp311*', 'cp312*', 'cp313*', 'cp314*']
+        wheel-version: ['cp310*', 'cp311*', 'cp312*', 'cp313*', 'cp314*', 'cp315*']
 
         include:
         - wheel-version: 'cp310*'
@@ -110,8 +115,11 @@ jobs:
         - wheel-version: 'cp314*'
           TARGET: 'py314'
           GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
+        - wheel-version: 'cp315*'
+          TARGET: 'py315'
+          GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Update README.md
         shell: bash
         run: |
@@ -119,7 +127,7 @@ jobs:
           mv README.new README.md
       - name: Set up QEMU
         if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: all
       - name: Build wheels
@@ -145,14 +153,14 @@ jobs:
       matrix:
         python-version: ['3.12']
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Update README.md
         shell: bash
         run: |
           sed '1,/REMOVE-EVERYTHING-BEFORE-THIS-LINE/d' README.md > README.new
           mv README.new README.md
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
@@ -182,14 +190,14 @@ jobs:
           TARGET: generic_tarball
         python-version: ['3.10']
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: Update README.md
       shell: bash
       run: |
         sed '1,/REMOVE-EVERYTHING-BEFORE-THIS-LINE/d' README.md > README.new
         mv README.new README.md
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
