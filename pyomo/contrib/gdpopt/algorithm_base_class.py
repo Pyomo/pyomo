@@ -281,7 +281,7 @@ class _GDPoptAlgorithm:
         some point the primal bound changes signs.
         """
         absolute_gap = abs(self.UB - self.LB)
-        return absolute_gap / (abs(self.primal_bound() + 1e-10))
+        return absolute_gap / (abs(self.primal_bound()) + 1e-10)
 
     def _log_current_state(self, logger, subproblem_type, primal_improved=False):
         star = "*" if primal_improved else ""

@@ -27,6 +27,7 @@ from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_global_constraint_list,
 )
 import pyomo.contrib.gdpopt.tests.common_tests as ct
+from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
 from pyomo.contrib.gdpopt.util import is_feasible, time_code
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 from pyomo.contrib.gdpopt.solve_discrete_problem import (
@@ -40,6 +41,7 @@ from pyomo.environ import (
     Integers,
     LogicalConstraint,
     maximize,
+    minimize,
     Objective,
     RangeSet,
     TransformationFactory,
@@ -50,7 +52,7 @@ from pyomo.environ import (
 )
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.tests import models
-from pyomo.opt import TerminationCondition
+from pyomo.opt import SolverResults, TerminationCondition
 
 exdir = normpath(join(PYOMO_ROOT_DIR, 'examples', 'gdp'))
 
@@ -311,6 +313,20 @@ class TestGDPoptUnit(unittest.TestCase):
         self.assertIs(c2.body, m.y)
         self.assertEqual(c2.lower, 0)
         self.assertIsNone(c2.upper)
+
+    def test_relative_gap_near_zero_primal_bound(self):
+        solver = GDP_LOA_Solver()
+        solver.pyomo_results = SolverResults()
+        solver.pyomo_results.problem.sense = minimize
+
+        # With the guard inside the abs(), this was a division by zero.
+        solver.LB, solver.UB = -1.0 - 1e-10, -1e-10
+        self.assertAlmostEqual(solver.relative_gap(), 1 / 2e-10, delta=1)
+
+        # The gap shouldn't depend on the sign of the primal bound.
+        for primal_bound in (2e-10, -2e-10):
+            solver.LB, solver.UB = primal_bound - 1.0, primal_bound
+            self.assertAlmostEqual(solver.relative_gap(), 1 / 3e-10, delta=1)
 
     def test_complain_when_no_algorithm_specified(self):
         m = self.get_GDP_on_block()
