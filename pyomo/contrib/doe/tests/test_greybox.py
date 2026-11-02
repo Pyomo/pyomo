@@ -2069,9 +2069,6 @@ class TestSingleExperimentSolve(unittest.TestCase):
 @unittest.skipIf(not pandas_available, "pandas is not available")
 class TestMultiexperimentError(unittest.TestCase):
     def test_optimize_experiments_greybox_unsupported_objectives_are_rejected(self):
-        # These unsupported objectives share the same early-validation path, so
-        # keep them in one table-driven test and verify none reaches the
-        # external grey_box_solver interface.
         objective_option = "zero"
 
         class _UnusedGreyBoxSolver:
