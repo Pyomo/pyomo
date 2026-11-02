@@ -1182,7 +1182,13 @@ class XpressDirect(DirectSolver):
                 soln_constraints = soln.constraint
 
                 if extract_duals or extract_slacks:
-                    xpress_cons = list(self._solver_con_to_pyomo_con_map.keys())
+                    # Starting in Xpress 9.9.0, passing SOS constraints
+                    # to getSlacks raises an xpress.ModelError:
+                    xpress_cons = [
+                        con
+                        for con in self._solver_con_to_pyomo_con_map.keys()
+                        if con.__class__ is not xpress.sos
+                    ]
                     for con in xpress_cons:
                         soln_constraints[con.name] = {}
 
