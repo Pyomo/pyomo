@@ -301,6 +301,14 @@ def _finalize_xpress_import(xpress, avail):
 
         XpressDirect._addCols = _addCols
 
+    # Xpress 10.0 (48) renamed some enums
+    if XpressDirect._version < (48,):
+        XpressDirect._minimize = xp.minimize
+        XpressDirect._maximize = xp.maximize
+    else:
+        XpressDirect._minimize = xp.ObjSense.MINIMIZE
+        XpressDirect._maximize = xp.ObjSense.MAXIMIZE
+
 
 class _xpress_importer_class:
     # We want to be able to *update* the message that the deferred
@@ -1062,9 +1070,9 @@ class XpressDirect(DirectSolver):
             raise ValueError('Cannot add inactive objective to solver.')
 
         if obj.sense == minimize:
-            sense = xpress.minimize
+            sense = self._minimize
         elif obj.sense == maximize:
-            sense = xpress.maximize
+            sense = self._maximize
         else:
             raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
 
