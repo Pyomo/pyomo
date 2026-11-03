@@ -761,7 +761,11 @@ class BlockData(ActiveComponentData):
         Components are transferred in declaration order.  Any private
         data recorded on `src` (see :meth:`private_data`) is also
         transferred, with incoming scopes replacing any scopes already
-        present on this Block.
+        present on this Block.  The private data is transferred by
+        reference (not copied): the scope data objects are shared with
+        `src`, consistent with the components themselves being
+        transferred by identity, so that bookkeeping referring to the
+        transferred components remains valid on this Block.
 
         If a Component on `src` is also declared on this block as either
         a Component or attribute, the local Component or attribute is

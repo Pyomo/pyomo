@@ -109,6 +109,23 @@ class TestAddSlacks(unittest.TestCase):
         slack = slacks[0]
         self.assertIs(m.rule3, trans.get_relaxed_constraint(m, slack))
 
+    def test_mapping_api_block_rule(self):
+        # The transformation bookkeeping is stored as private data on
+        # the transformed model's root block.  It must survive the
+        # transformed model being attached to another model through a
+        # Block construction rule, which transfers the returned block's
+        # contents (including its private data) onto the new block.
+        m = self.makeModel()
+        trans = TransformationFactory('core.add_slack_variables')
+        outer = ConcreteModel()
+        outer.relaxed = Block(rule=lambda blk: trans.create_using(m))
+
+        slacks = trans.get_slack_variables(outer.relaxed, outer.relaxed.rule1)
+        self.assertEqual(len(slacks), 1)
+        self.assertIs(
+            outer.relaxed.rule1, trans.get_relaxed_constraint(outer.relaxed, slacks[0])
+        )
+
     # wrapping this as a method because I use it again later when I test
     # targets
     def checkRule1(self, m):

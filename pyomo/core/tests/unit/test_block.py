@@ -1013,6 +1013,36 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(b.private_data()['answer'], 42)
         self.assertIs(b.private_data('pyomo.core.tests'), other)
 
+    def test_transfer_attributes_from_private_data_shared(self):
+        # Private data scopes are transferred by reference, not copied:
+        # the data objects are shared with the source block (consistent
+        # with components being transferred by identity), so writes
+        # through one block are visible through the other.
+        b = Block(concrete=True)
+        c = Block(concrete=True)
+        cfe = c.private_data()
+        cfe['answer'] = 42
+
+        b.transfer_attributes_from(c)
+        self.assertIs(b.private_data(), cfe)
+        b.private_data()['answer'] = 43
+        self.assertEqual(cfe['answer'], 43)
+        cfe['answer'] = 44
+        self.assertEqual(b.private_data()['answer'], 44)
+
+    def test_transfer_attributes_from_dict_private_data(self):
+        # A dict source cannot carry private data: a '_private_data'
+        # entry is a reserved word, so it is not transferred (and does
+        # not raise), while components and plain attributes are.
+        b = Block(concrete=True)
+        v = Var()
+        b.transfer_attributes_from(
+            {'_private_data': {'some.scope': {}}, 'answer': 42, 'v': v}
+        )
+        self.assertIsNone(b._private_data)
+        self.assertEqual(b.answer, 42)
+        self.assertIs(b.v, v)
+
     def test_iterate_hierarchy_defaults(self):
         self.assertIs(TraversalStrategy.BFS, TraversalStrategy.BreadthFirstSearch)
 
