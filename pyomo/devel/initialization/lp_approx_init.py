@@ -60,11 +60,7 @@ from pyomo.devel.initialization.bounds.bound_variables import (
     bound_all_nonlinear_variables,
 )
 from pyomo.devel.initialization.pwl_init import _minimize_infeasibility
-from pyomo.devel.initialization.utils import (
-    fix_vars_with_equal_bounds,
-    get_vars,
-    shallow_clone,
-)
+from pyomo.devel.initialization.utils import fix_vars_with_equal_bounds, shallow_clone
 from pyomo.repn.linear import LinearRepn, LinearRepnVisitor
 from pyomo.repn.util import ExitNodeDispatcher
 from pyomo.common.dependencies.scipy import stats

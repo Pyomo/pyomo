@@ -10,7 +10,10 @@
 from pyomo.contrib.piecewise.piecewise_linear_expression import (
     PiecewiseLinearExpression,
 )
-from pyomo.contrib.piecewise.piecewise_linear_function import PiecewiseLinearFunction
+from pyomo.contrib.piecewise.piecewise_linear_function import (
+    PiecewiseLinearFunction,
+    FunctionType,
+)
 
 ## register transformations
 from pyomo.contrib.piecewise.transform.inner_representation_gdp import (
