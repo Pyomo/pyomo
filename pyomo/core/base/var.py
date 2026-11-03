@@ -12,7 +12,7 @@ import logging
 import sys
 from pyomo.common.pyomo_typing import copy_signature, overload
 from weakref import ref as weakref_ref
-from typing import TypeVar, Type
+from typing import TypeVar, Type, Any as typingAny
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
@@ -601,8 +601,8 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
     def __init__(
         self,
         *indexes,
-        domain=Reals,
-        within=Reals,
+        domain: typingAny = Reals,
+        within: typingAny = Reals,
         bounds=None,
         initialize=None,
         rule=None,

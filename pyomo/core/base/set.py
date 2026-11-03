@@ -18,7 +18,7 @@ import weakref
 from collections.abc import Iterator
 from functools import partial
 from types import FunctionType
-from typing import TypeVar, Literal, Type, Any as typingAny
+from typing import TypeVar, Literal, Type, TYPE_CHECKING, cast, Any as typingAny
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentSet
@@ -4680,6 +4680,33 @@ DeclareGlobalSet(
     ),
     globals(),
 )
+
+if TYPE_CHECKING:
+    # DeclareGlobalSet() adds the global Sets to this module's
+    # namespace at runtime, which static type checkers cannot follow.
+    # Declare them here (for type checkers only) so they can be
+    # imported and have a known type.
+    Any = cast(_AnySet, GlobalSets['Any'])
+    AnyWithNone = cast(_AnyWithNoneSet, GlobalSets['AnyWithNone'])
+    EmptySet = cast(_EmptySet, GlobalSets['EmptySet'])
+    Reals = cast(InfiniteScalarRangeSet, GlobalSets['Reals'])
+    NonNegativeReals = cast(InfiniteScalarRangeSet, GlobalSets['NonNegativeReals'])
+    NonPositiveReals = cast(InfiniteScalarRangeSet, GlobalSets['NonPositiveReals'])
+    NegativeReals = cast(InfiniteScalarRangeSet, GlobalSets['NegativeReals'])
+    PositiveReals = cast(InfiniteScalarRangeSet, GlobalSets['PositiveReals'])
+    Integers = cast(InfiniteScalarRangeSet, GlobalSets['Integers'])
+    NonNegativeIntegers = cast(
+        InfiniteScalarRangeSet, GlobalSets['NonNegativeIntegers']
+    )
+    NonPositiveIntegers = cast(
+        InfiniteScalarRangeSet, GlobalSets['NonPositiveIntegers']
+    )
+    NegativeIntegers = cast(InfiniteScalarRangeSet, GlobalSets['NegativeIntegers'])
+    PositiveIntegers = cast(InfiniteScalarRangeSet, GlobalSets['PositiveIntegers'])
+    Binary = cast(FiniteScalarRangeSet, GlobalSets['Binary'])
+    Boolean = cast(FiniteScalarRangeSet, GlobalSets['Boolean'])
+    PercentFraction = cast(InfiniteScalarRangeSet, GlobalSets['PercentFraction'])
+    UnitInterval = cast(InfiniteScalarRangeSet, GlobalSets['UnitInterval'])
 
 # DeclareGlobalSet(Set(
 #     initialize=[None],

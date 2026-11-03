@@ -21,7 +21,7 @@ from inspect import isclass, currentframe
 from io import StringIO
 from itertools import filterfalse, chain
 from operator import itemgetter, attrgetter
-from typing import TypeVar, Union, Type, Any
+from typing import TypeVar, Union, Type, Any as typingAny
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import Mapping
@@ -542,7 +542,7 @@ class BlockData(ActiveComponentData):
         super(BlockData, self).__setattr__('_decl_order', [])
         self._private_data = None
 
-    def __getattr__(self, val) -> Union[Component, IndexedComponent, Any]:
+    def __getattr__(self, val) -> Union[Component, IndexedComponent, typingAny]:
         if val in ModelComponentFactory:
             return _component_decorator(self, ModelComponentFactory.get_class(val))
         # Since the base classes don't support getattr, we can just
@@ -551,7 +551,9 @@ class BlockData(ActiveComponentData):
             "'%s' object has no attribute '%s'" % (self.__class__.__name__, val)
         )
 
-    def __setattr__(self, name: str, val: Union[Component, IndexedComponent, Any]):
+    def __setattr__(
+        self, name: str, val: Union[Component, IndexedComponent, typingAny]
+    ):
         """
         Set an attribute of a block data object.
         """
