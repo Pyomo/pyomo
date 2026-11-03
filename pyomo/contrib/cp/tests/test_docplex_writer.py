@@ -70,7 +70,7 @@ class TestOptionDocplexDependency(unittest.TestCase):
             capture_output=True,
         )
         self.assertEqual(rc.returncode, 0)
-        self.assertEqual(rc.stdout, b"OK\n")
+        self.assertEqual(rc.stdout.rstrip(b"\r\n"), b"OK")
 
 
 @unittest.skipIf(not docplex_available, "docplex is not available")
