@@ -255,10 +255,22 @@ class Suffix(ComponentMap, ActiveComponent):
                 # (component, value) pairs) holding the suffix data,
                 # or a single scalar value.  A scalar value is stored
                 # as the value for the None key (i.e., the suffix
-                # value that applies to the entire block).
+                # value that applies to the entire block).  The
+                # container checks mirror what update_values() has
+                # historically accepted: mappings, objects with a
+                # callable items() method, iterables of pairs, and
+                # old-style sequences (defined only by __getitem__
+                # and __len__).
                 data = rule(self.parent_block(), None)
-                if isinstance(data, Mapping) or (
-                    isinstance(data, Iterable) and not isinstance(data, str)
+                if (
+                    isinstance(data, Mapping)
+                    or callable(getattr(data, 'items', None))
+                    or (isinstance(data, Iterable) and not isinstance(data, str))
+                    or (
+                        not isinstance(data, str)
+                        and hasattr(data, '__getitem__')
+                        and hasattr(data, '__len__')
+                    )
                 ):
                     self.update_values(data, expand=True)
                 else:
