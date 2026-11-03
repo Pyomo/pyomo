@@ -19,6 +19,11 @@ import pyomo.common.unittest as unittest
 from pyomo.common.fileutils import import_file
 from pyomo.common.log import LoggingIntercept
 import pyomo.contrib.gdpopt.tests.common_tests as ct
+from pyomo.contrib.gdpopt.branch_and_bound import GDP_LBB_Solver
+from pyomo.contrib.gdpopt.create_oa_subproblems import (
+    add_algebraic_variable_list,
+    add_util_block,
+)
 from pyomo.contrib.satsolver.satsolver import z3_available
 from pyomo.environ import (
     SolverFactory,
@@ -30,7 +35,7 @@ from pyomo.environ import (
     maximize,
 )
 from pyomo.gdp import Disjunction
-from pyomo.opt import TerminationCondition
+from pyomo.opt import SolverResults, TerminationCondition
 
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', '..', 'examples', 'gdp'))
@@ -319,13 +324,6 @@ class TestGDPoptLBBSubproblemErrors(unittest.TestCase):
         model = ConcreteModel()
         model.x = Var(bounds=(0, 1))
         model.objective = Objective(expr=model.x, sense=minimize)
-
-        from pyomo.contrib.gdpopt.branch_and_bound import GDP_LBB_Solver
-        from pyomo.contrib.gdpopt.create_oa_subproblems import (
-            add_algebraic_variable_list,
-            add_util_block,
-        )
-        from pyomo.opt import SolverResults
 
         solver = GDP_LBB_Solver()
         solver.pyomo_results = SolverResults()
