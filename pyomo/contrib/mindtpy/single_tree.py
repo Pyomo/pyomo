@@ -7,6 +7,8 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+"""Single-tree callback machinery for MindtPy persistent MIP solvers."""
+
 from pyomo.common.dependencies import attempt_import
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_no_good_cuts
@@ -30,12 +32,13 @@ cplex, cplex_available = attempt_import('cplex')
 class LazyOACallback_cplex(
     cplex.callbacks.LazyConstraintCallback if cplex_available else object
 ):
-    """Inherent class in CPLEX to call Lazy callback."""
+    """CPLEX lazy-constraint callback used by MindtPy single-tree OA."""
 
     def copy_lazy_var_list_values(
         self, opt, from_list, to_list, config, skip_stale=False, skip_fixed=True
     ):
-        """This function copies variable values from one list to another.
+        """Copy variable values from one list to another.
+
         Rounds to Binary/Integer if necessary.
         Sets to zero for NonNegativeReals if necessary.
 
@@ -78,7 +81,10 @@ class LazyOACallback_cplex(
         linearize_active=True,
         linearize_violated=True,
     ):
-        """Linearizes nonlinear constraints; add the OA cuts through CPLEX inherent function self.add()
+        """Add OA cuts through the CPLEX lazy-constraint callback.
+
+        Linearizes nonlinear constraints and adds OA cuts through CPLEX
+        inherent function ``self.add()``.
         For nonconvex problems, turn on 'config.add_slack'. Slack variables will always be used for
         nonlinear equality constraints.
 
@@ -375,7 +381,8 @@ class LazyOACallback_cplex(
         opt : SolverFactory
             The cplex_persistent solver.
         feasible : bool, optional
-            Whether the integer combination yields a feasible or infeasible NLP, by default False.
+            Whether the integer combination yields a feasible or infeasible NLP,
+            by default False.
 
         Raises
         ------
@@ -429,10 +436,12 @@ class LazyOACallback_cplex(
             )
 
     def handle_lazy_main_feasible_solution(self, main_mip, mindtpy_solver, config, opt):
-        """This function is called during the branch and bound of main mip, more
+        """Handle a feasible main-MIP solution inside the lazy callback.
+
+        This function is called during the branch and bound of main mip, more
         exactly when a feasible solution is found and LazyCallback is activated.
-        Copy the result to working model and update upper or lower bound.
-        In LP-NLP, upper or lower bound are updated during solving the main problem.
+        Copies the incumbent values to ``fixed_nlp`` for warm-starting and
+        updates the global dual bound from the callback-reported main bound.
 
         Parameters
         ----------
@@ -469,7 +478,9 @@ class LazyOACallback_cplex(
         )
 
     def handle_lazy_subproblem_optimal(self, fixed_nlp, mindtpy_solver, config, opt):
-        """This function copies the optimal solution of the fixed NLP subproblem to the MIP
+        """Handle an optimal NLP subproblem solve inside the lazy callback.
+
+        This function copies the optimal solution of the fixed NLP subproblem to the MIP
         main problem(explanation see below), updates bound, adds OA and no-good cuts,
         stores incumbent solution if it has been improved.
 
@@ -620,7 +631,9 @@ class LazyOACallback_cplex(
     def handle_lazy_subproblem_other_termination(
         self, fixed_nlp, termination_condition, mindtpy_solver, config
     ):
-        """Handles the result of the latest iteration of solving the NLP subproblem given
+        """Handle non-optimal, non-infeasible NLP callback termination.
+
+        Handles the result of the latest iteration of solving the NLP subproblem given
         a solution that is neither optimal nor infeasible.
 
         Parameters
@@ -652,7 +665,7 @@ class LazyOACallback_cplex(
             )
 
     def __call__(self):
-        """This is an inherent function in LazyConstraintCallback in CPLEX.
+        """Entry point for CPLEX LazyConstraintCallback.
 
         This function is called whenever an integer solution is found during the branch and bound process.
         """
@@ -662,8 +675,9 @@ class LazyOACallback_cplex(
         main_mip = self.main_mip
         mindtpy_solver = self.mindtpy_solver
 
-        # The lazy constraint callback may be invoked during MIP start processing. In that case get_solution_source returns mip_start_solution.
-        # Reference: https://www.ibm.com/docs/en/icos/22.1.1?topic=SSSA5P_22.1.1/ilog.odms.cplex.help/refpythoncplex/html/cplex.callbacks.SolutionSource-class.htm
+        # The lazy constraint callback may be invoked during MIP start processing.
+        # IBM CPLEX SolutionSource documentation:
+        # https://www.ibm.com/docs/en/icos/22.1.1?topic=SSSA5P_22.1.1/ilog.odms.cplex.help/refpythoncplex/html/cplex.callbacks.SolutionSource-class.htm
         # Another solution source is user_solution = 118, but it will not be encountered in LazyConstraintCallback.
         config.logger.info(
             "Solution source: {} (111 node_solution, 117 heuristic_solution, 119 mipstart_solution)".format(
@@ -674,8 +688,10 @@ class LazyOACallback_cplex(
         # The solution found in MIP start process might be revisited in branch and bound.
         # Lazy constraints separated when processing a MIP start will be discarded after that MIP start has been processed.
         # This means that the callback may have to separate the same constraint again for the next MIP start or for a solution that is found later in the solution process.
+        # IBM CPLEX LazyConstraintCallback documentation:
         # https://www.ibm.com/docs/en/icos/22.1.1?topic=SSSA5P_22.1.1/ilog.odms.cplex.help/refpythoncplex/html/cplex.callbacks.LazyConstraintCallback-class.htm
-        # For the MINLP3_simple example, all the solutions are obtained from mip_start (solution source). Therefore, it will not go to a branch and bound process.Cause an error output.
+        # In the minlp3_simple example, all solutions come from mip_start as the solution source.
+        # As a result, CPLEX may never enter the branch-and-bound process, which can otherwise lead to this error.
         if (
             self.get_solution_source()
             != cplex.callbacks.SolutionSource.mipstart_solution
@@ -935,11 +951,14 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, mindtpy_solver, config):
 
 
 def handle_lazy_main_feasible_solution_gurobi(cb_m, cb_opt, mindtpy_solver, config):
-    """This function is called during the branch and bound of main MIP problem,
+    """Handle a feasible Gurobi MIP solution in the lazy callback.
+
+    This function is called during the branch and bound of main MIP problem,
     more exactly when a feasible solution is found and LazyCallback is activated.
 
-    Copy the solution to working model and update upper or lower bound.
-    In LP-NLP, upper or lower bound are updated during solving the main problem.
+    Copies the incumbent values to ``fixed_nlp`` (and ``mip`` for cut
+    generation) and updates the global dual bound from
+    ``GRB.Callback.MIPSOL_OBJBND``.
 
     Parameters
     ----------
