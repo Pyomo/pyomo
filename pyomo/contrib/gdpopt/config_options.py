@@ -14,7 +14,6 @@ from pyomo.common.config import (
     In,
     NonNegativeFloat,
     NonNegativeInt,
-    PositiveFloat,
     PositiveInt,
 )
 from pyomo.common.deprecation import deprecation_warning
@@ -51,13 +50,6 @@ def _init_strategy_deprecation(strategy):
     return In(valid_init_strategies)(strategy)
 
 
-def _positive_time_limit(value):
-    try:
-        return PositiveInt(value)
-    except (TypeError, ValueError):
-        return PositiveFloat(value)
-
-
 def _get_algorithm_config():
     CONFIG = ConfigBlock("GDPoptAlgorithm")
     CONFIG.declare(
@@ -90,12 +82,13 @@ def _add_common_configs(CONFIG):
         "time_limit",
         ConfigValue(
             default=None,
-            domain=_positive_time_limit,
-            description="Time limit (seconds, default=600)",
+            domain=NonNegativeFloat,
+            description="Time limit (seconds)",
             doc="""
             Seconds allowed until terminated. Note that the time limit can
             currently only be enforced between subsolver invocations. You may
-            need to set subsolver time limits as well.""",
+            need to set subsolver time limits as well.  If `time_limit` "
+            "is 0 or ``None`` then no limit will be enforced.""",
         ),
     )
     CONFIG.declare(

@@ -34,9 +34,18 @@ model_list = [EightProcessFlowsheet(convex=True), ConstraintQualificationExample
     'Required subsolvers %s are not available' % (required_solvers,),
 )
 class TestMindtPy(unittest.TestCase):
-    """Tests for the MindtPy solver plugin."""
+    """Tests for the MindtPy solver."""
 
     def check_optimal_solution(self, model, places=1):
+        """Assert that variable values match the model's known optimum.
+
+        Parameters
+        ----------
+        model : Block
+            Model containing ``optimal_solution`` values for comparison.
+        places : int, optional
+            Decimal places used by ``assertAlmostEqual``.
+        """
         for var in model.optimal_solution:
             self.assertAlmostEqual(
                 var.value, model.optimal_solution[var], places=places

@@ -75,7 +75,7 @@ def solve_MILP_discrete_problem(util_block, solver, config):
 
     with SuppressInfeasibleWarning():
         mip_args = dict(config.mip_solver_args)
-        if config.time_limit is not None:
+        if config.time_limit:
             elapsed = get_main_elapsed_time(timing)
             remaining = max(config.time_limit - elapsed, 1)
             if config.mip_solver == 'gams':

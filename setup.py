@@ -205,8 +205,9 @@ setup_kwargs = dict(
             'pytest-parallel',
         ],
         'docs': [
-            # Sphinx 9.0-9.1.0 fails to correctly generate type references.
-            'Sphinx>4,!=8.2.0,!=9.0.*,!=9.1.0',
+            # Sphinx 9.x fails to correctly generate type references.
+            # (see https://github.com/sphinx-doc/sphinx/issues/14223)
+            'Sphinx>4,!=8.2.0,!=9.0.*,!=9.1.*,!=9.2.0',
             'sphinx-copybutton',
             'sphinx_rtd_theme>0.5',
             'sphinxcontrib-jsmath',
@@ -252,7 +253,9 @@ setup_kwargs = dict(
             # install on PyPy (binary wheels are not available), so we
             # will only "require" them on other (CPython) platforms:
             'casadi; implementation_name!="pypy"',  # dae
-            'dill; implementation_name!="pypy"',  # No direct use, but improves lambda pickle
+            # Dill: No direct use, but improves lambda pickle
+            # [Oct 26] dill does not yet support Python 3.15
+            'dill; implementation_name!="pypy" and python_version<"3.15"',
             'numdifftools; implementation_name!="pypy"',  # pynumero
             'pandas; implementation_name!="pypy"',
             'seaborn; implementation_name!="pypy"',  # parmest.graphics
