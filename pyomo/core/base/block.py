@@ -758,7 +758,10 @@ class BlockData(ActiveComponentData):
 
         This transfers all components and user-defined attributes from
         the block or dictionary `src` and places them on this Block.
-        Components are transferred in declaration order.
+        Components are transferred in declaration order.  Any private
+        data recorded on `src` (see :meth:`private_data`) is also
+        transferred, with incoming scopes replacing any scopes already
+        present on this Block.
 
         If a Component on `src` is also declared on this block as either
         a Component or attribute, the local Component or attribute is
@@ -832,6 +835,18 @@ class BlockData(ActiveComponentData):
                 # set the value)
             ):
                 setattr(self, k, v)
+        # _private_data is a reserved word (and this block already
+        # has the attribute), so the loop above will not transfer it.
+        # Transfer it explicitly so that any data recorded on the
+        # source block (e.g., the bookkeeping from a transformation
+        # that generated the block) is not silently dropped.  As with
+        # components, incoming scopes replace scopes already present
+        # on this block.
+        if isinstance(src, BlockData) and src._private_data:
+            if self._private_data is None:
+                self._private_data = {}
+            for scope, data in src._private_data.items():
+                self._private_data[scope] = data
 
     def collect_ctypes(self, active=None, descend_into=True):
         """

@@ -11,6 +11,7 @@ from pyomo.common.dependencies import scipy_available
 import pyomo.common.unittest as unittest
 from pyomo.environ import (
     Binary,
+    Block,
     ConcreteModel,
     Constraint,
     maximize,
@@ -284,6 +285,49 @@ class TestLPDual(unittest.TestCase):
         assertExpressionsEqual(
             self, dual_obj.expr, -5 * m.outer1 * alpha + 3 * beta - 4.2 * lamb + 42 * mu
         )
+
+    def test_parameterized_linear_dual_from_block_rule(self):
+        # Regression test for #3446: attaching the dual returned by
+        # create_using through a Block construction rule lost the
+        # transformation's private data, so the mapping accessors
+        # raised ValueError even though all of the components were
+        # transferred onto the block.
+        m = ConcreteModel()
+        m.outer1 = Var(domain=Binary)
+        m.outer = Var([2, 3], domain=Binary)
+
+        m.x = Var(domain=NonNegativeReals)
+        m.y = Var(domain=NonPositiveReals)
+        m.z = Var(domain=Reals)
+
+        m.obj = Objective(expr=m.outer1 + m.outer[2] + m.outer[3])
+        m.inner = Block()
+        m.inner.obj = Objective(expr=m.x + 2 * m.y - 3 * m.outer[3] * m.z)
+        m.inner.c1 = Constraint(expr=-4 * m.x - 2 * m.y - m.z <= -5 * m.outer1)
+        m.inner.c2 = Constraint(expr=m.x + m.outer[2] * m.y >= 3)
+        m.inner.c3 = Constraint(expr=-m.y - m.z == -4.2)
+        m.inner.c4 = Constraint(expr=m.z <= 42)
+
+        lp_dual = TransformationFactory('core.lp_dual')
+        m.dualblk = Block(
+            rule=lambda blk: lp_dual.create_using(
+                m.inner, parameterize_wrt=[m.outer1, m.outer]
+            )
+        )
+        m.add_component(
+            'dualblk_direct',
+            lp_dual.create_using(m.inner, parameterize_wrt=[m.outer1, m.outer]),
+        )
+
+        # The mappings must be available no matter how the dual was
+        # attached to the model
+        for blk in (m.dualblk, m.dualblk_direct):
+            for cons in (m.inner.c1, m.inner.c2, m.inner.c3, m.inner.c4):
+                dual_var = lp_dual.get_dual_var(blk, cons)
+                self.assertIs(lp_dual.get_primal_constraint(blk, dual_var), cons)
+            for var in (m.x, m.y, m.z):
+                dual_cons = lp_dual.get_dual_constraint(blk, var)
+                self.assertIs(lp_dual.get_primal_var(blk, dual_cons), var)
 
     @unittest.skipUnless(
         SolverFactory('gurobi').available(exception_flag=False)

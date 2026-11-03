@@ -990,6 +990,29 @@ class TestBlock(unittest.TestCase):
         ):
             b.transfer_attributes_from('foo')
 
+    def test_transfer_attributes_from_private_data(self):
+        b = Block(concrete=True)
+        c = Block(concrete=True)
+        c.x = c_x = Var()
+        cfe = c.private_data()
+        cfe['answer'] = 42
+
+        b.transfer_attributes_from(c)
+        self.assertIs(b.x, c_x)
+        self.assertIs(b.private_data(), cfe)
+        self.assertEqual(b.private_data()['answer'], 42)
+
+        # Incoming scopes replace scopes already on the target block,
+        # and scopes that only exist on the target block are preserved
+        b = Block(concrete=True)
+        bfe = b.private_data()
+        bfe['answer'] = 0
+        other = b.private_data('pyomo.core.tests')
+        b.transfer_attributes_from(c)
+        self.assertIs(b.private_data(), cfe)
+        self.assertEqual(b.private_data()['answer'], 42)
+        self.assertIs(b.private_data('pyomo.core.tests'), other)
+
     def test_iterate_hierarchy_defaults(self):
         self.assertIs(TraversalStrategy.BFS, TraversalStrategy.BreadthFirstSearch)
 
