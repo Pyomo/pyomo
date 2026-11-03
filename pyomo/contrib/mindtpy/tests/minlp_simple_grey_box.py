@@ -7,6 +7,8 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+"""Grey-box MINLP test model utilities for MindtPy test coverage."""
+
 from pyomo.common.dependencies import numpy as np
 import pyomo.common.dependencies.scipy.sparse as scipy_sparse
 from pyomo.common.dependencies import attempt_import
@@ -21,13 +23,16 @@ if egb_available:
         """Greybox model to compute the example objective function."""
 
         def __init__(self, initial, use_exact_derivatives=True, verbose=False):
-            """
-            Parameters
+            """Initialize the external grey-box model.
 
-            use_exact_derivatives: bool
+            Parameters
+            ----------
+            initial : dict
+                Initial values for model inputs.
+            use_exact_derivatives : bool, optional
                 If True, the exact derivatives are used. If False, the finite difference
                 approximation is used.
-            verbose: bool
+            verbose : bool, optional
                 If True, print information about the model.
             """
             self._use_exact_derivatives = use_exact_derivatives
@@ -58,13 +63,25 @@ if egb_available:
             return ['z']
 
         def set_output_constraint_multipliers(self, output_con_multiplier_values):
-            """Set the values of the output constraint multipliers."""
+            """Set the values of the output constraint multipliers.
+
+            Parameters
+            ----------
+            output_con_multiplier_values : array_like
+                Output-constraint multipliers provided by the NLP interface.
+            """
             # because we only have one output constraint
             assert len(output_con_multiplier_values) == 1
             np.copyto(self._output_con_mult_values, output_con_multiplier_values)
 
         def finalize_block_construction(self, pyomo_block):
-            """Finalize the construction of the ExternalGreyBoxBlock."""
+            """Finalize the construction of the ExternalGreyBoxBlock.
+
+            Parameters
+            ----------
+            pyomo_block : Block
+                External grey-box block being finalized.
+            """
             if self.initial is not None:
                 print("initialized")
                 pyomo_block.inputs["X1"].value = self.initial["X1"]
@@ -94,7 +111,13 @@ if egb_available:
             pyomo_block.inputs["Y3"].setlb(0)
 
         def set_input_values(self, input_values):
-            """Set the values of the inputs."""
+            """Set the values of the inputs.
+
+            Parameters
+            ----------
+            input_values : iterable
+                Input values in the order returned by ``input_names``.
+            """
             self._input_values = list(input_values)
 
         def evaluate_equality_constraints(self):
@@ -150,10 +173,18 @@ if egb_available:
                 # sparse matrix
                 return scipy_sparse.coo_matrix((data, (row, col)), shape=(1, 5))
 
-    def build_model_external(m):
+    def build_model_external(model_block):
+        """Create and attach the external grey-box block on the given block.
+
+        Parameters
+        ----------
+        model_block : Block
+            Block on a ``MinlpSimple`` test instance that receives the
+            ``egb`` component when grey-box coverage is enabled.
+        """
         ex_model = GreyBoxModel(initial={"X1": 0, "X2": 0, "Y1": 0, "Y2": 1, "Y3": 1})
-        m.egb = egb.ExternalGreyBoxBlock()
-        m.egb.set_external_model(ex_model)
+        model_block.egb = egb.ExternalGreyBoxBlock()
+        model_block.egb.set_external_model(ex_model)
 
 else:
     GreyBoxModel = None

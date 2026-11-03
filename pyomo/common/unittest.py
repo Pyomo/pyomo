@@ -587,7 +587,7 @@ class TestCase(_unittest.TestCase):
     )
 
     # By default, we always want to spend the time to create the full
-    # diff of the test reault and the baseline
+    # diff of the test result and the baseline
     maxDiff = None
 
     def assertStructuredAlmostEqual(

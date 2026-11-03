@@ -310,8 +310,7 @@ class Gurobi(PersistentBase, PersistentSolver):
     def release_license(self):
         self._reinit()
         if gurobipy_available:
-            with capture_output(capture_fd=True):
-                gurobipy.disposeDefaultEnv()
+            gurobipy.disposeDefaultEnv()
 
     def __del__(self):
         if not python_is_shutting_down():
@@ -1205,9 +1204,9 @@ class Gurobi(PersistentBase, PersistentSolver):
         """
         if attr in {'Sense', 'RHS', 'ConstrName'}:
             raise ValueError(
-                'Linear constraint attr {0} cannot be set with'
-                + ' the set_linear_constraint_attr method. Please use'
-                + ' the remove_constraint and add_constraint methods.'.format(attr)
+                f'Linear constraint attr {attr} cannot be set with'
+                ' the set_linear_constraint_attr method. Please use'
+                ' the remove_constraint and add_constraint methods.'
             )
         self._pyomo_con_to_solver_con_map[con].setAttr(attr, val)
         self._needs_updated = True
@@ -1234,9 +1233,9 @@ class Gurobi(PersistentBase, PersistentSolver):
         """
         if attr in {'LB', 'UB', 'VType', 'VarName'}:
             raise ValueError(
-                'Var attr {0} cannot be set with'
-                + ' the set_var_attr method. Please use'
-                + ' the update_var method.'.format(attr)
+                f'Var attr {attr} cannot be set with'
+                ' the set_var_attr method. Please use'
+                ' the update_var method.'
             )
         if attr == 'Obj':
             raise ValueError(

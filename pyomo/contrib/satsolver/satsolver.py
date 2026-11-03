@@ -97,7 +97,11 @@ class SMTSatSolver:
     # Set up functions to be added to beginning of string
     def _get_default_functions(self):
         default = list()
-        default.append("(define-fun exp ((x Real)) Real (^ %0.15f x))" % (math.exp(1),))
+        # z3 >= 5.3 has a builtin `exp`; redefining it causes an error
+        if z3.get_version() < (5, 3):
+            default.append(
+                "(define-fun exp ((x Real)) Real (^ %0.15f x))" % (math.exp(1),)
+            )
         return default
 
     # processes pyomo model into SMT model
