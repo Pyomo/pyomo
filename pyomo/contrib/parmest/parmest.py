@@ -87,9 +87,6 @@ def SSE(model):
     Returns an expression that is used to compute the sum of squared errors
     ('SSE') objective, assuming Gaussian i.i.d. errors
 
-    Like 'SSE_weighted', the sum is multiplied by 1/2, so both built-in
-    objectives share the same scaling (the 2 in the gradient cancels).
-
     Parameters
     ----------
     model : ConcreteModel
@@ -1821,8 +1818,7 @@ class Estimator:
                         # in the "reduced_hessian" method, the measurement error
                         # variance must be scaled by the probability constant that
                         # was applied to the objective function when computing
-                        # the inverse of the reduced hessian. SSE includes a 1/2,
-                        # so no factor of 2 is needed (as for SSE_weighted)
+                        # the inverse of the reduced hessian.
                         cov = (
                             meas_error[0] ** 2 / self.obj_probability_constant
                         ) * self.inv_red_hes
