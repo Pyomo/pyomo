@@ -8,6 +8,8 @@
 # ____________________________________________________________________________________
 
 import weakref
+from typing import TYPE_CHECKING
+
 from pyomo.common.collections import ComponentMap
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.set import UnknownSetDimen
@@ -68,6 +70,12 @@ class DerivativeVar(Var):
     #             derivative is being taken with respect to
     # _expr       An expression representing the discretization equations
     #             linking the :class:`DerivativeVar` to its state :class:`Var`.
+
+    if TYPE_CHECKING:
+        # Var.__new__ is overloaded so that type checkers report Var()
+        # as returning a ScalarVar or IndexedVar.  DerivativeVar
+        # inherits Var.__new__, but always returns a DerivativeVar.
+        def __new__(cls, sVar, **kwds) -> 'DerivativeVar': ...
 
     def __init__(self, sVar, **kwds):
         if not isinstance(sVar, Var):

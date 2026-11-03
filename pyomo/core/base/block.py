@@ -21,7 +21,7 @@ from inspect import isclass, currentframe
 from io import StringIO
 from itertools import filterfalse, chain
 from operator import itemgetter, attrgetter
-from typing import Union, Any, Type
+from typing import TypeVar, Union, Type, Any
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import Mapping
@@ -2055,6 +2055,10 @@ class _BlockData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
+_ScalarBlockT = TypeVar('_ScalarBlockT', bound='ScalarBlock')
+_IndexedBlockT = TypeVar('_IndexedBlockT', bound='IndexedBlock')
+
+
 @ModelComponentFactory.register(
     "A component that contains one or more model components."
 )
@@ -2072,15 +2076,16 @@ class Block(ActiveIndexedComponent):
     _private_data_initializers = defaultdict(lambda: dict)
 
     @overload
-    def __new__(cls: Type[ScalarBlock], *args, **kwds) -> ScalarBlock: ...
+    def __new__(cls: type[_ScalarBlockT], *args, **kwds) -> _ScalarBlockT: ...
 
     @overload
-    def __new__(cls: Type[IndexedBlock], *args, **kwds) -> IndexedBlock: ...
+    def __new__(cls: type[_IndexedBlockT], *args, **kwds) -> _IndexedBlockT: ...
 
     @overload
-    def __new__(
-        cls: Type[Block], *args, **kwds
-    ) -> Union[ScalarBlock, IndexedBlock]: ...
+    def __new__(cls: Type[Block], **kwds) -> ScalarBlock: ...
+
+    @overload
+    def __new__(cls: Type[Block], index, /, *args, **kwds) -> IndexedBlock: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Block:
@@ -2093,7 +2098,14 @@ class Block(ActiveIndexedComponent):
     # `options` is ignored since it is deprecated
     @overload
     def __init__(
-        self, *indexes, rule=None, concrete=False, dense=True, name=None, doc=None
+        self,
+        *indexes,
+        rule=None,
+        concrete=False,
+        dense=True,
+        name=None,
+        doc=None,
+        ctype: type = ...,
     ): ...
 
     def __init__(self, *args, **kwargs):

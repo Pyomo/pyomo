@@ -10,6 +10,8 @@
 import sys
 import logging
 from weakref import ref as weakref_ref
+from typing import TypeVar
+
 from pyomo.common.pyomo_typing import overload
 
 from pyomo.common.log import is_debug_set
@@ -234,6 +236,10 @@ class _GeneralExpressionData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
+_ScalarExpressionT = TypeVar('_ScalarExpressionT', bound='ScalarExpression')
+_IndexedExpressionT = TypeVar('_IndexedExpressionT', bound='IndexedExpression')
+
+
 @ModelComponentFactory.register(
     "Named expressions that can be used in other expressions."
 )
@@ -266,6 +272,22 @@ class Expression(IndexedComponent, IndexedComponent_NDArrayMixin):
     # This seems like a copy-paste error, and should be renamed/removed
     NoConstraint = IndexedComponent.Skip
 
+    @overload
+    def __new__(cls: type[_ScalarExpressionT], *args, **kwds) -> _ScalarExpressionT: ...
+
+    @overload
+    def __new__(
+        cls: type[_IndexedExpressionT], *args, **kwds
+    ) -> _IndexedExpressionT: ...
+
+    @overload
+    def __new__(cls: type['Expression'], **kwds) -> 'ScalarExpression': ...
+
+    @overload
+    def __new__(
+        cls: type['Expression'], index, /, *args, **kwds
+    ) -> 'IndexedExpression': ...
+
     def __new__(cls, *args, **kwds):
         if cls != Expression:
             return super(Expression, cls).__new__(cls)
@@ -276,7 +298,14 @@ class Expression(IndexedComponent, IndexedComponent_NDArrayMixin):
 
     @overload
     def __init__(
-        self, *indexes, rule=None, expr=None, initialize=None, name=None, doc=None
+        self,
+        *indexes,
+        rule=None,
+        expr=None,
+        initialize=None,
+        name=None,
+        doc=None,
+        ctype: type = ...,
     ): ...
 
     def __init__(self, *args, **kwds):

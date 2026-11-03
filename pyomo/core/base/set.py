@@ -17,7 +17,8 @@ import weakref
 
 from collections.abc import Iterator
 from functools import partial
-from typing import Union, Type, Any as typingAny
+from types import FunctionType
+from typing import TypeVar, Literal, Type, Any as typingAny
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentSet
@@ -2027,6 +2028,12 @@ class _ScalarSetMixin:
         yield UnindexedComponent_index, self
 
 
+_FiniteScalarSetT = TypeVar('_FiniteScalarSetT', bound='FiniteScalarSet')
+_OrderedScalarSetT = TypeVar('_OrderedScalarSetT', bound='OrderedScalarSet')
+_SortedScalarSetT = TypeVar('_SortedScalarSetT', bound='SortedScalarSet')
+_IndexedSetT = TypeVar('_IndexedSetT', bound='IndexedSet')
+
+
 @ModelComponentFactory.register("Set data that is used to define a model instance.")
 class Set(IndexedComponent):
     """A component used to index other Pyomo components.
@@ -2133,10 +2140,38 @@ class Set(IndexedComponent):
     _UnorderedInitializers = {set}
 
     @overload
-    def __new__(cls: Type[OrderedScalarSet], *args, **kwds) -> OrderedScalarSet: ...
+    def __new__(cls: type[_FiniteScalarSetT], *args, **kwds) -> _FiniteScalarSetT: ...
 
     @overload
-    def __new__(cls: Type[Set], *args, **kwds) -> Union[SetData, IndexedSet]: ...
+    def __new__(cls: type[_OrderedScalarSetT], *args, **kwds) -> _OrderedScalarSetT: ...
+
+    @overload
+    def __new__(cls: type[_SortedScalarSetT], *args, **kwds) -> _SortedScalarSetT: ...
+
+    @overload
+    def __new__(cls: type[_IndexedSetT], *args, **kwds) -> _IndexedSetT: ...
+
+    # For scalar Sets, the class depends on the `ordered` argument
+    @overload
+    def __new__(
+        cls: Type[Set],
+        *,
+        ordered: Literal[True] | Type[Set.InsertionOrder] = ...,
+        **kwds,
+    ) -> OrderedScalarSet: ...
+
+    @overload
+    def __new__(
+        cls: Type[Set], *, ordered: Literal[False], **kwds
+    ) -> FiniteScalarSet: ...
+
+    @overload
+    def __new__(
+        cls: Type[Set], *, ordered: Type[Set.SortedOrder] | FunctionType, **kwds
+    ) -> SortedScalarSet: ...
+
+    @overload
+    def __new__(cls: Type[Set], index, /, *args, **kwds) -> IndexedSet: ...
 
     def __new__(cls, *args, **kwds):
         if cls is not Set:
@@ -2204,8 +2239,8 @@ class Set(IndexedComponent):
         self,
         *indexes,
         initialize=None,
-        dimen=UnknownSetDimen,
-        ordered=InsertionOrder,
+        dimen: typingAny = UnknownSetDimen,
+        ordered: typingAny = InsertionOrder,
         within=None,
         domain=None,
         bounds=None,
@@ -2213,6 +2248,7 @@ class Set(IndexedComponent):
         validate=None,
         name=None,
         doc=None,
+        ctype: type = ...,
     ): ...
 
     def __init__(self, *args, **kwds):

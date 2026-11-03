@@ -12,7 +12,7 @@ import collections
 import sys
 import types
 import logging
-from typing import Union, Type
+from typing import TypeVar, Type, Any as typingAny
 from weakref import ref as weakref_ref
 
 from pyomo.common.autoslots import AutoSlots
@@ -280,6 +280,10 @@ class _ParamData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
+_ScalarParamT = TypeVar('_ScalarParamT', bound='ScalarParam')
+_IndexedParamT = TypeVar('_IndexedParamT', bound='IndexedParam')
+
+
 @ModelComponentFactory.register(
     "Parameter data that is used to define a model instance."
 )
@@ -322,15 +326,16 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         pass
 
     @overload
-    def __new__(cls: Type[ScalarParam], *args, **kwds) -> ScalarParam: ...
+    def __new__(cls: type[_ScalarParamT], *args, **kwds) -> _ScalarParamT: ...
 
     @overload
-    def __new__(cls: Type[IndexedParam], *args, **kwds) -> IndexedParam: ...
+    def __new__(cls: type[_IndexedParamT], *args, **kwds) -> _IndexedParamT: ...
 
     @overload
-    def __new__(
-        cls: Type[Param], *args, **kwds
-    ) -> Union[ScalarParam, IndexedParam]: ...
+    def __new__(cls: Type[Param], **kwds) -> ScalarParam: ...
+
+    @overload
+    def __new__(cls: Type[Param], index, /, *args, **kwds) -> IndexedParam: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Param:
@@ -344,17 +349,18 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     def __init__(
         self,
         *indexes,
-        rule=NOTSET,
-        initialize=NOTSET,
+        rule: typingAny = NOTSET,
+        initialize: typingAny = NOTSET,
         domain=None,
         within=None,
         validate=None,
         mutable=False,
-        default=NoValue,
+        default: typingAny = NoValue,
         initialize_as_dense=False,
         units=None,
         name=None,
         doc=None,
+        ctype: type = ...,
     ): ...
 
     def __init__(self, *args, **kwd):

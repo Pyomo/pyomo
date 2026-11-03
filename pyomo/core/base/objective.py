@@ -11,6 +11,7 @@ import sys
 import logging
 from weakref import ref as weakref_ref
 from pyomo.common.pyomo_typing import overload
+from typing import TypeVar, Any as typingAny
 
 from pyomo.common.deprecation import RenamedClass, deprecated
 from pyomo.common.errors import TemplateExpressionError
@@ -208,6 +209,10 @@ class TemplateObjectiveData(TemplateDataMixin, ObjectiveData):
         self._sense = sense
 
 
+_ScalarObjectiveT = TypeVar('_ScalarObjectiveT', bound='ScalarObjective')
+_IndexedObjectiveT = TypeVar('_IndexedObjectiveT', bound='IndexedObjective')
+
+
 @ModelComponentFactory.register("Expressions that are minimized or maximized.")
 class Objective(ActiveIndexedComponent):
     """
@@ -259,6 +264,20 @@ class Objective(ActiveIndexedComponent):
     _ComponentDataClass = ObjectiveData
     NoObjective = ActiveIndexedComponent.Skip
 
+    @overload
+    def __new__(cls: type[_ScalarObjectiveT], *args, **kwds) -> _ScalarObjectiveT: ...
+
+    @overload
+    def __new__(cls: type[_IndexedObjectiveT], *args, **kwds) -> _IndexedObjectiveT: ...
+
+    @overload
+    def __new__(cls: type['Objective'], **kwds) -> 'ScalarObjective': ...
+
+    @overload
+    def __new__(
+        cls: type['Objective'], index, /, *args, **kwds
+    ) -> 'IndexedObjective': ...
+
     def __new__(cls, *args, **kwds):
         if cls != Objective:
             return super().__new__(cls)
@@ -269,7 +288,14 @@ class Objective(ActiveIndexedComponent):
 
     @overload
     def __init__(
-        self, *indexes, expr=None, rule=None, sense=minimize, name=None, doc=None
+        self,
+        *indexes,
+        expr=None,
+        rule=None,
+        sense: typingAny = minimize,
+        name=None,
+        doc=None,
+        ctype: type = ...,
     ): ...
 
     def __init__(self, *args, **kwargs):

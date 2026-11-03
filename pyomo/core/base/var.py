@@ -12,7 +12,7 @@ import logging
 import sys
 from pyomo.common.pyomo_typing import overload
 from weakref import ref as weakref_ref
-from typing import Union, Type
+from typing import TypeVar, Type
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
@@ -546,6 +546,10 @@ class _GeneralVarData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
+_ScalarVarT = TypeVar('_ScalarVarT', bound='ScalarVar')
+_IndexedVarT = TypeVar('_IndexedVarT', bound='IndexedVar')
+
+
 @ModelComponentFactory.register("Decision variables.")
 class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
     """A numeric variable, which may be defined over an index.
@@ -574,13 +578,16 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
     _ComponentDataClass = VarData
 
     @overload
-    def __new__(cls: Type[ScalarVar], *args, **kwargs) -> ScalarVar: ...
+    def __new__(cls: type[_ScalarVarT], *args, **kwargs) -> _ScalarVarT: ...
 
     @overload
-    def __new__(cls: Type[IndexedVar], *args, **kwargs) -> IndexedVar: ...
+    def __new__(cls: type[_IndexedVarT], *args, **kwargs) -> _IndexedVarT: ...
 
     @overload
-    def __new__(cls: Type[Var], *args, **kwargs) -> Union[ScalarVar, IndexedVar]: ...
+    def __new__(cls: Type[Var], **kwargs) -> ScalarVar: ...
+
+    @overload
+    def __new__(cls: Type[Var], index, /, *args, **kwargs) -> IndexedVar: ...
 
     def __new__(cls, *args, **kwargs):
         if cls is not Var:
@@ -603,6 +610,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         units=None,
         name=None,
         doc=None,
+        ctype: type = ...,
     ): ...
 
     def __init__(self, *args, **kwargs):

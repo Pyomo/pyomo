@@ -10,6 +10,7 @@
 import logging
 import sys
 import types
+from typing import TypeVar
 
 from math import fabs
 from weakref import ref as weakref_ref
@@ -20,6 +21,7 @@ from pyomo.common.errors import PyomoException
 from pyomo.common.log import is_debug_set
 from pyomo.common.numeric_types import native_logical_types, native_types
 from pyomo.common.modeling import unique_component_name, NOTSET
+from pyomo.common.pyomo_typing import overload
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import (
     ModelComponentFactory,
@@ -453,9 +455,27 @@ class _DisjunctData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
+_ScalarDisjunctT = TypeVar('_ScalarDisjunctT', bound='ScalarDisjunct')
+_IndexedDisjunctT = TypeVar('_IndexedDisjunctT', bound='IndexedDisjunct')
+
+
 @ModelComponentFactory.register("Disjunctive blocks.")
 class Disjunct(Block):
     _ComponentDataClass = DisjunctData
+
+    @overload
+    def __new__(cls: type[_ScalarDisjunctT], *args, **kwds) -> _ScalarDisjunctT: ...
+
+    @overload
+    def __new__(cls: type[_IndexedDisjunctT], *args, **kwds) -> _IndexedDisjunctT: ...
+
+    @overload
+    def __new__(cls: type['Disjunct'], **kwds) -> 'ScalarDisjunct': ...
+
+    @overload
+    def __new__(
+        cls: type['Disjunct'], index, /, *args, **kwds
+    ) -> 'IndexedDisjunct': ...
 
     def __new__(cls, *args, **kwds):
         if cls != Disjunct:

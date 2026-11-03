@@ -9,10 +9,12 @@
 
 import logging
 from weakref import ref as weakref_ref, ReferenceType
+from typing import TypeVar
 
 from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name, NOTSET
+from pyomo.common.pyomo_typing import overload
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.boolean_value import BooleanValue
@@ -254,6 +256,10 @@ class _GeneralBooleanVarData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
+_ScalarBooleanVarT = TypeVar('_ScalarBooleanVarT', bound='ScalarBooleanVar')
+_IndexedBooleanVarT = TypeVar('_IndexedBooleanVarT', bound='IndexedBooleanVar')
+
+
 @ModelComponentFactory.register("Logical decision variables.")
 class BooleanVar(IndexedComponent):
     """A logical variable, which may be defined over an index.
@@ -269,6 +275,22 @@ class BooleanVar(IndexedComponent):
     """
 
     _ComponentDataClass = BooleanVarData
+
+    @overload
+    def __new__(cls: type[_ScalarBooleanVarT], *args, **kwds) -> _ScalarBooleanVarT: ...
+
+    @overload
+    def __new__(
+        cls: type[_IndexedBooleanVarT], *args, **kwds
+    ) -> _IndexedBooleanVarT: ...
+
+    @overload
+    def __new__(cls: type['BooleanVar'], **kwds) -> 'ScalarBooleanVar': ...
+
+    @overload
+    def __new__(
+        cls: type['BooleanVar'], index, /, *args, **kwds
+    ) -> 'IndexedBooleanVar': ...
 
     def __new__(cls, *args, **kwds):
         if cls != BooleanVar:

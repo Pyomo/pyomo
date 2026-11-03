@@ -7,6 +7,8 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+from typing import TypeVar
+
 from pyomo.common.collections import ComponentSet
 from pyomo.common.pyomo_typing import overload
 from pyomo.contrib.cp.scheduling_expr.scheduling_logic import SpanExpression
@@ -128,6 +130,10 @@ class IntervalVarData(BlockData):
         return SpanExpression([self] + list(_flattened(args)))
 
 
+_ScalarIntervalVarT = TypeVar('_ScalarIntervalVarT', bound='ScalarIntervalVar')
+_IndexedIntervalVarT = TypeVar('_IndexedIntervalVarT', bound='IndexedIntervalVar')
+
+
 @ModelComponentFactory.register("Interval variables for scheduling.")
 class IntervalVar(Block):
     """An interval variable, which may be defined over an index.
@@ -147,6 +153,24 @@ class IntervalVar(Block):
     """
 
     _ComponentDataClass = IntervalVarData
+
+    @overload
+    def __new__(
+        cls: type[_ScalarIntervalVarT], *args, **kwds
+    ) -> _ScalarIntervalVarT: ...
+
+    @overload
+    def __new__(
+        cls: type[_IndexedIntervalVarT], *args, **kwds
+    ) -> _IndexedIntervalVarT: ...
+
+    @overload
+    def __new__(cls: type['IntervalVar'], **kwds) -> 'ScalarIntervalVar': ...
+
+    @overload
+    def __new__(
+        cls: type['IntervalVar'], index, /, *args, **kwds
+    ) -> 'IndexedIntervalVar': ...
 
     def __new__(cls, *args, **kwds):
         if cls != IntervalVar:

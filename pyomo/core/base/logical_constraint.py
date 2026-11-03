@@ -10,6 +10,7 @@
 import sys
 import logging
 from weakref import ref as weakref_ref
+from typing import TypeVar
 
 from pyomo.common.deprecation import RenamedClass, deprecated
 from pyomo.common.formatting import tabular_writer
@@ -164,6 +165,14 @@ class _GeneralLogicalConstraintData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
+_ScalarLogicalConstraintT = TypeVar(
+    '_ScalarLogicalConstraintT', bound='ScalarLogicalConstraint'
+)
+_IndexedLogicalConstraintT = TypeVar(
+    '_IndexedLogicalConstraintT', bound='IndexedLogicalConstraint'
+)
+
+
 @ModelComponentFactory.register("General logical constraints.")
 class LogicalConstraint(ActiveIndexedComponent):
     """
@@ -214,6 +223,26 @@ class LogicalConstraint(ActiveIndexedComponent):
     NoConstraint = ActiveIndexedComponent.Skip
     Violated = Infeasible
     Satisfied = Feasible
+
+    @overload
+    def __new__(
+        cls: type[_ScalarLogicalConstraintT], *args, **kwds
+    ) -> _ScalarLogicalConstraintT: ...
+
+    @overload
+    def __new__(
+        cls: type[_IndexedLogicalConstraintT], *args, **kwds
+    ) -> _IndexedLogicalConstraintT: ...
+
+    @overload
+    def __new__(
+        cls: type['LogicalConstraint'], **kwds
+    ) -> 'ScalarLogicalConstraint': ...
+
+    @overload
+    def __new__(
+        cls: type['LogicalConstraint'], index, /, *args, **kwds
+    ) -> 'IndexedLogicalConstraint': ...
 
     def __new__(cls, *args, **kwds):
         if cls != LogicalConstraint:
