@@ -253,6 +253,14 @@ def _finalize_xpress_import(xpress, avail):
         XpressDirect._getLB = _getLB
         XpressDirect._getUB = _getUB
 
+        XpressDirect._firstIIS = lambda self, prob, mode: prob.iisfirst(mode)
+        # Note that iiswrite used a different argument ordering
+        XpressDirect._writeIIS = (
+            lambda self, prob, iis, filetype, filename, flags: prob.iiswrite(
+                iis, filename, filetype, flags
+            )
+        )
+
     else:
         XpressDirect._setLogFile = lambda self, prob, *args, **kwargs: prob.setLogFile(
             *args, **kwargs
@@ -287,6 +295,13 @@ def _finalize_xpress_import(xpress, avail):
         )
         XpressDirect._getUB = lambda self, prob, *args, **kwargs: prob.getUB(
             *args, **kwargs
+        )
+
+        XpressDirect._firstIIS = lambda self, prob, mode: prob.firstIIS(mode)
+        XpressDirect._writeIIS = (
+            lambda self, prob, iis, filetype, filename, flags: prob.writeIIS(
+                iis, filetype, filename, flags
+            )
         )
 
         def _addCols(self, prob, objx, mstart, mrwind, dmatval, bdl, bdu, names, types):
@@ -716,8 +731,9 @@ class XpressDirect(DirectSolver):
             results.solver.termination_condition = TerminationCondition.unknown
             soln.status = SolutionStatus.unknown
         elif status == XpressDirect.NLPStatus.LOCALLY_OPTIMAL:
-            # This is either XpressDirect.NLPStatus.LOCALLY_OPTIMAL or XpressDirect.NLPStatus.SOLUTION
-            # we must look at the solstatus to figure out which
+            # This is either XpressDirect.NLPStatus.LOCALLY_OPTIMAL or
+            # XpressDirect.NLPStatus.SOLUTION we must look at the
+            # solstatus to figure out which
             if solstatus in [2, 3]:
                 results.solver.status = SolverStatus.ok
                 results.solver.termination_message = (
