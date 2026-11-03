@@ -542,7 +542,15 @@ class BlockData(ActiveComponentData):
         super(BlockData, self).__setattr__('_decl_order', [])
         self._private_data = None
 
-    def __getattr__(self, val) -> Union[Component, IndexedComponent, typingAny]:
+    # Type checkers use this return type for any Block attribute they
+    # cannot see declared (e.g., components added in another scope).
+    # Such an attribute may be any component or any other object, so
+    # Any is the only type that does not reject valid code.  A Union of
+    # component types would require every member to support each
+    # operation, so m.x[i], m.x.value, etc. would all be errors.
+    # Users get precise types by declaring attributes on a Block
+    # subclass or by narrowing with isinstance().
+    def __getattr__(self, val) -> typingAny:
         if val in ModelComponentFactory:
             return _component_decorator(self, ModelComponentFactory.get_class(val))
         # Since the base classes don't support getattr, we can just
