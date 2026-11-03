@@ -127,10 +127,10 @@ class GurobiIIS(_IISBase):
 
 class XpressIIS(_IISBase):
     def compute(self):
-        self._solver._solver_model.iisfirst(1)
+        self._solver._firstIIS(self._solver._solver_model, 1)
 
     def write(self, file_name):
-        self._solver._solver_model.iiswrite(0, file_name, 0, "l")
+        self._solver._writeIIS(self._solver._solver_model, 0, 0, file_name, "l")
         if self._solver._version[0] < 38:
             return file_name
         else:
