@@ -26,7 +26,7 @@ from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedCla
 from pyomo.common.errors import DeveloperError, PyomoException
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
-from pyomo.common.pyomo_typing import overload
+from pyomo.common.pyomo_typing import copy_signature, overload
 from pyomo.common.sorting import sorted_robust
 from pyomo.common.timing import ConstructionTimer
 
@@ -2547,6 +2547,7 @@ class IndexedSet(Set):
 
 
 class FiniteScalarSet(_ScalarSetMixin, FiniteSetData, Set):
+    @copy_signature(Set.__init__)
     def __init__(self, **kwds):
         FiniteSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
@@ -2559,6 +2560,7 @@ class FiniteSimpleSet(metaclass=RenamedClass):
 
 
 class OrderedScalarSet(_ScalarSetMixin, InsertionOrderSetData, Set):
+    @copy_signature(Set.__init__)
     def __init__(self, **kwds):
         # In case someone inherits from us, we will provide a rational
         # default for the "ordered" flag
@@ -2574,6 +2576,7 @@ class OrderedSimpleSet(metaclass=RenamedClass):
 
 
 class SortedScalarSet(_ScalarSetMixin, SortedSetData, Set):
+    @copy_signature(Set.__init__)
     def __init__(self, **kwds):
         # In case someone inherits from us, we will provide a rational
         # default for the "ordered" flag

@@ -10,7 +10,7 @@
 from __future__ import annotations
 import logging
 import sys
-from pyomo.common.pyomo_typing import overload
+from pyomo.common.pyomo_typing import copy_signature, overload
 from weakref import ref as weakref_ref
 from typing import TypeVar, Type
 
@@ -866,6 +866,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
 class ScalarVar(VarData, Var):
     """A single variable."""
 
+    @copy_signature(Var.__init__)
     def __init__(self, *args, **kwd):
         VarData.__init__(self, component=self)
         Var.__init__(self, *args, **kwd)

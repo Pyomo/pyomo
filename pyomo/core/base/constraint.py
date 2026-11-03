@@ -11,7 +11,7 @@ from __future__ import annotations
 import sys
 import logging
 from weakref import ref as weakref_ref
-from pyomo.common.pyomo_typing import overload
+from pyomo.common.pyomo_typing import copy_signature, overload
 from typing import TypeVar, Type
 
 from pyomo.common.deprecation import RenamedClass, deprecated
@@ -807,6 +807,7 @@ class ScalarConstraint(ConstraintData, Constraint):
     non-indexed constraint.
     """
 
+    @copy_signature(Constraint.__init__)
     def __init__(self, *args, **kwds):
         ConstraintData.__init__(self, component=self, expr=None)
         Constraint.__init__(self, *args, **kwds)

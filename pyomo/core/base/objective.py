@@ -10,7 +10,7 @@
 import sys
 import logging
 from weakref import ref as weakref_ref
-from pyomo.common.pyomo_typing import overload
+from pyomo.common.pyomo_typing import copy_signature, overload
 from typing import TypeVar, Any as typingAny
 
 from pyomo.common.deprecation import RenamedClass, deprecated
@@ -471,6 +471,7 @@ class ScalarObjective(ObjectiveData, Objective):
     non-indexed objective.
     """
 
+    @copy_signature(Objective.__init__)
     def __init__(self, *args, **kwd):
         ObjectiveData.__init__(self, expr=None, component=self)
         Objective.__init__(self, *args, **kwd)

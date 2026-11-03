@@ -29,7 +29,7 @@ from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedCla
 from pyomo.common.formatting import StreamIndenter
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
-from pyomo.common.pyomo_typing import overload
+from pyomo.common.pyomo_typing import copy_signature, overload
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import (
     Component,
@@ -2305,6 +2305,7 @@ class Block(ActiveIndexedComponent):
 
 
 class ScalarBlock(BlockData, Block):
+    @copy_signature(Block.__init__)
     def __init__(self, *args, **kwds):
         BlockData.__init__(self, component=self)
         Block.__init__(self, *args, **kwds)

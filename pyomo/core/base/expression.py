@@ -12,7 +12,7 @@ import logging
 from weakref import ref as weakref_ref
 from typing import TypeVar
 
-from pyomo.common.pyomo_typing import overload
+from pyomo.common.pyomo_typing import copy_signature, overload
 
 from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import RenamedClass
@@ -419,6 +419,7 @@ class Expression(IndexedComponent, IndexedComponent_NDArrayMixin):
 
 
 class ScalarExpression(ExpressionData, Expression):
+    @copy_signature(Expression.__init__)
     def __init__(self, *args, **kwds):
         ExpressionData.__init__(self, expr=None, component=self)
         Expression.__init__(self, *args, **kwds)

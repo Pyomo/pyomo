@@ -20,7 +20,7 @@ from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedCla
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.numeric_types import native_types, value as expr_value
-from pyomo.common.pyomo_typing import overload
+from pyomo.common.pyomo_typing import copy_signature, overload
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import NumericValue
@@ -1007,6 +1007,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
 
 
 class ScalarParam(ParamData, Param):
+    @copy_signature(Param.__init__)
     def __init__(self, *args, **kwds):
         ParamData.__init__(self, component=self)
         Param.__init__(self, *args, **kwds)
