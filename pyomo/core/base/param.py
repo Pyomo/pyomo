@@ -453,7 +453,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     # only loop over the defined data.
     #
 
-    def sparse_keys(self, sort=SortComponents.UNSORTED):
+    def sparse_keys(self, sort: SortComponents | bool = SortComponents.UNSORTED):
         """Return a list of keys in the defined parameters"""
         try:
             # Temporarily remove the default value so that len(self) ==
@@ -466,7 +466,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         finally:
             self._default = tmp
 
-    def sparse_values(self, sort=SortComponents.UNSORTED):
+    def sparse_values(self, sort: SortComponents | bool = SortComponents.UNSORTED):
         """Return a list of the defined param data objects"""
         # Implementing things this way for consistency with items() (and
         # so that any changes in the base class implementation are
@@ -478,7 +478,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         finally:
             self._default = tmp
 
-    def sparse_items(self, sort=SortComponents.UNSORTED):
+    def sparse_items(self, sort: SortComponents | bool = SortComponents.UNSORTED):
         """Return a list (index,data) tuples for defined parameters"""
         # The base class implements special handling for references.
         # Instead of reimplementing that here, we will follow the

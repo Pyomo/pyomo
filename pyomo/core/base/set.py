@@ -2013,16 +2013,16 @@ class _ScalarSetMixin:
     # __getitem__()
     __slots__ = ()
 
-    def keys(self, sort=SortComponents.UNSORTED):
+    def keys(self, sort: SortComponents | bool = SortComponents.UNSORTED):
         # Scalar sets are always defined (we don't support Skip):
         return iter(UnindexedComponent_set)
 
-    def values(self, sort=SortComponents.UNSORTED):
+    def values(self, sort: SortComponents | bool = SortComponents.UNSORTED):
         """Return an iterator of the component data objects in the dictionary"""
         # Scalar sets are always defined (we don't support Skip):
         yield self
 
-    def items(self, sort=SortComponents.UNSORTED):
+    def items(self, sort: SortComponents | bool = SortComponents.UNSORTED):
         """Return an iterator of (index, data) tuples from the dictionary"""
         # Scalar sets are always defined (we don't support Skip):
         yield UnindexedComponent_index, self
