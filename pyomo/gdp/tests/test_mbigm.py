@@ -1076,6 +1076,7 @@ class IndexedDisjunction(unittest.TestCase):
         self.assertIs(cons_again[1], cons[1])
 
 
+@unittest.skipUnless(dill_available, "Dill is not available")
 class EdgeCases(unittest.TestCase):
     def make_infeasible_disjunct_model(self):
         m = ConcreteModel()
@@ -1137,6 +1138,7 @@ class EdgeCases(unittest.TestCase):
     @unittest.skipUnless(
         SolverFactory('ipopt').available(exception_flag=False), "Ipopt is not available"
     )
+    @unittest.skipUnless(dill_available, "dill is not available")
     @unittest.skipIf(
         is_pypy,
         "tests using multiprocessing stall on pypy; this will no longer be tested.",
