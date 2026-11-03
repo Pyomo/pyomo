@@ -109,6 +109,7 @@ information.
 
 import logging
 import sys
+from typing import TYPE_CHECKING, Union
 
 from pyomo.common.dependencies import pint as pint_module, pint_available
 from pyomo.common.modeling import NOTSET
@@ -123,6 +124,9 @@ from pyomo.core.expr.numvalue import (
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.visitor import ExpressionValueVisitor
 import pyomo.core.expr as EXPR
+
+if TYPE_CHECKING:
+    import pint.registry  # pyright: ignore[reportMissingImports]
 
 logger = logging.getLogger(__name__)
 
@@ -969,7 +973,12 @@ class PyomoUnitsContainer:
 
     """
 
-    def __init__(self, pint_registry=NOTSET):
+    def __init__(
+        self,
+        pint_registry: Union[
+            'pint.UnitRegistry', 'pint.registry.ApplicationRegistry', None, type[NOTSET]
+        ] = NOTSET,
+    ):
         """Create a PyomoUnitsContainer instance."""
         if pint_registry is NOTSET:
             pint_registry = pint_module.UnitRegistry()

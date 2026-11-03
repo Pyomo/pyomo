@@ -9,8 +9,10 @@
 
 import logging
 import sys
+from collections.abc import Hashable
 from copy import deepcopy
 from pickle import PickleError
+from typing import Type
 from weakref import ref as weakref_ref
 
 import pyomo.common
@@ -56,7 +58,12 @@ class ModelComponentFactoryClass(Factory):
 ModelComponentFactory = ModelComponentFactoryClass('model component')
 
 
-def name(component, index=NOTSET, fully_qualified=False, relative_to=None):
+def name(
+    component,
+    index: Hashable | type[NOTSET] = NOTSET,
+    fully_qualified=False,
+    relative_to=None,
+):
     """
     Return a string representation of component for a specific
     index value.
@@ -276,7 +283,13 @@ class ComponentBase(PyomoObject):
     def cname(self, *args, **kwds):
         return self.getname(*args, **kwds)
 
-    def pprint(self, ostream=None, verbose=False, prefix="", sort=NOTSET):
+    def pprint(
+        self,
+        ostream=None,
+        verbose=False,
+        prefix="",
+        sort: SortComponents | bool | None | Type[NOTSET] = NOTSET,
+    ):
         """Print component information
 
         Note that this method is generally only reachable through
@@ -534,7 +547,13 @@ class Component(ComponentBase):
         """Return True if this can be used as a model component."""
         return True
 
-    def pprint(self, ostream=None, verbose=False, prefix="", sort=NOTSET):
+    def pprint(
+        self,
+        ostream=None,
+        verbose=False,
+        prefix="",
+        sort: SortComponents | bool | None | Type[NOTSET] = NOTSET,
+    ):
         """Print component information"""
         self._pprint_base_impl(
             ostream,

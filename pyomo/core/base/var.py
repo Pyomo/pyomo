@@ -832,7 +832,17 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
     # Because we need to do more initialization than simply calling
     # set_value(), we need to override _setitem_when_not_present
     #
-    def _setitem_when_not_present(self, index, value=NOTSET):
+    def _setitem_when_not_present(
+        self,
+        index,
+        value: (
+            SupportsFloat
+            | NumericValue
+            | None
+            | type[IndexedComponent.Skip]
+            | type[NOTSET]
+        ) = NOTSET,
+    ):
         if value is self.Skip:
             return None
         try:

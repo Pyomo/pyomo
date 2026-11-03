@@ -562,7 +562,9 @@ def _identify_wildcard_sets(iter_stack, index):
     return index
 
 
-def Reference(reference, ctype=NOTSET):
+def Reference(
+    reference, ctype: type[IndexedComponent] | None | type[NOTSET] = NOTSET
+) -> IndexedComponent:
     """Creates a component that references other components
 
     ``Reference`` generates a *reference component*; that is, an indexed

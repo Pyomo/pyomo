@@ -11,6 +11,7 @@ import collections
 import functools
 import inspect
 import itertools
+from typing import TYPE_CHECKING
 
 from collections.abc import Sequence
 from collections.abc import Mapping
@@ -19,6 +20,9 @@ from pyomo.common.autoslots import AutoSlots
 from pyomo.common.dependencies import numpy, numpy_available, pandas, pandas_available
 from pyomo.common.modeling import NOTSET
 from pyomo.core.pyomoobject import PyomoObject
+
+if TYPE_CHECKING:
+    from pyomo.core.base.component import Component
 
 initializer_map = {}
 sequence_types = set()
@@ -620,7 +624,7 @@ class BoundInitializer(InitializerBase):
 
     __slots__ = ('_initializer',)
 
-    def __new__(cls, arg=None, obj=NOTSET):
+    def __new__(cls, arg=None, obj: 'Component | type[NOTSET]' = NOTSET):
         # The Initializer() function returns None if the initializer is
         # None.  We will mock that behavior by commandeering __new__()
         if arg is None and obj is not NOTSET:
@@ -628,7 +632,7 @@ class BoundInitializer(InitializerBase):
         else:
             return super().__new__(cls)
 
-    def __init__(self, arg, obj=NOTSET):
+    def __init__(self, arg, obj: 'Component | type[NOTSET]' = NOTSET):
         if obj is NOTSET or obj.is_indexed():
             treat_sequences_as_mappings = not (
                 isinstance(arg, Sequence)

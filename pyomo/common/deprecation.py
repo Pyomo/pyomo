@@ -679,7 +679,12 @@ MovedModuleInfo = typing.NamedTuple(
 
 
 def moved_module(
-    old_name, new_name, msg=NOTSET, logger=None, version=None, remove_in=None
+    old_name,
+    new_name,
+    msg: str | None | type[NOTSET] = NOTSET,
+    logger=None,
+    version=None,
+    remove_in=None,
 ):
     """Provide a deprecation path for moved / renamed modules
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 import collections
 import sys
 import types
+from collections.abc import Hashable
 import logging
 from typing import TypeVar, Type, Any as typingAny
 from weakref import ref as weakref_ref
@@ -173,7 +174,7 @@ class ParamData(ComponentData, NumericValue):
     # operations like validation efficient.  As it stands now, if
     # set_value is called without specifying an index, this call
     # involves a linear scan of the _data dict.
-    def set_value(self, value, idx=NOTSET):
+    def set_value(self, value, idx: Hashable | type[NOTSET] = NOTSET):
         """Set the value of this ParamData object, performing unit conversion
         and validation as necessary.
 
@@ -1046,7 +1047,7 @@ class ScalarParam(ParamData, Param):
                 "value to return)." % (self.name,)
             )
 
-    def set_value(self, value, index=NOTSET):
+    def set_value(self, value, index: Hashable | type[NOTSET] = NOTSET):
         if index is NOTSET:
             index = None
         if self._constructed and not self._mutable:

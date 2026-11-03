@@ -7,7 +7,9 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-from typing import Sequence, Mapping
+from typing import Any, Sequence, Mapping, SupportsFloat, TextIO
+import io
+import logging
 import os
 
 from pyomo.core.base.constraint import ConstraintData
@@ -437,20 +439,29 @@ class LegacySolverWrapper:
 
     def _map_config(
         self,
-        tee=NOTSET,
-        load_solutions=NOTSET,
-        symbolic_solver_labels=NOTSET,
-        timelimit=NOTSET,
-        report_timing=NOTSET,
-        raise_exception_on_nonoptimal_result=NOTSET,
-        solver_io=NOTSET,
-        suffixes=NOTSET,
-        logfile=NOTSET,
-        keepfiles=NOTSET,
-        solnfile=NOTSET,
-        options=NOTSET,
-        solver_options=NOTSET,
-        writer_config=NOTSET,
+        tee: (
+            bool
+            | TextIO
+            | io.TextIOBase
+            | logging.Logger
+            | Sequence[bool | TextIO | io.TextIOBase | logging.Logger]
+            | type[NOTSET]
+        ) = NOTSET,
+        load_solutions: bool | type[NOTSET] = NOTSET,
+        symbolic_solver_labels: bool | type[NOTSET] = NOTSET,
+        timelimit: SupportsFloat | None | type[NOTSET] = NOTSET,
+        report_timing: bool | type[NOTSET] = NOTSET,
+        raise_exception_on_nonoptimal_result: bool | type[NOTSET] = NOTSET,
+        solver_io: None | type[NOTSET] = NOTSET,
+        suffixes: None | type[NOTSET] = NOTSET,
+        logfile: None | type[NOTSET] = NOTSET,
+        keepfiles: bool | type[NOTSET] = NOTSET,
+        solnfile: str | os.PathLike[str] | None | type[NOTSET] = NOTSET,
+        options: dict[str, Any] | ConfigDict | str | None | type[NOTSET] = NOTSET,
+        solver_options: (
+            dict[str, Any] | ConfigDict | str | None | type[NOTSET]
+        ) = NOTSET,
+        writer_config: dict[str, Any] | ConfigDict | str | None | type[NOTSET] = NOTSET,
     ):
         """Map between legacy and new interface configuration options"""
         if 'report_timing' not in self.config:

@@ -9,6 +9,7 @@
 
 from pyomo.dae.flatten import flatten_dae_components
 from pyomo.common.modeling import NOTSET
+from pyomo.core.base.block import BlockData
 from pyomo.core.base.var import Var
 from pyomo.core.base.expression import Expression
 from pyomo.core.base.componentuid import ComponentUID
@@ -58,7 +59,7 @@ class DynamicModelInterface:
 
     """
 
-    def __init__(self, model, time, context=NOTSET):
+    def __init__(self, model, time, context: BlockData | None | type[NOTSET] = NOTSET):
         """
         Construct with a model and a set. We will flatten the model
         with respect to this set and generate CUIDs with wildcards.

@@ -39,7 +39,9 @@ import sys
 import textwrap
 import types
 
+from collections.abc import Callable, Iterable
 from operator import attrgetter
+from typing import Any
 
 import pyomo.tpl.ply.lex as lex
 
@@ -404,7 +406,12 @@ class _Container:
 
     """
 
-    def __init__(self, itemtype=None, domain=None, string_lexer=NOTSET):
+    def __init__(
+        self,
+        itemtype=None,
+        domain=None,
+        string_lexer: Callable[[str], Iterable[object]] | None | type[NOTSET] = NOTSET,
+    ):
         self.itemtype = itemtype
         if domain is None:
             domain = self.itemtype
@@ -1750,12 +1757,12 @@ class ConfigBase:
 
     def __call__(
         self,
-        value=NOTSET,
-        default=NOTSET,
-        domain=NOTSET,
-        description=NOTSET,
-        doc=NOTSET,
-        visibility=NOTSET,
+        value: Any = NOTSET,
+        default: Any = NOTSET,
+        domain: Callable[..., object] | None | type[NOTSET] = NOTSET,
+        description: str | None | type[NOTSET] = NOTSET,
+        doc: str | None | type[NOTSET] = NOTSET,
+        visibility: int | type[NOTSET] = NOTSET,
         preserve_implicit=False,
     ):
         # We will pass through overriding arguments to the constructor.
@@ -2439,7 +2446,7 @@ class ConfigList(ConfigBase, Sequence):
         else:
             return val
 
-    def get(self, key, default=NOTSET):
+    def get(self, key, default: Any = NOTSET):
         # Note: get() is borrowed from ConfigDict for cases where we
         # want the raw stored object (and to avoid the implicit
         # conversion of ConfigValue members to their stored data).
@@ -2508,7 +2515,7 @@ class ConfigList(ConfigBase, Sequence):
         val._userSet = False
         _data.append(val)
 
-    def append(self, value=NOTSET):
+    def append(self, value: Any = NOTSET):
         self._append(self._data, value)
         self._data[-1]._userSet = True
         # Adding something to the container should not change the
@@ -2517,7 +2524,7 @@ class ConfigList(ConfigBase, Sequence):
         # self._userSet = True
 
     @deprecated("ConfigList.add() has been deprecated.  Use append()", version='5.7.2')
-    def add(self, value=NOTSET):
+    def add(self, value: Any = NOTSET):
         "Append the specified value to the list, casting as necessary."
         return self.append(value)
 
@@ -2640,12 +2647,12 @@ class ConfigDict(ConfigBase, MutableMapping):
 
     def __call__(
         self,
-        value=NOTSET,
-        description=NOTSET,
-        doc=NOTSET,
-        visibility=NOTSET,
-        implicit=NOTSET,
-        implicit_domain=NOTSET,
+        value: "dict[Any, Any] | ConfigDict | str | None | type[NOTSET]" = NOTSET,
+        description: str | None | type[NOTSET] = NOTSET,
+        doc: str | None | type[NOTSET] = NOTSET,
+        visibility: int | type[NOTSET] = NOTSET,
+        implicit: bool | type[NOTSET] = NOTSET,
+        implicit_domain: Callable[..., object] | None | type[NOTSET] = NOTSET,
         preserve_implicit=False,
     ):
         # We will pass through overriding arguments to the constructor.
@@ -2699,7 +2706,7 @@ class ConfigDict(ConfigBase, MutableMapping):
         else:
             return self._data[_key]
 
-    def get(self, key, default=NOTSET):
+    def get(self, key, default: Any = NOTSET):
         self._userAccessed = True
         _key = str(key).replace(' ', '_')
         if _key in self._data:
@@ -2714,7 +2721,7 @@ class ConfigDict(ConfigBase, MutableMapping):
         else:
             return ConfigValue(default)
 
-    def setdefault(self, key, default=NOTSET):
+    def setdefault(self, key, default: Any = NOTSET):
         self._userAccessed = True
         _key = str(key).replace(' ', '_')
         if _key in self._data:
