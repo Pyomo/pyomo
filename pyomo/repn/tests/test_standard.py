@@ -3505,6 +3505,44 @@ class Test(unittest.TestCase):
         baseline = {id(rep.linear_vars[0]): 1, None: 2}
         self.assertEqual(baseline, repn_to_dict(rep))
 
+    def test_product_pow_fixed_exponent(self):
+        # A power expression whose exponent evaluates to 0 reduces to
+        # the constant 1.  When it appears in a product with a
+        # nonlinear term, the variables that only appear in the power
+        # expression should not leak into the nonlinear repn.
+        # (See https://github.com/Pyomo/pyomo/issues/3078)
+        m = ConcreteModel()
+        m.x = Var([1, 2, 3], initialize=1.0)
+        m.x[2].fix(0.0)
+        m.y = Var(initialize=12.83)
+
+        e = m.y**2 * (m.x[1] ** (m.x[2] * m.x[3])) * 0.0686
+        rep = generate_standard_repn(e, quadratic=False, compute_values=True)
+        #
+        self.assertFalse(rep.is_fixed())
+        self.assertFalse(rep.is_constant())
+        self.assertFalse(rep.is_linear())
+        self.assertFalse(rep.is_quadratic())
+        self.assertTrue(rep.is_nonlinear())
+        #
+        self.assertTrue(len(rep.linear_vars) == 0)
+        self.assertTrue(len(rep.linear_coefs) == 0)
+        self.assertTrue(len(rep.quadratic_vars) == 0)
+        self.assertTrue(len(rep.quadratic_coefs) == 0)
+        self.assertFalse(rep.nonlinear_expr is None)
+        self.assertEqual(rep.nonlinear_vars, (m.y,))
+        self.assertAlmostEqual(value(rep.nonlinear_expr), 0.0686 * 12.83**2)
+
+        # If the exponent evaluates to a nonzero value, the power
+        # expression is genuinely nonlinear and its variables must
+        # still be reported: the reduction above must not remove them.
+        e = m.y**2 * (m.x[1] ** (m.x[2] * m.x[3] + 2)) * 0.0686
+        rep = generate_standard_repn(e, quadratic=False, compute_values=True)
+        #
+        self.assertTrue(rep.is_nonlinear())
+        self.assertFalse(rep.nonlinear_expr is None)
+        self.assertEqual(set(v.name for v in rep.nonlinear_vars), {'y', 'x[1]', 'x[3]'})
+
     def test_abs(self):
         #      abs
         #      /

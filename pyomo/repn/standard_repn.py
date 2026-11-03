@@ -739,6 +739,43 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     ):
         return Results()
     #
+    # LHS is nonlinear, but the RHS turns out to be a constant because
+    # the variables in it were fixed (e.g. a power expression whose
+    # exponent evaluates to 0).  Recollect the LHS with the RHS folded
+    # into the multiplier, mirroring the handling of a constant LHS
+    # above, so that the variables that only appear in the RHS do not
+    # leak into the nonlinear expression.
+    #
+    if (
+        not lhs_nonl_None
+        and rhs_nonl_None
+        and len(rhs.linear) == 0
+        and (not quadratic or len(rhs.quadratic) == 0)
+    ):
+        if rhs.constant.__class__ in native_numeric_types and rhs.constant == 0:
+            return Results()
+        if compute_values:
+            val = value(rhs.constant)
+            if val == 0:
+                return Results()
+            return _collect_standard_repn(
+                exp._args_[0],
+                multiplier * val,
+                idMap,
+                compute_values,
+                verbose,
+                quadratic,
+            )
+        else:
+            return _collect_standard_repn(
+                exp._args_[0],
+                multiplier * rhs.constant,
+                idMap,
+                compute_values,
+                verbose,
+                quadratic,
+            )
+    #
     # If either the LHS or RHS are nonlinear, then simply return the nonlinear expression
     #
     if not lhs_nonl_None or not rhs_nonl_None:
