@@ -433,13 +433,31 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
         # users register with RegisterNumericType().  All of these
         # types can appear as constant leaf nodes in Pyomo
         # expressions (e.g., when models are built from pandas /
-        # NumPy data).
+        # NumPy data).  Types registered after this visitor is
+        # constructed are picked up on demand in exitNode.
         for numeric_type in native_numeric_types:
             self._operator_handles.setdefault(numeric_type, handle_num_node)
 
     def exitNode(self, node, data):
+        handler = self._operator_handles.get(node.__class__)
+        if handler is None:
+            # Numeric types can be registered in native_numeric_types
+            # after this visitor was constructed: when printing a
+            # block, constraint rules are only executed (and may
+            # import NumPy) as the printer templatizes each
+            # constraint, which happens after the visitor is built.
+            # Consult the registry again before giving up.
+            if node.__class__ in native_numeric_types:
+                handler = self._operator_handles.setdefault(
+                    node.__class__, handle_num_node
+                )
+            else:
+                raise DeveloperError(
+                    'Latex printer encountered an error when processing type %s, contact the developers'
+                    % (node.__class__)
+                )
         try:
-            return self._operator_handles[node.__class__](self, node, *data)
+            return handler(self, node, *data)
         except:
             raise DeveloperError(
                 'Latex printer encountered an error when processing type %s, contact the developers'
