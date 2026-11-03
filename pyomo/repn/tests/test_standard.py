@@ -3543,6 +3543,187 @@ class Test(unittest.TestCase):
         self.assertFalse(rep.nonlinear_expr is None)
         self.assertEqual(set(v.name for v in rep.nonlinear_vars), {'y', 'x[1]', 'x[3]'})
 
+    def test_product_pow_fixed_exponent_compute_values_false(self):
+        # With compute_values=False the folded constant is *not*
+        # evaluated: it can be an expression object (here the fixed
+        # VarData x[2] itself).  The RHS-constant branch must behave
+        # exactly like the pre-existing LHS-constant branch in this
+        # mode; neither branch evaluates the constant, both fold it
+        # into the multiplier and recollect the other side.
+        # (See https://github.com/Pyomo/pyomo/issues/3078)
+        m = ConcreteModel()
+        m.x = Var([1, 2, 3], initialize=1.0)
+        m.x[2].fix(2.0)
+        m.y = Var(initialize=12.83)
+        # Potentially variable (x[3] appears in it), but collects to
+        # the constant x[2] because x[3] is multiplied by 0.
+        S = m.x[2] + m.x[3] * 0
+
+        # New RHS branch, compute_values=False path: the unevaluated
+        # constant is folded into the multiplier.
+        rep = generate_standard_repn(m.y**2 * S, quadratic=False, compute_values=False)
+        self.assertEqual(rep.nonlinear_vars, (m.y,))
+        self.assertAlmostEqual(value(rep.nonlinear_expr), 2.0 * 12.83**2)
+
+        # Mirror image through the pre-existing LHS branch: the
+        # result must be identical in shape and value.
+        rep = generate_standard_repn(S * m.y**2, quadratic=False, compute_values=False)
+        self.assertEqual(rep.nonlinear_vars, (m.y,))
+        self.assertAlmostEqual(value(rep.nonlinear_expr), 2.0 * 12.83**2)
+
+        # A power expression that reduces to the *native* constant 1
+        # through the #**0 rule also folds under compute_values=False.
+        rep = generate_standard_repn(
+            m.y**2 * (m.x[1] ** (m.x[3] * 0)), quadratic=False, compute_values=False
+        )
+        self.assertEqual(rep.nonlinear_vars, (m.y,))
+        self.assertAlmostEqual(value(rep.nonlinear_expr), 12.83**2)
+
+        # The issue expression itself does *not* reduce with
+        # compute_values=False (the exponent repn still has a linear
+        # term, so the power is genuinely nonlinear in this mode);
+        # this is unchanged from the behaviour before the fix.
+        m.x[2].fix(0.0)
+        e = m.y**2 * (m.x[1] ** (m.x[2] * m.x[3])) * 0.0686
+        rep = generate_standard_repn(e, quadratic=False, compute_values=False)
+        self.assertEqual(set(v.name for v in rep.nonlinear_vars), {'y', 'x[1]', 'x[3]'})
+
+    def test_product_pow_fixed_exponent_full_replacement(self):
+        # When the new branch recollected the LHS, the replacement
+        # must be complete: the constant, linear and nonlinear parts
+        # all come from the recollected LHS, with no double counting
+        # and no residue of the original product expression.
+        m = ConcreteModel()
+        m.x = Var([1, 2, 3], initialize=1.0)
+        m.x[2].fix(0.0)
+        m.y = Var(initialize=12.83)
+        m.z = Var(initialize=0.5)
+
+        e = (2 + 3 * m.y + sin(m.z)) * (m.x[1] ** (m.x[2] * m.x[3]))
+        rep = generate_standard_repn(e, quadratic=True, compute_values=True)
+        #
+        self.assertEqual(rep.constant, 2)
+        self.assertEqual(rep.linear_vars, (m.y,))
+        self.assertEqual(rep.linear_coefs, (3,))
+        self.assertTrue(len(rep.quadratic_vars) == 0)
+        self.assertEqual(rep.nonlinear_vars, (m.z,))
+        self.assertAlmostEqual(value(rep.nonlinear_expr), value(sin(m.z)))
+
+    def test_product_pow_fixed_exponent_unchanged_paths(self):
+        # Products that do not take the new RHS-constant branch must
+        # be unchanged.  The expected values below were measured on
+        # the code before the fix.
+        m = ConcreteModel()
+        m.x = Var([1, 2, 3], initialize=1.0)
+        m.x[2].fix(0.0)
+        m.y = Var(initialize=12.83)
+        m.z = Var(initialize=0.5)
+        POW = m.x[1] ** (m.x[2] * m.x[3])
+
+        # Polynomial LHS x constant-valued factor: the general
+        # combination path (the new branch requires a nonlinear LHS).
+        rep = generate_standard_repn(
+            (2 + 3 * m.y) * POW, quadratic=True, compute_values=True
+        )
+        self.assertEqual(rep.constant, 2)
+        self.assertEqual(rep.linear_vars, (m.y,))
+        self.assertEqual(rep.linear_coefs, (3,))
+        self.assertTrue(rep.nonlinear_expr is None)
+        self.assertTrue(len(rep.nonlinear_vars) == 0)
+
+        # Nonlinear LHS x RHS that still contains variables: the
+        # whole product stays nonlinear (exponent evaluates to 2).
+        rep = generate_standard_repn(
+            m.y**2 * (m.x[1] ** (m.x[2] * m.x[3] + 2)),
+            quadratic=False,
+            compute_values=True,
+        )
+        self.assertEqual(rep.constant, 0)
+        self.assertTrue(len(rep.linear_vars) == 0)
+        self.assertEqual(set(v.name for v in rep.nonlinear_vars), {'y', 'x[1]', 'x[3]'})
+        self.assertAlmostEqual(value(rep.nonlinear_expr), 12.83**2)
+
+        # Nonlinear x nonlinear: the whole product stays nonlinear.
+        rep = generate_standard_repn(
+            m.y**2 * sin(m.z), quadratic=False, compute_values=True
+        )
+        self.assertEqual(rep.constant, 0)
+        self.assertTrue(len(rep.linear_vars) == 0)
+        self.assertEqual(set(v.name for v in rep.nonlinear_vars), {'y', 'z'})
+        self.assertAlmostEqual(value(rep.nonlinear_expr), 12.83**2 * value(sin(m.z)))
+
+    def test_product_pow_fixed_exponent_constant_variants(self):
+        # Variants of the constant that the RHS reduces to, and of how
+        # the product is associated.  Each block names the branch
+        # condition it covers.
+        m = ConcreteModel()
+        m.x = Var([1, 2, 3], initialize=1.0)
+        m.x[2].fix(0.0)
+        m.y = Var(initialize=12.83)
+        POW = m.x[1] ** (m.x[2] * m.x[3])  # reduces to the constant 1
+
+        # RHS reduces to 0: the pre-existing RHS-zero early return
+        # (before the new branch) empties the whole product.
+        rep = generate_standard_repn(
+            m.y**2 * (POW - 1), quadratic=False, compute_values=True
+        )
+        self.assertEqual(rep.constant, 0)
+        self.assertTrue(len(rep.linear_vars) == 0)
+        self.assertTrue(rep.nonlinear_expr is None)
+        self.assertTrue(len(rep.nonlinear_vars) == 0)
+
+        # RHS reduces to a nonzero *negative* constant: the new
+        # branch folds it, sign included.
+        rep = generate_standard_repn(
+            m.y**2 * (POW - 3), quadratic=False, compute_values=True
+        )
+        self.assertEqual(rep.nonlinear_vars, (m.y,))
+        self.assertAlmostEqual(value(rep.nonlinear_expr), -2.0 * 12.83**2)
+
+        # RHS constant comes from a combination of fixed variables,
+        # not from a literal: the new branch folds the evaluated sum.
+        m2 = ConcreteModel()
+        m2.x = Var([2, 3], initialize=1.0)
+        m2.x[2].fix(2.0)
+        m2.y = Var(initialize=12.83)
+        rep = generate_standard_repn(
+            m2.y**2 * (m2.x[2] + m2.x[3] * 0), quadratic=False, compute_values=True
+        )
+        self.assertEqual(rep.nonlinear_vars, (m2.y,))
+        self.assertAlmostEqual(value(rep.nonlinear_expr), 2.0 * 12.83**2)
+
+        # The multiplier entering the new branch is not 1, under
+        # three associations of the nested product; all must agree.
+        for e in ((m.y**2 * POW) * 2, 2 * (m.y**2 * POW), m.y**2 * (POW * 2)):
+            rep = generate_standard_repn(e, quadratic=False, compute_values=True)
+            self.assertEqual(rep.nonlinear_vars, (m.y,))
+            self.assertAlmostEqual(value(rep.nonlinear_expr), 2.0 * 12.83**2)
+
+        # quadratic=True: the fixed-exponent product lands in the
+        # quadratic part, and the power variables do not leak.
+        rep = generate_standard_repn(
+            m.y**2 * POW * 0.0686, quadratic=True, compute_values=True
+        )
+        self.assertEqual(rep.quadratic_vars, ((m.y, m.y),))
+        self.assertAlmostEqual(rep.quadratic_coefs[0], 0.0686)
+        self.assertTrue(rep.nonlinear_expr is None)
+        self.assertTrue(len(rep.nonlinear_vars) == 0)
+
+        # Reverse order (constant factor on the left) goes through
+        # the pre-existing LHS branch and must agree with the new
+        # RHS branch on the forward order.
+        rep_fwd = generate_standard_repn(
+            m.y**2 * POW, quadratic=False, compute_values=True
+        )
+        rep_rev = generate_standard_repn(
+            POW * m.y**2, quadratic=False, compute_values=True
+        )
+        for rep in (rep_fwd, rep_rev):
+            self.assertEqual(rep.constant, 0)
+            self.assertTrue(len(rep.linear_vars) == 0)
+            self.assertEqual(rep.nonlinear_vars, (m.y,))
+            self.assertAlmostEqual(value(rep.nonlinear_expr), 12.83**2)
+
     def test_abs(self):
         #      abs
         #      /

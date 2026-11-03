@@ -746,6 +746,13 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     # above, so that the variables that only appear in the RHS do not
     # leak into the nonlinear expression.
     #
+    # Note: if the RHS still contains variable terms -- in particular
+    # when both sides are nonlinear -- this branch does not apply, and
+    # the original expression is returned as the nonlinear expression
+    # below, with the nonlinear variables collected from the original
+    # expression tree.  That is the established behaviour for products
+    # that the standard form cannot represent, not a missing reduction.
+    #
     if (
         not lhs_nonl_None
         and rhs_nonl_None
