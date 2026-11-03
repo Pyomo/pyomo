@@ -384,7 +384,7 @@ class _PyomoUnit(NumericValue):
         else:
             return _str
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Unit is treated as a constant value, and this method always returns 1.0
 
         Returns

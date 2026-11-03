@@ -155,7 +155,7 @@ class BooleanVarData(ComponentData, BooleanValue):
     def clear(self):
         self.value = None
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Compute the value of this variable."""
         exception = _type_check_exception_arg(self, exception)
         return self.value
@@ -221,7 +221,7 @@ class BooleanVarData(ComponentData, BooleanValue):
         if binary_var is not None:
             self._associated_binary = weakref_ref(binary_var)
 
-    def fix(self, value=NOTSET, skip_validation=False):
+    def fix(self, value: bool | None | type[NOTSET] = NOTSET, skip_validation=False):
         """Fix the value of this variable (treat as nonvariable)
 
         This sets the `fixed` indicator to True.  If ``value`` is
@@ -524,7 +524,7 @@ class ScalarBooleanVar(BooleanVarData, BooleanVar):
         """BooleanSet : the domain for this variable."""
         return BooleanVarData.domain.fget(self)
 
-    def fix(self, value=NOTSET, skip_validation=False):
+    def fix(self, value: bool | None | type[NOTSET] = NOTSET, skip_validation=False):
         """
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
@@ -556,7 +556,7 @@ class SimpleBooleanVar(metaclass=RenamedClass):
 class IndexedBooleanVar(BooleanVar):
     """An array of variables."""
 
-    def fix(self, value=NOTSET, skip_validation=False):
+    def fix(self, value: bool | None | type[NOTSET] = NOTSET, skip_validation=False):
         """Fix all variables in this IndexedBooleanVar (treat as nonvariable)
 
         This sets the `fixed` indicator to True for every variable in

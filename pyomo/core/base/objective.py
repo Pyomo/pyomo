@@ -477,7 +477,7 @@ class ScalarObjective(ObjectiveData, Objective):
         Objective.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         exception = _type_check_exception_arg(self, exception)
         if not self._data:
             raise ValueError(

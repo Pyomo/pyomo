@@ -55,7 +55,7 @@ class NamedExpressionData(numeric_expr.NumericValue):
     PRECEDENCE = 0
     ASSOCIATIVITY = EXPR.OperatorAssociativity.NON_ASSOCIATIVE
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Compute the value of this expression."""
         exception = _type_check_exception_arg(self, exception)
         (arg,) = self.args
@@ -430,7 +430,7 @@ class ScalarExpression(ExpressionData, Expression):
     # construction
     #
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Return expression on this expression."""
         exception = _type_check_exception_arg(self, exception)
         if self._constructed:

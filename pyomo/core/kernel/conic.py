@@ -133,7 +133,7 @@ class _ConicBase(IConstraint):
     # to avoid building the body expression, if possible
     #
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         exception = _type_check_exception_arg(self, exception)
         try:
             # we wrap the result with value(...) as the

@@ -73,7 +73,7 @@ class _MatrixConstraintData(IConstraint):
     # to avoid building the body expression
     #
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         # don't mask an exception in the terms
         # property method
         exception = _type_check_exception_arg(self, exception)
@@ -442,7 +442,7 @@ class matrix_constraint(constraint_tuple):
         assert not equality
         self._equality.fill(False)
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Compute the value of the body of this constraint"""
         exception = _type_check_exception_arg(self, exception)
         if self.x is None:

@@ -328,7 +328,7 @@ class BooleanConstant(BooleanValue):
     def __bool__(self):
         return self.value
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Return the constant value"""
         exception = _type_check_exception_arg(self, exception)
         return self.value

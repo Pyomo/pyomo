@@ -10,7 +10,7 @@
 import logging
 import sys
 import types
-from typing import TypeVar
+from typing import SupportsFloat, TypeVar
 
 from math import fabs
 from weakref import ref as weakref_ref
@@ -47,6 +47,7 @@ from pyomo.core.base.block import BlockData
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
 from pyomo.core.expr.expr_common import ExpressionType
+from pyomo.core.expr.numvalue import NumericValue
 
 logger = logging.getLogger('pyomo.gdp')
 
@@ -102,7 +103,11 @@ class AutoLinkedBinaryVar(ScalarVar):
             bool_val, skip_validation, _propagate_value=False
         )
 
-    def fix(self, value=NOTSET, skip_validation=False):
+    def fix(
+        self,
+        value: SupportsFloat | NumericValue | None | type[NOTSET] = NOTSET,
+        skip_validation=False,
+    ):
         super().fix(value, skip_validation)
         bool_var = self.get_associated_boolean()
         if not bool_var.is_fixed():
@@ -175,7 +180,7 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
             val, skip_validation, _propagate_value=False
         )
 
-    def fix(self, value=NOTSET, skip_validation=False):
+    def fix(self, value: bool | None | type[NOTSET] = NOTSET, skip_validation=False):
         super().fix(value, skip_validation)
         bin_var = self.get_associated_binary()
         if not bin_var.is_fixed():

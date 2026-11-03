@@ -176,7 +176,7 @@ class ConstraintData(ActiveComponentData):
         if expr is not None:
             self.set_value(expr)
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Compute the value of the body of this constraint."""
         exception = _type_check_exception_arg(self, exception)
         body = self.to_bounded_expression()[1]

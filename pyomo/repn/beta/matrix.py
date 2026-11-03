@@ -467,7 +467,7 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
     # possible
     #
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """
         Compute the value of the body of this constraint.
         """

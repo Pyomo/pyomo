@@ -129,7 +129,7 @@ class _MatrixConstraintData(ConstraintData):
     # possible
     #
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Compute the value of the body of this constraint."""
         exception = _type_check_exception_arg(self, exception)
         comp = self.parent_component()

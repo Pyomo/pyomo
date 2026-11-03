@@ -218,7 +218,7 @@ class ParamData(ComponentData, NumericValue):
             self._value = old_value
             raise
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """
         Return the value of this object.
         """
@@ -1022,7 +1022,7 @@ class ScalarParam(ParamData, Param):
     # up both the Component and Data base classes.
     #
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """
         Return the value of this parameter.
         """

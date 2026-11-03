@@ -6,6 +6,8 @@
 # Solutions of Sandia, LLC, the U.S. Government retains certain rights in this
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
+from typing import SupportsFloat
+
 from pyomo.common.modeling import NOTSET
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.expr_common import _type_check_exception_arg
@@ -122,7 +124,7 @@ class IVariable(ICategorizedObject, NumericValue):
     def ub(self, val):
         self.upper = val
 
-    def fix(self, value=NOTSET):
+    def fix(self, value: SupportsFloat | None | type[NOTSET] = NOTSET):
         """
         Fix the variable. Sets the fixed indicator to
         :const:`True`. An optional value argument will
@@ -269,7 +271,7 @@ class IVariable(ICategorizedObject, NumericValue):
             return 0
         return 1
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Return the value of this variable."""
         exception = _type_check_exception_arg(self, exception)
         if exception and (self.value is None):

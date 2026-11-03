@@ -12,7 +12,7 @@ import logging
 import sys
 from pyomo.common.pyomo_typing import copy_signature, overload
 from weakref import ref as weakref_ref
-from typing import TypeVar, Type, Any as typingAny
+from typing import SupportsFloat, TypeVar, Type, Any as typingAny
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
@@ -196,7 +196,7 @@ class VarData(ComponentData, NumericValue):
     def value(self, val):
         self.set_value(val)
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Compute the value of this variable."""
         exception = _type_check_exception_arg(self, exception)
         return self._value
@@ -380,7 +380,11 @@ class VarData(ComponentData, NumericValue):
         # component if not scalar
         return self.parent_component()._units
 
-    def fix(self, value=NOTSET, skip_validation=False):
+    def fix(
+        self,
+        value: SupportsFloat | NumericValue | None | type[NOTSET] = NOTSET,
+        skip_validation=False,
+    ):
         """Fix the value of this variable (treat as nonvariable)
 
         This sets the :attr:`fixed` indicator to True.  If ``value`` is
@@ -900,7 +904,11 @@ class IndexedVar(Var):
         for vardata in self.values():
             vardata.upper = val
 
-    def fix(self, value=NOTSET, skip_validation=False):
+    def fix(
+        self,
+        value: SupportsFloat | NumericValue | None | type[NOTSET] = NOTSET,
+        skip_validation=False,
+    ):
         """Fix all variables in this :class:`IndexedVar` (treat as nonvariable)
 
         This sets the :attr:`fixed` indicator to True for every variable
