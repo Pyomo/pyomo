@@ -781,11 +781,11 @@ class TestGDPopt(unittest.TestCase):
                 eight_process,
                 mip_solver=mip_solver,
                 nlp_solver=nlp_solver,
-                time_limit=1,
+                time_limit=0.25,
             )
             self.assertIn(
                 "GDPopt exiting--Did not converge bounds before "
-                "time limit of 1 seconds.",
+                "time limit of 0.25 seconds.",
                 output.getvalue().strip(),
             )
         self.assertEqual(

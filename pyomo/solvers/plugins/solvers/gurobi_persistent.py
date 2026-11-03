@@ -170,9 +170,9 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         """
         if attr in {'Sense', 'RHS', 'ConstrName'}:
             raise ValueError(
-                'Linear constraint attr {0} cannot be set with'
-                + ' the set_linear_constraint_attr method. Please use'
-                + ' the remove_constraint and add_constraint methods.'.format(attr)
+                f'Linear constraint attr {attr} cannot be set with'
+                ' the set_linear_constraint_attr method. Please use'
+                ' the remove_constraint and add_constraint methods.'
             )
         if self._version_major < 7:
             if (
@@ -190,7 +190,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.var.VarData
+        var: pyomo.core.base.var.VarData
             The pyomo var for which the corresponding gurobi var attribute
             should be modified.
         attr: str
@@ -208,9 +208,9 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         """
         if attr in {'LB', 'UB', 'VType', 'VarName'}:
             raise ValueError(
-                'Var attr {0} cannot be set with'
-                + ' the set_var_attr method. Please use'
-                + ' the update_var method.'.format(attr)
+                f'Var attr {attr} cannot be set with'
+                ' the set_var_attr method. Please use'
+                ' the update_var method.'
             )
         if attr == 'Obj':
             raise ValueError(
