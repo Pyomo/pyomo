@@ -319,7 +319,8 @@ class TestGDPoptUnit(unittest.TestCase):
         solver.pyomo_results = SolverResults()
         solver.pyomo_results.problem.sense = minimize
 
-        # With the guard inside the abs(), this was a division by zero.
+        # primal bound is -1e-10, so adding the 1e-10 guard before taking
+        # abs() would divide by zero.
         solver.LB, solver.UB = -1.0 - 1e-10, -1e-10
         self.assertAlmostEqual(solver.relative_gap(), 1 / 2e-10, delta=1)
 
