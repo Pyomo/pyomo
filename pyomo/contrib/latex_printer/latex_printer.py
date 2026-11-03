@@ -74,7 +74,7 @@ _GENERAL = ExprType.GENERAL
 
 from pyomo.common.errors import InfeasibleConstraintException
 
-from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.numeric_types import native_numeric_types
 
 set_operator_map = {
     '|': r' \cup ',
@@ -424,8 +424,18 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
             NPV_SumExpression: handle_sumExpression_node,
             NPV_DivisionExpression: handle_division_node,
         }
-        if numpy_available:
-            self._operator_handles[np.float64] = handle_num_node
+        # Register the numeric handler for every type that Pyomo
+        # treats as a native numeric type.  In addition to the native
+        # Python types (int, float), this includes all of the NumPy
+        # scalar integer and floating point types (registered in
+        # native_numeric_types when NumPy is loaded; see
+        # pyomo.common.dependencies) and any additional types that
+        # users register with RegisterNumericType().  All of these
+        # types can appear as constant leaf nodes in Pyomo
+        # expressions (e.g., when models are built from pandas /
+        # NumPy data).
+        for numeric_type in native_numeric_types:
+            self._operator_handles.setdefault(numeric_type, handle_num_node)
 
     def exitNode(self, node, data):
         try:

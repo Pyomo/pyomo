@@ -15,6 +15,7 @@ import pyomo.core.tests.examples.pmedian_concrete as pmedian_concrete
 import pyomo.environ as pyo
 
 from pyomo.contrib.latex_printer import latex_printer
+from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.collections.component_map import ComponentMap
 from pyomo.environ import (
@@ -292,6 +293,60 @@ class TestLatexPrinter(unittest.TestCase):
         """)
 
         self.assertEqual('\n' + pstr + '\n', bstr)
+
+    @unittest.skipUnless(numpy_available, "numpy is not available")
+    def test_latexPrinter_numpyConstants(self):
+        # Regression test for #3325: NumPy scalar constants (e.g.,
+        # from models built using pandas data) are valid constant
+        # leaf nodes in Pyomo expressions and should be printed as
+        # numbers instead of raising a DeveloperError.
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+
+        # numpy integer constant as a standalone term in a sum
+        m.con_int = pyo.Constraint(expr=m.x + np.int64(7) >= 1)
+        pstr = latex_printer(m.con_int)
+        bstr = dedent(r"""
+        \begin{equation} 
+             1 \leq x + 7 
+        \end{equation} 
+        """)
+        self.assertEqual('\n' + pstr + '\n', bstr)
+
+        # numpy float constant as a standalone term in a sum
+        m.con_float = pyo.Constraint(expr=m.y + np.float32(1.5) <= 10)
+        pstr = latex_printer(m.con_float)
+        bstr = dedent(r"""
+        \begin{equation} 
+             y + 1.5 \leq 10 
+        \end{equation} 
+        """)
+        self.assertEqual('\n' + pstr + '\n', bstr)
+
+        # numpy integer constant as an exponent
+        m.con_pow = pyo.Constraint(expr=m.x ** np.int64(2) <= 4)
+        pstr = latex_printer(m.con_pow)
+        bstr = dedent(r"""
+        \begin{equation} 
+             x^{2} \leq 4 
+        \end{equation} 
+        """)
+        self.assertEqual('\n' + pstr + '\n', bstr)
+
+        # the remaining NumPy scalar numeric types should also print
+        for numeric_type in (
+            np.int8,
+            np.int16,
+            np.int32,
+            np.uint8,
+            np.uint64,
+            np.float16,
+            np.float64,
+        ):
+            m.con = pyo.Constraint(expr=m.x + numeric_type(3) >= 0)
+            self.assertIn('x + 3', latex_printer(m.con))
+            del m.con
 
     def test_latexPrinter_simpleExpression(self):
         m = generate_model()
