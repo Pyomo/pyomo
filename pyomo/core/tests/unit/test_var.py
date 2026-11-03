@@ -879,6 +879,55 @@ class TestArrayVar(TestSimpleVar):
         m.x[3]
         self.assertIs(m.x[3].domain, NonNegativeReals)
 
+    def test_var_domain_setter_future_data_dict(self):
+        # Same as test_var_domain_setter_future_data, but assigning a
+        # dict of domains: future data for indices listed in the dict
+        # are created with the new domains, while accessing an index
+        # that is not listed raises KeyError -- exactly as it does
+        # when the same dict is passed at construction time (#3326).
+        m = ConcreteModel()
+        m.x = Var(Any, domain=NonNegativeIntegers, dense=False)
+        m.x[1]
+        self.assertIs(m.x[1].domain, NonNegativeIntegers)
+        m.x.domain = {2: Integers, 3: Reals}
+        # Existing data for unlisted indices are not touched ...
+        self.assertIs(m.x[1].domain, NonNegativeIntegers)
+        # ... future data for listed indices get the new domains ...
+        self.assertIs(m.x[2].domain, Integers)
+        self.assertIs(m.x[3].domain, Reals)
+        # ... and an unlisted index has no domain rule anymore
+        with self.assertRaises(KeyError):
+            m.x[4]
+        # Construction with the same dict behaves identically:
+        m2 = ConcreteModel()
+        m2.x = Var(Any, domain={2: Integers, 3: Reals}, dense=False)
+        self.assertIs(m2.x[2].domain, Integers)
+        self.assertIs(m2.x[3].domain, Reals)
+        with self.assertRaises(KeyError):
+            m2.x[4]
+
+    def test_var_domain_setter_failure_keeps_old_rule(self):
+        # If a domain assignment fails while updating the existing
+        # VarData, the assignment must not take effect at all: the
+        # stored domain rule stays the old one, so VarData created
+        # after the failed assignment still get the old domain
+        # (#3326).
+        m = ConcreteModel()
+        m.x = Var(Any, domain=NonNegativeIntegers, dense=False)
+        m.x[1]
+        self.assertIs(m.x[1].domain, NonNegativeIntegers)
+        with (
+            LoggingIntercept(),
+            self.assertRaisesRegex(
+                TypeError,
+                'Cannot create a Set from data that does not support ' '__contains__',
+            ),
+        ):
+            m.x.domain = {1: None}
+        self.assertIs(m.x[1].domain, NonNegativeIntegers)
+        m.x[2]
+        self.assertIs(m.x[2].domain, NonNegativeIntegers)
+
 
 class TestVarList(PyomoModel):
     def setUp(self):
