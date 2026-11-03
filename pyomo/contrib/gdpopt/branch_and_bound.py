@@ -466,7 +466,7 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
             return discrete_solver, discrete_solver_args
 
     def _apply_rnGDP_subproblem_time_limit(self, solver_name, solver_args, config):
-        if config.time_limit is not None and solver_name == 'gams':
+        if config.time_limit and solver_name == 'gams':
             elapsed = get_main_elapsed_time(self.timing)
             remaining = max(config.time_limit - elapsed, 1)
             solver_args['add_options'] = solver_args.get('add_options', [])

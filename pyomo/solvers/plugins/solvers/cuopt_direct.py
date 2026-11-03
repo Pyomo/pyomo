@@ -34,7 +34,7 @@ def _get_cuopt_version(cuopt, avail):
     if not avail:
         return
     CUOPTDirect._version = tuple(cuopt.__version__.split('.'))
-    CUOPTDirect._name = "cuOpt %s.%s%s" % CUOPTDirect._version
+    CUOPTDirect._name = "cuOpt %s" % (cuopt.__version__,)
 
 
 # Note: catch RuntimeError as the base for CUDARuntimeError, which can

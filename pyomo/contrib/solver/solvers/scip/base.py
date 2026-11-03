@@ -46,6 +46,7 @@ from pyomo.core.expr.relational_expr import (
     EqualityExpression,
     InequalityExpression,
     RangedExpression,
+    TrivialRelationalExpression,
 )
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.gdp.disjunct import AutoLinkedBinaryVar
@@ -218,6 +219,12 @@ def _handle_inequality(node, data, opt, visitor):
     return data[0] <= data[1]
 
 
+def _handle_trivial_inequality(node, data, opt, visitor):
+    # Keep the constant relation symbolic so that PySCIPOpt creates a
+    # constraint instead of Python evaluating it to a bool.
+    return scip.Expr() + data[0] <= data[1]
+
+
 def _handle_named_expression(node, data, opt, visitor):
     return data[0]
 
@@ -244,6 +251,7 @@ _operator_map = {
     EqualityExpression: _handle_equality,
     RangedExpression: _handle_ranged,
     InequalityExpression: _handle_inequality,
+    TrivialRelationalExpression: _handle_trivial_inequality,
     ScalarExpression: _handle_named_expression,
     ExpressionData: _handle_named_expression,
     VarData: _handle_var,
