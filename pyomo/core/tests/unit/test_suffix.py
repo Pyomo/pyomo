@@ -151,6 +151,22 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(m.suffix_generator_fcn[m.y[2]], 100)
         self.assertEqual(m.suffix_generator_fcn[m.y[3]], 100)
 
+    def test_suffix_scalar_initialize(self):
+        # Regression test for #3323: a scalar initialize is a single
+        # value, stored under the None key (equivalent to constructing
+        # the Suffix and then assigning suffix[None] = value)
+        m = ConcreteModel()
+        m.bigM = Suffix(direction=Suffix.LOCAL, initialize=1000)
+        self.assertEqual(len(m.bigM), 1)
+        self.assertIn(None, m.bigM)
+        self.assertEqual(m.bigM[None], 1000)
+
+        # The explicit mapping form of the same value behaves the same
+        # (and mapping-based initialization is otherwise unchanged)
+        m.other = Suffix(direction=Suffix.LOCAL, initialize={None: 2000})
+        self.assertEqual(len(m.other), 1)
+        self.assertEqual(m.other[None], 2000)
+
     # test import_enabled
     def test_import_enabled(self):
         model = ConcreteModel()

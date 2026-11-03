@@ -7,6 +7,9 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+from collections.abc import Iterable
+from collections.abc import Mapping
+
 import logging
 import operator
 
@@ -247,7 +250,19 @@ class Suffix(ComponentMap, ActiveComponent):
                 for index in rule.indices():
                     self.set_value(index, rule(block, index), expand=True)
             else:
-                self.update_values(rule(self.parent_block(), None), expand=True)
+                # The rule does not contain explicit indices: calling
+                # it returns either a mapping (or an iterable of
+                # (component, value) pairs) holding the suffix data,
+                # or a single scalar value.  A scalar value is stored
+                # as the value for the None key (i.e., the suffix
+                # value that applies to the entire block).
+                data = rule(self.parent_block(), None)
+                if isinstance(data, Mapping) or (
+                    isinstance(data, Iterable) and not isinstance(data, str)
+                ):
+                    self.update_values(data, expand=True)
+                else:
+                    self.set_value(None, data, expand=True)
         timer.report()
 
     @property
@@ -316,7 +331,7 @@ class Suffix(ComponentMap, ActiveComponent):
         behavior is disabled and a reference to the array component
         itself is kept.
         """
-        if expand and component.is_indexed():
+        if expand and component is not None and component.is_indexed():
             for component_ in component.values():
                 self[component_] = value
         else:
@@ -333,7 +348,7 @@ class Suffix(ComponentMap, ActiveComponent):
         """
         Clears suffix information for a component.
         """
-        if expand and component.is_indexed():
+        if expand and component is not None and component.is_indexed():
             for component_ in component.values():
                 self.pop(component_, None)
         else:
