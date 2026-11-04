@@ -2009,7 +2009,7 @@ class TestExceptional(unittest.TestCase):
         self.assertEqual(len(comps_list), 1)
         self.assertEqual(len(comps_list[0]), len(m.s2) - 1)
 
-        for idx in m.b:
+        for idx in list(m.b.keys()):
             del m.b[idx]
 
         with self.assertRaises(StopIteration):
