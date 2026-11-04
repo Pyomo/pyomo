@@ -68,6 +68,7 @@ from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
 import pyomo.contrib.parmest.utils as utils
 import pyomo.contrib.parmest.graphics as graphics
+from pyomo.contrib.parmest.utils.model_utils import get_meas_error_covariance_matrix_inv
 from pyomo.dae import ContinuousSet
 
 from pyomo.common.deprecation import deprecated
@@ -159,123 +160,6 @@ def SSE_weighted(model):
             'One or more values are missing from "measurement_error". All values of '
             'the measurement errors are required for the "SSE_weighted" objective.'
         )
-
-
-def _build_meas_error_covariance_matrix(model, estimated_var=None):
-    """
-    Builds the full measurement-error covariance matrix
-
-    Note: The code does not automatically build the full covariance matrix
-    It only places whatever covariances the user explicitly supplies
-    Therefore, for correlation in time, shared timepoints, or other types of
-    correlation, the user must provide all the desired covariance terms
-    The diagonal elements can be constructed automatically or the standard
-    deviations can be specified by the user. The standard deviations may be
-    constant or depend on the value (i.e., data) of the measured or input
-    variables (e.g., be proportional to them)
-
-    Parameters
-    ----------
-    model : ConcreteModel
-        Annotated Pyomo model
-    estimated_var: float or int, optional
-        Value of the estimated variance of the measurement error
-        in cases where the user does not supply the
-        measurement-error standard deviation
-
-    Returns
-    -------
-    Sigma_y: numpy.ndarray
-        Full measurement-error covariance matrix
-    """
-    # get the output variables
-    outputs = list(model.experiment_outputs.keys())
-    outputs_name = [y_hat.name for y_hat in outputs]
-    outputs_index = {y_hat_name: i for i, y_hat_name in enumerate(outputs_name)}
-
-    number_outputs = len(outputs)
-
-    # define the measurement-error covariance matrix
-    Sigma_y = np.zeros((number_outputs, number_outputs))
-
-    if hasattr(model, "measurement_error"):
-        all_known_errors = all(
-            model.measurement_error[y_hat] is not None
-            for y_hat in model.experiment_outputs
-        )
-
-        # fill the leading-diagonal elements from the standard deviation of
-        # the measurement errors
-        for y_hat in outputs:
-            i = outputs_index[y_hat.name]
-
-            if all_known_errors:
-                standard_dev = model.measurement_error[y_hat]
-                Sigma_y[i, i] = standard_dev**2
-            else:
-                Sigma_y[i, i] = estimated_var
-
-        # fill the off-diagonal elements from covariance entries
-        # supplied by the user
-        for key, err_cov in model.measurement_error.items():
-            if isinstance(key, tuple) and len(key) == 2:
-                yi, yj = key
-                if yi.name not in outputs_name or yj.name not in outputs_name:
-                    raise ValueError(
-                        "Measurement-error covariance must be defined only between "
-                        "experiment output variables."
-                    )
-
-                # get the indices of yi and yj
-                i = outputs_index[yi.name]
-                j = outputs_index[yj.name]
-
-                # update the measurement-error covariance matrix which
-                # is a symmetric matrix
-                Sigma_y[i, j] = err_cov
-                Sigma_y[j, i] = err_cov
-            elif not isinstance(key, tuple) and not hasattr(key, "name"):
-                raise TypeError(
-                    "Expected a tuple of two measured variables when specifying a "
-                    "measurement-error covariance, e.g., "
-                    "measurement_error[(y1, y2)] = covariance."
-                )
-
-    return Sigma_y
-
-
-def get_meas_error_covariance_matrix_inv(model, estimated_var=None):
-    """
-    Computes the inverse of the measurement-error covariance matrix
-
-    Parameters
-    ----------
-    model : ConcreteModel
-        Annotated Pyomo model
-    estimated_var: float or int, optional
-        Value of the estimated variance of the measurement error
-        in cases where the user does not supply the
-        measurement-error standard deviation
-
-    Returns
-    -------
-    Sigma_y_inv: numpy.ndarray
-        Inverse of the measurement-error covariance matrix
-    """
-    # get the measurement-error covariance matrix
-    Sigma_y = _build_meas_error_covariance_matrix(model, estimated_var)
-
-    # compute the inverse of the measurement-error covariance matrix
-    try:
-        Sigma_y_inv = np.linalg.inv(Sigma_y)
-    except np.linalg.LinAlgError:
-        Sigma_y_inv = np.linalg.pinv(Sigma_y)
-        logger.warning(
-            "The measurement-error covariance matrix is singular. "
-            "Using pseudo-inverse instead."
-        )
-
-    return Sigma_y_inv
 
 
 def _validate_prior_FIM(prior_FIM, require_psd=True):
