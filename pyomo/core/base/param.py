@@ -10,7 +10,6 @@
 from __future__ import annotations
 import collections
 import sys
-import types
 import logging
 from typing import Union, Type
 from weakref import ref as weakref_ref
@@ -33,7 +32,7 @@ from pyomo.core.base.indexed_component import (
     IndexedComponent_NDArrayMixin,
 )
 from pyomo.core.base.initializer import Initializer, PartialInitializer
-from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
+from pyomo.core.base.misc import apply_parameterized_indexed_rule
 from pyomo.core.base.set import Reals, _AnySet, SetInitializer
 from pyomo.core.base.units_container import units
 from pyomo.core.expr import GetItemExpression
@@ -692,11 +691,11 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         # in construct().  But if it was a function / constant, then we
         # should use it to initialize this value.
         if self._rule is not None and not self._rule.contains_indices():
-            val = self._rule(self, index)
+            val = self._rule(self.parent_block(), index)
             _check_value_domain = True
             _store_value = True
         elif self._default is not None:
-            val = self._default(self, index)
+            val = self._default(self.parent_block(), index)
             _check_value_domain = not self._default.constant()
             _store_value = self._mutable
         else:
