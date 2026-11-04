@@ -40,6 +40,8 @@ from pyomo.environ import (
     Objective,
 )
 from pyomo.opt import WriterFactory, SolverFactory
+import subprocess
+import sys
 
 try:
     import docplex.cp.model as cp
@@ -49,6 +51,26 @@ except:
     docplex_available = False
 
 cpoptimizer_available = Executable('cpoptimizer').available()
+
+
+@unittest.skipIf(not docplex_available, "docplex is not available")
+class TestOptionDocplexDependency(unittest.TestCase):
+    def test_import_finalizes_when_docplex_already_imported(self):
+        """
+        If docplex is already imported when something from pyomo.environ (that will
+        go and register everything) is imported, the docplex_writer module needs
+        to finalize all the data structures cleanly.
+        """
+        rc = subprocess.run(
+            [
+                sys.executable,
+                '-c',
+                'import docplex.cp.model; from pyomo.environ import Any; print("OK")',
+            ],
+            capture_output=True,
+        )
+        self.assertEqual(rc.returncode, 0)
+        self.assertEqual(rc.stdout.rstrip(b"\r\n"), b"OK")
 
 
 @unittest.skipIf(not docplex_available, "docplex is not available")

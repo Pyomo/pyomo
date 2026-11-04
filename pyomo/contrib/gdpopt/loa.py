@@ -74,6 +74,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
     _add_tolerance_configs(CONFIG)
 
     algorithm = 'LOA'
+    _requires_model_convexity = True
 
     # Override solve() to customize the docstring for this solver
     @document_kwargs_from_configdict(CONFIG, doc=_GDPoptAlgorithm.solve.__doc__)
