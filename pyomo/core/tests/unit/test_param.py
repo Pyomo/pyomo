@@ -2573,6 +2573,26 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         self.assertEqual(m.p[2].value, 100)
         self.assertEqual(len(m.p._data), 3)
 
+    def test_dynamic_rules_receive_owning_block(self):
+        # Callbacks evaluated on demand (a default= callback, or an
+        # initialize= rule over a non-finite index) must receive the
+        # owning block (not the Param) so they can reference sibling
+        # components. Use a sub-block to distinguish the owning block
+        # from the top-level model
+        m = ConcreteModel()
+        m.b = Block()
+        m.b.offset = Param(initialize=100)
+
+        m.b.p = Param(Integers, initialize={0: 1}, default=lambda b, i: b.offset + i)
+        self.assertEqual(m.b.p[0], 1)
+        self.assertEqual(m.b.p[5], 105)
+
+        m.b.q = Param(Integers, mutable=True, default=lambda b, i: b.offset + i)
+        self.assertEqual(value(m.b.q[5]), 105)
+
+        m.b.r = Param(Integers, initialize=lambda b, i: b.offset * i)
+        self.assertEqual(m.b.r[5], 500)
+
     def test_immutable_dynamic_indexing_sets(self):
         m = ConcreteModel()
         m.I = Set(initialize=[0, 2])
