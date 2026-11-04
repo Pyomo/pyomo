@@ -1284,7 +1284,7 @@ class UncertaintySetList(MutableSequence):
 
 
 class BoxSet(UncertaintySet):
-    """
+    r"""
     A hyperrectangle (or box).
 
     Parameters
@@ -1298,16 +1298,16 @@ class BoxSet(UncertaintySet):
 
     .. math::
 
-        \\left\\{
-            q \\in \\mathbb{R}^n\\,|
-            \\,q^\\text{L} \\leq q \\leq q^\\text{U}
-        \\right\\}
+        \left\{
+            q \in \mathbb{R}^n\,|
+            \,q^\text{L} \leq q \leq q^\text{U}
+        \right\},
 
     in which
-    :math:`q^\\text{L} \\in \\mathbb{R}^n` refers to
-    ``numpy.array(bounds)[:, 0]``,
+    :math:`q^\text{L} \in \mathbb{R}^n` refers to
+    ``numpy.array(bounds)[:, 0]``
     and
-    :math:`q^\\text{U} \\in \\mathbb{R}^n` refers to
+    :math:`q^\text{U} \in \mathbb{R}^n` refers to
     ``numpy.array(bounds)[:, 1]``.
 
     Examples
@@ -1467,7 +1467,7 @@ class BoxSet(UncertaintySet):
 
 
 class CardinalitySet(UncertaintySet):
-    """
+    r"""
     A cardinality-constrained (i.e., "gamma") set.
 
     Parameters
@@ -1494,48 +1494,48 @@ class CardinalitySet(UncertaintySet):
 
     .. math::
 
-        \\left\\{ q \\in \\mathbb{R}^n\\,\\middle|
-             \\,\\exists\\, \\xi^+, \\xi^- \\in [0, 1]^n \\,:\\,
-             \\left[
-                 \\begin{array}{l}
-                    q = q^0 + \\hat{q}^+ \\circ \\xi^+
-                        - \\hat{q}^- \\circ \\xi^- \\\\
-                    \\displaystyle \\sum_{i=1}^n (\\xi_i^+ + \\xi_i^-)
-                        \\leq \\Gamma \\\\
-                    \\xi_i^+ = 0 \\quad\\forall\\,i :
-                        \\hat{q}_i^+ = 0 \\\\
-                    \\xi_i^- = 0 \\quad\\forall\\,i :
-                        \\hat{q}_i^- = 0
-                 \\end{array}
-             \\right]
-        \\right\\}
+        \left\{ q \in \mathbb{R}^n\,\middle|
+             \,\exists\, \xi^+, \xi^- \in [0, 1]^n \,:\,
+             \left[
+                 \begin{array}{l}
+                    q = q^0 + \hat{q}^+ \circ \xi^+
+                        - \hat{q}^- \circ \xi^- \\
+                    \displaystyle \sum_{i=1}^n (\xi_i^+ + \xi_i^-)
+                        \leq \Gamma \\
+                    \xi_i^+ = 0 \quad\forall\,i :
+                        \hat{q}_i^+ = 0 \\
+                    \xi_i^- = 0 \quad\forall\,i :
+                        \hat{q}_i^- = 0
+                 \end{array}
+             \right]
+        \right\},
 
     in which
-    :math:`q^\\text{0} \\in \\mathbb{R}^n` refers to ``origin``,
-    the quantity :math:`\\hat{q}^+ \\in \\mathbb{R}_{+}^n`
+    :math:`q^\text{0} \in \mathbb{R}^n` refers to ``origin``,
+    the quantity :math:`\hat{q}^+ \in \mathbb{R}_{+}^n`
     refers to ``positive_deviation``,
-    the quantity :math:`\\hat{q}^- \\in \\mathbb{R}_{+}^n`
+    the quantity :math:`\hat{q}^- \in \mathbb{R}_{+}^n`
     refers to ``negative_deviation``,
     and
-    :math:`\\Gamma \\in [0, n]` refers to ``gamma``.
+    :math:`\Gamma \in [0, n]` refers to ``gamma``.
 
     .. note::
 
-       If :math:`\\hat{q}^+ = \\hat{q}^-`,
+       If :math:`\hat{q}^+ = \hat{q}^-`,
        then this set is mathematically equal to
 
        .. math::
 
-           \\left\\{ q \\in \\mathbb{R}^n\\,\\middle|
-                \\,\\exists\\, \\delta \\in [-1, 1]^n \\,:\\,
-                \\left[
-                    \\begin{array}{l}
-                       q = q^0 + \\hat{q}^+ \\circ \\delta \\\\
-                       \\displaystyle \\sum_{i=1}^n |\\delta_i|
-                           \\leq \\Gamma
-                    \\end{array}
-                \\right]
-           \\right\\},
+           \left\{ q \in \mathbb{R}^n\,\middle|
+                \,\exists\, \delta \in [-1, 1]^n \,:\,
+                \left[
+                    \begin{array}{l}
+                       q = q^0 + \hat{q}^+ \circ \delta \\
+                       \displaystyle \sum_{i=1}^n |\delta_i|
+                           \leq \Gamma
+                    \end{array}
+                \right]
+           \right\},
 
        the cardinality-constrained set implicitly defined
        in the popular robust optimization work by Bertsimas and Sim
@@ -1910,7 +1910,7 @@ class CardinalitySet(UncertaintySet):
 
 
 class PolyhedralSet(UncertaintySet):
-    """
+    r"""
     A bounded convex polyhedron or polytope.
 
     Parameters
@@ -1931,16 +1931,16 @@ class PolyhedralSet(UncertaintySet):
 
     .. math::
 
-        \\left\\{
-            q \\in \\mathbb{R}^n\\,
-            \\middle| \\, A q \\leq b
-        \\right\\}
+        \left\{
+            q \in \mathbb{R}^n\,
+            \middle| \, A q \leq b
+        \right\},
 
     in which
-    :math:`A \\in \\mathbb{R}^{m \\times n}` refers to
-    ``lhs_coefficients_mat``,
+    :math:`A \in \mathbb{R}^{m \times n}` refers to
+    ``lhs_coefficients_mat``
     and
-    :math:`b \\in \\mathbb{R}^m` refers to ``rhs_vec``.
+    :math:`b \in \mathbb{R}^m` refers to ``rhs_vec``.
 
     Examples
     --------
@@ -2148,7 +2148,7 @@ class PolyhedralSet(UncertaintySet):
 
 
 class BudgetSet(UncertaintySet):
-    """
+    r"""
     A budget set.
 
     Parameters
@@ -2173,21 +2173,21 @@ class BudgetSet(UncertaintySet):
 
     .. math::
 
-        \\left\\{
-            q \\in \\mathbb{R}^n\\,\\middle|
-            \\begin{pmatrix} B \\\\ -I \\end{pmatrix} q
-            \\leq \\begin{pmatrix} b + Bq^0 \\\\ -q^0 \\end{pmatrix}
-        \\right\\}
+        \left\{
+            q \in \mathbb{R}^n\,\middle|
+            \begin{pmatrix} B \\ -I \end{pmatrix} q
+            \leq \begin{pmatrix} b + Bq^0 \\ -q^0 \end{pmatrix}
+        \right\},
 
     in which
-    :math:`B \\in \\{0, 1\\}^{\\ell \\times n}` refers to
+    :math:`B \in \{0, 1\}^{\ell \times n}` refers to
     ``budget_membership_mat``,
     the quantity
-    :math:`I` denotes the :math:`n \\times n` identity matrix,
+    :math:`I` denotes the :math:`n \times n` identity matrix,
     the quantity
-    :math:`b \\in \\mathbb{R}_{+}^\\ell` refers to ``rhs_vec``,
+    :math:`b \in \mathbb{R}_{+}^\ell` refers to ``rhs_vec``,
     and
-    :math:`q^0 \\in \\mathbb{R}^n` refers to ``origin``.
+    :math:`q^0 \in \mathbb{R}^n` refers to ``origin``.
 
     Examples
     --------
@@ -2509,7 +2509,7 @@ class BudgetSet(UncertaintySet):
 
 
 class FactorModelSet(UncertaintySet):
-    """
+    r"""
     A factor model (i.e., "net-alpha" model) set.
 
     Parameters
@@ -2540,26 +2540,26 @@ class FactorModelSet(UncertaintySet):
 
     .. math::
 
-        \\left\\{ q \\in \\mathbb{R}^n\\,
-            \\middle|
-             \\,
-            \\exists\\, \\xi \\in [-1, 1]^F \\,:\\,
-            \\left[
-            \\begin{array}{l}
-                q = q^0 + \\Psi \\xi \\\\
-                \\displaystyle
-                    \\bigg| \\sum_{i=1}^n \\xi_i \\bigg|
-                    \\leq \\beta F
-            \\end{array}
-            \\right]
-        \\right\\}
+        \left\{ q \in \mathbb{R}^n\,
+            \middle|
+             \,
+            \exists\, \xi \in [-1, 1]^F \,:\,
+            \left[
+            \begin{array}{l}
+                q = q^0 + \Psi \xi \\
+                \displaystyle
+                    \bigg| \sum_{i=1}^n \xi_i \bigg|
+                    \leq \beta F
+            \end{array}
+            \right]
+        \right\},
 
     in which
-    :math:`q^\\text{0} \\in \\mathbb{R}^n` refers to ``origin``,
+    :math:`q^\text{0} \in \mathbb{R}^n` refers to ``origin``,
     the quantity :math:`F` refers to ``number_of_factors``,
-    the quantity :math:`\\Psi \\in \\mathbb{R}^{n \\times F}`
+    the quantity :math:`\Psi \in \mathbb{R}^{n \times F}`
     refers to ``psi_mat``,
-    and :math:`\\beta \\in [0, 1]` refers to ``beta``.
+    and :math:`\beta \in [0, 1]` refers to ``beta``.
 
 
     Examples
@@ -2927,7 +2927,7 @@ class FactorModelSet(UncertaintySet):
 
 
 class AxisAlignedEllipsoidalSet(UncertaintySet):
-    """
+    r"""
     An axis-aligned ellipsoidal region.
 
     Parameters
@@ -2947,22 +2947,22 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
     .. math::
 
-        \\left\\{
-            q \\in \\mathbb{R}^n\\,
-            \\middle|\\,
-            \\begin{array}{l}
-                \\displaystyle
-                    \\sum_{\\substack{i = 1 \\\\ \\alpha_i > 0}}^n
-                    \\bigg( \\frac{q_i - q_i^0}{\\alpha_i}\\bigg)^2
-                    \\leq 1
-                    \\\\
-                q_i = q_i^0\\quad\\forall\\,i \\,:\\,\\alpha_i = 0
-            \\end{array}
-        \\right\\}
+        \left\{
+            q \in \mathbb{R}^n\,
+            \middle|\,
+            \begin{array}{l}
+                \displaystyle
+                    \sum_{\substack{i = 1 \\ \alpha_i > 0}}^n
+                    \bigg( \frac{q_i - q_i^0}{\alpha_i}\bigg)^2
+                    \leq 1
+                    \\
+                q_i = q_i^0\quad\forall\,i \,:\,\alpha_i = 0
+            \end{array}
+        \right\},
 
     in which
-    :math:`q^0 \\in \\mathbb{R}^n` refers to ``center``,
-    and :math:`\\alpha \\in \\mathbb{R}_{+}^n` refers to
+    :math:`q^0 \in \mathbb{R}^n` refers to ``center``
+    and :math:`\alpha \in \mathbb{R}_{+}^n` refers to
     ``half_lengths``.
 
     Examples
@@ -3162,7 +3162,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
 
 class EllipsoidalSet(UncertaintySet):
-    """
+    r"""
     A general ellipsoidal region.
 
     Parameters
@@ -3193,22 +3193,22 @@ class EllipsoidalSet(UncertaintySet):
 
     .. math::
 
-        \\left\\{
-            q \\in \\mathbb{R}^n\\,|
-            \\,(q - q^0)^\\intercal \\Sigma^{-1}(q - q^0) \\leq s
-        \\right\\}
+        \left\{
+            q \in \mathbb{R}^n\,|
+            \,(q - q^0)^\intercal \Sigma^{-1}(q - q^0) \leq s
+        \right\},
 
     in which
-    :math:`q^0 \\in \\mathbb{R}^n` refers to ``center``,
+    :math:`q^0 \in \mathbb{R}^n` refers to ``center``,
     the quantity
-    :math:`\\Sigma \\in \\mathbb{R}^{n \\times n}`
+    :math:`\Sigma \in \mathbb{R}^{n \times n}`
     refers to ``shape_matrix``,
-    and :math:`s \\geq 0` refers to ``scale``.
+    and :math:`s \geq 0` refers to ``scale``.
 
     The quantity :math:`s` is related to the Gaussian confidence level
-    (``gaussian_conf_lvl``) :math:`p \\in [0, 1)`
-    by :math:`s = \\chi_{n}^2(p)`, in which
-    :math:`\\chi_{n}^2(\\cdot)` is the quantile function
+    (``gaussian_conf_lvl``) :math:`p \in [0, 1)`
+    by :math:`s = \chi_{n}^2(p)`, in which
+    :math:`\chi_{n}^2(\cdot)` is the quantile function
     of the chi-squared distribution with :math:`n` degrees of freedom.
 
     Examples
@@ -3585,7 +3585,7 @@ class EllipsoidalSet(UncertaintySet):
 
 
 class DiscreteScenarioSet(UncertaintySet):
-    """
+    r"""
     A set of finitely many distinct points (or scenarios).
 
     Parameters
@@ -3599,12 +3599,12 @@ class DiscreteScenarioSet(UncertaintySet):
 
     .. math::
 
-        \\left\\{
-                q^1, q^2, \\dots, q^m
-        \\right\\}
+        \left\{
+                q^1, q^2, \dots, q^m
+        \right\},
 
-    in which :math:`q^i \\in \\mathbb{R}^n`
-    refers to ``scenarios[i - 1]`` for :math:`i = 1, 2, \\dots, m`.
+    in which :math:`q^i \in \mathbb{R}^n`
+    refers to ``scenarios[i - 1]`` for :math:`i = 1, 2, \dots, m`.
 
     Examples
     --------
@@ -3790,7 +3790,7 @@ class DiscreteScenarioSet(UncertaintySet):
 
 
 class IntersectionSet(UncertaintySet):
-    """
+    r"""
     An intersection of two or more uncertainty sets.
 
     Parameters
@@ -3807,18 +3807,18 @@ class IntersectionSet(UncertaintySet):
     Notes
     -----
     Given uncertainty sets
-    :math:`\\mathcal{Q}_1,`
-    :math:`\\mathcal{Q}_2,`
-    :math:`\\dots,`
-    :math:`\\mathcal{Q}_m \\subset \\mathbb{R}^{n}`,
+    :math:`\mathcal{Q}_1,`
+    :math:`\mathcal{Q}_2,`
+    :math:`\dots,`
+    :math:`\mathcal{Q}_m \subset \mathbb{R}^{n}`,
     collectively represented by the operand uncertainty sets
     passed through ``args`` or ``kwargs``,
     the :math:`n`-dimensional intersection set is defined by
 
     .. math::
 
-        \\mathcal{Q}_1 \\cap \\mathcal{Q}_2 \\cap \\cdots
-            \\cap \\mathcal{Q}_m.
+        \mathcal{Q}_1 \cap \mathcal{Q}_2 \cap \cdots
+            \cap \mathcal{Q}_m.
 
     Examples
     --------
@@ -4071,7 +4071,7 @@ class IntersectionSet(UncertaintySet):
 
 
 class CartesianProductSet(UncertaintySet):
-    """
+    r"""
     A Cartesian product of one or more uncertainty sets.
 
     The order and identities of the uncertainty sets
@@ -4098,19 +4098,19 @@ class CartesianProductSet(UncertaintySet):
     Notes
     -----
     Given uncertainty sets
-    :math:`\\mathcal{Q}_1 \\subset \\mathbb{R}^{n_1},`
-    :math:`\\mathcal{Q}_2 \\subset \\mathbb{R}^{n_2},`
-    :math:`\\dots,`
-    :math:`\\mathcal{Q}_m \\subset \\mathbb{R}^{n_m}`,
+    :math:`\mathcal{Q}_1 \subset \mathbb{R}^{n_1},`
+    :math:`\mathcal{Q}_2 \subset \mathbb{R}^{n_2},`
+    :math:`\dots,`
+    :math:`\mathcal{Q}_m \subset \mathbb{R}^{n_m}`,
     collectively represented by the operand uncertainty sets
     passed through ``args`` or ``kwargs``,
-    the :math:`(n_1 + n_2 + \\dots + n_m)`-dimensional
+    the :math:`(n_1 + n_2 + \dots + n_m)`-dimensional
     Cartesian product set is defined by
 
     .. math::
 
-        \\mathcal{Q}_1 \\times \\mathcal{Q}_2 \\times \\cdots
-            \\times \\mathcal{Q}_m.
+        \mathcal{Q}_1 \times \mathcal{Q}_2 \times \cdots
+            \times \mathcal{Q}_m.
 
     Examples
     --------
