@@ -14,6 +14,7 @@ from pyomo.core.expr import replace_expressions, identify_mutable_parameters
 from pyomo.core.base.var import IndexedVar, VarData
 from pyomo.core.base.param import IndexedParam, ParamData
 from pyomo.common.collections import ComponentMap
+from pyomo.common.dependencies import numpy as np
 
 from pyomo.environ import ComponentUID
 
