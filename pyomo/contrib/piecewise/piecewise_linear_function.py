@@ -8,6 +8,7 @@
 # ____________________________________________________________________________________
 
 import logging
+from typing import TypeVar
 
 from pyomo.common import DeveloperError
 from pyomo.common.autoslots import AutoSlots
@@ -15,6 +16,7 @@ from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import numpy as np
 from pyomo.common.dependencies.scipy import spatial
 from pyomo.common.enums import IntEnum
+from pyomo.common.pyomo_typing import overload
 from pyomo.contrib.piecewise.piecewise_linear_expression import (
     PiecewiseLinearExpression,
 )
@@ -215,6 +217,14 @@ def _define_handler(handle_map, *key):
     return _wrapper
 
 
+_ScalarPiecewiseLinearFunctionT = TypeVar(
+    '_ScalarPiecewiseLinearFunctionT', bound='ScalarPiecewiseLinearFunction'
+)
+_IndexedPiecewiseLinearFunctionT = TypeVar(
+    '_IndexedPiecewiseLinearFunctionT', bound='IndexedPiecewiseLinearFunction'
+)
+
+
 @ModelComponentFactory.register("Multidimensional piecewise linear function")
 class PiecewiseLinearFunction(Block):
     """A piecewise linear function, which may be defined over an index.
@@ -274,6 +284,26 @@ class PiecewiseLinearFunction(Block):
     # Map 5-tuple of bool to handler: "(f, pts, simplices, linear_funcs,
     # tabular_data) : handler"
     _handlers = {}
+
+    @overload
+    def __new__(
+        cls: type[_ScalarPiecewiseLinearFunctionT], *args, **kwds
+    ) -> _ScalarPiecewiseLinearFunctionT: ...
+
+    @overload
+    def __new__(
+        cls: type[_IndexedPiecewiseLinearFunctionT], *args, **kwds
+    ) -> _IndexedPiecewiseLinearFunctionT: ...
+
+    @overload
+    def __new__(
+        cls: type['PiecewiseLinearFunction'], **kwds
+    ) -> 'ScalarPiecewiseLinearFunction': ...
+
+    @overload
+    def __new__(
+        cls: type['PiecewiseLinearFunction'], index, /, *args, **kwds
+    ) -> 'IndexedPiecewiseLinearFunction': ...
 
     def __new__(cls, *args, **kwds):
         if cls is not PiecewiseLinearFunction:

@@ -10,7 +10,9 @@
 import sys
 import logging
 from weakref import ref as weakref_ref
-from pyomo.common.pyomo_typing import overload
+from typing import TypeVar
+
+from pyomo.common.pyomo_typing import copy_signature, overload
 
 from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import RenamedClass
@@ -53,7 +55,7 @@ class NamedExpressionData(numeric_expr.NumericValue):
     PRECEDENCE = 0
     ASSOCIATIVITY = EXPR.OperatorAssociativity.NON_ASSOCIATIVE
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Compute the value of this expression."""
         exception = _type_check_exception_arg(self, exception)
         (arg,) = self.args
@@ -234,6 +236,10 @@ class _GeneralExpressionData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
+_ScalarExpressionT = TypeVar('_ScalarExpressionT', bound='ScalarExpression')
+_IndexedExpressionT = TypeVar('_IndexedExpressionT', bound='IndexedExpression')
+
+
 @ModelComponentFactory.register(
     "Named expressions that can be used in other expressions."
 )
@@ -266,6 +272,22 @@ class Expression(IndexedComponent, IndexedComponent_NDArrayMixin):
     # This seems like a copy-paste error, and should be renamed/removed
     NoConstraint = IndexedComponent.Skip
 
+    @overload
+    def __new__(cls: type[_ScalarExpressionT], *args, **kwds) -> _ScalarExpressionT: ...
+
+    @overload
+    def __new__(
+        cls: type[_IndexedExpressionT], *args, **kwds
+    ) -> _IndexedExpressionT: ...
+
+    @overload
+    def __new__(cls: type['Expression'], **kwds) -> 'ScalarExpression': ...
+
+    @overload
+    def __new__(
+        cls: type['Expression'], index, /, *args, **kwds
+    ) -> 'IndexedExpression': ...
+
     def __new__(cls, *args, **kwds):
         if cls != Expression:
             return super(Expression, cls).__new__(cls)
@@ -276,7 +298,14 @@ class Expression(IndexedComponent, IndexedComponent_NDArrayMixin):
 
     @overload
     def __init__(
-        self, *indexes, rule=None, expr=None, initialize=None, name=None, doc=None
+        self,
+        *indexes,
+        rule=None,
+        expr=None,
+        initialize=None,
+        name=None,
+        doc=None,
+        ctype: type = ...,
     ): ...
 
     def __init__(self, *args, **kwds):
@@ -390,6 +419,7 @@ class Expression(IndexedComponent, IndexedComponent_NDArrayMixin):
 
 
 class ScalarExpression(ExpressionData, Expression):
+    @copy_signature(Expression.__init__)
     def __init__(self, *args, **kwds):
         ExpressionData.__init__(self, expr=None, component=self)
         Expression.__init__(self, *args, **kwds)
@@ -400,7 +430,7 @@ class ScalarExpression(ExpressionData, Expression):
     # construction
     #
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Return expression on this expression."""
         exception = _type_check_exception_arg(self, exception)
         if self._constructed:

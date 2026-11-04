@@ -17,7 +17,8 @@ import weakref
 
 from collections.abc import Iterator
 from functools import partial
-from typing import Union, Type, Any as typingAny
+from types import FunctionType
+from typing import TypeVar, Literal, Type, TYPE_CHECKING, cast, Any as typingAny
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentSet
@@ -25,7 +26,7 @@ from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedCla
 from pyomo.common.errors import DeveloperError, PyomoException
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
-from pyomo.common.pyomo_typing import overload
+from pyomo.common.pyomo_typing import copy_signature, overload
 from pyomo.common.sorting import sorted_robust
 from pyomo.common.timing import ConstructionTimer
 
@@ -2012,19 +2013,25 @@ class _ScalarSetMixin:
     # __getitem__()
     __slots__ = ()
 
-    def keys(self, sort=SortComponents.UNSORTED):
+    def keys(self, sort: SortComponents | bool = SortComponents.UNSORTED):
         # Scalar sets are always defined (we don't support Skip):
         return iter(UnindexedComponent_set)
 
-    def values(self, sort=SortComponents.UNSORTED):
+    def values(self, sort: SortComponents | bool = SortComponents.UNSORTED):
         """Return an iterator of the component data objects in the dictionary"""
         # Scalar sets are always defined (we don't support Skip):
         yield self
 
-    def items(self, sort=SortComponents.UNSORTED):
+    def items(self, sort: SortComponents | bool = SortComponents.UNSORTED):
         """Return an iterator of (index, data) tuples from the dictionary"""
         # Scalar sets are always defined (we don't support Skip):
         yield UnindexedComponent_index, self
+
+
+_FiniteScalarSetT = TypeVar('_FiniteScalarSetT', bound='FiniteScalarSet')
+_OrderedScalarSetT = TypeVar('_OrderedScalarSetT', bound='OrderedScalarSet')
+_SortedScalarSetT = TypeVar('_SortedScalarSetT', bound='SortedScalarSet')
+_IndexedSetT = TypeVar('_IndexedSetT', bound='IndexedSet')
 
 
 @ModelComponentFactory.register("Set data that is used to define a model instance.")
@@ -2133,10 +2140,38 @@ class Set(IndexedComponent):
     _UnorderedInitializers = {set}
 
     @overload
-    def __new__(cls: Type[OrderedScalarSet], *args, **kwds) -> OrderedScalarSet: ...
+    def __new__(cls: type[_FiniteScalarSetT], *args, **kwds) -> _FiniteScalarSetT: ...
 
     @overload
-    def __new__(cls: Type[Set], *args, **kwds) -> Union[SetData, IndexedSet]: ...
+    def __new__(cls: type[_OrderedScalarSetT], *args, **kwds) -> _OrderedScalarSetT: ...
+
+    @overload
+    def __new__(cls: type[_SortedScalarSetT], *args, **kwds) -> _SortedScalarSetT: ...
+
+    @overload
+    def __new__(cls: type[_IndexedSetT], *args, **kwds) -> _IndexedSetT: ...
+
+    # For scalar Sets, the class depends on the `ordered` argument
+    @overload
+    def __new__(
+        cls: Type[Set],
+        *,
+        ordered: Literal[True] | Type[Set.InsertionOrder] = ...,
+        **kwds,
+    ) -> OrderedScalarSet: ...
+
+    @overload
+    def __new__(
+        cls: Type[Set], *, ordered: Literal[False], **kwds
+    ) -> FiniteScalarSet: ...
+
+    @overload
+    def __new__(
+        cls: Type[Set], *, ordered: Type[Set.SortedOrder] | FunctionType, **kwds
+    ) -> SortedScalarSet: ...
+
+    @overload
+    def __new__(cls: Type[Set], index, /, *args, **kwds) -> IndexedSet: ...
 
     def __new__(cls, *args, **kwds):
         if cls is not Set:
@@ -2204,8 +2239,8 @@ class Set(IndexedComponent):
         self,
         *indexes,
         initialize=None,
-        dimen=UnknownSetDimen,
-        ordered=InsertionOrder,
+        dimen: typingAny = UnknownSetDimen,
+        ordered: typingAny = InsertionOrder,
         within=None,
         domain=None,
         bounds=None,
@@ -2213,6 +2248,7 @@ class Set(IndexedComponent):
         validate=None,
         name=None,
         doc=None,
+        ctype: type = ...,
     ): ...
 
     def __init__(self, *args, **kwds):
@@ -2511,6 +2547,7 @@ class IndexedSet(Set):
 
 
 class FiniteScalarSet(_ScalarSetMixin, FiniteSetData, Set):
+    @copy_signature(Set.__init__)
     def __init__(self, **kwds):
         FiniteSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
@@ -2523,6 +2560,7 @@ class FiniteSimpleSet(metaclass=RenamedClass):
 
 
 class OrderedScalarSet(_ScalarSetMixin, InsertionOrderSetData, Set):
+    @copy_signature(Set.__init__)
     def __init__(self, **kwds):
         # In case someone inherits from us, we will provide a rational
         # default for the "ordered" flag
@@ -2538,6 +2576,7 @@ class OrderedSimpleSet(metaclass=RenamedClass):
 
 
 class SortedScalarSet(_ScalarSetMixin, SortedSetData, Set):
+    @copy_signature(Set.__init__)
     def __init__(self, **kwds):
         # In case someone inherits from us, we will provide a rational
         # default for the "ordered" flag
@@ -4641,6 +4680,33 @@ DeclareGlobalSet(
     ),
     globals(),
 )
+
+if TYPE_CHECKING:
+    # DeclareGlobalSet() adds the global Sets to this module's
+    # namespace at runtime, which static type checkers cannot follow.
+    # Declare them here (for type checkers only) so they can be
+    # imported and have a known type.
+    Any = cast(_AnySet, GlobalSets['Any'])
+    AnyWithNone = cast(_AnyWithNoneSet, GlobalSets['AnyWithNone'])
+    EmptySet = cast(_EmptySet, GlobalSets['EmptySet'])
+    Reals = cast(InfiniteScalarRangeSet, GlobalSets['Reals'])
+    NonNegativeReals = cast(InfiniteScalarRangeSet, GlobalSets['NonNegativeReals'])
+    NonPositiveReals = cast(InfiniteScalarRangeSet, GlobalSets['NonPositiveReals'])
+    NegativeReals = cast(InfiniteScalarRangeSet, GlobalSets['NegativeReals'])
+    PositiveReals = cast(InfiniteScalarRangeSet, GlobalSets['PositiveReals'])
+    Integers = cast(InfiniteScalarRangeSet, GlobalSets['Integers'])
+    NonNegativeIntegers = cast(
+        InfiniteScalarRangeSet, GlobalSets['NonNegativeIntegers']
+    )
+    NonPositiveIntegers = cast(
+        InfiniteScalarRangeSet, GlobalSets['NonPositiveIntegers']
+    )
+    NegativeIntegers = cast(InfiniteScalarRangeSet, GlobalSets['NegativeIntegers'])
+    PositiveIntegers = cast(InfiniteScalarRangeSet, GlobalSets['PositiveIntegers'])
+    Binary = cast(FiniteScalarRangeSet, GlobalSets['Binary'])
+    Boolean = cast(FiniteScalarRangeSet, GlobalSets['Boolean'])
+    PercentFraction = cast(InfiniteScalarRangeSet, GlobalSets['PercentFraction'])
+    UnitInterval = cast(InfiniteScalarRangeSet, GlobalSets['UnitInterval'])
 
 # DeclareGlobalSet(Set(
 #     initialize=[None],

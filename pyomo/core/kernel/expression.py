@@ -45,7 +45,7 @@ class IIdentityExpression(NumericValue):
     # Implement the NumericValue abstract methods
     #
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Compute the value of this expression.
 
         Args:

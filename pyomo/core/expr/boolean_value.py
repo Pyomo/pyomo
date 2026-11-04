@@ -9,6 +9,7 @@
 # ____________________________________________________________________________________
 import sys
 import logging
+from typing import TYPE_CHECKING
 
 from pyomo.common.deprecation import deprecated
 from pyomo.common.modeling import NOTSET
@@ -17,11 +18,17 @@ from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.expr_common import _and, _or, _equiv, _inv, _xor, _impl
 from pyomo.core.pyomoobject import PyomoObject
 
+if TYPE_CHECKING:
+    from pyomo.core.expr.logical_expr import BooleanExpression
+
 logger = logging.getLogger('pyomo.core')
 native_logical_values = {True, False, 1, 0}
 
 
-def _generate_logical_proposition(etype, _self, _other):
+# Replaced by pyomo.core.expr.logical_expr when the expression system is
+# imported.  The return type tells type checkers what the replacement
+# returns (otherwise they infer that the logical operators never return).
+def _generate_logical_proposition(etype, _self, _other) -> 'BooleanExpression':
     raise RuntimeError(
         "Incomplete import of Pyomo expression system"
     )  # pragma: no cover
@@ -321,7 +328,7 @@ class BooleanConstant(BooleanValue):
     def __bool__(self):
         return self.value
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Return the constant value"""
         exception = _type_check_exception_arg(self, exception)
         return self.value

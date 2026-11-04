@@ -7,7 +7,10 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+from typing import TypeVar
+
 from pyomo.common.deprecation import RenamedClass
+from pyomo.common.pyomo_typing import overload
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.indexed_component import rule_wrapper
 from pyomo.core.base.expression import (
@@ -18,6 +21,9 @@ from pyomo.core.base.expression import (
 )
 from pyomo.dae.contset import ContinuousSet
 from pyomo.dae.diffvar import DAE_Error
+
+_ScalarIntegralT = TypeVar('_ScalarIntegralT', bound='ScalarIntegral')
+_IndexedIntegralT = TypeVar('_IndexedIntegralT', bound='IndexedIntegral')
 
 
 @ModelComponentFactory.register("Integral Expression in a DAE model.")
@@ -44,6 +50,22 @@ class Integral(Expression):
     rule : function
         Function returning the expression being integrated
     """
+
+    @overload
+    def __new__(cls: type[_ScalarIntegralT], *args, **kwds) -> _ScalarIntegralT: ...
+
+    @overload
+    def __new__(cls: type[_IndexedIntegralT], *args, **kwds) -> _IndexedIntegralT: ...
+
+    # An Integral is scalar when it has one index Set (the ContinuousSet
+    # it is taken with respect to) and indexed when it has more
+    @overload
+    def __new__(cls: type['Integral'], index, /, **kwds) -> 'ScalarIntegral': ...
+
+    @overload
+    def __new__(
+        cls: type['Integral'], index1, index2, /, *args, **kwds
+    ) -> 'IndexedIntegral': ...
 
     def __new__(cls, *args, **kwds):
         if cls != Integral:

@@ -73,7 +73,7 @@ class IConstraint(ICategorizedObject):
     # Interface
     #
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Compute the value of the body of this constraint."""
         exception = _type_check_exception_arg(self, exception)
         if exception and (self.body is None):
@@ -798,7 +798,7 @@ class linear_constraint(_MutableBoundsConstraintMixin, IConstraint):
     # to avoid building the body expression
     #
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         exception = _type_check_exception_arg(self, exception)
         try:
             return sum(

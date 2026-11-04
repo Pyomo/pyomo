@@ -112,7 +112,7 @@ class NonNumericValue(PyomoObject):
     def __repr__(self):
         return repr(self.value)
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         exception = _type_check_exception_arg(self, exception)
         return self.value
 
@@ -422,7 +422,7 @@ class NumericConstant(NumericValue):
     def __str__(self):
         return str(self.value)
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Return the constant value"""
         exception = _type_check_exception_arg(self, exception)
         return self.value

@@ -11,8 +11,9 @@ from __future__ import annotations
 import collections
 import sys
 import types
+from collections.abc import Hashable
 import logging
-from typing import Union, Type
+from typing import TypeVar, Type, Any as typingAny
 from weakref import ref as weakref_ref
 
 from pyomo.common.autoslots import AutoSlots
@@ -20,7 +21,7 @@ from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedCla
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.numeric_types import native_types, value as expr_value
-from pyomo.common.pyomo_typing import overload
+from pyomo.common.pyomo_typing import copy_signature, overload
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import NumericValue
@@ -173,7 +174,7 @@ class ParamData(ComponentData, NumericValue):
     # operations like validation efficient.  As it stands now, if
     # set_value is called without specifying an index, this call
     # involves a linear scan of the _data dict.
-    def set_value(self, value, idx=NOTSET):
+    def set_value(self, value, idx: Hashable | type[NOTSET] = NOTSET):
         """Set the value of this ParamData object, performing unit conversion
         and validation as necessary.
 
@@ -218,7 +219,7 @@ class ParamData(ComponentData, NumericValue):
             self._value = old_value
             raise
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """
         Return the value of this object.
         """
@@ -280,6 +281,10 @@ class _ParamData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
+_ScalarParamT = TypeVar('_ScalarParamT', bound='ScalarParam')
+_IndexedParamT = TypeVar('_IndexedParamT', bound='IndexedParam')
+
+
 @ModelComponentFactory.register(
     "Parameter data that is used to define a model instance."
 )
@@ -322,15 +327,16 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         pass
 
     @overload
-    def __new__(cls: Type[ScalarParam], *args, **kwds) -> ScalarParam: ...
+    def __new__(cls: type[_ScalarParamT], *args, **kwds) -> _ScalarParamT: ...
 
     @overload
-    def __new__(cls: Type[IndexedParam], *args, **kwds) -> IndexedParam: ...
+    def __new__(cls: type[_IndexedParamT], *args, **kwds) -> _IndexedParamT: ...
 
     @overload
-    def __new__(
-        cls: Type[Param], *args, **kwds
-    ) -> Union[ScalarParam, IndexedParam]: ...
+    def __new__(cls: Type[Param], **kwds) -> ScalarParam: ...
+
+    @overload
+    def __new__(cls: Type[Param], index, /, *args, **kwds) -> IndexedParam: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Param:
@@ -344,17 +350,18 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     def __init__(
         self,
         *indexes,
-        rule=NOTSET,
-        initialize=NOTSET,
+        rule: typingAny = NOTSET,
+        initialize: typingAny = NOTSET,
         domain=None,
         within=None,
         validate=None,
         mutable=False,
-        default=NoValue,
+        default: typingAny = NoValue,
         initialize_as_dense=False,
         units=None,
         name=None,
         doc=None,
+        ctype: type = ...,
     ): ...
 
     def __init__(self, *args, **kwd):
@@ -446,7 +453,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     # only loop over the defined data.
     #
 
-    def sparse_keys(self, sort=SortComponents.UNSORTED):
+    def sparse_keys(self, sort: SortComponents | bool = SortComponents.UNSORTED):
         """Return a list of keys in the defined parameters"""
         try:
             # Temporarily remove the default value so that len(self) ==
@@ -459,7 +466,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         finally:
             self._default = tmp
 
-    def sparse_values(self, sort=SortComponents.UNSORTED):
+    def sparse_values(self, sort: SortComponents | bool = SortComponents.UNSORTED):
         """Return a list of the defined param data objects"""
         # Implementing things this way for consistency with items() (and
         # so that any changes in the base class implementation are
@@ -471,7 +478,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         finally:
             self._default = tmp
 
-    def sparse_items(self, sort=SortComponents.UNSORTED):
+    def sparse_items(self, sort: SortComponents | bool = SortComponents.UNSORTED):
         """Return a list (index,data) tuples for defined parameters"""
         # The base class implements special handling for references.
         # Instead of reimplementing that here, we will follow the
@@ -1001,6 +1008,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
 
 
 class ScalarParam(ParamData, Param):
+    @copy_signature(Param.__init__)
     def __init__(self, *args, **kwds):
         ParamData.__init__(self, component=self)
         Param.__init__(self, *args, **kwds)
@@ -1015,7 +1023,7 @@ class ScalarParam(ParamData, Param):
     # up both the Component and Data base classes.
     #
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """
         Return the value of this parameter.
         """
@@ -1039,7 +1047,7 @@ class ScalarParam(ParamData, Param):
                 "value to return)." % (self.name,)
             )
 
-    def set_value(self, value, index=NOTSET):
+    def set_value(self, value, index: Hashable | type[NOTSET] = NOTSET):
         if index is NOTSET:
             index = None
         if self._constructed and not self._mutable:

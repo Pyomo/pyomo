@@ -323,10 +323,10 @@ class _ReferenceDict(MutableMapping):
         # is very slow (linear time).
         return sum(1 for i in self._slice)
 
-    def keys(self, sort=SortComponents.UNSORTED):
+    def keys(self, sort: SortComponents | bool = SortComponents.UNSORTED):
         return self._slice.wildcard_keys(sort)
 
-    def items(self, sort=SortComponents.UNSORTED):
+    def items(self, sort: SortComponents | bool = SortComponents.UNSORTED):
         """Return the wildcard, value tuples for this ReferenceDict
 
         This method is necessary because the default implementation
@@ -341,7 +341,7 @@ class _ReferenceDict(MutableMapping):
         """
         return self._slice.wildcard_items(sort)
 
-    def values(self, sort=SortComponents.UNSORTED):
+    def values(self, sort: SortComponents | bool = SortComponents.UNSORTED):
         """Return the values for this ReferenceDict
 
         This method is necessary because the default implementation
@@ -562,7 +562,9 @@ def _identify_wildcard_sets(iter_stack, index):
     return index
 
 
-def Reference(reference, ctype=NOTSET):
+def Reference(
+    reference, ctype: type[IndexedComponent] | None | type[NOTSET] = NOTSET
+) -> IndexedComponent:
     """Creates a component that references other components
 
     ``Reference`` generates a *reference component*; that is, an indexed

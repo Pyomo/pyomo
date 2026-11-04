@@ -36,10 +36,12 @@ import itertools
 import operator
 import types
 import enum
+from typing import TypeVar
 
 from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import RenamedClass, deprecation_warning
 from pyomo.common.numeric_types import value
+from pyomo.common.pyomo_typing import overload
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.block import Block, BlockData
 from pyomo.core.base.component import ModelComponentFactory
@@ -1017,6 +1019,10 @@ class _BIGMPiecewise:
         return M_final
 
 
+_SimplePiecewiseT = TypeVar('_SimplePiecewiseT', bound='SimplePiecewise')
+_IndexedPiecewiseT = TypeVar('_IndexedPiecewiseT', bound='IndexedPiecewise')
+
+
 @ModelComponentFactory.register(
     "Constraints that contain piecewise linear expressions."
 )
@@ -1144,6 +1150,21 @@ class Piecewise(Block):
     """
 
     _ComponentDataClass = PiecewiseData
+
+    @overload
+    def __new__(cls: type[_SimplePiecewiseT], *args, **kwds) -> _SimplePiecewiseT: ...
+
+    @overload
+    def __new__(cls: type[_IndexedPiecewiseT], *args, **kwds) -> _IndexedPiecewiseT: ...
+
+    # Piecewise(yvar, xvar) is scalar; Piecewise(*indexes, yvar, xvar) is indexed
+    @overload
+    def __new__(cls: type['Piecewise'], yvar, xvar, /, **kwds) -> 'SimplePiecewise': ...
+
+    @overload
+    def __new__(
+        cls: type['Piecewise'], index, yvar, xvar, /, *args, **kwds
+    ) -> 'IndexedPiecewise': ...
 
     def __new__(cls, *args, **kwds):
         if cls != Piecewise:

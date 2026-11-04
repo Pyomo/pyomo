@@ -11,8 +11,8 @@ from __future__ import annotations
 import sys
 import logging
 from weakref import ref as weakref_ref
-from pyomo.common.pyomo_typing import overload
-from typing import Union, Type
+from pyomo.common.pyomo_typing import copy_signature, overload
+from typing import TypeVar, Type
 
 from pyomo.common.deprecation import RenamedClass, deprecated
 from pyomo.common.errors import (
@@ -176,7 +176,7 @@ class ConstraintData(ActiveComponentData):
         if expr is not None:
             self.set_value(expr)
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Compute the value of the body of this constraint."""
         exception = _type_check_exception_arg(self, exception)
         body = self.to_bounded_expression()[1]
@@ -559,6 +559,10 @@ class TemplateConstraintData(TemplateDataMixin, ConstraintData):
         self._expr = template_info
 
 
+_ScalarConstraintT = TypeVar('_ScalarConstraintT', bound='ScalarConstraint')
+_IndexedConstraintT = TypeVar('_IndexedConstraintT', bound='IndexedConstraint')
+
+
 @ModelComponentFactory.register("General constraint expressions.")
 class Constraint(ActiveIndexedComponent):
     """
@@ -611,15 +615,20 @@ class Constraint(ActiveIndexedComponent):
     Satisfied = Feasible
 
     @overload
-    def __new__(cls: Type[ScalarConstraint], *args, **kwds) -> ScalarConstraint: ...
-
-    @overload
-    def __new__(cls: Type[IndexedConstraint], *args, **kwds) -> IndexedConstraint: ...
+    def __new__(cls: type[_ScalarConstraintT], *args, **kwds) -> _ScalarConstraintT: ...
 
     @overload
     def __new__(
-        cls: Type[Constraint], *args, **kwds
-    ) -> Union[ScalarConstraint, IndexedConstraint]: ...
+        cls: type[_IndexedConstraintT], *args, **kwds
+    ) -> _IndexedConstraintT: ...
+
+    @overload
+    def __new__(cls: Type[Constraint], **kwds) -> ScalarConstraint: ...
+
+    @overload
+    def __new__(
+        cls: Type[Constraint], index, /, *args, **kwds
+    ) -> IndexedConstraint: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Constraint:
@@ -630,7 +639,9 @@ class Constraint(ActiveIndexedComponent):
             return super().__new__(IndexedConstraint)
 
     @overload
-    def __init__(self, *indexes, expr=None, rule=None, name=None, doc=None): ...
+    def __init__(
+        self, *indexes, expr=None, rule=None, name=None, doc=None, ctype: type = ...
+    ): ...
 
     def __init__(self, *args, **kwargs):
         _init = self._pop_from_kwargs('Constraint', kwargs, ('rule', 'expr'), None)
@@ -796,6 +807,7 @@ class ScalarConstraint(ConstraintData, Constraint):
     non-indexed constraint.
     """
 
+    @copy_signature(Constraint.__init__)
     def __init__(self, *args, **kwds):
         ConstraintData.__init__(self, component=self, expr=None)
         Constraint.__init__(self, *args, **kwds)

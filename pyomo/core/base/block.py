@@ -21,7 +21,7 @@ from inspect import isclass, currentframe
 from io import StringIO
 from itertools import filterfalse, chain
 from operator import itemgetter, attrgetter
-from typing import Union, Any, Type
+from typing import TypeVar, Union, Type, Any as typingAny
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import Mapping
@@ -29,7 +29,7 @@ from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedCla
 from pyomo.common.formatting import StreamIndenter
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
-from pyomo.common.pyomo_typing import overload
+from pyomo.common.pyomo_typing import copy_signature, overload
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import (
     Component,
@@ -542,7 +542,15 @@ class BlockData(ActiveComponentData):
         super(BlockData, self).__setattr__('_decl_order', [])
         self._private_data = None
 
-    def __getattr__(self, val) -> Union[Component, IndexedComponent, Any]:
+    # Type checkers use this return type for any Block attribute they
+    # cannot see declared (e.g., components added in another scope).
+    # Such an attribute may be any component or any other object, so
+    # Any is the only type that does not reject valid code.  A Union of
+    # component types would require every member to support each
+    # operation, so m.x[i], m.x.value, etc. would all be errors.
+    # Users get precise types by declaring attributes on a Block
+    # subclass or by narrowing with isinstance().
+    def __getattr__(self, val) -> typingAny:
         if val in ModelComponentFactory:
             return _component_decorator(self, ModelComponentFactory.get_class(val))
         # Since the base classes don't support getattr, we can just
@@ -551,7 +559,9 @@ class BlockData(ActiveComponentData):
             "'%s' object has no attribute '%s'" % (self.__class__.__name__, val)
         )
 
-    def __setattr__(self, name: str, val: Union[Component, IndexedComponent, Any]):
+    def __setattr__(
+        self, name: str, val: Union[Component, IndexedComponent, typingAny]
+    ):
         """
         Set an attribute of a block data object.
         """
@@ -2055,6 +2065,10 @@ class _BlockData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
+_ScalarBlockT = TypeVar('_ScalarBlockT', bound='ScalarBlock')
+_IndexedBlockT = TypeVar('_IndexedBlockT', bound='IndexedBlock')
+
+
 @ModelComponentFactory.register(
     "A component that contains one or more model components."
 )
@@ -2072,15 +2086,16 @@ class Block(ActiveIndexedComponent):
     _private_data_initializers = defaultdict(lambda: dict)
 
     @overload
-    def __new__(cls: Type[ScalarBlock], *args, **kwds) -> ScalarBlock: ...
+    def __new__(cls: type[_ScalarBlockT], *args, **kwds) -> _ScalarBlockT: ...
 
     @overload
-    def __new__(cls: Type[IndexedBlock], *args, **kwds) -> IndexedBlock: ...
+    def __new__(cls: type[_IndexedBlockT], *args, **kwds) -> _IndexedBlockT: ...
 
     @overload
-    def __new__(
-        cls: Type[Block], *args, **kwds
-    ) -> Union[ScalarBlock, IndexedBlock]: ...
+    def __new__(cls: Type[Block], **kwds) -> ScalarBlock: ...
+
+    @overload
+    def __new__(cls: Type[Block], index, /, *args, **kwds) -> IndexedBlock: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Block:
@@ -2093,7 +2108,14 @@ class Block(ActiveIndexedComponent):
     # `options` is ignored since it is deprecated
     @overload
     def __init__(
-        self, *indexes, rule=None, concrete=False, dense=True, name=None, doc=None
+        self,
+        *indexes,
+        rule=None,
+        concrete=False,
+        dense=True,
+        name=None,
+        doc=None,
+        ctype: type = ...,
     ): ...
 
     def __init__(self, *args, **kwargs):
@@ -2293,6 +2315,7 @@ class Block(ActiveIndexedComponent):
 
 
 class ScalarBlock(BlockData, Block):
+    @copy_signature(Block.__init__)
     def __init__(self, *args, **kwds):
         BlockData.__init__(self, component=self)
         Block.__init__(self, *args, **kwds)

@@ -10,7 +10,8 @@
 import sys
 import logging
 from weakref import ref as weakref_ref
-from pyomo.common.pyomo_typing import overload
+from pyomo.common.pyomo_typing import copy_signature, overload
+from typing import TypeVar, Any as typingAny
 
 from pyomo.common.deprecation import RenamedClass, deprecated
 from pyomo.common.errors import TemplateExpressionError
@@ -208,6 +209,10 @@ class TemplateObjectiveData(TemplateDataMixin, ObjectiveData):
         self._sense = sense
 
 
+_ScalarObjectiveT = TypeVar('_ScalarObjectiveT', bound='ScalarObjective')
+_IndexedObjectiveT = TypeVar('_IndexedObjectiveT', bound='IndexedObjective')
+
+
 @ModelComponentFactory.register("Expressions that are minimized or maximized.")
 class Objective(ActiveIndexedComponent):
     """
@@ -259,6 +264,20 @@ class Objective(ActiveIndexedComponent):
     _ComponentDataClass = ObjectiveData
     NoObjective = ActiveIndexedComponent.Skip
 
+    @overload
+    def __new__(cls: type[_ScalarObjectiveT], *args, **kwds) -> _ScalarObjectiveT: ...
+
+    @overload
+    def __new__(cls: type[_IndexedObjectiveT], *args, **kwds) -> _IndexedObjectiveT: ...
+
+    @overload
+    def __new__(cls: type['Objective'], **kwds) -> 'ScalarObjective': ...
+
+    @overload
+    def __new__(
+        cls: type['Objective'], index, /, *args, **kwds
+    ) -> 'IndexedObjective': ...
+
     def __new__(cls, *args, **kwds):
         if cls != Objective:
             return super().__new__(cls)
@@ -269,7 +288,14 @@ class Objective(ActiveIndexedComponent):
 
     @overload
     def __init__(
-        self, *indexes, expr=None, rule=None, sense=minimize, name=None, doc=None
+        self,
+        *indexes,
+        expr=None,
+        rule=None,
+        sense: typingAny = minimize,
+        name=None,
+        doc=None,
+        ctype: type = ...,
     ): ...
 
     def __init__(self, *args, **kwargs):
@@ -445,12 +471,13 @@ class ScalarObjective(ObjectiveData, Objective):
     non-indexed objective.
     """
 
+    @copy_signature(Objective.__init__)
     def __init__(self, *args, **kwd):
         ObjectiveData.__init__(self, expr=None, component=self)
         Objective.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         exception = _type_check_exception_arg(self, exception)
         if not self._data:
             raise ValueError(

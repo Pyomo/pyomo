@@ -71,6 +71,9 @@ class _simple:
     def h(self):
         return 'h'
 
+    def i(self, arg: LocalClass | type[NOTSET] = NOTSET) -> LocalClass:
+        return arg
+
 
 @disable_methods(
     (
@@ -81,6 +84,7 @@ class _simple:
         'f',
         'g',
         ('h', 'custom_pmsg'),
+        'i',
     )
 )
 class _abstract_simple(_simple):
@@ -136,6 +140,18 @@ class TestDisableMethods(unittest.TestCase):
         )
         self.assertIsNone(_simple.h.fset)
         self.assertIsNone(_abstract_simple.h.fset)
+
+    def test_annotated_signature(self):
+        # Annotations that are not resolvable in the namespace of the
+        # generated function must not prevent disabling the method
+        self.assertEqual(
+            inspect.signature(_simple.i), inspect.signature(_abstract_simple.i)
+        )
+        x = _abstract_simple('foo')
+        with self.assertRaisesRegex(
+            RuntimeError, "Cannot access 'i' on _abstract_simple 'foo'"
+        ):
+            x.i()
 
     def test_disable(self):
         x = _abstract_simple('foo')

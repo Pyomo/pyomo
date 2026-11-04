@@ -10,6 +10,7 @@
 import logging
 import sys
 import types
+from typing import SupportsFloat, TypeVar
 
 from math import fabs
 from weakref import ref as weakref_ref
@@ -20,6 +21,7 @@ from pyomo.common.errors import PyomoException
 from pyomo.common.log import is_debug_set
 from pyomo.common.numeric_types import native_logical_types, native_types
 from pyomo.common.modeling import unique_component_name, NOTSET
+from pyomo.common.pyomo_typing import overload
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import (
     ModelComponentFactory,
@@ -45,6 +47,7 @@ from pyomo.core.base.block import BlockData
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
 from pyomo.core.expr.expr_common import ExpressionType
+from pyomo.core.expr.numvalue import NumericValue
 
 logger = logging.getLogger('pyomo.gdp')
 
@@ -100,7 +103,11 @@ class AutoLinkedBinaryVar(ScalarVar):
             bool_val, skip_validation, _propagate_value=False
         )
 
-    def fix(self, value=NOTSET, skip_validation=False):
+    def fix(
+        self,
+        value: SupportsFloat | NumericValue | None | type[NOTSET] = NOTSET,
+        skip_validation=False,
+    ):
         super().fix(value, skip_validation)
         bool_var = self.get_associated_boolean()
         if not bool_var.is_fixed():
@@ -173,7 +180,7 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
             val, skip_validation, _propagate_value=False
         )
 
-    def fix(self, value=NOTSET, skip_validation=False):
+    def fix(self, value: bool | None | type[NOTSET] = NOTSET, skip_validation=False):
         super().fix(value, skip_validation)
         bin_var = self.get_associated_binary()
         if not bin_var.is_fixed():
@@ -453,9 +460,27 @@ class _DisjunctData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
+_ScalarDisjunctT = TypeVar('_ScalarDisjunctT', bound='ScalarDisjunct')
+_IndexedDisjunctT = TypeVar('_IndexedDisjunctT', bound='IndexedDisjunct')
+
+
 @ModelComponentFactory.register("Disjunctive blocks.")
 class Disjunct(Block):
     _ComponentDataClass = DisjunctData
+
+    @overload
+    def __new__(cls: type[_ScalarDisjunctT], *args, **kwds) -> _ScalarDisjunctT: ...
+
+    @overload
+    def __new__(cls: type[_IndexedDisjunctT], *args, **kwds) -> _IndexedDisjunctT: ...
+
+    @overload
+    def __new__(cls: type['Disjunct'], **kwds) -> 'ScalarDisjunct': ...
+
+    @overload
+    def __new__(
+        cls: type['Disjunct'], index, /, *args, **kwds
+    ) -> 'IndexedDisjunct': ...
 
     def __new__(cls, *args, **kwds):
         if cls != Disjunct:

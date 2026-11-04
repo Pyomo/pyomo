@@ -48,6 +48,10 @@ def _disable_method(fcn, msg=None, exception=RuntimeError):
 
     params = list(sig.parameters.values())
     for i, param in enumerate(params):
+        # Annotations are not needed by the temporary function (and
+        # functools.wraps transfers them).  They may not be resolvable
+        # in its private namespace when cast to a string, so drop them.
+        param = params[i] = param.replace(annotation=inspect.Parameter.empty)
         if param.default is inspect.Parameter.empty:
             continue
         # The function that we are going to wrap needs to have the same
@@ -59,7 +63,7 @@ def _disable_method(fcn, msg=None, exception=RuntimeError):
         # a string, we will convert all optional positional arguments to
         # have a default value of None
         params[i] = param.replace(default=None)
-    sig = sig.replace(parameters=params)
+    sig = sig.replace(parameters=params, return_annotation=inspect.Signature.empty)
     args = str(sig)
     assert args == '(self)' or args.startswith('(self,')
 

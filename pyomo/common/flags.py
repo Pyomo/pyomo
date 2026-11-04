@@ -63,7 +63,7 @@ class NOTSET(object, metaclass=FlagType):
     pass
 
 
-def in_testing_environment(state=NOTSET):
+def in_testing_environment(state: bool | None | type[NOTSET] = NOTSET):
     """Return True if we are currently running in a "testing" environment
 
     This currently includes if ``nose``, ``nose2``, or ``pytest`` are
@@ -91,7 +91,7 @@ def in_testing_environment(state=NOTSET):
 in_testing_environment.state = None
 
 
-def building_documentation(state=NOTSET):
+def building_documentation(state: bool | None | type[NOTSET] = NOTSET):
     """True if we are building the Sphinx documentation
 
     We detect if we are building the documentation by looking if the

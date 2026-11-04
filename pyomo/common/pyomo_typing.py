@@ -36,3 +36,28 @@ if sys.version_info[:2] <= (3, 10) and not typing.TYPE_CHECKING:
 else:
     from typing import get_overloads as get_overloads_for
     from typing import overload as overload
+
+
+_P = typing.ParamSpec('_P')
+_R = typing.TypeVar('_R')
+
+
+def copy_signature(
+    source: typing.Callable[_P, _R],
+) -> typing.Callable[[typing.Callable[..., typing.Any]], typing.Callable[_P, _R]]:
+    """Declare that the decorated function has the signature of `source`
+
+    This decorator returns the decorated function unchanged.  Its only
+    effect is on static type checkers, which will check calls to the
+    decorated function against the signature of `source`.  This is
+    intended for methods that accept ``*args, **kwds`` and forward them
+    to `source` (e.g., a scalar component's ``__init__`` forwarding to
+    the base component's ``__init__``), so that their arguments are
+    checked without repeating the signature.
+
+    """
+
+    def decorator(func: typing.Any) -> typing.Any:
+        return func
+
+    return decorator

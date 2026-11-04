@@ -8,9 +8,11 @@
 # ____________________________________________________________________________________
 
 from collections import namedtuple
+from typing import TypeVar
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
+from pyomo.common.pyomo_typing import overload
 from pyomo.common.timing import ConstructionTimer
 import pyomo.core.expr as EXPR
 from pyomo.core.expr.numvalue import ZeroConstant, native_numeric_types, as_numeric
@@ -187,9 +189,35 @@ class _ComplementarityData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
+_ScalarComplementarityT = TypeVar(
+    '_ScalarComplementarityT', bound='ScalarComplementarity'
+)
+_IndexedComplementarityT = TypeVar(
+    '_IndexedComplementarityT', bound='IndexedComplementarity'
+)
+
+
 @ModelComponentFactory.register("Complementarity conditions.")
 class Complementarity(Block):
     _ComponentDataClass = ComplementarityData
+
+    @overload
+    def __new__(
+        cls: type[_ScalarComplementarityT], *args, **kwds
+    ) -> _ScalarComplementarityT: ...
+
+    @overload
+    def __new__(
+        cls: type[_IndexedComplementarityT], *args, **kwds
+    ) -> _IndexedComplementarityT: ...
+
+    @overload
+    def __new__(cls: type['Complementarity'], **kwds) -> 'ScalarComplementarity': ...
+
+    @overload
+    def __new__(
+        cls: type['Complementarity'], index, /, *args, **kwds
+    ) -> 'IndexedComplementarity': ...
 
     def __new__(cls, *args, **kwds):
         if cls != Complementarity:

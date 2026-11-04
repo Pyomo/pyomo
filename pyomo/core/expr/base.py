@@ -97,7 +97,7 @@ class ExpressionBase(PyomoObject):
             f"Derived expression ({self.__class__}) failed to implement args()"
         )
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Evaluate the value of the expression tree.
 
         Parameters

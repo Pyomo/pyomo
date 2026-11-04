@@ -19,7 +19,7 @@ class IParameter(ICategorizedObject, NumericValue):
 
     __slots__ = ()
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Computes the numeric value of this object."""
         raise NotImplementedError  # pragma:nocover
 
@@ -77,7 +77,7 @@ class parameter(IParameter):
     # Implement the IParameter abstract methods
     #
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         """Computes the numeric value of this object."""
         exception = _type_check_exception_arg(self, exception)
         return self.value
@@ -117,7 +117,7 @@ class functional_value(IParameter):
     # Implement the IParameter abstract methods
     #
 
-    def __call__(self, exception=NOTSET):
+    def __call__(self, exception: bool | type[NOTSET] = NOTSET):
         exception = _type_check_exception_arg(self, exception)
         if self._fn is None:
             return None

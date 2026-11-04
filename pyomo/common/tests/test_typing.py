@@ -11,7 +11,7 @@ import pyomo.common.unittest as unittest
 
 import inspect
 
-from pyomo.common.pyomo_typing import get_overloads_for
+from pyomo.common.pyomo_typing import copy_signature, get_overloads_for
 from pyomo.environ import Block
 
 
@@ -20,4 +20,15 @@ class TestTyping(unittest.TestCase):
         func_list = get_overloads_for(Block.__init__)
         self.assertEqual(len(func_list), 1)
         kwds = inspect.getfullargspec(func_list[0]).kwonlyargs
-        self.assertEqual(kwds, ['rule', 'concrete', 'dense', 'name', 'doc'])
+        self.assertEqual(kwds, ['rule', 'concrete', 'dense', 'name', 'doc', 'ctype'])
+
+    def test_copy_signature(self):
+        def source(a, *, b=1):
+            pass
+
+        def func(*args, **kwds):
+            return args, kwds
+
+        decorated = copy_signature(source)(func)
+        self.assertIs(decorated, func)
+        self.assertEqual(decorated(1, b=2), ((1,), {'b': 2}))

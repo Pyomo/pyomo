@@ -51,7 +51,12 @@ _SUFFIX_API = (
 #   - suffix_generator
 
 
-def suffix_generator(a_block, datatype=NOTSET, direction=NOTSET, active=None):
+def suffix_generator(
+    a_block,
+    datatype: 'SuffixDataType | None | type[NOTSET]' = NOTSET,
+    direction: 'SuffixDirection | int | str | type[NOTSET]' = NOTSET,
+    active=None,
+):
     _iter = (
         (s.local_name, s)
         for s in a_block.component_data_objects(
@@ -69,31 +74,45 @@ def suffix_generator(a_block, datatype=NOTSET, direction=NOTSET, active=None):
     return _iter
 
 
-def active_export_suffix_generator(a_block, datatype=NOTSET):
+def active_export_suffix_generator(
+    a_block, datatype: 'SuffixDataType | None | type[NOTSET]' = NOTSET
+):
     return suffix_generator(a_block, datatype, SuffixDirection.EXPORT, True)
 
 
-def export_suffix_generator(a_block, datatype=NOTSET):
+def export_suffix_generator(
+    a_block, datatype: 'SuffixDataType | None | type[NOTSET]' = NOTSET
+):
     return suffix_generator(a_block, datatype, SuffixDirection.EXPORT)
 
 
-def active_import_suffix_generator(a_block, datatype=NOTSET):
+def active_import_suffix_generator(
+    a_block, datatype: 'SuffixDataType | None | type[NOTSET]' = NOTSET
+):
     return suffix_generator(a_block, datatype, SuffixDirection.IMPORT, True)
 
 
-def import_suffix_generator(a_block, datatype=NOTSET):
+def import_suffix_generator(
+    a_block, datatype: 'SuffixDataType | None | type[NOTSET]' = NOTSET
+):
     return suffix_generator(a_block, datatype, SuffixDirection.IMPORT)
 
 
-def active_local_suffix_generator(a_block, datatype=NOTSET):
+def active_local_suffix_generator(
+    a_block, datatype: 'SuffixDataType | None | type[NOTSET]' = NOTSET
+):
     return suffix_generator(a_block, datatype, SuffixDirection.LOCAL, True)
 
 
-def local_suffix_generator(a_block, datatype=NOTSET):
+def local_suffix_generator(
+    a_block, datatype: 'SuffixDataType | None | type[NOTSET]' = NOTSET
+):
     return suffix_generator(a_block, datatype, SuffixDirection.LOCAL)
 
 
-def active_suffix_generator(a_block, datatype=NOTSET):
+def active_suffix_generator(
+    a_block, datatype: 'SuffixDataType | None | type[NOTSET]' = NOTSET
+):
     return suffix_generator(a_block, datatype, active=True)
 
 

@@ -423,7 +423,11 @@ class IndexedComponent(Component):
         """Return an iterator of the component data keys"""
         return self.keys()
 
-    def keys(self, sort=SortComponents.UNSORTED, ordered=NOTSET):
+    def keys(
+        self,
+        sort: SortComponents | bool = SortComponents.UNSORTED,
+        ordered: bool | type[NOTSET] = NOTSET,
+    ):
         """Return an iterator over the component data keys
 
         This method sets the ordering of component data objects within
@@ -531,7 +535,11 @@ You can silence this warning by one of three ways:
             ans = filter(self._data.__contains__, ans)
         return ans
 
-    def values(self, sort=SortComponents.UNSORTED, ordered=NOTSET):
+    def values(
+        self,
+        sort: SortComponents | bool = SortComponents.UNSORTED,
+        ordered: bool | type[NOTSET] = NOTSET,
+    ):
         """Return an iterator of the component data objects
 
         Parameters
@@ -584,7 +592,11 @@ You can silence this warning by one of three ways:
 
         return map(getter, self.keys(sort))
 
-    def items(self, sort=SortComponents.UNSORTED, ordered=NOTSET):
+    def items(
+        self,
+        sort: SortComponents | bool = SortComponents.UNSORTED,
+        ordered: bool | type[NOTSET] = NOTSET,
+    ):
         """Return an iterator of (index,data) component data tuples
 
         Parameters
