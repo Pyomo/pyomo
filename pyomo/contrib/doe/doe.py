@@ -57,7 +57,10 @@ from pyomo.contrib.doe.utils import (
     compute_FIM_metrics,
     regularize_fim_for_cholesky,
 )
-from pyomo.contrib.parmest.utils.model_utils import get_meas_error_covariance_matrix_inv
+from pyomo.contrib.parmest.utils.model_utils import (
+    _build_meas_error_covariance_matrix,
+    get_meas_error_covariance_matrix_inv,
+)
 
 from pyomo.opt import SolverStatus
 
@@ -2802,15 +2805,13 @@ class DesignOfExperiments:
                 )
 
             # get the measurement-error covariance matrix
-            Sigma_matrix = self._build_meas_error_covariance_matrix(
-                model.scenario_blocks[0]
-            )
+            Sigma_matrix = _build_meas_error_covariance_matrix(model.scenario_blocks[0])
 
             # get the measurement-error standard deviation
             sigma_vals = np.sqrt(np.diag(Sigma_matrix))
 
         else:
-            Sigma_matrix = self._build_meas_error_covariance_matrix(model)
+            Sigma_matrix = _build_meas_error_covariance_matrix(model)
             sigma_vals = np.sqrt(np.diag(Sigma_matrix))
 
         return sigma_vals
