@@ -45,6 +45,7 @@ if scipy_available:
     )
 from pyomo.contrib.doe.utils import rescale_FIM
 from pyomo.contrib.doe.examples.rooney_biegler_doe_example import run_rooney_biegler_doe
+from pyomo.contrib.parmest.utils.model_utils import get_meas_error_covariance_matrix_inv
 
 import pyomo.environ as pyo
 
@@ -173,7 +174,7 @@ def get_FIM_Q_L(doe_obj=None):
         for i in model.output_names
         for j in model.parameter_names
     ]
-    sigma_inv = doe_obj.get_meas_error_covariance_matrix_inv(model.scenario_blocks[0])
+    sigma_inv = get_meas_error_covariance_matrix_inv(model.scenario_blocks[0])
 
     FIM_vals_np = np.array(FIM_vals).reshape((n_param, n_param))
 
