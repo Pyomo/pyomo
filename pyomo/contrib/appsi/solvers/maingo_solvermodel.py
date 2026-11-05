@@ -76,7 +76,7 @@ class ToMAiNGOVisitor(EXPR.ExpressionValueVisitor):
     def visit(self, node, values):
         """Visit nodes that have been expanded"""
         for i, val in enumerate(values):
-            arg = node._args_[i]
+            arg = node.arg(i)
 
             if arg is None:
                 values[i] = "Undefined"
@@ -94,7 +94,7 @@ class ToMAiNGOVisitor(EXPR.ExpressionValueVisitor):
                     elif node.PRECEDENCE == arg.PRECEDENCE:
                         if i == 0:
                             parens = node.ASSOCIATIVITY != LEFT_TO_RIGHT
-                        elif i == len(node._args_) - 1:
+                        elif i == node.nargs() - 1:
                             parens = node.ASSOCIATIVITY != RIGHT_TO_LEFT
                         else:
                             parens = True
