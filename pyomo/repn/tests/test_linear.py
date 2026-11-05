@@ -1799,3 +1799,50 @@ class TestLinear(unittest.TestCase):
             repn.linear, {id(m.x[0]): 1, id(m.x[1]): 2, id(m.x[2]): 3, id(m.x[3]): 4}
         )
         self.assertEqual(repn.nonlinear, None)
+
+
+class TestFixedVarAfterRegistration(unittest.TestCase):
+    # gh-3851: variables that were registered in the var_map while
+    # still free must be handled as constants once fixed
+    def test_fixed_var_after_registration(self):
+        from pyomo.environ import Set
+        from pyomo.repn.util import SortComponents, TemplateVarRecorder
+
+        m = ConcreteModel()
+        m.a = Set(initialize=[1, 2, 3])
+        m.x = Var(m.a)
+        e1 = m.x[1] * (m.x[2] + m.x[3])
+        e2 = m.x[1] - 1 / m.x[2]
+        m.x[2].fix(2)
+
+        visitor = LinearRepnVisitor(
+            subexpression_cache={},
+            var_recorder=TemplateVarRecorder({}, SortComponents.ORDERED_INDICES),
+        )
+        visitor.walk_expression(e1)
+        repn = visitor.walk_expression(e2)
+
+        self.assertIsNone(repn.nonlinear)
+        self.assertEqual(repn.constant, -0.5)
+        self.assertEqual(repn.linear, {id(m.x[1]): 1})
+
+    def test_fixed_var_substituted_before_registration(self):
+        from pyomo.environ import Set
+        from pyomo.repn.util import SortComponents, TemplateVarRecorder
+
+        m = ConcreteModel()
+        m.a = Set(initialize=[1, 2, 3])
+        m.x = Var(m.a)
+        e1 = m.x[1] * (m.x[2] + m.x[3])
+        m.x[2].fix(2)
+
+        visitor = LinearRepnVisitor(
+            subexpression_cache={},
+            var_recorder=TemplateVarRecorder({}, SortComponents.ORDERED_INDICES),
+        )
+        repn = visitor.walk_expression(e1)
+
+        # x[2] is fixed, so it never becomes a linear term and its
+        # value does not appear in the nonlinear remainder
+        self.assertEqual(repn.linear, {})
+        self.assertNotIn("x[2]", str(repn.nonlinear))
