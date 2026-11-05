@@ -361,6 +361,11 @@ for _test in ('MILP_unbounded', 'MILP_unbounded_kernel'):
         lambda v: True,
         "cuopt does not differentiate between unbounded and infeasible status",
     )
+# MIQP_simple_kernel inherits description "MIQP_simple".
+SkipTests['cuopt', 'python', 'MIQP_simple'] = (
+    lambda v: True,
+    "cuOpt does not support mixed-integer quadratic problems",
+)
 
 
 def generate_scenarios(arg=None):
