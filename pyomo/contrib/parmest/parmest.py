@@ -68,6 +68,7 @@ from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
 import pyomo.contrib.parmest.utils as utils
 import pyomo.contrib.parmest.graphics as graphics
+from pyomo.contrib.parmest.utils.model_utils import get_meas_error_covariance_matrix_inv
 from pyomo.dae import ContinuousSet
 
 from pyomo.common.deprecation import deprecated
@@ -103,8 +104,12 @@ def SSE(model):
 def SSE_weighted(model):
     """
     Returns an expression that is used to compute the 'SSE_weighted' objective,
-    assuming Gaussian i.i.d. errors, with measurement error standard deviation
-    defined in the annotated Pyomo model
+    assuming Gaussian correlated or i.i.d. errors, with the standard deviation
+    or covariance of the measurement errors defined in the annotated Pyomo model
+
+    This objective function is applicable to both homoscedastic
+    (constant-variance) and heteroskedastic (non-constant-variance, e.g.,
+    proportional-error) measurement-error models
 
     Parameters
     ----------
@@ -122,26 +127,34 @@ def SSE_weighted(model):
             'objective.'
         )
 
-    # check if all the values of the measurement error standard deviation
+    # check if all the values of the measurement-error standard deviation
     # have been supplied
-    all_known_errors = all(
-        model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
-    )
+    try:
+        all_known_errors = all(
+            model.measurement_error[y_hat] is not None
+            for y_hat in model.experiment_outputs
+        )
+    except KeyError:
+        raise KeyError(
+            'One or more experiment outputs are not defined in the '
+            '"measurement_error" attribute. All the variables defined '
+            'in "experiment_outputs" must be defined as keys in '
+            '"measurement_error".'
+        )
 
     if all_known_errors:
+        # calculate the residuals between the model predictions and data
+        prediction_resid = np.array(
+            [y - y_hat for y_hat, y in model.experiment_outputs.items()]
+        ).reshape(1, -1)
+
+        # get the inverse of the measurement-error covariance matrix
+        Sigma_y_inv = get_meas_error_covariance_matrix_inv(model)
+
         # calculate the weighted SSE between the prediction
         # and observation of the measured variables
-        try:
-            expr = (1 / 2) * sum(
-                ((y - y_hat) / model.measurement_error[y_hat]) ** 2
-                for y_hat, y in model.experiment_outputs.items()
-            )
-            return expr
-        except ZeroDivisionError:
-            raise ValueError(
-                'Division by zero encountered in the "SSE_weighted" objective. '
-                'One or more values of the measurement error are zero.'
-            )
+        expr = (1 / 2) * prediction_resid @ Sigma_y_inv @ prediction_resid.T
+        return expr[0, 0]
     else:
         raise ValueError(
             'One or more values are missing from "measurement_error". All values of '
@@ -570,8 +583,11 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee, solver_options)
     # grab the model
     model = _get_labeled_model(experiment)
 
+    # get the parameter data objects
+    param_data_objects, _, _ = _expanded_unknown_parameter_info(model)
+
     # fix the value of the unknown parameters to the estimated values
-    for param in model.unknown_parameters:
+    for param in param_data_objects:
         param.fix(theta_vals[param.name])
 
     # re-solve the model with the estimated parameters
@@ -585,7 +601,7 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee, solver_options)
     assert_optimal_termination(results)
 
     # get the estimated parameter values
-    param_values = [p.value for p in model.unknown_parameters]
+    param_values = [p.value for p in param_data_objects]
 
     # get the number of parameters and measured variables
     n_params = len(param_values)
@@ -594,7 +610,7 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee, solver_options)
     # compute the sensitivity of the measured variables w.r.t the parameters
     J = np.zeros((n_outputs, n_params))
 
-    for i, param in enumerate(model.unknown_parameters):
+    for i, param in enumerate(param_data_objects):
         # store original value of the parameter
         orig_value = param_values[i]
 
@@ -813,36 +829,11 @@ def _finite_difference_FIM(
     # grab the model
     model = _get_labeled_model(experiment)
 
-    # extract the measured variables and measurement errors
-    y_hat_list = [y_hat for y_hat, y in model.experiment_outputs.items()]
+    # get the inverse of the measurement-error covariance matrix
+    Sigma_y_inv = get_meas_error_covariance_matrix_inv(model, estimated_var)
 
-    # check if the model has a 'measurement_error' attribute and
-    # the measurement error standard deviation has been supplied
-    all_known_errors = all(
-        model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
-    )
-
-    if hasattr(model, "measurement_error") and all_known_errors:
-        error_list = [
-            model.measurement_error[y_hat] for y_hat in model.experiment_outputs
-        ]
-
-        # check if the dimension of error_list is the same with that of y_hat_list
-        if len(error_list) != len(y_hat_list):
-            raise ValueError(
-                "Experiment outputs and measurement errors are not the same length."
-            )
-
-        # compute the matrix of the inverse of the measurement error variance
-        # the following assumes independent and identically distributed
-        # measurement errors
-        W = np.diag([1 / (err**2) for err in error_list])
-
-        # calculate the FIM using the formula in our future paper
-        # Lilonfe et al. (2025)
-        FIM = J.T @ W @ J
-    else:
-        FIM = (1 / estimated_var) * (J.T @ J)
+    # compute the FIM
+    FIM = J.T @ Sigma_y_inv @ J
 
     return FIM
 
@@ -900,8 +891,11 @@ def _kaug_FIM(
     # add the built-in objective function selected by the user
     model.objective = pyo.Objective(expr=obj_function, sense=pyo.minimize)
 
+    # get the parameter data objects
+    param_data_objects, _, _ = _expanded_unknown_parameter_info(model)
+
     # fix the parameter values to the estimated values
-    for param in model.unknown_parameters:
+    for param in param_data_objects:
         param.fix(theta_vals[param.name])
 
     solver = pyo.SolverFactory(solver)
@@ -912,7 +906,7 @@ def _kaug_FIM(
     assert_optimal_termination(results)
 
     # Probe the solved model for dsdp results (sensitivities s.t. parameters)
-    params_dict = {k.name: v for k, v in model.unknown_parameters.items()}
+    params_dict = {k.name: theta_vals[k.name] for k in param_data_objects}
     params_names = list(params_dict.keys())
 
     dsdp_re, col = get_dsdp(model, params_names, params_dict, tee=tee)
@@ -946,7 +940,7 @@ def _kaug_FIM(
     jac = [[] for _ in params_names]
 
     for d in range(len(dsdp_extract)):
-        for k, v in model.unknown_parameters.items():
+        for k in param_data_objects:
             p = params_names.index(k.name)  # Index of parameter in np array
             sensi = dsdp_extract[d][p]
             jac[p].append(sensi)
@@ -954,24 +948,11 @@ def _kaug_FIM(
     # record kaug jacobian
     kaug_jac = np.array(jac).T
 
-    # compute FIM
-    # compute the matrix of the inverse of the measurement error variance
-    # the following assumes independent and identically distributed
-    # measurement errors
-    W = np.zeros((len(model.measurement_error), len(model.measurement_error)))
-    all_known_errors = all(
-        model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
-    )
+    # get the inverse of the measurement-error covariance matrix
+    Sigma_y_inv = get_meas_error_covariance_matrix_inv(model, estimated_var)
 
-    count = 0
-    for k, v in model.measurement_error.items():
-        if all_known_errors:
-            W[count, count] = 1 / (v**2)
-        else:
-            W[count, count] = 1 / estimated_var
-        count += 1
-
-    FIM = kaug_jac.T @ W @ kaug_jac
+    # compute the FIM
+    FIM = kaug_jac.T @ Sigma_y_inv @ kaug_jac
 
     return FIM
 
@@ -1698,13 +1679,12 @@ class Estimator:
             for experiment in self.exp_list:
                 model = _get_labeled_model(experiment)
 
+                # get the parameter data objects
+                param_data_objects, _, _ = _expanded_unknown_parameter_info(model)
+
                 # fix the value of the unknown parameters to the estimated values
-                for param in model.unknown_parameters:
-                    if param.is_indexed():
-                        for idx in param:
-                            param[idx].fix(self.estimated_theta[param[idx].name])
-                    else:
-                        param.fix(self.estimated_theta[param.name])
+                for param in param_data_objects:
+                    param.fix(self.estimated_theta[param.name])
 
                 # re-solve the model with the estimated parameters
                 results = pyo.SolverFactory(solver).solve(model, tee=self.tee)
@@ -1763,10 +1743,18 @@ class Estimator:
             # check if the user defined the 'measurement_error' attribute
             if hasattr(ref_model, "measurement_error"):
                 # get the measurement errors
-                meas_error = [
-                    ref_model.measurement_error[y_hat]
-                    for y_hat, y in ref_model.experiment_outputs.items()
-                ]
+                try:
+                    meas_error = [
+                        ref_model.measurement_error[y_hat]
+                        for y_hat, y in ref_model.experiment_outputs.items()
+                    ]
+                except KeyError:
+                    raise KeyError(
+                        'One or more experiment outputs are not defined in the '
+                        '"measurement_error" attribute. All the variables defined '
+                        'in "experiment_outputs" must be defined as keys in '
+                        '"measurement_error".'
+                    )
 
                 # check if the user supplied the values of the measurement errors
                 if all(item is None for item in meas_error):

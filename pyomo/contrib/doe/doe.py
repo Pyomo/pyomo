@@ -57,6 +57,10 @@ from pyomo.contrib.doe.utils import (
     compute_FIM_metrics,
     regularize_fim_for_cholesky,
 )
+from pyomo.contrib.parmest.utils.model_utils import (
+    _build_meas_error_covariance_matrix,
+    get_meas_error_covariance_matrix_inv,
+)
 
 from pyomo.opt import SolverStatus
 
@@ -450,12 +454,13 @@ class DesignOfExperiments:
         self.results["Unknown Parameters"] = self.get_unknown_parameter_values()
         self.results["Unknown Parameter Names"] = [
             str(pyo.ComponentUID(k, context=model.scenario_blocks[0]))
-            for k in model.scenario_blocks[0].unknown_parameters
+            for k in self._expanded_unknown_parameters(model.scenario_blocks[0])
         ]
         self.results["Measurement Error"] = self.get_measurement_error_values()
         self.results["Measurement Error Names"] = [
             str(pyo.ComponentUID(k, context=model.scenario_blocks[0]))
             for k in model.scenario_blocks[0].measurement_error
+            if hasattr(k, "name")
         ]
 
         self.results["Prior FIM"] = [list(row) for row in list(self.prior_FIM)]
@@ -581,6 +586,33 @@ class DesignOfExperiments:
     def run_multi_doe_simultaneous(self, N_exp=1):
         raise NotImplementedError("Multiple experiment optimization not yet supported.")
 
+    def _expanded_unknown_parameters(self, model):
+        """
+        Creates a list of scalar unknown parameter components
+
+        The unknown_parameters suffix may contain either scalar ComponentData
+        objects or indexed components. Indexed components are expanded to
+        their scalar data objects.
+
+        Parameters
+        ----------
+        model : ConcreteModel
+            Annotated Pyomo model
+
+        Returns
+        -------
+        params_data_object: list
+            List of scalar parameter data objects
+        """
+        params_data_object = []
+        for component in model.unknown_parameters:
+            if component.is_indexed():
+                params_data_object.extend(component.values())
+            else:
+                params_data_object.append(component)
+
+        return params_data_object
+
     # Compute FIM for the DoE object
     def compute_FIM(self, model=None, method="sequential"):
         """
@@ -615,16 +647,16 @@ class DesignOfExperiments:
         self.check_model_labels(model=model)
 
         # Set length values for the model features
-        self.n_parameters = len(model.unknown_parameters)
-        self.n_measurement_error = len(model.measurement_error)
+        self.n_parameters = len(self._expanded_unknown_parameters(model))
+        self.n_measurement_error = len(
+            [k for k in model.measurement_error if hasattr(k, "name")]
+        )
         self.n_experiment_inputs = len(model.experiment_inputs)
         self.n_experiment_outputs = len(model.experiment_outputs)
 
         # Check FIM input, if it exists. Otherwise, set the prior_FIM attribute
         if self.prior_FIM is None:
-            self.prior_FIM = np.zeros(
-                (len(model.unknown_parameters), len(model.unknown_parameters))
-            )
+            self.prior_FIM = np.zeros((self.n_parameters, self.n_parameters))
         else:
             self.check_model_FIM(FIM=self.prior_FIM)
 
@@ -668,25 +700,27 @@ class DesignOfExperiments:
             model.del_component(model.parameter_scenarios)
         model.parameter_scenarios = pyo.Suffix(direction=pyo.Suffix.LOCAL)
 
+        unknown_params = self._expanded_unknown_parameters(model)
+        unknown_params_val = {p.name: p.value for p in unknown_params}
+
         # Populate parameter scenarios, and scenario
         # inds based on finite difference scheme
         if self.fd_formula == FiniteDifferenceStep.central:
             model.parameter_scenarios.update(
-                (2 * ind, k) for ind, k in enumerate(model.unknown_parameters.keys())
+                (2 * ind, k) for ind, k in enumerate(unknown_params)
             )
             model.parameter_scenarios.update(
-                (2 * ind + 1, k)
-                for ind, k in enumerate(model.unknown_parameters.keys())
+                (2 * ind + 1, k) for ind, k in enumerate(unknown_params)
             )
-            model.scenarios = range(len(model.unknown_parameters) * 2)
+            model.scenarios = range(self.n_parameters * 2)
         elif self.fd_formula in [
             FiniteDifferenceStep.forward,
             FiniteDifferenceStep.backward,
         ]:
             model.parameter_scenarios.update(
-                (ind + 1, k) for ind, k in enumerate(model.unknown_parameters.keys())
+                (ind + 1, k) for ind, k in enumerate(unknown_params)
             )
-            model.scenarios = range(len(model.unknown_parameters) + 1)
+            model.scenarios = range(self.n_parameters + 1)
         else:
             raise DeveloperError(
                 "Finite difference option not recognized. Please "
@@ -721,7 +755,7 @@ class DesignOfExperiments:
             if not skip_param_update:
                 param = model.parameter_scenarios[s]
                 # Update parameter values for the given finite difference scenario
-                param.set_value(model.unknown_parameters[param] * (1 + diff))
+                param.set_value(unknown_params_val[param.name] * (1 + diff))
             else:
                 continue
 
@@ -741,7 +775,7 @@ class DesignOfExperiments:
 
             # Reset value of parameter to default value
             # before computing finite difference perturbation
-            param.set_value(model.unknown_parameters[param])
+            param.set_value(unknown_params_val[param.name])
 
             # Extract the measurement values for the scenario and append
             measurement_vals.append(
@@ -751,12 +785,7 @@ class DesignOfExperiments:
         # Use the measurement outputs to make the Q matrix
         measurement_vals_np = np.array(measurement_vals).T
 
-        self.seq_jac = np.zeros(
-            (
-                len(model.experiment_outputs.items()),
-                len(model.unknown_parameters.items()),
-            )
-        )
+        self.seq_jac = np.zeros((self.n_experiment_outputs, self.n_parameters))
 
         # Counting variable for loop
         i = 0
@@ -764,7 +793,8 @@ class DesignOfExperiments:
         # Loop over parameter values and grab correct
         # columns for finite difference calculation
 
-        for k, v in model.unknown_parameters.items():
+        for k in unknown_params:
+            v = pyo.value(k)
             curr_step = v * self.step
 
             if self.fd_formula == FiniteDifferenceStep.central:
@@ -792,18 +822,11 @@ class DesignOfExperiments:
             # Increment the count
             i += 1
 
-        # TODO: As more complex measurement error schemes
-        #       are put in place, this needs to change
-        # Add independent (non-correlated) measurement
-        # error for FIM calculation
-        cov_y = np.zeros((len(model.measurement_error), len(model.measurement_error)))
-        count = 0
-        for k, v in model.measurement_error.items():
-            cov_y[count, count] = 1 / v**2
-            count += 1
+        # get the inverse of the measurement-error covariance matrix
+        Sigma_y_inv = get_meas_error_covariance_matrix_inv(model)
 
         # Compute and record FIM
-        self.seq_FIM = self.seq_jac.T @ cov_y @ self.seq_jac + self.prior_FIM
+        self.seq_FIM = self.seq_jac.T @ Sigma_y_inv @ self.seq_jac + self.prior_FIM
 
     # Use kaug to get FIM
     def _kaug_FIM(self, model=None):
@@ -834,8 +857,10 @@ class DesignOfExperiments:
 
         self.solver.solve(model, tee=self.tee)
 
+        unknown_params = self._expanded_unknown_parameters(model)
+
         # Probe the solved model for dsdp results (sensitivities s.t. parameters)
-        params_dict = {k.name: v for k, v in model.unknown_parameters.items()}
+        params_dict = {p.name: p.value for p in unknown_params}
         params_names = list(params_dict.keys())
 
         dsdp_re, col = get_dsdp(model, params_names, params_dict, tee=self.tee)
@@ -868,12 +893,12 @@ class DesignOfExperiments:
         jac = [[] for k in params_names]
 
         for d in range(len(dsdp_extract)):
-            for k, v in model.unknown_parameters.items():
+            for k in unknown_params:
                 p = params_names.index(k.name)  # Index of parameter in np array
                 # if scaled by parameter value or constant value
                 sensi = dsdp_extract[d][p] * self.scale_constant_value
                 if self.scale_nominal_param_value:
-                    sensi *= v
+                    sensi *= pyo.value(k)
                 jac[p].append(sensi)
 
         # record kaug jacobian
@@ -881,23 +906,14 @@ class DesignOfExperiments:
 
         # Compute FIM
         if self.prior_FIM is None:
-            self.prior_FIM = np.zeros((len(params_names), len(params_names)))
+            self.prior_FIM = np.zeros(self.n_parameters, self.n_parameters)
         else:
             self.check_model_FIM(FIM=self.prior_FIM)
 
-        # Constructing the Covariance of the measurements for the FIM calculation
-        # The following assumes independent measurement error.
-        cov_y = np.zeros((len(model.measurement_error), len(model.measurement_error)))
-        count = 0
-        for k, v in model.measurement_error.items():
-            cov_y[count, count] = 1 / v**2
-            count += 1
+        # get the inverse of the measurement-error covariance matrix
+        Sigma_y_inv = get_meas_error_covariance_matrix_inv(model)
 
-        # TODO: need to add a covariance matrix for measurements (sigma inverse)
-        # i.e., cov_y = self.cov_y or model.cov_y
-        # Still deciding where this would be best.
-
-        self.kaug_FIM = self.kaug_jac.T @ cov_y @ self.kaug_jac + self.prior_FIM
+        self.kaug_FIM = self.kaug_jac.T @ Sigma_y_inv @ self.kaug_jac + self.prior_FIM
 
     # Create the DoE model (with ``scenarios`` from finite differencing scheme)
     def create_doe_model(self, model=None):
@@ -948,13 +964,13 @@ class DesignOfExperiments:
         scen_block_ind = min(
             [
                 k.name.split(".").index("scenario_blocks[0]")
-                for k in model.scenario_blocks[0].unknown_parameters.keys()
+                for k in self._expanded_unknown_parameters(model.scenario_blocks[0])
             ]
         )
         model.parameter_names = pyo.Set(
             initialize=[
                 ".".join(k.name.split(".")[(scen_block_ind + 1) :])
-                for k in model.scenario_blocks[0].unknown_parameters.keys()
+                for k in self._expanded_unknown_parameters(model.scenario_blocks[0])
             ]
         )
         model.output_names = pyo.Set(
@@ -1100,8 +1116,7 @@ class DesignOfExperiments:
             var_lo = cuid.find_component_on(m.scenario_blocks[s2])
 
             param = m.parameter_scenarios[max(s1, s2)]
-            param_loc = pyo.ComponentUID(param).find_component_on(m.scenario_blocks[0])
-            param_val = m.scenario_blocks[0].unknown_parameters[param_loc]
+            param_val = pyo.value(param)
             param_diff = param_val * fd_step_mult * self.step
 
             if self.scale_nominal_param_value:
@@ -1154,20 +1169,20 @@ class DesignOfExperiments:
                 else:
                     return m.fim[p, q] == m.fim[q, p]
             else:
-                return (
-                    m.fim[p, q]
-                    == sum(
-                        1
-                        / m.scenario_blocks[0].measurement_error[
-                            pyo.ComponentUID(n).find_component_on(m.scenario_blocks[0])
-                        ]
-                        ** 2
-                        * m.sensitivity_jacobian[n, p]
-                        * m.sensitivity_jacobian[n, q]
-                        for n in m.output_names
-                    )
-                    + m.prior_FIM[p, q]
+                sens_jac = np.array(
+                    [
+                        [m.sensitivity_jacobian[y, p] for p in m.parameter_names]
+                        for y in m.output_names
+                    ],
+                    dtype=object,
                 )
+
+                # get the inverse of the measurement-error covariance matrix
+                Sigma_y_inv = get_meas_error_covariance_matrix_inv(m.scenario_blocks[0])
+
+                fim_expr = sens_jac.T @ Sigma_y_inv @ sens_jac
+
+                return m.fim[p, q] == fim_expr[p_ind, q_ind] + m.prior_FIM[p, q]
 
         model.jacobian_constraint = pyo.Constraint(
             model.output_names, model.parameter_names, rule=jacobian_rule
@@ -1216,8 +1231,10 @@ class DesignOfExperiments:
         self.check_model_labels(model=model.base_model)
 
         # Gather lengths of label structures for later use in the model build process
-        self.n_parameters = len(model.base_model.unknown_parameters)
-        self.n_measurement_error = len(model.base_model.measurement_error)
+        self.n_parameters = len(self._expanded_unknown_parameters(model.base_model))
+        self.n_measurement_error = len(
+            [k for k in model.base_model.measurement_error if hasattr(k, "name")]
+        )
         self.n_experiment_inputs = len(model.base_model.experiment_inputs)
         self.n_experiment_outputs = len(model.base_model.experiment_outputs)
 
@@ -1249,27 +1266,27 @@ class DesignOfExperiments:
         # are associated with parameters
         model.parameter_scenarios = pyo.Suffix(direction=pyo.Suffix.LOCAL)
 
+        unknown_params = self._expanded_unknown_parameters(model.base_model)
+        unknown_params_val = {p.name: p.value for p in unknown_params}
+
         # Populate parameter scenarios, and scenario
         # inds based on finite difference scheme
         if self.fd_formula == FiniteDifferenceStep.central:
             model.parameter_scenarios.update(
-                (2 * ind, k)
-                for ind, k in enumerate(model.base_model.unknown_parameters.keys())
+                (2 * ind, k) for ind, k in enumerate(unknown_params)
             )
             model.parameter_scenarios.update(
-                (2 * ind + 1, k)
-                for ind, k in enumerate(model.base_model.unknown_parameters.keys())
+                (2 * ind + 1, k) for ind, k in enumerate(unknown_params)
             )
-            model.scenarios = range(len(model.base_model.unknown_parameters) * 2)
+            model.scenarios = range(self.n_parameters * 2)
         elif self.fd_formula in [
             FiniteDifferenceStep.forward,
             FiniteDifferenceStep.backward,
         ]:
             model.parameter_scenarios.update(
-                (ind + 1, k)
-                for ind, k in enumerate(model.base_model.unknown_parameters.keys())
+                (ind + 1, k) for ind, k in enumerate(unknown_params)
             )
-            model.scenarios = range(len(model.base_model.unknown_parameters) + 1)
+            model.scenarios = range(self.n_parameters + 1)
         else:
             raise DeveloperError(
                 "Finite difference option not recognized. Please contact "
@@ -1327,7 +1344,7 @@ class DesignOfExperiments:
             # Update parameter values for the given finite difference scenario
             pyo.ComponentUID(param, context=m.base_model).find_component_on(
                 b
-            ).set_value(m.base_model.unknown_parameters[param] * (1 + diff))
+            ).set_value(unknown_params_val[param.name] * (1 + diff))
 
             # Fix experiment inputs before solve (enforce square solve)
             for comp in b.experiment_inputs:
@@ -1728,7 +1745,7 @@ class DesignOfExperiments:
 
         # Check that experimental inputs exist
         try:
-            outputs = [k.name for k, v in model.experiment_inputs.items()]
+            exp_inputs = [k.name for k, v in model.experiment_inputs.items()]
         except:
             raise RuntimeError(
                 "Experiment model does not have suffix " + '"experiment_inputs".'
@@ -1736,7 +1753,7 @@ class DesignOfExperiments:
 
         # Check that unknown parameters exist
         try:
-            outputs = [k.name for k, v in model.unknown_parameters.items()]
+            unknown_params = self._expanded_unknown_parameters(model)
         except:
             raise RuntimeError(
                 "Experiment model does not have suffix " + '"unknown_parameters".'
@@ -1744,7 +1761,7 @@ class DesignOfExperiments:
 
         # Check that measurement errors exist
         try:
-            outputs = [k.name for k, v in model.measurement_error.items()]
+            meas_error = [k.name for k in model.measurement_error if hasattr(k, "name")]
         except:
             raise RuntimeError(
                 "Experiment model does not have suffix " + '"measurement_error".'
@@ -2714,12 +2731,11 @@ class DesignOfExperiments:
                     "`get_unknown_parameter_values`"
                 )
 
-            theta_vals = [
-                pyo.value(k)
-                for k, v in model.scenario_blocks[0].unknown_parameters.items()
-            ]
+            unknown_params = self._expanded_unknown_parameters(model.scenario_blocks[0])
+            theta_vals = [pyo.value(k) for k in unknown_params]
         else:
-            theta_vals = [pyo.value(k) for k, v in model.unknown_parameters.items()]
+            unknown_params = self._expanded_unknown_parameters(model)
+            theta_vals = [pyo.value(k) for k in unknown_params]
 
         return theta_vals
 
@@ -2788,12 +2804,15 @@ class DesignOfExperiments:
                     "`get_measurement_error_values`"
                 )
 
-            sigma_vals = [
-                pyo.value(k)
-                for k, v in model.scenario_blocks[0].measurement_error.items()
-            ]
+            # get the measurement-error covariance matrix
+            Sigma_matrix = _build_meas_error_covariance_matrix(model.scenario_blocks[0])
+
+            # get the measurement-error standard deviation
+            sigma_vals = np.sqrt(np.diag(Sigma_matrix))
+
         else:
-            sigma_vals = [pyo.value(k) for k, v in model.measurement_error.items()]
+            Sigma_matrix = _build_meas_error_covariance_matrix(model)
+            sigma_vals = np.sqrt(np.diag(Sigma_matrix))
 
         return sigma_vals
 
