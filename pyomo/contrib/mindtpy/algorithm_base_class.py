@@ -2007,7 +2007,8 @@ class _MindtPyAlgorithm:
         if main_mip_results.solver.termination_condition is tc.optimal:
             if config.single_tree:
                 # With no-good cuts or tabu list, the bound of the B&B tree is
-                # clamped to the primal bound in update_dual_bound.
+                # updated to be min/max(primal_bound, MIP_bound) 
+                # (depending on the problem sense) in update_dual_bound.
                 self.update_suboptimal_dual_bound(main_mip_results)
         elif main_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
             # Linear solvers will sometimes tell me that it's infeasible or
