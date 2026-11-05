@@ -745,14 +745,33 @@ Supported Simulator Packages
 The Simulator currently includes interfaces to SciPy and CasADi. ODE
 simulation is supported in both packages however, DAE simulation is only
 supported by CasADi. A list of available integrators for each package is
-given below. Please refer to the `SciPy
-<https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.ode.html>`_
+given below. Please refer to the `SciPy solve_ivp
+<https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html>`_,
+`SciPy ode
+<https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.ode.html>`_,
 and `CasADi
 <https://web.casadi.org/python-api/#integrator>`_ documentation directly for the most up-to-date information about
 these packages and for more information about the various integrators and
 options.
 
-SciPy Integrators:
+SciPy Integrators (``scipy.integrate.solve_ivp``):
+    - **'LSODA'** : Adams/BDF method with automatic stiffness detection and
+      switching (default)
+    - **'RK45'** : Explicit Runge-Kutta method of order 5(4)
+    - **'RK23'** : Explicit Runge-Kutta method of order 3(2)
+    - **'DOP853'** : Explicit Runge-Kutta method of order 8
+    - **'Radau'** : Implicit Runge-Kutta method of the Radau IIA family of
+      order 5, for stiff systems
+    - **'BDF'** : Implicit multi-step variable-order method based on backward
+      differentiation formulas, for stiff systems
+    - A subclass of ``scipy.integrate.OdeSolver`` may also be passed as the
+      integrator
+
+    Unless they are specified in ``integrator_options``, these integrators
+    use ``rtol=1e-6`` and ``atol=1e-12``, which match the defaults for the
+    legacy SciPy integrators below.
+
+Legacy SciPy Integrators (``scipy.integrate.ode``):
     - **'vode'** :  Real-valued Variable-coefficient ODE solver, options for
       non-stiff and stiff systems
     - **'zvode'** : Complex-values Variable-coefficient ODE solver, options for
@@ -837,10 +856,17 @@ valid keyword arguments for this function.
 
 .. doctest::
 
-    >>> tsim, profiles = sim.simulate(numpoints=100, integrator='vode') # doctest: +SKIP
+    >>> tsim, profiles = sim.simulate(numpoints=100, integrator='RK45') # doctest: +SKIP
 
 The ``simulate`` function returns numpy arrays containing time points and
-the corresponding values for the dynamic variable profiles.
+the corresponding values for the dynamic variable profiles. Options for the
+integrator, such as tolerances, may be specified using the
+``integrator_options`` keyword argument.
+
+.. doctest::
+
+    >>> tsim, profiles = sim.simulate(numpoints=100, integrator='Radau',
+    ...                               integrator_options={'rtol': 1e-8}) # doctest: +SKIP
 
 `Simulator Limitations`:
     - Differential equations must be first-order and separable
@@ -907,7 +933,7 @@ example.
     Simulate the model using scipy
     >>> sim = Simulator(m, package='scipy') # doctest: +SKIP
     >>> tsim, profiles = sim.simulate(numpoints=100,
-    ...                               integrator='vode',
+    ...                               integrator='LSODA',
     ...                               varying_inputs=m.var_input) # doctest: +SKIP
 
 .. note::
@@ -931,7 +957,7 @@ returned from the simulator. An example using this function is shown below
 
     Simulate the model using scipy
     >>> sim = Simulator(m, package='scipy') # doctest: +SKIP
-    >>> tsim, profiles = sim.simulate(numpoints=100, integrator='vode',
+    >>> tsim, profiles = sim.simulate(numpoints=100, integrator='LSODA',
     ...                               varying_inputs=m.var_input) # doctest: +SKIP
 
     Discretize the model using Orthogonal Collocation

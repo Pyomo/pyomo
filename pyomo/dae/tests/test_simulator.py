@@ -20,12 +20,17 @@ from pyomo.environ import (
     sin,
     log,
     sqrt,
+    Suffix,
     TransformationFactory,
 )
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
+from pyomo.common.dependencies import numpy as np, numpy_available, scipy
+from pyomo.common.log import LoggingIntercept
 from pyomo.dae.simulator import (
     scipy_available,
+    scipy_ivp_integrators,
+    scipy_ode_integrators,
     casadi,
     casadi_available,
     Simulator,
@@ -1260,6 +1265,202 @@ class TestCasadiSubstituters(unittest.TestCase):
         self.assertIs(type(e3.arg(1)), IndexTemplate)
 
         m.del_component('y')
+
+
+@unittest.skipIf(not scipy_available, "Scipy is not available")
+@unittest.skipIf(not numpy_available, "Numpy is not available")
+class TestScipyIntegrators(unittest.TestCase):
+    """
+    Class for testing the scipy integrators available in the Simulator
+    """
+
+    def _linear_model(self):
+        # x1' = -x1, x2' = x1 - 2*x2, x1(0) = 1, x2(0) = 0
+        m = ConcreteModel()
+        m.t = ContinuousSet(bounds=(0, 5))
+        m.x1 = Var(m.t)
+        m.x2 = Var(m.t)
+        m.dx1 = DerivativeVar(m.x1)
+        m.dx2 = DerivativeVar(m.x2)
+        m.x1[0] = 1.0
+        m.x2[0] = 0.0
+
+        def _deq1(m, t):
+            return m.dx1[t] == -m.x1[t]
+
+        m.deq1 = Constraint(m.t, rule=_deq1)
+
+        def _deq2(m, t):
+            return m.dx2[t] == m.x1[t] - 2 * m.x2[t]
+
+        m.deq2 = Constraint(m.t, rule=_deq2)
+        return m
+
+    def _linear_exact(self, t):
+        return np.column_stack([np.exp(-t), np.exp(-t) - np.exp(-2 * t)])
+
+    def _input_model(self):
+        # x' = -x + u, x(0) = 0, with u = 1 on [0, 2), 0 on [2, 4),
+        # and 3 on [4, 6]
+        m = ConcreteModel()
+        m.t = ContinuousSet(bounds=(0, 6))
+        m.x = Var(m.t)
+        m.u = Var(m.t)
+        m.dx = DerivativeVar(m.x)
+        m.x[0] = 0.0
+
+        def _deq(m, t):
+            return m.dx[t] == -m.x[t] + m.u[t]
+
+        m.deq = Constraint(m.t, rule=_deq)
+
+        m.var_input = Suffix(direction=Suffix.LOCAL)
+        m.var_input[m.u] = {0: 1.0, 2: 0.0, 4: 3.0}
+        return m
+
+    def _input_exact(self, t):
+        x = np.zeros(len(t))
+        x0 = 0.0
+        for tstart, tend, u in [(0, 2, 1.0), (2, 4, 0.0), (4, 6, 3.0)]:
+            idx = (t >= tstart) & (t <= tend)
+            x[idx] = u + (x0 - u) * np.exp(-(t[idx] - tstart))
+            x0 = u + (x0 - u) * np.exp(-(tend - tstart))
+        return x
+
+    def test_integrators(self):
+        for integrator in scipy_ivp_integrators + scipy_ode_integrators + [None]:
+            if integrator == 'zvode':
+                # zvode is for complex-valued ODEs
+                continue
+            m = self._linear_model()
+            sim = Simulator(m, package='scipy')
+            tsim, profiles = sim.simulate(numpoints=51, integrator=integrator)
+            self.assertEqual(profiles.shape, (51, 2))
+            self.assertStructuredAlmostEqual(
+                profiles.tolist(), self._linear_exact(tsim).tolist(), abstol=1e-5
+            )
+
+    def test_default_integrator(self):
+        m = self._linear_model()
+        sim = Simulator(m, package='scipy')
+        with unittest.mock.patch(
+            'scipy.integrate.solve_ivp', wraps=scipy.integrate.solve_ivp
+        ) as solve_ivp:
+            sim.simulate(numpoints=10)
+        self.assertEqual(solve_ivp.call_count, 1)
+        kwds = solve_ivp.call_args.kwargs
+        self.assertEqual(kwds['method'], 'LSODA')
+        self.assertEqual(kwds['rtol'], 1e-6)
+        self.assertEqual(kwds['atol'], 1e-12)
+
+        # User options override the default tolerances
+        with unittest.mock.patch(
+            'scipy.integrate.solve_ivp', wraps=scipy.integrate.solve_ivp
+        ) as solve_ivp:
+            sim.simulate(
+                numpoints=10,
+                integrator='Radau',
+                integrator_options={'rtol': 1e-8, 'max_step': 0.5},
+            )
+        kwds = solve_ivp.call_args.kwargs
+        self.assertEqual(kwds['method'], 'Radau')
+        self.assertEqual(kwds['rtol'], 1e-8)
+        self.assertEqual(kwds['atol'], 1e-12)
+        self.assertEqual(kwds['max_step'], 0.5)
+
+    def test_varying_inputs(self):
+        # The integrators must be restarted at each input switching
+        # point or the solution will be inaccurate
+        for integrator in scipy_ivp_integrators + ['vode', 'lsoda', 'dopri5']:
+            m = self._input_model()
+            sim = Simulator(m, package='scipy')
+            with unittest.mock.patch(
+                'scipy.integrate.solve_ivp', wraps=scipy.integrate.solve_ivp
+            ) as solve_ivp:
+                tsim, profiles = sim.simulate(
+                    numpoints=61, integrator=integrator, varying_inputs=m.var_input
+                )
+            if integrator in scipy_ivp_integrators:
+                # One call to solve_ivp for each segment between
+                # switching points
+                self.assertEqual(solve_ivp.call_count, 3)
+            self.assertEqual(len(tsim), 61)
+            self.assertStructuredAlmostEqual(
+                profiles[:, 0].tolist(), self._input_exact(tsim).tolist(), abstol=1e-4
+            )
+
+    def test_tstep(self):
+        m = self._linear_model()
+        sim = Simulator(m, package='scipy')
+        tsim, profiles = sim.simulate(tstep=0.5, integrator='BDF')
+        self.assertEqual(len(tsim), 10)
+        self.assertStructuredAlmostEqual(
+            profiles.tolist(), self._linear_exact(tsim).tolist(), abstol=1e-5
+        )
+
+    def test_odesolver_subclass(self):
+        class MyIntegrator(scipy.integrate.RK45):
+            pass
+
+        m = self._linear_model()
+        sim = Simulator(m, package='scipy')
+        tsim, profiles = sim.simulate(numpoints=51, integrator=MyIntegrator)
+        self.assertStructuredAlmostEqual(
+            profiles.tolist(), self._linear_exact(tsim).tolist(), abstol=1e-5
+        )
+
+    def test_invalid_integrator(self):
+        m = self._linear_model()
+        sim = Simulator(m, package='scipy')
+        with self.assertRaisesRegex(DAE_Error, "Unrecognized scipy integrator"):
+            sim.simulate(integrator='idas')
+        with self.assertRaisesRegex(DAE_Error, "Unrecognized scipy integrator"):
+            sim.simulate(integrator=dict)
+
+    def test_reserved_integrator_options(self):
+        m = self._linear_model()
+        sim = Simulator(m, package='scipy')
+        for opt in ('fun', 't_span', 'y0', 'method', 't_eval', 'args'):
+            with self.assertRaisesRegex(DAE_Error, "'%s' argument" % opt):
+                sim.simulate(integrator='RK45', integrator_options={opt: None})
+
+    def test_terminal_event(self):
+        m = self._linear_model()
+        sim = Simulator(m, package='scipy')
+
+        # Stop when x1 = 0.5, i.e. t = ln(2)
+        def _event(t, x):
+            return x[0] - 0.5
+
+        _event.terminal = True
+
+        with LoggingIntercept(module='pyomo.core') as LOG:
+            tsim, profiles = sim.simulate(
+                numpoints=51, integrator='RK45', integrator_options={'events': _event}
+            )
+        self.assertIn("stopped by a terminal event", LOG.getvalue())
+        self.assertEqual(len(tsim), 7)
+        self.assertEqual(profiles.shape, (7, 2))
+        self.assertLessEqual(tsim[-1], np.log(2))
+        self.assertGreater(tsim[-1] + 0.1, np.log(2))
+        self.assertStructuredAlmostEqual(
+            profiles.tolist(), self._linear_exact(tsim).tolist(), abstol=1e-5
+        )
+
+    def test_integrator_failure(self):
+        # x' = x**2 with x(0) = 1 has a singularity at t = 1
+        m = ConcreteModel()
+        m.t = ContinuousSet(bounds=(0, 2))
+        m.x = Var(m.t)
+        m.dx = DerivativeVar(m.x)
+        m.x[0] = 1.0
+        m.deq = Constraint(m.t, rule=lambda m, t: m.dx[t] == m.x[t] ** 2)
+
+        sim = Simulator(m, package='scipy')
+        with self.assertRaisesRegex(
+            DAE_Error, "The Scipy integrator RK45 did not terminate successfully"
+        ):
+            sim.simulate(integrator='RK45')
 
 
 class TestSimulationInterface:
