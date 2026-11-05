@@ -17,6 +17,7 @@ from pyomo.util.subsystems import (
     ParamSweeper,
     identify_external_functions,
     add_local_external_functions,
+    copy_scaling_factors_to_block,
 )
 from pyomo.common.gsl import find_GSL
 
@@ -752,6 +753,150 @@ class TestParamSweeper(unittest.TestCase):
         self.assertFalse(m.v2.fixed)
         self.assertFalse(m.v3.fixed)
         self.assertFalse(m.v4.fixed)
+
+
+# Code originally based on example in IDAES.
+#################################################################################
+# The Institute for the Design of Advanced Energy Systems Integrated Platform
+# Framework (IDAES IP) was produced under the DOE Institute for the
+# Design of Advanced Energy Systems (IDAES).
+#
+# Copyright (c) 2018-2026 by the software owners: The Regents of the
+# University of California, through Lawrence Berkeley National Laboratory,
+# National Technology & Engineering Solutions of Sandia, LLC, Carnegie Mellon
+# University, West Virginia University Research Corporation, et al.
+# All rights reserved.  Please see the files COPYRIGHT.md and LICENSE.md
+# for full copyright and license information.
+#################################################################################
+
+
+def _create_model():
+    m = pyo.ConcreteModel()
+    m.s = pyo.Set(initialize=[1, 2, 3, 4])
+
+    m.v = pyo.Var(m.s)
+
+    @m.Constraint(m.s)
+    def c(b, i):
+        return b.v[i] == i
+
+    m.b = pyo.Block(m.s)
+
+    for bd in m.b.values():
+        bd.v2 = pyo.Var()
+
+    return m
+
+
+def _scale_model(m):
+    for bd in m.b.values():
+        bd.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        bd.scaling_factor[bd.v2] = 10
+
+    m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+    for i in m.s:
+        m.scaling_factor[m.v[i]] = 5 * i
+        m.scaling_factor[m.c[i]] = 5**i
+
+    return m
+
+
+class TestCopyScalingFactorsToBlock(unittest.TestCase):
+    def test_copy_scaling_factors_to_block(self):
+        m = _create_model()
+        _scale_model(m)
+
+        blk = create_subsystem_block(
+            constraints=[m.c[1], m.c[3]],
+            variables=[m.v[1], m.b[2].v2],  # m.v[3] should be an input variable
+        )
+
+        assert not hasattr(blk, "scaling_factor")
+        copy_scaling_factors_to_block(m, blk)
+        assert hasattr(blk, "scaling_factor")
+        assert len(blk.scaling_factor) == 5
+        assert blk.scaling_factor[m.v[1]] == 5
+        assert blk.scaling_factor[m.v[3]] == 15
+        assert blk.scaling_factor[m.b[2].v2] == 10
+        assert blk.scaling_factor[m.c[1]] == 5
+        assert blk.scaling_factor[m.c[3]] == 125
+
+    def test_copy_scaling_factors_preexisting_scaling_factor(self):
+        # Now test what happens if a scaling factor suffix already exits
+        m = _create_model()
+        _scale_model(m)
+
+        blk = create_subsystem_block(
+            constraints=[m.c[1], m.c[3]],
+            variables=[m.v[1], m.b[2].v2],  # m.v[3] should be an input variable
+        )
+        blk.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        blk.scaling_factor[m.b[2].v2] = 137
+        # If a scaling factor doesn't exist on the original model
+        # for a variable, it should leave the existing scaling factor
+        # on the temporary block
+        del m.b[2].scaling_factor[m.b[2].v2]
+        copy_scaling_factors_to_block(m, blk)
+        assert hasattr(blk, "scaling_factor")
+        assert len(blk.scaling_factor) == 5
+        assert blk.scaling_factor[m.v[1]] == 5
+        assert blk.scaling_factor[m.v[3]] == 15
+        assert blk.scaling_factor[m.b[2].v2] == 137
+        assert blk.scaling_factor[m.c[1]] == 5
+        assert blk.scaling_factor[m.c[3]] == 125
+
+    def test_copy_scaling_factors_overwrite_False(self):
+        m = _create_model()
+        _scale_model(m)
+
+        blk = create_subsystem_block(
+            constraints=[m.c[1], m.c[3]],
+            variables=[m.v[1], m.b[2].v2],  # m.v[3] should be an input variable
+        )
+        blk.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        blk.scaling_factor[m.b[2].v2] = 137
+
+        copy_scaling_factors_to_block(m, blk, overwrite=False)
+        assert hasattr(blk, "scaling_factor")
+        assert len(blk.scaling_factor) == 5
+        assert blk.scaling_factor[m.v[1]] == 5
+        assert blk.scaling_factor[m.v[3]] == 15
+        assert blk.scaling_factor[m.b[2].v2] == 137
+        assert blk.scaling_factor[m.c[1]] == 5
+        assert blk.scaling_factor[m.c[3]] == 125
+
+    def test_copy_scaling_factors_overwrite_true(self):
+        m = _create_model()
+        _scale_model(m)
+
+        blk = create_subsystem_block(
+            constraints=[m.c[1], m.c[3]],
+            variables=[m.v[1], m.b[2].v2],  # m.v[3] should be an input variable
+        )
+        blk.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        blk.scaling_factor[m.b[2].v2] = 137
+
+        copy_scaling_factors_to_block(m, blk, overwrite=True)
+        assert hasattr(blk, "scaling_factor")
+        assert len(blk.scaling_factor) == 5
+        assert blk.scaling_factor[m.v[1]] == 5
+        assert blk.scaling_factor[m.v[3]] == 15
+        assert blk.scaling_factor[m.b[2].v2] == 10
+        assert blk.scaling_factor[m.c[1]] == 5
+        assert blk.scaling_factor[m.c[3]] == 125
+
+    def test_copy_scaling_factors_to_block_from_subblock(self):
+        m = _create_model()
+        _scale_model(m)
+
+        blk = create_subsystem_block(
+            constraints=[m.c[1], m.c[3]],
+            variables=[m.v[1], m.b[2].v2],  # m.v[3] should be an input variable
+        )
+        # Only the scaling suffix on m.b[2] should be copied.
+        copy_scaling_factors_to_block(m.b[2], blk)
+        assert len(blk.scaling_factor) == 1
+        assert blk.scaling_factor[m.b[2].v2] == 10
 
 
 if __name__ == '__main__':
