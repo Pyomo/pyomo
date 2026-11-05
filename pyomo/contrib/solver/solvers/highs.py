@@ -11,6 +11,7 @@ import logging
 import io
 
 from pyomo.common.collections import ComponentMap
+from pyomo.common.config import ConfigValue
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import ApplicationError
 from pyomo.common.flags import NOTSET
@@ -232,6 +233,34 @@ class _MutableConstraintBounds:
         self.highs.changeRowBounds(row_ndx, lb, ub)
 
 
+class HighsConfig(PersistentBranchAndBoundConfig):
+    def __init__(
+        self,
+        description=None,
+        doc=None,
+        implicit=False,
+        implicit_domain=None,
+        visibility=0,
+    ):
+        PersistentBranchAndBoundConfig.__init__(
+            self,
+            description=description,
+            doc=doc,
+            implicit=implicit,
+            implicit_domain=implicit_domain,
+            visibility=visibility,
+        )
+        self.warmstart_discrete_vars: bool = self.declare(
+            'warmstart_discrete_vars',
+            ConfigValue(
+                default=False,
+                domain=bool,
+                description="If True, the current values of the integer variables "
+                "will be passed to HiGHS.",
+            ),
+        )
+
+
 class HighsSolutionLoader(PersistentSolutionLoader):
     def get_number_of_solutions(self) -> int:
         self._assert_solution_still_valid()
@@ -245,7 +274,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
     Interface to HiGHS
     """
 
-    CONFIG = PersistentBranchAndBoundConfig()
+    CONFIG = HighsConfig()
 
     _available = None
 
@@ -285,11 +314,36 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
 
         return version
 
+    def _mipstart(self):
+        if self.version()[:2] < (1, 8):
+            logger.warning(
+                "Partial MIP starts require HiGHS >= 1.8; "
+                "ignoring warmstart_discrete_vars."
+            )
+            return
+        indices = []
+        values = []
+        for v_id, v_ndx in self._pyomo_var_to_solver_var_map.items():
+            v = self._vars[v_id][0]
+            if v.is_integer() and v.value is not None:
+                indices.append(v_ndx)
+                values.append(v.value)
+        if indices:
+            self._solver_model.setSolution(
+                len(indices),
+                np.array(indices, dtype=np.int32),
+                np.array(values, dtype=np.double),
+            )
+
     def _solve(self):
         config = self._active_config
         timer = config.timer
         options = config.solver_options
         ostreams = [io.StringIO()] + config.tee
+
+        # outside capture_output, so that warnings reach the logger
+        if config.warmstart_discrete_vars:
+            self._mipstart()
 
         with capture_output(output=TeeStream(*ostreams), capture_fd=True):
             self._solver_model.setOptionValue('log_to_console', True)
