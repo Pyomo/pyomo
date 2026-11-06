@@ -3097,6 +3097,61 @@ class TestParmestProfileLikelihood(unittest.TestCase):
         )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_copy_scenario_values_warm_starts_states(self):
+        pest = _build_two_theta_estimator()
+        # Solved model with theta_a fixed at 2.4 (theta_b = 5 - 2 * 2.4 = 0.2)
+        pest._Q_opt(
+            theta_vals={"theta_a": 2.4, "theta_b": 0.0},
+            fixed_theta_values={"theta_a": 2.4},
+        )
+        source = pest.ef_instance
+        # New model for the next grid value; its states are the Experiment's
+        target = pest._create_scenario_blocks(
+            theta_vals={"theta_a": 2.6, "theta_b": 0.2},
+            fixed_theta_values={"theta_a": 2.6},
+        )
+
+        pest._copy_scenario_values(source, target)
+
+        for i, x in enumerate([1.0, 2.0, 3.0]):
+            block = target.exp_scenarios[i]
+            # free states and thetas come from the previous solution
+            self.assertAlmostEqual(pyo.value(block.y), 2.4 * x + 0.2, places=6)
+            self.assertAlmostEqual(pyo.value(block.theta_b), 0.2, places=6)
+            # the fixed (profiled) theta keeps the new grid value
+            self.assertEqual(pyo.value(block.theta_a), 2.6)
+            self.assertTrue(block.theta_a.fixed)
+            self.assertAlmostEqual(target._parmest_experiment_theta[i, "theta_a"], 2.4)
+
+        # The initialization then makes the states consistent with 2.6
+        pest._initialize_scenario_states(target)
+        for i, x in enumerate([1.0, 2.0, 3.0]):
+            block = target.exp_scenarios[i]
+            self.assertAlmostEqual(pyo.value(block.y), 2.6 * x + 0.2, places=6)
+            self.assertFalse(block.theta_b.fixed)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_profile_initialize_states_same_profile(self):
+        kwargs = dict(
+            grid=[1.6, 2.0, 2.4],
+            theta_hat={"theta_a": 2.0, "theta_b": 1.0},
+            obj_hat=0.0,
+        )
+        for warmstart in ("neighbor", "none"):
+            prof_on, _, _, _ = _build_two_theta_estimator().profile_likelihood(
+                "theta_a", warmstart=warmstart, **kwargs
+            )
+            prof_off, _, _, _ = _build_two_theta_estimator().profile_likelihood(
+                "theta_a", warmstart=warmstart, initialize_states=False, **kwargs
+            )
+            np.testing.assert_allclose(
+                prof_on["obj"].to_numpy(), prof_off["obj"].to_numpy(), atol=1e-8
+            )
+            np.testing.assert_allclose(
+                prof_on["theta_b"].to_numpy(), prof_off["theta_b"].to_numpy(), atol=1e-6
+            )
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_profile_failure_recorded_continue(self):
         pest = _build_two_theta_estimator()
         # theta_a = 5.0 is outside the model bounds (0, 4), so that solve

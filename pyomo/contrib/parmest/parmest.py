@@ -1614,6 +1614,46 @@ class Estimator:
             elif hasattr(self, attr):
                 delattr(self, attr)
 
+    def _copy_scenario_values(self, source, target):
+        """
+        Copy the free variable values of a solved extensive form model into a
+        new one with the same scenario blocks (used to warm start a profile
+        grid value from the previous one)
+
+        Fixed variables (data, experiment inputs, fixed thetas) keep the
+        target's values. The theta values of the source blocks are recorded
+        as the target's ``_parmest_experiment_theta``, since the copied states
+        are consistent with them.
+
+        Parameters
+        ----------
+        source : ConcreteModel
+            Solved extensive form model from _create_scenario_blocks.
+        target : ConcreteModel
+            New extensive form model built for the same experiments.
+        """
+        theta_names = list(target._parmest_theta_names)
+        for name in theta_names:
+            if not target.parmest_theta[name].fixed:
+                target.parmest_theta[name].set_value(
+                    pyo.value(source.parmest_theta[name])
+                )
+        for i in target.scenario_indices:
+            source_block = source.exp_scenarios[i]
+            target_block = target.exp_scenarios[i]
+            for target_var in target_block.component_data_objects(
+                pyo.Var, descend_into=True
+            ):
+                if target_var.fixed:
+                    continue
+                cuid = ComponentUID(target_var, context=target_block)
+                source_var = cuid.find_component_on(source_block)
+                if source_var is not None and source_var.value is not None:
+                    target_var.set_value(source_var.value, skip_validation=True)
+            for name, cuid in zip(theta_names, target._parmest_theta_cuids):
+                source_theta = cuid.find_component_on(source_block)
+                target._parmest_experiment_theta[i, name] = source_theta.value
+
     def _initialize_scenario_states(self, model):
         """
         Initialize the states of each scenario block at its current theta
@@ -1856,6 +1896,7 @@ class Estimator:
         multistart=False,
         fixed_theta_values=None,
         initialize_states=False,
+        warm_start_model=None,
     ):
         """
         _Q_opt method for parameter estimation using an extensive form
@@ -1903,6 +1944,11 @@ class Estimator:
             (see _initialize_scenario_states) before the estimation solve. The
             termination of that step is stored in
             ``self._initialization_termination``. Default is False.
+        warm_start_model : ConcreteModel, optional
+            Solved extensive form model for the same experiments. Its free
+            variable values (states and thetas) are copied into the new model
+            before the initialization and solve (see _copy_scenario_values).
+            Default is None.
 
         Returns
         -------
@@ -1948,6 +1994,10 @@ class Estimator:
             fixed_theta_values=fixed_theta_values,
         )
         expanded_theta_names = list(model._parmest_theta_names)
+
+        # Start from a previous solution (e.g., the neighboring profile value)
+        if warm_start_model is not None:
+            self._copy_scenario_values(warm_start_model, model)
 
         # Make the states consistent with the starting theta
         self._initialization_termination = None
@@ -2973,6 +3023,7 @@ class Estimator:
         warmstart,
         max_consecutive_failures,
         return_theta_paths,
+        initialize_states=True,
     ):
         """
         Solve every grid value of each profiled theta (see profile_likelihood),
@@ -3007,11 +3058,14 @@ class Estimator:
                 branches = [grid_values]
 
             # Solution at the first value solved (closest to theta_hat),
-            # used to start the second side
+            # used to start the second side. With "neighbor", the solved model
+            # is kept too, so the next value starts from its states as well
             center_theta = theta_hat
+            center_model = None
             center_value = branches[0][0]
             for branch in branches:
                 previous_theta = center_theta
+                previous_model = center_model
                 consecutive_failures = 0
 
                 for value in branch:
@@ -3023,7 +3077,10 @@ class Estimator:
                     t0 = time.time()
                     try:
                         obj_val, theta_conv, term = self._Q_opt(
-                            theta_vals=init_theta, fixed_theta_values={pname: value}
+                            theta_vals=init_theta,
+                            fixed_theta_values={pname: value},
+                            initialize_states=initialize_states,
+                            warm_start_model=previous_model,
                         )
                         status = str(term)
                     except Exception as exc:
@@ -3036,8 +3093,10 @@ class Estimator:
                         consecutive_failures = 0
                         if warmstart == "neighbor":
                             previous_theta = theta_conv
+                            previous_model = self.ef_instance
                             if value == center_value:
                                 center_theta = theta_conv
+                                center_model = self.ef_instance
                         # Track the lowest objective to check the baseline
                         if best_obj is None or obj_val < best_obj:
                             best_obj = obj_val
@@ -3082,6 +3141,7 @@ class Estimator:
         max_consecutive_failures=None,
         return_theta_paths=True,
         max_rebaseline=0,
+        initialize_states=True,
     ):
         """
         Profile likelihood for one or more thetas, fixing each profiled theta
@@ -3123,8 +3183,10 @@ class Estimator:
         warmstart: str, optional
             "neighbor" solves the grid values outward from theta_hat, upward
             then downward, each starting from the last successful solution on
-            that side. "none" solves them in increasing order, each starting
-            from theta_hat. Default is "neighbor".
+            that side (its theta values and all its other variable values,
+            e.g., the states). "none" solves them in increasing order, each
+            starting from theta_hat and the Experiment's initialization.
+            Default is "neighbor".
         max_consecutive_failures: int, optional
             Stop a side of theta_hat ("neighbor") or a theta ("none") after
             this many consecutive failed solves. Default is None (no limit).
@@ -3135,6 +3197,12 @@ class Estimator:
             Maximum number of times the profiles are solved again from a new
             baseline, when a lower objective is found. Default is 0 (the
             baseline is updated, but the profiles are not solved again).
+        initialize_states: bool, optional
+            If True, before each grid value is solved, every experiment is
+            solved with all thetas fixed at the starting values (the profiled
+            theta at the grid value), so the states are consistent with them
+            (see theta_est_multistart). With "neighbor" this starts from the
+            previous solution, so the step is small. Default is True.
 
         Returns
         -------
@@ -3196,6 +3264,8 @@ class Estimator:
                 raise ValueError("max_consecutive_failures must be greater than zero.")
         if not isinstance(return_theta_paths, bool):
             raise TypeError("return_theta_paths must be a bool.")
+        if not isinstance(initialize_states, bool):
+            raise TypeError("initialize_states must be a bool.")
         if alphas is None:
             alphas = [0.95]
         if not isinstance(alphas, (list, tuple)) or len(alphas) == 0:
@@ -3292,6 +3362,7 @@ class Estimator:
                     warmstart=warmstart,
                     max_consecutive_failures=max_consecutive_failures,
                     return_theta_paths=return_theta_paths,
+                    initialize_states=initialize_states,
                 )
                 # Relative tolerance, so solver noise does not count as a
                 # lower objective
