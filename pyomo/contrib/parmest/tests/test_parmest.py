@@ -2633,6 +2633,68 @@ class TestParmestMultistart(unittest.TestCase):
             places=8,
         )
 
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_initialize_states_at_start_theta(self):
+        # Each Experiment builds y at its own theta (y = y_data); after the
+        # initialization y must be consistent with the start theta instead
+        pest = _build_estimator(_LINEAR_DATA)
+        model = pest._create_scenario_blocks(theta_vals={"theta": 5.0})
+        for i, (x, y) in enumerate(_LINEAR_DATA):
+            self.assertAlmostEqual(pyo.value(model.exp_scenarios[i].y), y)
+
+        termination = pest._initialize_scenario_states(model)
+
+        self.assertEqual(termination, pyo.TerminationCondition.optimal)
+        for i, (x, y) in enumerate(_LINEAR_DATA):
+            block = model.exp_scenarios[i]
+            self.assertAlmostEqual(pyo.value(block.y), 5.0 + x, places=6)
+            # theta keeps its value and is free again for the estimation
+            self.assertAlmostEqual(pyo.value(block.theta), 5.0)
+            self.assertFalse(block.theta.fixed)
+            self.assertFalse(block.Total_Cost_Objective.active)
+        self.assertTrue(model.Obj.active)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_initialize_states_failure_restores_values(self):
+        class BoundedOutputExperiment(LinearThetaExperiment):
+            def create_model(self):
+                super().create_model()
+                # y = theta + x cannot exceed 4, so theta = 9 is infeasible
+                self.model.y.setub(4.0)
+
+        pest = parmest.Estimator(
+            [BoundedOutputExperiment(x, y) for x, y in _LINEAR_DATA], obj_function="SSE"
+        )
+        model = pest._create_scenario_blocks(theta_vals={"theta": 9.0})
+
+        termination = pest._initialize_scenario_states(model)
+
+        self.assertNotEqual(termination, pyo.TerminationCondition.optimal)
+        for i, (x, y) in enumerate(_LINEAR_DATA):
+            block = model.exp_scenarios[i]
+            self.assertAlmostEqual(pyo.value(block.y), y)
+            self.assertAlmostEqual(pyo.value(block.theta), 9.0)
+            self.assertFalse(block.theta.fixed)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_multistart_records_initialization(self):
+        pest = _build_estimator(_LINEAR_DATA)
+        starts = pd.DataFrame({"theta": [-9.0, 9.0]})
+
+        result, _, _ = pest.theta_est_multistart(user_supplied_vals=starts)
+        self.assertEqual(list(result["initialization_termination"]), ["optimal"] * 2)
+
+        result_off, _, _ = pest.theta_est_multistart(
+            user_supplied_vals=starts, initialize_states=False
+        )
+        self.assertEqual(list(result_off["initialization_termination"]), [""] * 2)
+        # Both settings reach the same optimum on this convex problem
+        self.assertAlmostEqual(
+            result.loc[0, "converged_theta"],
+            result_off.loc[0, "converged_theta"],
+            places=6,
+        )
+
     def test_indexed_unknown_parameters_supported_in_sampling(self):
         pest = _build_indexed_theta_estimator(_LINEAR_DATA)
         theta_starts = pest._generate_initial_theta(seed=10, n_restarts=3)
