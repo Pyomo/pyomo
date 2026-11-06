@@ -94,25 +94,25 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: [3.14]
+        python: [3.15]
         other: [""]
         category: [""]
 
         include:
         - os: ubuntu-latest
-          python: 3.14
+          python: 3.15
           test_docs: 1
           TARGET: linux
           PYENV: pip
 
         - os: macos-latest
-          python: 3.12
+          python: 3.13
           test_docs: 1
           TARGET: osx
           PYENV: pip
 
         - os: windows-latest
-          python: 3.13
+          python: 3.14
           test_docs: 1
           TARGET: win
           PYENV: conda
@@ -174,9 +174,13 @@ jobs:
             EXTRAS="$EXTRAS,docs,optional"
         fi
         echo "EXTRAS=$EXTRAS" >> $GITHUB_ENV
+        echo "EXCLUDE=${{matrix.EXCLUDE}}" \
+            | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
+        echo "" >> $GITHUB_ENV
         PYTHON_PACKAGES="${{matrix.PACKAGES}}"
         echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
+        echo "" >> $GITHUB_ENV
 
     #- name: Pip package cache
     #  uses: actions/cache@v6
@@ -259,6 +263,7 @@ jobs:
       uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python }}
+        allow-prereleases: true
 
     - name: Set up Miniconda Python ${{ matrix.python }}
       if: matrix.PYENV == 'conda'
@@ -378,6 +383,15 @@ jobs:
         if test "${{matrix.TARGET}}" == linux; then
             EXCLUDE="casadi numdifftools $EXCLUDE"
         fi
+        # HACK: Some packages have not been released for 3.15
+        # (but don't accidentally add casadi back for linux)
+        if test "${{matrix.python}}" == 3.15; then
+            if test `echo "$EXCLUDE" | grep casadi | wc -l` -eq 0; then
+                OPTIONAL="casadi $OPTIONAL"
+            fi
+            OPTIONAL="qtconsole $OPTIONAL"
+            EXCLUDE="casadi qtconsole $EXCLUDE"
+        fi
         EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
             for WORD in $EXCLUDE; do
@@ -416,7 +430,7 @@ jobs:
             else
                 XPRESS='xpress'
             fi
-            for PKG in gurobi "$XPRESS" cyipopt pymumps scip pyscipopt; do
+            for PKG in gurobi "$XPRESS" cyipopt pymumps scip pyscipopt $OPTIONAL; do
                 echo ""
                 echo "*** Install $PKG ***"
                 echo ""
@@ -470,13 +484,19 @@ jobs:
             # The CPLEX and CP Optimizer Python interfaces are no longer
             # delivered inside CPLEX Optimization Studio, but can be
             # installed directly from PyPI.
-            PYPI_DEPENDENCIES="$PYPI_DEPENDENCIES cplex docplex"
+            OPTIONAL_PYPI_DEPENDENCIES="$OPTIONAL_PYPI_DEPENDENCIES cplex docplex"
         fi
         # Re-try Pyomo (optional) dependencies with pip
         echo ""
         echo "Installing packages only available on PyPI"
         if test -n "$PYPI_DEPENDENCIES"; then
             python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES
+        fi
+        if test -n "$OPTIONAL_PYPI_DEPENDENCIES"; then
+            for DEPENDENCY in $OPTIONAL_PYPI_DEPENDENCIES; do
+                python -m pip install --cache-dir cache/pip $DEPENDENCY || \
+                    echo "WARNING: installing $DEPENDENCY failed"
+            done
         fi
         # remember this python interpreter
         python -c 'import sys; print("PYTHON_EXE=%s" \
@@ -800,7 +820,9 @@ jobs:
       run: |
         sudo apt-get -y install graphviz latexmk texlive texlive-latex-extra \
             texlive-pictures
+        echo "Build HTML docs..."
         make -C doc/OnlineDocs html
+        echo "Build PDF docs..."
         make -C doc/OnlineDocs latexpdf
         # Run the doc tests (some check the html output for correctness)
         $PYTHON_EXE -m pytest -v -W ignore::Warning \

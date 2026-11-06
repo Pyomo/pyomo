@@ -55,6 +55,7 @@ from pyomo.contrib.gdpopt.util import (
 from pyomo.contrib.gdpopt.solve_discrete_problem import (
     distinguish_mip_infeasible_or_unbounded,
 )
+from pyomo.contrib.gdpopt.convexity import model_is_not_certified_convex
 from pyomo.contrib.mindtpy.util import (
     generate_norm1_objective_function,
     generate_norm2sq_objective_function,
@@ -86,6 +87,10 @@ egb, egb_available = attempt_import(
 class _MindtPyAlgorithm:
     """Common base implementation shared by all MindtPy algorithms."""
 
+    # OA and ECP need a convex model for their linearizations to provide a valid
+    # relaxation. GOA uses McCormick envelopes and does not have this requirement.
+    _requires_model_convexity = False
+
     def __init__(self, **kwds):
         """Initialize common state shared by MindtPy algorithm variants.
 
@@ -107,6 +112,8 @@ class _MindtPyAlgorithm:
         self.timing = Bunch()
         self.curr_int_sol = []
         self.should_terminate = False
+        self._bounds_crossed_without_certified_convexity = False
+        self._model_is_not_certified_convex = False
         self.integer_list = []
         # Dictionary {integer solution (tuple): [cuts begin index, cuts end index] (list)}
         self.integer_solution_to_cuts_index = dict()
@@ -2028,7 +2035,10 @@ class _MindtPyAlgorithm:
             config.logger.error(e, exc_info=True)
             if config.single_tree:
                 config.logger.warning('Single tree terminate.')
-                if get_main_elapsed_time(self.timing) >= config.time_limit:
+                if (
+                    config.time_limit
+                    and get_main_elapsed_time(self.timing) >= config.time_limit
+                ):
                     config.logger.warning('due to the timelimit.')
                     self.results.solver.termination_condition = tc.maxTimeLimit
                 if config.strategy == 'GOA' or config.add_no_good_cuts:
@@ -2557,7 +2567,14 @@ class _MindtPyAlgorithm:
 
     def update_result(self):
         """Populate the solver results object from algorithm state."""
-        if self.objective_sense == minimize:
+        if self._bounds_crossed_without_certified_convexity:
+            if self.objective_sense == minimize:
+                self.results.problem.lower_bound = float('-inf')
+                self.results.problem.upper_bound = self.primal_bound
+            else:
+                self.results.problem.lower_bound = self.primal_bound
+                self.results.problem.upper_bound = float('inf')
+        elif self.objective_sense == minimize:
             self.results.problem.lower_bound = self.dual_bound
             self.results.problem.upper_bound = self.primal_bound
         else:
@@ -3154,6 +3171,8 @@ class _MindtPyAlgorithm:
             kwds.pop('options', {}), preserve_implicit=True
         )
         config.set_value(kwds)
+        self._bounds_crossed_without_certified_convexity = False
+        self._model_is_not_certified_convex = False
         self.set_up_logger()
         new_logging_level = logging.INFO if config.tee else None
         with lower_logger_level_to(config.logger, new_logging_level):
@@ -3180,6 +3199,12 @@ class _MindtPyAlgorithm:
                 setup_results_object(self.results, self.original_model, config)
                 self.results.problem.number_of_objectives = (
                     self._original_model_num_active_objectives
+                )
+                self._model_is_not_certified_convex = (
+                    self._requires_model_convexity
+                    and model_is_not_certified_convex(
+                        self.original_model, config.eigenvalue_tolerance
+                    )
                 )
 
                 # Validate the model to ensure that MindtPy is able to solve it.
@@ -3507,6 +3532,17 @@ class _MindtPyAlgorithm:
     def bounds_converged(self):
         """Check whether primal and dual bounds satisfy convergence tolerances."""
         # Check bound convergence
+        if (
+            self.abs_gap < 0
+            and self._requires_model_convexity
+            and self._model_is_not_certified_convex
+        ):
+            self._bounds_crossed_without_certified_convexity = True
+            self.config.logger.info(
+                'MindtPy exiting on crossed bounds without certified model convexity.'
+            )
+            self.results.solver.termination_condition = tc.feasible
+            return True
         if self.abs_gap <= self.config.absolute_bound_tolerance:
             self.config.logger.info(
                 'MindtPy exiting on bound convergence. '
@@ -3552,6 +3588,8 @@ class _MindtPyAlgorithm:
 
     def reached_time_limit(self):
         """Check whether the configured time limit has been reached."""
+        if not self.config.time_limit:
+            return False
         if get_main_elapsed_time(self.timing) >= self.config.time_limit:
             self.config.logger.info(
                 'MindtPy unable to converge bounds '

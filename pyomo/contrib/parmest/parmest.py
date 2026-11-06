@@ -617,13 +617,15 @@ def _build_multistart_table(theta_starts):
     -------
     pd.DataFrame
         Starting values plus empty ``converged_<theta>``, ``final_objective``,
-        ``solver_termination`` and ``solve_time`` columns.
+        ``solver_termination``, ``initialization_termination`` and
+        ``solve_time`` columns.
     """
     multistart_result = theta_starts.copy()
     for name in theta_starts.columns:
         multistart_result[f"converged_{name}"] = np.nan
     multistart_result["final_objective"] = np.nan
     multistart_result["solver_termination"] = ""
+    multistart_result["initialization_termination"] = ""
     multistart_result["solve_time"] = np.nan
     return multistart_result
 
@@ -1538,6 +1540,10 @@ class Estimator:
 
         model.theta_link_constraints = pyo.ConstraintList()
 
+        # Theta values each Experiment built its model with (its states are
+        # consistent with these). Used by _initialize_scenario_states.
+        model._parmest_experiment_theta = {}
+
         # Link scenario-local theta variables to the parent/global EF theta vars.
         # CUIDs are used for component lookup. Names are only used to index the
         # parent EF theta variable.
@@ -1554,6 +1560,7 @@ class Estimator:
                         f"in scenario block {i}."
                     )
 
+                model._parmest_experiment_theta[i, name] = child_theta_var.value
                 child_theta_var.set_value(theta_value)
 
                 if fix_theta or name in fixed_theta_values:
@@ -1606,6 +1613,124 @@ class Estimator:
                 setattr(self, attr, state[attr])
             elif hasattr(self, attr):
                 delattr(self, attr)
+
+    def _initialize_scenario_states(self, model):
+        """
+        Initialize the states of each scenario block at its current theta
+
+        Each experiment model is built by its Experiment class, usually with
+        states that are consistent with the Experiment's own theta values. When
+        theta is moved to a new point (a multistart start or a profile grid
+        value), those states no longer match it. Each scenario block is
+        therefore solved with every theta fixed at its current value (for a
+        typical model this is a square solve), so that the full estimation
+        problem starts from states consistent with theta. Theta is then
+        returned to its previous fixed/free status.
+
+        A direct solve can fail when the new theta is far from the theta the
+        states were built with (e.g., a stiff ODE trajectory). In that case
+        theta is moved from the Experiment's values to the new values in
+        ``continuation_steps`` equal steps, each solve starting from the
+        previous one, for each number of steps in turn.
+
+        If no attempt terminates optimally, the block's variable values are
+        restored to what they were before and a warning is logged.
+
+        Parameters
+        ----------
+        model : ConcreteModel
+            Extensive form model from _create_scenario_blocks.
+
+        Returns
+        -------
+        termination : pyomo.opt.TerminationCondition or str
+            "optimal" if every block solved optimally, otherwise the
+            termination condition (or exception message) of the first block
+            that did not.
+        """
+        sol = SolverFactory('ipopt')
+        if self.solver_options is not None:
+            for key in self.solver_options:
+                sol.options[key] = self.solver_options[key]
+
+        # Number of equal theta steps tried in turn; 1 is a direct solve
+        continuation_steps = (1, 4, 16)
+        theta_names = list(model._parmest_theta_names)
+        experiment_theta = getattr(model, "_parmest_experiment_theta", {})
+
+        def _solve_block(block):
+            try:
+                results = sol.solve(block, tee=self.tee, load_solutions=False)
+            except Exception as exc:
+                return False, f"exception: {exc}"
+            # Load values only after an optimal solve, so a failed solve never
+            # overwrites the current point
+            if check_optimal_termination(results):
+                block.solutions.load_from(results)
+                return True, results.solver.termination_condition
+            return False, results.solver.termination_condition
+
+        worst = pyo.TerminationCondition.optimal
+        for i in model.scenario_indices:
+            block = model.exp_scenarios[i]
+            theta_vars = [
+                cuid.find_component_on(block) for cuid in model._parmest_theta_cuids
+            ]
+            was_fixed = [v.fixed for v in theta_vars]
+            target = [v.value for v in theta_vars]
+            origin = [
+                experiment_theta.get((i, name), value)
+                for name, value in zip(theta_names, target)
+            ]
+            block_vars = list(block.component_data_objects(pyo.Var, descend_into=True))
+            saved_values = [v.value for v in block_vars]
+            objectives = list(block.component_objects(pyo.Objective))
+
+            # Reuse the block's own objective so models with extra degrees of
+            # freedom are initialized at their best fit for this theta
+            for obj in objectives:
+                obj.activate()
+            results_ok = False
+            termination = None
+            try:
+                for n_steps in continuation_steps:
+                    if n_steps > 1 and origin == target:
+                        break
+                    # Each attempt starts from the Experiment's initialization
+                    for v, value in zip(block_vars, saved_values):
+                        v.set_value(value, skip_validation=True)
+                    for step in range(1, n_steps + 1):
+                        frac = step / n_steps
+                        for v, a, b in zip(theta_vars, origin, target):
+                            if a is None or b is None:
+                                v.fix(b)
+                            else:
+                                v.fix(a + frac * (b - a))
+                        results_ok, termination = _solve_block(block)
+                        if not results_ok:
+                            break
+                    if results_ok:
+                        break
+            finally:
+                for obj in objectives:
+                    obj.deactivate()
+                for v, value, fixed in zip(theta_vars, target, was_fixed):
+                    v.set_value(value)
+                    if not fixed:
+                        v.unfix()
+
+            if not results_ok:
+                for v, value in zip(block_vars, saved_values):
+                    v.set_value(value, skip_validation=True)
+                logger.info(
+                    f"State initialization of scenario {i} at the current theta "
+                    f"did not terminate optimally ({termination}); starting "
+                    "from the Experiment's initialization instead."
+                )
+                if worst == pyo.TerminationCondition.optimal:
+                    worst = termination
+
+        return worst
 
     def _generate_initial_theta(
         self,
@@ -1730,6 +1855,7 @@ class Estimator:
         fix_theta=False,
         multistart=False,
         fixed_theta_values=None,
+        initialize_states=False,
     ):
         """
         _Q_opt method for parameter estimation using an extensive form
@@ -1772,6 +1898,11 @@ class Estimator:
             thetas are estimated (used by profile_likelihood); see
             _create_scenario_blocks. If given, the solve is handled as with
             multistart=True. Default is None.
+        initialize_states : bool, optional
+            If True, initialize each scenario block's states at theta_vals
+            (see _initialize_scenario_states) before the estimation solve. The
+            termination of that step is stored in
+            ``self._initialization_termination``. Default is False.
 
         Returns
         -------
@@ -1817,6 +1948,11 @@ class Estimator:
             fixed_theta_values=fixed_theta_values,
         )
         expanded_theta_names = list(model._parmest_theta_names)
+
+        # Make the states consistent with the starting theta
+        self._initialization_termination = None
+        if initialize_states:
+            self._initialization_termination = self._initialize_scenario_states(model)
 
         # Check solver and set options
         if solver == "k_aug":
@@ -2538,6 +2674,7 @@ class Estimator:
         seed=None,
         save_results=False,
         file_name="multistart_result.csv",
+        initialize_states=True,
     ):
         """
         Parameter estimation using all scenarios in the data, from multiple
@@ -2546,6 +2683,12 @@ class Estimator:
         Each start is solved as in theta_est. Every theta needs finite bounds.
         The best start is the optimal start with the smallest objective; its
         solution is kept on the Estimator (e.g., for cov_est).
+
+        By default, each start first solves every experiment with theta fixed
+        at the start values, so the model states (e.g., a discretized ODE
+        trajectory) are consistent with that start. Without this step every
+        start would begin from the states the Experiment class built for its
+        own theta values, and only theta would differ between starts.
 
         Parameters
         ----------
@@ -2566,13 +2709,20 @@ class Estimator:
             If True, write multistart_result to file_name. Default is False.
         file_name: str, optional
             CSV file name. Default is "multistart_result.csv".
+        initialize_states: bool, optional
+            If True, initialize the states of every experiment at each start's
+            theta values before solving (see above). If an experiment's
+            initialization does not solve optimally, that start uses the
+            Experiment's initialization and a warning is logged. Default is
+            True.
 
         Returns
         -------
         multistart_result: pd.DataFrame
             One row per start: starting and converged (``converged_<theta>``)
-            theta values, ``final_objective``, ``solver_termination`` and
-            ``solve_time`` (seconds).
+            theta values, ``final_objective``, ``solver_termination``,
+            ``initialization_termination`` (empty if initialize_states is
+            False) and ``solve_time`` (seconds, including initialization).
         best_theta: dict or None
             Theta values of the best start. None if no start is optimal.
         best_obj: float
@@ -2605,15 +2755,22 @@ class Estimator:
             for name in theta_names:
                 theta_vals[name] = float(theta_starts.at[i, name])
             t0 = time.time()
+            self._initialization_termination = None
             try:
                 obj, theta_hat, termination = self._Q_opt(
-                    theta_vals=theta_vals, multistart=True
+                    theta_vals=theta_vals,
+                    multistart=True,
+                    initialize_states=initialize_states,
                 )
                 multistart_result.at[i, "solver_termination"] = str(termination)
             except Exception as exc:
                 logger.warning(f"Start {i} raised an exception: {exc}")
                 theta_hat = None
                 multistart_result.at[i, "solver_termination"] = f"exception: {exc}"
+            if self._initialization_termination is not None:
+                multistart_result.at[i, "initialization_termination"] = str(
+                    self._initialization_termination
+                )
             multistart_result.at[i, "solve_time"] = time.time() - t0
 
             # theta_hat is None unless the solve terminated optimally
@@ -2625,6 +2782,19 @@ class Estimator:
                     best_obj = obj
                     best_theta = theta_hat
                     best_model = self.ef_instance
+
+        if initialize_states:
+            init_status = multistart_result["initialization_termination"]
+            n_init_failed = int(
+                ((init_status != "") & (init_status != "optimal")).sum()
+            )
+            if n_init_failed > 0:
+                logger.warning(
+                    f"State initialization did not terminate optimally for "
+                    f"{n_init_failed} of {len(theta_starts)} starts; those starts "
+                    "began from the Experiment's initialization (see the "
+                    "initialization_termination column)."
+                )
 
         if best_theta is None:
             logger.warning(

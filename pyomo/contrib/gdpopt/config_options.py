@@ -82,12 +82,13 @@ def _add_common_configs(CONFIG):
         "time_limit",
         ConfigValue(
             default=None,
-            domain=PositiveInt,
-            description="Time limit (seconds, default=600)",
+            domain=NonNegativeFloat,
+            description="Time limit (seconds)",
             doc="""
             Seconds allowed until terminated. Note that the time limit can
             currently only be enforced between subsolver invocations. You may
-            need to set subsolver time limits as well.""",
+            need to set subsolver time limits as well.  If `time_limit` "
+            "is 0 or ``None`` then no limit will be enforced.""",
         ),
     )
     CONFIG.declare(
@@ -527,6 +528,14 @@ def _add_tolerance_configs(CONFIG):
             default=1e-6,
             domain=NonNegativeFloat,
             description="Tolerance for bound convergence.",
+        ),
+    )
+    CONFIG.declare(
+        "eigenvalue_tolerance",
+        ConfigValue(
+            default=1e-10,
+            domain=NonNegativeFloat,
+            description=("Numerical tolerance for eigenvalue-based convexity checks."),
         ),
     )
 

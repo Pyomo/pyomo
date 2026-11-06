@@ -34,7 +34,7 @@ def configure_and_call_solver(model, solver, args, problem_type, timing, time_li
         raise RuntimeError("%s solver %s is not available." % (problem_type, solver))
     with SuppressInfeasibleWarning():
         solver_args = dict(args)
-        if time_limit is not None:
+        if time_limit:
             elapsed = get_main_elapsed_time(timing)
             remaining = max(time_limit - elapsed, 1)
             if solver == 'gams':

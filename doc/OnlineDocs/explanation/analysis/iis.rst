@@ -37,7 +37,10 @@ as part of the watertap project (https://github.com/watertap-org/watertap)
 and is therefore governed by a license shown
 at the top of ``mis.py``.
 
-The algorithms come from John Chinneck's slides, see: http://www.sce.carleton.ca/faculty/chinneck/docs/CPAIOR07InfeasibilityTutorial.pdf
+The algorithms come from John Chinneck's presentation, "`Feasibility and
+Infeasibility in Optimization
+<https://raw.githubusercontent.com/Pyomo/pyomo-tutorials/main/references/CPAIOR07InfeasibilityTutorial.pdf>`__"
+from the CP-AI-OR-07 conference (23-26 May 2007, Brussels, Belgium).
 
 Solver
 ------
