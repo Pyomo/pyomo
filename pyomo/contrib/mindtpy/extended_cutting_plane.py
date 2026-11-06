@@ -37,6 +37,8 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
     """
 
     CONFIG = _get_MindtPy_ECP_config()
+    # ECP linearizations only provide a valid relaxation for convex models.
+    _requires_model_convexity = True
 
     def MindtPy_iteration_loop(self):
         """Main loop for MindtPy Algorithms.
@@ -61,7 +63,6 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
                 self.config.call_after_main_solve(main_mip)
 
             if self.algorithm_should_terminate():
-                self.last_iter_cuts = False
                 break
 
             add_ecp_cuts(self.mip, self.jacobians, self.config, self.timing)

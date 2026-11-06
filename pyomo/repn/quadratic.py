@@ -262,7 +262,7 @@ def _handle_product_linear_linear(visitor, node, arg1, arg2):
         # need to preserve any InvalidNumbers
         arg1.linear = {
             vid: coef * arg2.constant
-            for key, coef in arg1.linear.items()
+            for vid, coef in arg1.linear.items()
             if coef.__class__ is InvalidNumber
         }
     else:
