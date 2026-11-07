@@ -978,10 +978,9 @@ def _finalize_multiprocessing(module, available):
     global capture_output_lock
     try:
         capture_output_lock = module.Lock()
-    except OSError:
-        # multiprocessing.Lock() raises an OSError when the platform
-        # cannot create the underlying semaphore (e.g., AWS Lambda has
-        # no /dev/shm, which raises PermissionError).  Keep the
+    except PermissionError:
+        # AWS Lambda has no usable /dev/shm, so multiprocessing.Lock()
+        # raises PermissionError (Errno 13; see #3977).  Keep the
         # threading.Lock instead of failing the import.
         pass
 

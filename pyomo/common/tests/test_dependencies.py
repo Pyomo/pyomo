@@ -530,9 +530,9 @@ class TestDependencies(unittest.TestCase):
             A_Class.method()
 
     def test_finalize_multiprocessing_lock_unavailable(self):
-        # Platforms without shared memory (e.g., AWS Lambda has no
-        # /dev/shm) raise OSError from multiprocessing.Lock(); importing
-        # multiprocessing must not fail, and we keep the threading.Lock
+        # AWS Lambda has no usable /dev/shm, so multiprocessing.Lock()
+        # raises PermissionError; importing multiprocessing must not
+        # fail, and we keep the threading.Lock
         class _NoSharedMemory:
             @staticmethod
             def Lock():
