@@ -225,7 +225,11 @@ class Highs(PersistentBase, PersistentSolver):
 
     def _warm_start(self):
         # Collect all variable values
-        col_value = np.zeros(len(self._pyomo_var_to_solver_var_map))
+        col_value = np.full(
+            len(self._pyomo_var_to_solver_var_map),
+            getattr(highspy, "kHighsUndefined", 0.0),
+            dtype=float,
+        )
         has_values = False
 
         for var_id, col_ndx in self._pyomo_var_to_solver_var_map.items():

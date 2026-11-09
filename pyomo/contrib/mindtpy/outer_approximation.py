@@ -38,6 +38,8 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
     """
 
     CONFIG = _get_MindtPy_OA_config()
+    # OA linearizations only provide a valid relaxation for convex models.
+    _requires_model_convexity = True
 
     def check_config(self):
         """Validate OA/ROA options and apply dependent defaults."""
@@ -152,21 +154,6 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             add_oa_cuts_for_grey_box(
                 self.mip, nlp, self.config, self.objective_sense, self.mip_iter, cb_opt
             )
-
-    def deactivate_no_good_cuts_when_fixing_bound(self, no_good_cuts):
-        """Deactivate the most recent no-good cut when fixing bounds.
-
-        Parameters
-        ----------
-        no_good_cuts : ConstraintList
-            No-good cut list stored on the main model.
-        """
-        # Only deactivate the last OA cuts may not be correct.
-        # Since integer solution may also be cut off by OA cuts due to calculation approximation.
-        if self.config.add_no_good_cuts:
-            no_good_cuts[len(no_good_cuts)].deactivate()
-        if self.config.use_tabu_list:
-            self.integer_list = self.integer_list[:-1]
 
     def objective_reformulation(self):
         """Configure objective reformulation for OA and regularized OA."""

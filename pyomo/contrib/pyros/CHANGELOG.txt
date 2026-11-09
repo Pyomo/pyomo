@@ -4,6 +4,17 @@ PyROS CHANGELOG
 
 
 -------------------------------------------------------------------------------
+PyROS 1.3.16    03 Nov 2026
+-------------------------------------------------------------------------------
+- Add a new constructor interface for the `IntersectionSet`
+  and `CartesianProductSet` classes.
+- Simplify and/or speed up attribute getters, setters, and validation
+  routines for the concrete `UncertaintySet` subclasses.
+- Convert `UncertaintySet` subclass docstrings to raw strings
+  to better accommodate LaTeX math backslashes.
+
+
+-------------------------------------------------------------------------------
 PyROS 1.3.15    04 Jun 2026
 -------------------------------------------------------------------------------
 - Extend `CardinalitySet` to allow for negative deviations
