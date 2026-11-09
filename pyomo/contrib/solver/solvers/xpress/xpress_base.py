@@ -434,9 +434,8 @@ class XpressSolverMixin(SolverBase):
         if not xpress_available:
             return tuple()
         if XpressSolverMixin._version is None:
-            XpressSolverMixin._version = tuple(
-                getattr(xp, 'getVersionNumbers', xp.getversionnumbers)()
-            )
+            get_ver = getattr(xp, 'getVersionNumbers', None) or xp.getversionnumbers
+            XpressSolverMixin._version = tuple(get_ver())
         return XpressSolverMixin._version
 
     @staticmethod

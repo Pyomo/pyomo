@@ -630,7 +630,8 @@ class TestXpressExternalFunction(unittest.TestCase):
         m.f1 = pyo.ExternalFunction(function=f1)
         m.f2 = pyo.ExternalFunction(function=f2)
         m.obj = pyo.Objective(expr=m.f1(m.x) + m.f2(m.y))
-        if xp.featurequery("Community"):  # Free community license
+        feature_query = getattr(xp, "featureQuery", None) or xp.featurequery
+        if feature_query("Community"):  # Free community license
             with self.assertRaisesRegex(Exception, r"^\?1152"):
                 self.opt.solve(m)
         else:
