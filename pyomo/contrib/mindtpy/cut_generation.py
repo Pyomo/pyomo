@@ -51,6 +51,8 @@ def add_oa_cuts(
         MIP iteration counter.
     config : ConfigBlock
         The specific configurations for MindtPy.
+    timing : Timing
+        Timing object used to record cut-generation time.
     cb_opt : SolverFactory, optional
         Gurobi_persistent solver, by default None.
     linearize_active : bool, optional
@@ -183,6 +185,23 @@ def add_oa_cuts(
 def add_oa_cuts_for_grey_box(
     target_model, jacobians_model, config, objective_sense, mip_iter, cb_opt=None
 ):
+    """Add OA cuts contributed by external grey-box output Jacobians.
+
+    Parameters
+    ----------
+    target_model : Block
+        Target MIP model receiving OA cuts.
+    jacobians_model : Block
+        NLP model with duals and Jacobian evaluators.
+    config : ConfigBlock
+        MindtPy configuration options.
+    objective_sense : int
+        Objective sense indicator (``minimize`` or ``maximize``).
+    mip_iter : int
+        Main-problem iteration counter.
+    cb_opt : SolverFactory, optional
+        Persistent-solver callback object for lazy-cut injection.
+    """
     sign_adjust = -1 if objective_sense == minimize else 1
     if config.add_slack:
         slack_var = target_model.MindtPy_utils.cuts.slack_vars.add()
@@ -406,6 +425,8 @@ def add_affine_cuts(target_model, config, timing):
 
     Parameters
     ----------
+    target_model : Pyomo model
+        The relaxed main model receiving affine cuts.
     config : ConfigBlock
         The specific configurations for MindtPy.
     timing : Timing

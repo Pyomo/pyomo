@@ -9,6 +9,8 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+"""Extended Cutting Plane strategy implementation for MindtPy."""
+
 from pyomo.contrib.gdpopt.util import time_code, get_main_elapsed_time
 from pyomo.contrib.mindtpy.util import calc_jacobians
 from pyomo.core import ConstraintList
@@ -35,6 +37,8 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
     """
 
     CONFIG = _get_MindtPy_ECP_config()
+    # ECP linearizations only provide a valid relaxation for convex models.
+    _requires_model_convexity = True
 
     def MindtPy_iteration_loop(self):
         """Main loop for MindtPy Algorithms.
@@ -59,7 +63,6 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
                 self.config.call_after_main_solve(main_mip)
 
             if self.algorithm_should_terminate():
-                self.last_iter_cuts = False
                 break
 
             add_ecp_cuts(self.mip, self.jacobians, self.config, self.timing)
@@ -69,8 +72,17 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
         )
 
     def check_config(self):
+        """Validate and normalize ECP-specific configuration values.
+
+        If ``ecp_tolerance`` is ``None``, this method sets
+        ``ecp_tolerance = absolute_bound_tolerance``.
+        The resulting ``ecp_tolerance`` is then used in ECP nonlinear-constraint
+        satisfaction checks, where the algorithm continues while any slack is
+        less than ``-ecp_tolerance``.
+        """
         config = self.config
-        # if ecp tolerance is not provided use bound tolerance
+        # Normalize ECP feasibility tolerance to the global absolute bound
+        # tolerance when the user does not provide an explicit ECP value.
         if config.ecp_tolerance is None:
             config.ecp_tolerance = config.absolute_bound_tolerance
         super().check_config()
@@ -87,7 +99,9 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
         )
 
     def init_rNLP(self):
-        """Initialize the problem by solving the relaxed NLP and then store the optimal variable
+        """Initialize by solving the relaxed NLP and storing variable values.
+
+        Initialize the problem by solving the relaxed NLP and then store the optimal variable
         values obtained from solving the rNLP.
 
         Raises
@@ -125,6 +139,7 @@ class MindtPy_ECP_Solver(_MindtPyAlgorithm):
         )
 
     def all_nonlinear_constraint_satisfied(self):
+        """Return True when all nonlinear constraints satisfy ECP tolerance."""
         # check to see if the nonlinear constraints are satisfied
         config = self.config
         MindtPy = self.mip.MindtPy_utils

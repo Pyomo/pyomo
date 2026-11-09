@@ -26,10 +26,10 @@ your console output will, by default, look like this:
    :linenos:
 
    ==============================================================================
-   PyROS: The Pyomo Robust Optimization Solver, v1.3.15.
-          Pyomo version: 6.10.1
+   PyROS: The Pyomo Robust Optimization Solver, v1.3.16.
+          Pyomo version: 6.10.2.dev0
           Commit hash: unknown
-          Invoked at UTC 2026-06-05T00:00:00.000000+00:00
+          Invoked at UTC 2026-11-03T00:00:00.000000+00:00
    
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)
@@ -44,11 +44,9 @@ your console output will, by default, look like this:
    https://github.com/Pyomo/pyomo/issues/new/choose
    ==============================================================================
    User-provided solver options:
-    tee=False
     objective_focus=<ObjectiveType.worst_case: 1>
     decision_rule_order=1
     solve_master_globally=True
-    bypass_local_separation=False
    ------------------------------------------------------------------------------
    Model Statistics (before preprocessing):
      Number of variables : 4
@@ -65,19 +63,18 @@ your console output will, by default, look like this:
    ------------------------------------------------------------------------------
    Itn  Objective    1-Stg Shift  2-Stg Shift  #CViol  Max Viol     Wall Time (s)
    ------------------------------------------------------------------------------
-   0     5.4079e+03  -            -            3       4.6876e+02   0.185        
-   1     5.4079e+03  6.0451e-10   1.0717e-10   2       6.1500e+01   0.496        
-   2     6.5403e+03  1.0018e-01   7.4564e-03   1       1.7142e-03   0.804        
-   3     6.5403e+03  1.9372e-16   3.6832e-06   2       2.7964e-01   1.136        
-   4     6.5403e+03  0.0000e+00   3.8115e-06   1       1.7141e-03   1.465        
-   5     6.5403e+03  0.0000e+00   8.4872e-03   1       4.7920e-01   1.855        
-   6     6.5403e+03  0.0000e+00   2.0736e-04   0       1.3594e-06g  2.756        
+   0     5.4079e+03  -            -            3       4.6876e+02   0.181        
+   1     5.4079e+03  6.0451e-10   1.9880e-10   2       6.1500e+01   0.428        
+   2     6.5403e+03  1.0018e-01   7.4564e-03   1       4.0992e-03   0.682        
+   3     6.5403e+03  1.2583e-10   8.6077e-06   2       6.4421e-01   0.973        
+   4     6.5403e+03  1.2583e-10   9.3260e-06   1       4.0992e-03   1.265        
+   5     6.5403e+03  1.2557e-10   2.6654e-04   0       1.0843e-07g  2.148        
    ------------------------------------------------------------------------------
    Robust optimal solution identified.
    ------------------------------------------------------------------------------
    Termination stats:
-    Iterations            : 7
-    Solve time (wall s)   : 2.756
+    Iterations            : 6
+    Solve time (wall s)   : 2.148
     Final objective value : 6.5403e+03
     Termination condition : pyrosTerminationCondition.robust_optimal
    ------------------------------------------------------------------------------

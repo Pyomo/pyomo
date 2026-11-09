@@ -59,8 +59,15 @@ def _finalize_xpress_import(xpress, avail):
     if not avail:
         return
     xp = xpress
-    XpressDirect._version = tuple(int(k) for k in xp.getversion().split('.'))
-    XpressDirect._name = "Xpress %s.%s.%s" % XpressDirect._version
+
+    try:
+        # getversion was renamed getVersion in 47.01.01:
+        _version_str = xp.getVersion()
+    except AttributeError:
+        # Pre 47.01.01 behavior
+        _version_str = xp.getversion()
+    XpressDirect._version = tuple(int(k) for k in _version_str.split('.'))
+    XpressDirect._name = f"Xpress {_version_str}"
     # In (pypi) versions prior to 8.13.0, the 'xp.rng' keyword was
     # 'xp.range'
     if not hasattr(xp, 'rng'):
@@ -246,6 +253,14 @@ def _finalize_xpress_import(xpress, avail):
         XpressDirect._getLB = _getLB
         XpressDirect._getUB = _getUB
 
+        XpressDirect._firstIIS = lambda self, prob, mode: prob.iisfirst(mode)
+        # Note that iiswrite used a different argument ordering
+        XpressDirect._writeIIS = (
+            lambda self, prob, iis, filetype, filename, flags: prob.iiswrite(
+                iis, filename, filetype, flags
+            )
+        )
+
     else:
         XpressDirect._setLogFile = lambda self, prob, *args, **kwargs: prob.setLogFile(
             *args, **kwargs
@@ -282,6 +297,13 @@ def _finalize_xpress_import(xpress, avail):
             *args, **kwargs
         )
 
+        XpressDirect._firstIIS = lambda self, prob, mode: prob.firstIIS(mode)
+        XpressDirect._writeIIS = (
+            lambda self, prob, iis, filetype, filename, flags: prob.writeIIS(
+                iis, filetype, filename, flags
+            )
+        )
+
         def _addCols(self, prob, objx, mstart, mrwind, dmatval, bdl, bdu, names, types):
             first_col_ind = prob.attributes.cols
             prob.addCols(objx, mstart, mrwind, dmatval, bdl, bdu)
@@ -293,6 +315,14 @@ def _finalize_xpress_import(xpress, avail):
                 prob.chgColType(col_indices, types)
 
         XpressDirect._addCols = _addCols
+
+    # Xpress 10.0 (48) renamed some enums
+    if XpressDirect._version < (48,):
+        XpressDirect._minimize = xp.minimize
+        XpressDirect._maximize = xp.maximize
+    else:
+        XpressDirect._minimize = xp.ObjSense.MINIMIZE
+        XpressDirect._maximize = xp.ObjSense.MAXIMIZE
 
 
 class _xpress_importer_class:
@@ -701,8 +731,9 @@ class XpressDirect(DirectSolver):
             results.solver.termination_condition = TerminationCondition.unknown
             soln.status = SolutionStatus.unknown
         elif status == XpressDirect.NLPStatus.LOCALLY_OPTIMAL:
-            # This is either XpressDirect.NLPStatus.LOCALLY_OPTIMAL or XpressDirect.NLPStatus.SOLUTION
-            # we must look at the solstatus to figure out which
+            # This is either XpressDirect.NLPStatus.LOCALLY_OPTIMAL or
+            # XpressDirect.NLPStatus.SOLUTION we must look at the
+            # solstatus to figure out which
             if solstatus in [2, 3]:
                 results.solver.status = SolverStatus.ok
                 results.solver.termination_message = (
@@ -1055,9 +1086,9 @@ class XpressDirect(DirectSolver):
             raise ValueError('Cannot add inactive objective to solver.')
 
         if obj.sense == minimize:
-            sense = xpress.minimize
+            sense = self._minimize
         elif obj.sense == maximize:
-            sense = xpress.maximize
+            sense = self._maximize
         else:
             raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
 
@@ -1167,7 +1198,13 @@ class XpressDirect(DirectSolver):
                 soln_constraints = soln.constraint
 
                 if extract_duals or extract_slacks:
-                    xpress_cons = list(self._solver_con_to_pyomo_con_map.keys())
+                    # Starting in Xpress 9.9.0, passing SOS constraints
+                    # to getSlacks raises an xpress.ModelError:
+                    xpress_cons = [
+                        con
+                        for con in self._solver_con_to_pyomo_con_map.keys()
+                        if con.__class__ is not xpress.sos
+                    ]
                     for con in xpress_cons:
                         soln_constraints[con.name] = {}
 
@@ -1175,7 +1212,16 @@ class XpressDirect(DirectSolver):
                 try:
                     var_vals = xprob.getSolution(xpress_vars)
                     if extract_slacks:
-                        slacks = self._getSlacks(xprob, xpress_cons)
+                        # Beginning in Xpress 10.0.0, getSolution can
+                        # return a solution for unbounded problems, but
+                        # getSlacks() will raise a ModelError("Slack
+                        # values are not available").  We will suppress
+                        # that exception and just return an empty list
+                        # of slacks.
+                        try:
+                            slacks = self._getSlacks(xprob, xpress_cons)
+                        except xpress.ModelError:
+                            slacks = []
                 except xpress.ModelError:
                     # Xpress 9.5.0 has new behavior for unbounded
                     # problems that have mipsols > 0.  Previously
