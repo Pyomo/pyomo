@@ -161,6 +161,12 @@ class LinearStandardFormInfo:
 
     Attributes
     ----------
+    format : StandardFormFormat
+
+        The format used in this model representation.  This flag
+        indicates how to interpret the rows (and corresponding duals) in
+        this representation.
+
     c : scipy.sparse.csc_array
 
         The objective coefficients.  Note that this is a sparse array
@@ -226,8 +232,47 @@ class LinearStandardFormInfo:
     """
 
     def __init__(
-        self, c, c_offset, A, rhs, rhs_range, rows, columns, objectives, eliminated_vars
+        self,
+        c,
+        c_offset,
+        A,
+        rhs,
+        rows,
+        columns,
+        objectives,
+        eliminated_vars,
+        rhs_range=None,
+        format=None,
     ):
+        # "format" and 'rhs_range' are not optional: this logic is
+        # solely to provide a deprecation path (that hopefully no one
+        # needs)
+        if format is None:
+            deprecation_warning(
+                'LinearStandardFormInfo requires the format argument',
+                version="6.10.2.dev0",
+            )
+            row_types = set(_[1] for _ in rows)
+            if BoundType.RANGE in row_types:
+                assert rhs_range is not None
+                format = StandardFormFormat.EXTENDED_MIXED_STANDARD_FORM
+            elif BoundType.EQUALITY in row_types:
+                if len(row_types) == 1:
+                    format = StandardFormFormat.SLACK_STANDARD_FORM
+                else:
+                    format = StandardFormFormat.MIXED_STANDARD_FORM
+            else:
+                # This is a guess: it is possible that this is a MIXED
+                # form that just doesn't have equalities.  If that is
+                # the case, we will guess the wrong sign convention for
+                # lower-bounded inequalities.
+                logger.warning(
+                    "LinearStandardFormInfo: assuming STANDARD_FORM; this could "
+                    "be incorrect, which will result in the wrong sign convention "
+                    "for lower-bounded inequalitied"
+                )
+                format = StandardFormFormat.STANDARD_FORM
+        self.format = format
         self.c = c
         self.c_offset = c_offset
         self.A = A
@@ -790,11 +835,12 @@ class _LinearStandardFormCompiler_impl:
             obj_offset,
             A,
             rhs,
-            np.array(rhs_range) if keep_range_constraints else None,
             rows,
             columns,
             objectives,
             eliminated_vars,
+            None if rhs_range is None else np.array(rhs_range),
+            _format,
         )
         timer.toc("Generated linear standard form representation", delta=False)
         return info
