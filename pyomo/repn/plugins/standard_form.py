@@ -171,7 +171,8 @@ class LinearStandardFormInfo:
 
         The objective coefficients.  Note that this is a sparse array
         and may contain multiple rows (for multiobjective problems).  The
-        objectives may be calculated by ``c @ x``
+        objectives may be calculated (inefficiently) by
+        ``c.todense() @ x + c_offset``
 
     c_offset : numpy.ndarray
 
@@ -180,46 +181,40 @@ class LinearStandardFormInfo:
     A : scipy.sparse.csc_array
 
         The constraint coefficients.  The constraint bodies may be
-        calculated by ``A @ x``
+        calculated (inefficiently) by ``A.todense() @ x``
 
     rhs : numpy.ndarray
 
-        The constraint right-hand sides.  For range rows (``bound_type
-        == 2``, only produced when ``keep_range_constraints=True``),
-        this holds the adjusted *upper* bound ``ub - offset``.
+        The constraint right-hand sides.  For range rows
+        (:attr:`BoundType.RANGE`), this holds the adjusted *upper*
+        bound.  See `rhs_range` for computing the lower bound.
 
-    rhs_range : numpy.ndarray or None
+    rhs_range : numpy.ndarray | None
 
-        Range widths for range rows: ``rhs_range[i] = ub - lb`` for
-        ``bound_type == 2`` rows.  ``None`` when
-        ``keep_range_constraints=False`` (the default) or when the
-        model contains no range constraints.  When not ``None``, the
-        adjusted lower bound for a range row can be recovered as
-        ``rhs[i] - rhs_range[i]``.
+        If ``format=EXTENDED_MIXED_STANDARD_FORM``, this contains the
+        row range widths: ``ub - lb`` for :attr:`BoundType.RANGE` rows,
+        ``0.0`` for :attr:`BoundType.EQUALITY` rows, and
+        ``float('inf')`` for inequalities.  For all other formats,
+        ``rhs_range`` is ``None``.
 
-    rows : List[Tuple[ConstraintData, int]]
+    rows : list[tuple[ConstraintData, BoundType]]
 
         The list of Pyomo constraint objects corresponding to the rows
         in `A`.  Each element in the list is a 2-tuple of
-        (ConstraintData, bound_type).  ``bound_type`` values:
+        (:class:`ConstraintData`, :enum:`BoundType`).  See the
+        :enum:`BoundType` documentation for how to interpret the row
+        constraint.
 
-        * ``+1`` – upper-bound row (``Ax <= rhs``);
-        * ``-1`` – lower-bound row (see mode-dependent sign conventions);
-        * ``0``  – equality row (``mixed_form`` only);
-        * ``+2`` – range row (``lb - offset <= Ax <= ub - offset``,
-          coefficients in the upper-bound sense; only produced when
-          ``keep_range_constraints=True``).
-
-    columns : List[VarData]
+    columns : list[VarData]
 
         The list of Pyomo variable objects corresponding to columns in
         the `A` and `c` matrices.
 
-    objectives : List[ObjectiveData]
+    objectives : list[ObjectiveData]
 
         The list of Pyomo objective objects corresponding to the active objectives
 
-    eliminated_vars: List[Tuple[VarData, NumericExpression]]
+    eliminated_vars: list[tuple[VarData, NumericExpression]]
 
         The list of variables from the original model that do not appear
         in the standard form (usually because they were replaced by
