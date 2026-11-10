@@ -87,11 +87,38 @@ _FileDeterminism_deprecation = {
 
 
 class FileDeterminism(enums.IntEnum):
+    #: No effort is applied to ensure deterministic output.
+    #:
+    #: Components are interated over using their internal default
+    #: sequence.  This allows for fast iteration, but does *NOT*
+    #: guarantee deterministic output.
     NONE = 0
+
+    # The following entries are deprecated and no longer documented:
+    #
     # DEPRECATED_KEYS = 1
     # DEPRECATED_KEYS_AND_NAMES = 2
+
+    #: Iterate over components using the underlying "ordered" iterators.
+    #:
+    #: Components are visited using declaration order.  Within
+    #: components, indices are iterated over using the "ordered"
+    #: iterator.  Assuming the model is generated using deterministic
+    #: input, then the resulting output *should* be determistic.
     ORDERED = 10
+
+    #: Sort keys of indexed components.
+    #:
+    #: Components are visited using declaration order.  Within
+    #: components, indices are iterated over using the "sorted"
+    #: iterator.
     SORT_INDICES = 20
+
+    #: Sort components by name *and* sort keys of indexed components.
+    #:
+    #: Components are visited in alphabetical order.  Within
+    #: components, indices are iterated over using the "sorted"
+    #: iterator.
     SORT_SYMBOLS = 30
 
     # We will define __str__ and __format__ so that behavior in python
