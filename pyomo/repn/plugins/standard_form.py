@@ -62,6 +62,99 @@ _inf = float('inf')
 _ninf = -_inf
 
 
+class BoundType(IntEnum):
+    #: Indicates that a variable or constraint has a finite lower bound
+    #: (and infinite upper bound)
+    LOWER = -1
+    #: Indicates that a variable or constraint has finite lower and
+    #: upper bounds that are the same value
+    EQUALITY = 0
+    #: Indicates that a variable or constraint has a finite upper bound
+    #: (and infinite lower bound)
+    UPPER = 1
+    #: Indicates that a variable or constraint has finite lower and
+    #: upper bounds (that are not equal)
+    RANGE = 2
+
+
+class StandardFormFormat(Enum):
+    #: ``A @ x <= rhs``
+    #:
+    #: "Traditional" standard form.  Equality constraints are split into
+    #: pairs of lower-bounded and upper-bounded inequalities.
+    #: Lower-bounded inequalities are negated and turned into
+    #: upper-bounded constraints.
+    #:
+    #: .. math::
+    #:
+    #:    \{\min|\max\}\ & c^Tx \\
+    #:    s.t.\ & Ax \le b
+    #:
+    #: Notes:
+    #:   - :math:`x` may or may not be nonnegative.
+    STANDARD_FORM = 1
+
+    #: ``A @ x == rhs``
+    #:
+    #: Slack standard form.  Slack variables are added to inequality
+    #: constraints to convert them to equalities.
+    #:
+    #: .. math::
+    #:
+    #:    \{\min|\max\}\ & c^Tx \\
+    #:    s.t.\ & Ax = b
+    #:
+    #: Notes:
+    #:   - :math:`x` is a vector of the original problem variables concatenated
+    #:     with any additional slack variables needed to convert
+    #:     inequalities / range constraints into equality expressions.
+    #:   - :math:`x` may or may not be nonnegative.
+    #:
+    SLACK_STANDARD_FORM = 2
+
+    #: ``A @ x {<=>}= rhs``
+    #:
+    #: Mixed standard form.  Each row defines a constraint whose
+    #: relational operator is one of `<=`, `>=`, or `==`, as defined by
+    #: the :attr:`BoundType` field in :attr:`LinearStandardFormInfo.rows`.
+    #: Individual model constraints are not manipulated, except for
+    #: ranged inequalities, which are split into pairs of lower- and
+    #: upper-bounded inequalities.
+    #:
+    #: .. math::
+    #:
+    #:    \{\min|\max\}\ & c^Tx \\
+    #:    s.t.\ & A_1x \ge b_1 \\
+    #:          & A_2x = b_2 \\
+    #:          & A_3x \le b_3 \\
+    #:
+    #: Notes:
+    #:   - :math:`x` may or may not be nonnegative.
+    #:
+    MIXED_STANDARD_FORM = 3
+
+    #: ``A @ x {<=>}= rhs``; ``rhs - rhs_bound <= A @ x <= rhs``
+    #:
+    #: Extended mixed standard form. In addition to the row types from
+    #: :attr:`MIXED_STANDARD_FORM`, rows may also define ranged
+    #: constraints given by ``rhs - rhs_range <= A @ x <= rhs``.  This
+    #: results in the minimal manipulation of model constraints when
+    #: generating the compiled representation.
+    #:
+    #: .. math::
+    #:
+    #:    \{\min|\max\}\ & c^Tx \\
+    #:    s.t.\ & A_1x \ge b_1 \\
+    #:          & A_2x = b_2 \\
+    #:          & A_3x \le b_3 \\
+    #:    b_4 - b_r \le & A_4x \le b_4
+    #:
+    #: Notes:
+    #:   - :math:`x` may or may not be nonnegative.
+    #:
+    EXTENDED_MIXED_STANDARD_FORM = 4
+
+
 # TODO: make a proper base class
 class LinearStandardFormInfo:
     """Return type for LinearStandardFormCompiler.write()
