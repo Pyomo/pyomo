@@ -89,7 +89,7 @@ _FileDeterminism_deprecation = {
 class FileDeterminism(enums.IntEnum):
     #: No effort is applied to ensure deterministic output.
     #:
-    #: Components are interated over using their internal default
+    #: Components are iterated over using their internal default
     #: sequence.  This allows for fast iteration, but does *NOT*
     #: guarantee deterministic output.
     NONE = 0
@@ -104,7 +104,7 @@ class FileDeterminism(enums.IntEnum):
     #: Components are visited using declaration order.  Within
     #: components, indices are iterated over using the "ordered"
     #: iterator.  Assuming the model is generated using deterministic
-    #: input, then the resulting output *should* be determistic.
+    #: input, then the resulting output *should* be deterministic.
     ORDERED = 10
 
     #: Sort keys of indexed components.
