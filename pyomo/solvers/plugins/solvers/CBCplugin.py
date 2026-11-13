@@ -815,6 +815,8 @@ class CBCSHELL(SystemCallSolver):
         )
         header_processed = False
         optim_value = None
+        # CBC flags rows / columns that violate their bounds with "**"
+        infeasible_point = False
 
         try:
             INPUT = open(self._soln_file, "r")
@@ -960,6 +962,14 @@ class CBCSHELL(SystemCallSolver):
                         'line is: {}'.format(tokens[0], line.strip())
                     )
 
+            # CBC prefixes rows / columns whose values violate their
+            # bounds with "**".  Strip the marker before reading the row
+            # number, as row number 0 marks the start of a section.
+            if n_tokens == 5 and tokens[0] == "**":
+                infeasible_point = True
+                tokens = tokens[1:]
+                n_tokens = 4
+
             # most of the first tokens should be integers
             # if it's not an integer, only then check the list of results
             try:
@@ -995,11 +1005,7 @@ class CBCSHELL(SystemCallSolver):
                     header_processed = True
 
             if (processing_constraints is True) and (extract_duals is True):
-                if n_tokens == 4:
-                    pass
-                elif (n_tokens == 5) and tokens[0] == "**":
-                    tokens = tokens[1:]
-                else:
+                if n_tokens != 4:
                     raise RuntimeError(
                         "Unexpected line format encountered in CBC solution file - line="
                         + line
@@ -1036,11 +1042,7 @@ class CBCSHELL(SystemCallSolver):
                         }
 
             elif processing_constraints is False:
-                if n_tokens == 4:
-                    pass
-                elif (n_tokens == 5) and tokens[0] == "**":
-                    tokens = tokens[1:]
-                else:
+                if n_tokens != 4:
                     raise RuntimeError(
                         "Unexpected line format encountered "
                         "in CBC solution file - line=" + line
@@ -1071,6 +1073,16 @@ class CBCSHELL(SystemCallSolver):
 
         if not type(INPUT) is list:
             INPUT.close()
+
+        if infeasible_point:
+            # The point in the solution file is not feasible: do not
+            # return it as a solution that can be loaded into the model
+            solution.status = SolutionStatus.infeasible
+            results.solution.clear()
+            results.solver.termination_message = (
+                (results.solver.termination_message or "")
+                + " CBC marked the values in the solution file as infeasible."
+            ).strip()
 
         if len(results.solution) == 0 and solution.status in [
             SolutionStatus.optimal,
