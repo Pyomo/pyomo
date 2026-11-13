@@ -95,6 +95,11 @@ class CBCSHELL(SystemCallSolver):
         # warm-start file (if any).
         self._warm_start_file_name = None
 
+        # Timeout (in seconds) for the subprocess calls that query the
+        # cbc version and ASL support.  Users can raise it if cbc starts
+        # slowly (e.g., on heavily loaded machines).
+        self._version_timeout = 5
+
         #
         # Set up valid problem formats and valid results for each
         # problem format
@@ -296,7 +301,7 @@ class CBCSHELL(SystemCallSolver):
         """
         results = subprocess.run(
             [self.executable(), "-stop"],
-            timeout=5,
+            timeout=self._version_timeout,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
@@ -309,7 +314,7 @@ class CBCSHELL(SystemCallSolver):
     def _compiled_with_asl(self):
         results = subprocess.run(
             [self.executable(), "dummy", "-AMPL", "-stop"],
-            timeout=5,
+            timeout=self._version_timeout,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
