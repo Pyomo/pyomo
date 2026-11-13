@@ -18,10 +18,14 @@ from pyomo.common.config import (
     InEnum,
     document_kwargs_from_configdict,
 )
-from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.common.dependencies import scipy, numpy as np
-from pyomo.common.enums import ObjectiveSense
-from pyomo.common.errors import InvalidConstraintError, InvalidExpressionError
+from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.enums import Enum, IntEnum, ObjectiveSense
+from pyomo.common.errors import (
+    InvalidConstraintError,
+    InvalidExpressionError,
+    InfeasibleConstraintException,
+)
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.numeric_types import native_types, value
 from pyomo.common.timing import TicTocTimer
@@ -58,6 +62,102 @@ logger = logging.getLogger(__name__)
 
 RowEntry = collections.namedtuple('RowEntry', ['constraint', 'bound_type'])
 
+_inf = float('inf')
+_ninf = -_inf
+
+
+class BoundType(IntEnum):
+    #: Indicates that a variable or constraint has a finite lower bound
+    #: (and infinite upper bound)
+    LOWER = -1
+    #: Indicates that a variable or constraint has finite lower and
+    #: upper bounds that are the same value
+    EQUALITY = 0
+    #: Indicates that a variable or constraint has a finite upper bound
+    #: (and infinite lower bound)
+    UPPER = 1
+    #: Indicates that a variable or constraint has finite lower and
+    #: upper bounds (that are not equal)
+    RANGE = 2
+
+
+class StandardFormFormat(Enum):
+    #: ``A @ x <= rhs``
+    #:
+    #: "Traditional" standard form.  Equality constraints are split into
+    #: pairs of lower-bounded and upper-bounded inequalities.
+    #: Lower-bounded inequalities are negated and turned into
+    #: upper-bounded constraints.
+    #:
+    #: .. math::
+    #:
+    #:    \{\min|\max\}\ & c^Tx \\
+    #:    s.t.\ & Ax \le b
+    #:
+    #: Notes:
+    #:   - :math:`x` may or may not be nonnegative.
+    STANDARD_FORM = 1
+
+    #: ``A @ x == rhs``
+    #:
+    #: Slack standard form.  Slack variables are added to inequality
+    #: constraints to convert them to equalities.
+    #:
+    #: .. math::
+    #:
+    #:    \{\min|\max\}\ & c^Tx \\
+    #:    s.t.\ & Ax = b
+    #:
+    #: Notes:
+    #:   - :math:`x` is a vector of the original problem variables concatenated
+    #:     with any additional slack variables needed to convert
+    #:     inequalities / range constraints into equality expressions.
+    #:   - :math:`x` may or may not be nonnegative.
+    #:
+    SLACK_STANDARD_FORM = 2
+
+    #: ``A @ x {<=>}= rhs``
+    #:
+    #: Mixed standard form.  Each row defines a constraint whose
+    #: relational operator is one of `<=`, `>=`, or `==`, as defined by
+    #: the :attr:`BoundType` field in :attr:`LinearStandardFormInfo.rows`.
+    #: Individual model constraints are not manipulated, except for
+    #: ranged inequalities, which are split into pairs of lower- and
+    #: upper-bounded inequalities.
+    #:
+    #: .. math::
+    #:
+    #:    \{\min|\max\}\ & c^Tx \\
+    #:    s.t.\ & A_1x \ge b_1 \\
+    #:          & A_2x = b_2 \\
+    #:          & A_3x \le b_3 \\
+    #:
+    #: Notes:
+    #:   - :math:`x` may or may not be nonnegative.
+    #:
+    MIXED_STANDARD_FORM = 3
+
+    #: ``A @ x {<=>}= rhs``; ``rhs - rhs_bound <= A @ x <= rhs``
+    #:
+    #: Extended mixed standard form. In addition to the row types from
+    #: :attr:`MIXED_STANDARD_FORM`, rows may also define ranged
+    #: constraints given by ``rhs - rhs_range <= A @ x <= rhs``.  This
+    #: results in the minimal manipulation of model constraints when
+    #: generating the compiled representation.
+    #:
+    #: .. math::
+    #:
+    #:    \{\min|\max\}\ & c^Tx \\
+    #:    s.t.\ & A_1x \ge b_1 \\
+    #:          & A_2x = b_2 \\
+    #:          & A_3x \le b_3 \\
+    #:    b_4 - b_r \le & A_4x \le b_4
+    #:
+    #: Notes:
+    #:   - :math:`x` may or may not be nonnegative.
+    #:
+    EXTENDED_MIXED_STANDARD_FORM = 4
+
 
 # TODO: make a proper base class
 class LinearStandardFormInfo:
@@ -65,11 +165,18 @@ class LinearStandardFormInfo:
 
     Attributes
     ----------
+    format : StandardFormFormat
+
+        The format used in this model representation.  This flag
+        indicates how to interpret the rows (and corresponding duals) in
+        this representation.
+
     c : scipy.sparse.csc_array
 
         The objective coefficients.  Note that this is a sparse array
         and may contain multiple rows (for multiobjective problems).  The
-        objectives may be calculated by ``c @ x``
+        objectives may be calculated (inefficiently) by
+        ``c.todense() @ x + c_offset``
 
     c_offset : numpy.ndarray
 
@@ -78,30 +185,40 @@ class LinearStandardFormInfo:
     A : scipy.sparse.csc_array
 
         The constraint coefficients.  The constraint bodies may be
-        calculated by ``A @ x``
+        calculated (inefficiently) by ``A.todense() @ x``
 
     rhs : numpy.ndarray
 
-        The constraint right-hand sides.
+        The constraint right-hand sides.  For range rows
+        (:attr:`BoundType.RANGE`), this holds the adjusted *upper*
+        bound.  See `rhs_range` for computing the lower bound.
 
-    rows : List[Tuple[ConstraintData, int]]
+    rhs_range : numpy.ndarray | None
+
+        If ``format=EXTENDED_MIXED_STANDARD_FORM``, this contains the
+        row range widths: ``ub - lb`` for :attr:`BoundType.RANGE` rows,
+        ``0.0`` for :attr:`BoundType.EQUALITY` rows, and
+        ``float('inf')`` for inequalities.  For all other formats,
+        ``rhs_range`` is ``None``.
+
+    rows : list[tuple[ConstraintData, BoundType]]
 
         The list of Pyomo constraint objects corresponding to the rows
         in `A`.  Each element in the list is a 2-tuple of
-        (ConstraintData, row_multiplier).  The `row_multiplier` will be
-        +/- 1 indicating if the row was multiplied by -1 (corresponding
-        to a constraint lower bound) or +1 (upper bound).
+        (:class:`ConstraintData`, :enum:`BoundType`).  See the
+        :enum:`BoundType` documentation for how to interpret the row
+        constraint.
 
-    columns : List[VarData]
+    columns : list[VarData]
 
         The list of Pyomo variable objects corresponding to columns in
         the `A` and `c` matrices.
 
-    objectives : List[ObjectiveData]
+    objectives : list[ObjectiveData]
 
         The list of Pyomo objective objects corresponding to the active objectives
 
-    eliminated_vars: List[Tuple[VarData, NumericExpression]]
+    eliminated_vars: list[tuple[VarData, NumericExpression]]
 
         The list of variables from the original model that do not appear
         in the standard form (usually because they were replaced by
@@ -113,11 +230,53 @@ class LinearStandardFormInfo:
 
     """
 
-    def __init__(self, c, c_offset, A, rhs, rows, columns, objectives, eliminated_vars):
+    def __init__(
+        self,
+        c,
+        c_offset,
+        A,
+        rhs,
+        rows,
+        columns,
+        objectives,
+        eliminated_vars,
+        rhs_range=None,
+        format=None,
+    ):
+        # "format" and 'rhs_range' are not optional: this logic is
+        # solely to provide a deprecation path (that hopefully no one
+        # needs)
+        if format is None:
+            deprecation_warning(
+                'LinearStandardFormInfo requires the format argument',
+                version="6.10.2.dev0",
+            )
+            row_types = set(_[1] for _ in rows)
+            if BoundType.RANGE in row_types:
+                assert rhs_range is not None
+                format = StandardFormFormat.EXTENDED_MIXED_STANDARD_FORM
+            elif BoundType.EQUALITY in row_types:
+                if len(row_types) == 1:
+                    format = StandardFormFormat.SLACK_STANDARD_FORM
+                else:
+                    format = StandardFormFormat.MIXED_STANDARD_FORM
+            else:
+                # This is a guess: it is possible that this is a MIXED
+                # form that just doesn't have equalities.  If that is
+                # the case, we will guess the wrong sign convention for
+                # lower-bounded inequalities.
+                logger.warning(
+                    "LinearStandardFormInfo: assuming STANDARD_FORM; this could "
+                    "be incorrect, which will result in the wrong sign convention "
+                    "for lower-bounded inequalitied"
+                )
+                format = StandardFormFormat.STANDARD_FORM
+        self.format = format
         self.c = c
         self.c_offset = c_offset
         self.A = A
         self.rhs = rhs
+        self.rhs_range = rhs_range
         self.rows = rows
         self.columns = columns
         self.objectives = objectives
@@ -139,21 +298,25 @@ class LinearStandardFormInfo:
     r'Compile an LP to standard form (:math:`\min c^Tx s.t. Ax \le b)`',
 )
 class LinearStandardFormCompiler:
-    r"""Compiler to convert an LP to the matrix representation of the
-    standard form:
+    r"""Compiler to convert an LP to a matrix representation in "standard form".
 
-    .. math::
-
-        \min\ & c^Tx \\
-        s.t.\ & Ax \le b
-
-    and return the compiled representation as NumPy arrays and SciPy
-    sparse matrices.
+    This compiler supports a number of "standard" representations; see
+    :enum:`StandardFormFormat` for supported formats.  The result is
+    returned in a :class:`LinearStandardFormInfo` object containing
+    lists, NumPy arrays, and SciPy sparse matrices.
 
     """
 
     CONFIG = ConfigBlock('compile_standard_form')
 
+    CONFIG.declare(
+        'format',
+        ConfigValue(
+            default=StandardFormFormat.STANDARD_FORM,
+            domain=InEnum(StandardFormFormat),
+            description="The format for the compiled problem representation.",
+        ),
+    )
     CONFIG.declare(
         'nonnegative_vars',
         ConfigValue(
@@ -165,19 +328,18 @@ class LinearStandardFormCompiler:
     CONFIG.declare(
         'slack_form',
         ConfigValue(
-            default=False,
             domain=bool,
-            description='Add slack variables and return '
-            r':math:`\min c^Tx; s.t. Ax = b`',
+            description='DEPRECATED. Please use `format`.\n\n'
+            'Add slack variables to convert inequalities to equalities',
         ),
     )
     CONFIG.declare(
         'mixed_form',
         ConfigValue(
-            default=False,
             domain=bool,
-            description='Return A in mixed form (the comparison operator is a '
-            'mix of <=, ==, and >=)',
+            description='DEPRECATED. Please use `format`.\n\n'
+            'Return A in mixed form (the comparison operator between `A` '
+            'and `rhs` varies by row and is a mix of <=, ==, and >=)',
         ),
     )
     CONFIG.declare(
@@ -203,15 +365,8 @@ class LinearStandardFormCompiler:
             domain=InEnum(FileDeterminism),
             description='How much effort to ensure result is deterministic',
             doc="""
-            How much effort do we want to put into ensuring the
-            resulting matrices are produced deterministically:
-
-               - ``NONE`` (0): None
-               - ``ORDERED`` (10): rely on underlying component ordering (default)
-               - ``SORT_INDICES`` (20) : sort keys of indexed components
-               - ``SORT_SYMBOLS`` (30) : sort keys AND sort names (not
-                 declaration order)
-
+            This indicates how much effort we want to put into ensuring the
+            resulting matrices are produced deterministically
             """,
         ),
     )
@@ -291,6 +446,39 @@ class _LinearStandardFormCompiler_impl:
         with_debug_timing = (
             timing_logger.isEnabledFor(logging.DEBUG) and timing_logger.hasHandlers()
         )
+
+        if self.config.slack_form is not None or self.config.mixed_form is not None:
+            deprecation_warning(
+                "The `slack_form` and `mixed_form` parameters are deprecated.  "
+                "Please use `format` to specify the standard form representation",
+                version='6.10.2.dev0',
+            )
+            count = sum(
+                (
+                    bool(list(self.config.get('format').user_values())),
+                    self.config.slack_form is not None,
+                    self.config.mixed_form is not None,
+                )
+            )
+            if count > 1:
+                raise ValueError(
+                    "Cannot specify more than one of `format`, `slack_form`, and "
+                    "`mixed_form`"
+                )
+            if self.config.slack_form:
+                self.config.format = StandardFormFormat.SLACK_STANDARD_FORM
+            elif self.config.mixed_form:
+                self.config.format = StandardFormFormat.MIXED_STANDARD_FORM
+
+        # local variables to speed up lookups
+        _format = self.config.format
+        _SLACK = StandardFormFormat.SLACK_STANDARD_FORM
+        _MIXED = StandardFormFormat.MIXED_STANDARD_FORM
+        _EXTENDED = StandardFormFormat.EXTENDED_MIXED_STANDARD_FORM
+        _LOWER = BoundType.LOWER
+        _EQUALITY = BoundType.EQUALITY
+        _UPPER = BoundType.UPPER
+        _RANGE = BoundType.RANGE
 
         sorter = FileDeterminism_to_SortComponents(self.config.file_determinism)
         component_map, unknown = categorize_valid_components(
@@ -410,12 +598,9 @@ class _LinearStandardFormCompiler_impl:
         #
         # Tabulate constraints
         #
-        slack_form = self.config.slack_form
-        mixed_form = self.config.mixed_form
-        if slack_form and mixed_form:
-            raise ValueError("cannot specify both slack_form and mixed_form")
         rows = []
         rhs = []
+        rhs_range = [] if _format is _EXTENDED else None
         con_nnz = 0
         con_data = []
         con_index = []
@@ -453,11 +638,13 @@ class _LinearStandardFormCompiler_impl:
                 linear_index = map(var_recorder.var_order.__getitem__, repn.linear)
                 linear_data = repn.linear.values()
 
-            if lb is None and ub is None:
-                # Note: you *cannot* output trivial (unbounded)
-                # constraints in matrix format.  I suppose we could add a
-                # slack variable, but that seems rather silly.
-                continue
+            # Normalize +/-inf to None: both kernel constraints and AML
+            # RangedExpressions can return +/-inf instead of None for unbounded
+            # sides (e.g., `(-inf, x, 5)`).  Treat them as unbounded.
+            if lb == _ninf:
+                lb = None
+            if ub == _inf:
+                ub = None
 
             if not N and offset.__class__ in native_types:
                 # This is a constant constraint
@@ -468,33 +655,87 @@ class _LinearStandardFormCompiler_impl:
                     f"model contains a trivially infeasible constraint, '{con.name}'"
                 )
 
-            if mixed_form:
-                if lb == ub:
-                    con_nnz += N
-                    rows.append(RowEntry(con, 0))
-                    rhs.append(ub - offset)
-                    con_data.append(linear_data)
-                    con_index.append(linear_index)
-                    con_index_ptr.append(con_nnz)
-                else:
-                    if ub is not None:
-                        if lb is not None:
-                            linear_index = list(linear_index)
+            # Note: you *cannot* output trivial (unbounded) constraints
+            # in matrix format.  I suppose we could add a slack
+            # variable, but that seems rather silly.  The logic below
+            # will silently drop unbounded constraints
+
+            if _format is _MIXED:
+                if ub is not None:
+                    if lb == ub:
+                        # Record the equality constraint
                         con_nnz += N
-                        rows.append(RowEntry(con, 1))
+                        rows.append(RowEntry(con, _EQUALITY))
                         rhs.append(ub - offset)
                         con_data.append(linear_data)
                         con_index.append(linear_index)
                         con_index_ptr.append(con_nnz)
-                    if lb is not None:
+                        continue
+                    if lb is not None and linear_index.__class__ is not list:
+                        # Because we are splitting range constraints,
+                        # the index can't be a map() (it would be empty
+                        # the second time we iterate over it)
+                        linear_index = list(linear_index)
+                    # Record the lower bound.  The upper bound will be
+                    # recorded below
+                    con_nnz += N
+                    rows.append(RowEntry(con, _UPPER))
+                    rhs.append(ub - offset)
+                    con_data.append(linear_data)
+                    con_index.append(linear_index)
+                    con_index_ptr.append(con_nnz)
+                # Note: NOT elif, as this needs to also record the LB
+                # for range constraints
+                if lb is not None:
+                    con_nnz += N
+                    rows.append(RowEntry(con, _LOWER))
+                    rhs.append(lb - offset)
+                    con_data.append(linear_data)
+                    con_index.append(linear_index)
+                    con_index_ptr.append(con_nnz)
+            elif _format is _EXTENDED:
+                if ub is not None:
+                    if lb == ub:
+                        # Record the equality constraint
                         con_nnz += N
-                        rows.append(RowEntry(con, -1))
-                        rhs.append(lb - offset)
+                        rows.append(RowEntry(con, _EQUALITY))
+                        rhs.append(ub - offset)
+                        rhs_range.append(0.0)
                         con_data.append(linear_data)
                         con_index.append(linear_index)
                         con_index_ptr.append(con_nnz)
-            elif slack_form:
+                        continue
+                    if lb is not None:
+                        # Range constraint: single row, coefficients in the upper-
+                        # bound sense (not negated), bound_type=RANGE.
+                        con_nnz += N
+                        rows.append(RowEntry(con, _RANGE))
+                        rhs.append(ub - offset)
+                        rhs_range.append(ub - lb)
+                        con_data.append(linear_data)
+                        con_index.append(linear_index)
+                        con_index_ptr.append(con_nnz)
+                        continue
+                    con_nnz += N
+                    rows.append(RowEntry(con, _UPPER))
+                    rhs.append(ub - offset)
+                    rhs_range.append(_inf)
+                    con_data.append(linear_data)
+                    con_index.append(linear_index)
+                    con_index_ptr.append(con_nnz)
+                # Note: elif, as range constraints are completely handled above
+                elif lb is not None:
+                    con_nnz += N
+                    rows.append(RowEntry(con, _LOWER))
+                    rhs.append(lb - offset)
+                    rhs_range.append(_inf)
+                    con_data.append(linear_data)
+                    con_index.append(linear_index)
+                    con_index_ptr.append(con_nnz)
+            elif _format is _SLACK:
                 if lb == ub:  # TODO: add tolerance?
+                    if lb is None:
+                        continue
                     rhs.append(ub - offset)
                 else:
                     # add slack variable
@@ -502,12 +743,17 @@ class _LinearStandardFormCompiler_impl:
                     v = Var(name=f'_slack_{len(rhs)}', bounds=(None, None))
                     v.construct()
                     if lb is None:
+                        # Create equality constraint at the upper bound
                         rhs.append(ub - offset)
                         v.lb = 0
                     else:
+                        # Create an equality constraint at the lower bound
                         rhs.append(lb - offset)
                         v.ub = 0
                         if ub is not None:
+                            # This is a range constraint: absorb the
+                            # upper bound into the slack variable lower
+                            # bound
                             v.lb = lb - ub
                     var_map[id(v)] = v
                     if var_recorder.var_order is not None:
@@ -519,23 +765,23 @@ class _LinearStandardFormCompiler_impl:
                     linear_index = list(linear_index)
                     linear_index.append(slack_col)
                 con_nnz += N
-                rows.append(RowEntry(con, 1))
+                rows.append(RowEntry(con, BoundType.UPPER))
                 con_data.append(linear_data)
                 con_index.append(linear_index)
                 con_index_ptr.append(con_nnz)
-            else:
+            else:  # STANDARD_FORM
                 if ub is not None:
-                    if lb is not None:
+                    if lb is not None and linear_index.__class__ is not list:
                         linear_index = list(linear_index)
                     con_nnz += N
-                    rows.append(RowEntry(con, 1))
+                    rows.append(RowEntry(con, BoundType.UPPER))
                     rhs.append(ub - offset)
                     con_data.append(linear_data)
                     con_index.append(linear_index)
                     con_index_ptr.append(con_nnz)
                 if lb is not None:
                     con_nnz += N
-                    rows.append(RowEntry(con, -1))
+                    rows.append(RowEntry(con, BoundType.LOWER))
                     rhs.append(offset - lb)
                     con_data.append(-np.array(list(linear_data)))
                     con_index.append(linear_index)
@@ -613,7 +859,16 @@ class _LinearStandardFormCompiler_impl:
             eliminated_vars = []
 
         info = LinearStandardFormInfo(
-            c, obj_offset, A, rhs, rows, columns, objectives, eliminated_vars
+            c,
+            obj_offset,
+            A,
+            rhs,
+            rows,
+            columns,
+            objectives,
+            eliminated_vars,
+            None if rhs_range is None else np.array(rhs_range),
+            _format,
         )
         timer.toc("Generated linear standard form representation", delta=False)
         return info

@@ -87,11 +87,38 @@ _FileDeterminism_deprecation = {
 
 
 class FileDeterminism(enums.IntEnum):
+    #: No effort is applied to ensure deterministic output.
+    #:
+    #: Components are iterated over using their internal default
+    #: sequence.  This allows for fast iteration, but does *NOT*
+    #: guarantee deterministic output.
     NONE = 0
+
+    # The following entries are deprecated and no longer documented:
+    #
     # DEPRECATED_KEYS = 1
     # DEPRECATED_KEYS_AND_NAMES = 2
+
+    #: Iterate over components using the underlying "ordered" iterators.
+    #:
+    #: Components are visited using declaration order.  Within
+    #: components, indices are iterated over using the "ordered"
+    #: iterator.  Assuming the model is generated using deterministic
+    #: input, then the resulting output *should* be deterministic.
     ORDERED = 10
+
+    #: Sort keys of indexed components.
+    #:
+    #: Components are visited using declaration order.  Within
+    #: components, indices are iterated over using the "sorted"
+    #: iterator.
     SORT_INDICES = 20
+
+    #: Sort components by name *and* sort keys of indexed components.
+    #:
+    #: Components are visited in alphabetical order.  Within
+    #: components, indices are iterated over using the "sorted"
+    #: iterator.
     SORT_SYMBOLS = 30
 
     # We will define __str__ and __format__ so that behavior in python
@@ -891,7 +918,12 @@ class TemplateVarRecorder:
         # Note: the following is mostly a copy of
         # LinearBeforeChildDispatcher.record_var, but with extra
         # handling to update the env in the same loop
-        var_comp = var.parent_component()
+        try:
+            var_comp = var.parent_component()
+        except AttributeError:
+            # kernel variable objects do not have parent_component(); treat
+            # the variable itself as a scalar component.
+            var_comp = var
         # Double-check that the component has not already been processed
         # (through an individual var data)
         name = self.symbolmap.getSymbol(var_comp)
@@ -908,9 +940,8 @@ class TemplateVarRecorder:
         try:
             _iter = var_comp.items(self.sorter)
         except AttributeError:
-            # Note that this only works for the AML, as kernel does not
-            # provide a parent_component()
-            _iter = (None, var)
+            # kernel variables have no items(); treat as a scalar with index None
+            _iter = ((None, var),)
         if self._var_order is None:
             for i, (idx, v) in enumerate(_iter, start=len(vm)):
                 vm[id(v)] = v
