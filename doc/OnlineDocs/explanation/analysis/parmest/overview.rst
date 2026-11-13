@@ -54,7 +54,7 @@ where :math:`g(\boldsymbol{x}, \boldsymbol{y};\boldsymbol{\theta})` can be:
     .. math::
 
        g(\boldsymbol{x}, \boldsymbol{y};\boldsymbol{\theta}) =
-        \sum_{i = 1}^{n} \left(\boldsymbol{y}_{i} - \boldsymbol{f}(\boldsymbol{x}_{i};\boldsymbol{\theta})
+        \frac{1}{2} \sum_{i = 1}^{n} \left(\boldsymbol{y}_{i} - \boldsymbol{f}(\boldsymbol{x}_{i};\boldsymbol{\theta})
         \right)^\text{T} \left(\boldsymbol{y}_{i} - \boldsymbol{f}(\boldsymbol{x}_{i};\boldsymbol{\theta})\right)
 
 2. Weighted sum of squared errors
@@ -69,6 +69,10 @@ where :math:`g(\boldsymbol{x}, \boldsymbol{y};\boldsymbol{\theta})` can be:
         \frac{1}{2} \sum_{i = 1}^{n} \left(\boldsymbol{y}_{i} - \boldsymbol{f}(\boldsymbol{x}_{i};\boldsymbol{\theta})
         \right)^\text{T} \boldsymbol{\Sigma}_{\boldsymbol{y}}^{-1} \left(\boldsymbol{y}_{i} -
         \boldsymbol{f}(\boldsymbol{x}_{i};\boldsymbol{\theta})\right)
+
+Both built-in objectives include the factor :math:`\frac{1}{2}`. When several experiments
+are used, parmest minimizes the average of the experiment objectives, i.e., the sum above
+divided by the number of experiments.
 
 Custom objectives can also be defined for parameter estimation.
 

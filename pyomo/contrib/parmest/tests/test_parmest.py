@@ -109,7 +109,8 @@ class TestParmestCovEst(unittest.TestCase):
                 standard deviation
         """
         if obj_function == "SSE":
-            self.assertAlmostEqual(obj_val, 4.33171, places=2)
+            # SSE includes a 1/2: half the sum of squared residuals, 4.33171
+            self.assertAlmostEqual(obj_val, 2.165856, places=2)
         elif obj_function == "SSE_weighted" and measurement_error is not None:
             self.assertAlmostEqual(obj_val, 216.58556, places=2)
 
@@ -901,7 +902,8 @@ class TestModelVariants(unittest.TestCase):
             idx for idx, s in enumerate(cov_cols) if "rate_constant" in s
         ][0]
 
-        self.assertAlmostEqual(objval, 4.3317112, places=2)
+        # SSE includes a 1/2: half the sum of squared residuals, 4.3317112
+        self.assertAlmostEqual(objval, 2.1658556, places=2)
         self.assertAlmostEqual(
             cov.iloc[asymptote_index, asymptote_index], 6.155892, places=2
         )  # 6.22864 from paper
@@ -932,7 +934,8 @@ class TestModelVariants(unittest.TestCase):
             self.check_rooney_biegler_results(objval, cov)
 
             obj_at_theta = pest.objective_at_theta(parmest_input["theta_vals"])
-            self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
+            # SSE includes a 1/2: half of 16.531953
+            self.assertAlmostEqual(obj_at_theta["obj"][0], 8.2659765, places=2)
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_initialize_parmest_model_option(self):
@@ -950,7 +953,8 @@ class TestModelVariants(unittest.TestCase):
                 parmest_input["theta_vals"], initialize_parmest_model=True
             )
 
-            self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
+            # SSE includes a 1/2: half of 16.531953
+            self.assertAlmostEqual(obj_at_theta["obj"][0], 8.2659765, places=2)
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_square_problem_solve(self):
@@ -968,7 +972,8 @@ class TestModelVariants(unittest.TestCase):
             cov = pest.cov_est(method="reduced_hessian")
             self.check_rooney_biegler_results(objval, cov)
 
-            self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
+            # SSE includes a 1/2: half of 16.531953
+            self.assertAlmostEqual(obj_at_theta["obj"][0], 8.2659765, places=2)
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_square_problem_solve_no_theta_vals(self):
@@ -1122,8 +1127,10 @@ class TestReactorDesign_DAE(unittest.TestCase):
             # Model objective component names adjusted to prevent reserved name error.
             m.FirstStage = pyo.Expression(rule=ComputeFirstStageCost_rule)
 
+            # Includes the 1/2 of parmest's SSE, so test_covariance compares
+            # the same optimization problem
             def ComputeSecondStageCost_rule(m):
-                return sum(
+                return (1 / 2) * sum(
                     (m.ca[t] - ca_meas[t]) ** 2
                     + (m.cb[t] - cb_meas[t]) ** 2
                     + (m.cc[t] - cc_meas[t]) ** 2
@@ -1533,8 +1540,9 @@ class TestRegularizationCore(unittest.TestCase):
             obj_function=parmest.SSE,
         )
 
-        sse_expected = 9.0
-        l2_expected = 54.0
+        # SSE and the L2 penalty both include a 1/2
+        sse_expected = 0.5 * 9.0
+        l2_expected = 0.5 * 54.0
         expected = sse_expected + weight * l2_expected
 
         self.assertAlmostEqual(pyo.value(expr), expected)
@@ -1560,8 +1568,10 @@ class TestRegularizationCore(unittest.TestCase):
             regularization_weight=1.0,
         )
 
+        # zero residuals, so the objective is the penalty 0.5 * 2.0 (with the
+        # 1/2 of SSE); counting it once per scenario would give 2.0
         obj_val = self._obj_at_theta(pest, 0.0, 1.0)
-        self.assertAlmostEqual(obj_val, 2.0)
+        self.assertAlmostEqual(obj_val, 1.0)
 
     def test_regularization_requires_explicit_option_when_prior_supplied(self):
         # Guardrail: passing prior/FIM arguments without selecting a
@@ -1639,7 +1649,8 @@ class TestRegularizationCore(unittest.TestCase):
 
         obj_base_theta1 = self._obj_at_theta(pest_base, theta0=0.0, theta1=1.0)
         obj_l2_theta1 = self._obj_at_theta(pest_l2, theta0=0.0, theta1=1.0)
-        expected_penalty = 4.0 * (1.0**2)
+        # the L2 penalty includes a 1/2, as SSE does
+        expected_penalty = 0.5 * 4.0 * (1.0**2)
         self.assertAlmostEqual(obj_l2_theta1 - obj_base_theta1, expected_penalty)
 
     def test_negative_regularization_weight_raises(self):
@@ -1815,7 +1826,7 @@ class TestRegularizationCore(unittest.TestCase):
             )
         )
 
-    def test_compute_covariance_matrix_adds_twice_weighted_prior_fim_for_sse(self):
+    def test_compute_covariance_matrix_adds_weighted_prior_fim_for_sse(self):
         exp_list = [self.DummyExperiment()]
 
         data_fim = np.array([[5.0, 1.0], [1.0, 4.0]])
@@ -1848,7 +1859,8 @@ class TestRegularizationCore(unittest.TestCase):
         finally:
             parmest._finite_difference_FIM = original_finite_difference_FIM
 
-        expected_fim = data_fim + 2.0 * regularization_weight * prior_fim.values
+        # SSE includes a 1/2 like SSE_weighted, so the prior is not doubled
+        expected_fim = data_fim + regularization_weight * prior_fim.values
         expected_cov = np.linalg.inv(expected_fim)
 
         np.testing.assert_allclose(
@@ -2000,7 +2012,8 @@ class TestRegularizationCore(unittest.TestCase):
         theta_values = pd.DataFrame([[1.0, 2.0]], columns=["theta[a]", "theta[b]"])
         obj_val = pest.objective_at_theta(theta_values=theta_values).iloc[0]["obj"]
 
-        self.assertAlmostEqual(obj_val, 7.0)
+        # SSE and the L2 penalty both include a 1/2 (7.0 without it)
+        self.assertAlmostEqual(obj_val, 3.5)
 
 
 class LinearThetaExperiment(Experiment):
@@ -2291,7 +2304,7 @@ class TestParmestBlockEF(unittest.TestCase):
         obj, theta = pest._Q_opt()
 
         self.assertAlmostEqual(theta["theta"], 1.5, places=7)
-        self.assertAlmostEqual(obj, 0.25, places=7)
+        self.assertAlmostEqual(obj, 0.125, places=7)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_q_opt_returns_requested_values(self):
@@ -2314,7 +2327,7 @@ class TestParmestBlockEF(unittest.TestCase):
 
         self.assertEqual(status, pyo.TerminationCondition.optimal)
         self.assertEqual(theta, {"theta": 1.0})
-        self.assertAlmostEqual(obj, 0.5, places=8)
+        self.assertAlmostEqual(obj, 0.25, places=8)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_q_opt_fixed_theta_infeasible_returns_none(self):
@@ -2333,7 +2346,7 @@ class TestParmestBlockEF(unittest.TestCase):
         theta_values = pd.DataFrame([[1.0]], columns=["theta"])
         obj_at_theta = pest.objective_at_theta(theta_values=theta_values)
 
-        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 0.5, places=8)
+        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 0.25, places=8)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_objective_at_theta_none_uses_initial_theta(self):
@@ -2341,7 +2354,7 @@ class TestParmestBlockEF(unittest.TestCase):
 
         obj_at_theta = pest.objective_at_theta()
 
-        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 1.0, places=8)
+        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 0.5, places=8)
         self.assertAlmostEqual(obj_at_theta.loc[0, "theta"], 0.0, places=8)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
@@ -2355,7 +2368,7 @@ class TestParmestBlockEF(unittest.TestCase):
         self.assertEqual(len(obj_at_theta), 1)
         self.assertEqual(list(obj_at_theta.columns), ["theta", "obj"])
         self.assertAlmostEqual(obj_at_theta.loc[0, "theta"], 0.0, places=8)
-        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 1.0, places=8)
+        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 0.5, places=8)
 
     def test_invalid_solver_name_raises_runtimeerror(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
