@@ -98,6 +98,10 @@ class ProcessStartMethod(str, enum.Enum):
     fork = 'fork'
     forkserver = 'forkserver'
 
+    # Back-patch for Python 3.10
+    def __format__(self, format_spec):
+        return super().__format__(format_spec)
+
 
 @TransformationFactory.register(
     'gdp.mbigm',
@@ -267,16 +271,19 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             doc="""
             Start method used for spawning processes during M calculation.
 
-            Options are the elements of the enum ProcessStartMethod, or equivalently the
-            strings 'fork', 'spawn', or 'forkserver', or None. See the Python
-            multiprocessing documentation for a full description of each of these. When
-            None is passed, we determine a reasonable default. On POSIX, the default is
-            'fork', unless we detect that Python has multiple threads at the time the
-            process pool is created, in which case we instead use 'forkserver'. On
-            Windows, the default and only possible option is 'spawn'. Note that if
-            'spawn' or 'forkserver' are selected, we depend on the `dill` module for
-            pickling, and model instances must be pickleable using `dill`. This option is
-            ignored if `threads` is set to 1.
+            Options are the elements of enum
+            :class:`ProcessStartMethod`, or equivalently the strings
+            ``'fork'``, ``'spawn'``, or ``'forkserver'``, or
+            ``None``. See the Python multiprocessing documentation for a
+            full description of each of these. When None is passed, we
+            determine a reasonable default. On POSIX, the default is
+            'fork', unless we detect that Python has multiple threads at
+            the time the process pool is created, in which case we
+            instead use 'forkserver'. On Windows, the default and only
+            possible option is 'spawn'. Note that if 'spawn' or
+            'forkserver' are selected, we depend on the `dill` module
+            for pickling, and model instances must be pickleable using
+            `dill`. This option is ignored if `threads` is set to 1.
             """,
         ),
     )
@@ -479,10 +486,10 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 else os.cpu_count() - 1
             )
             if threads > 1:
+                # Note: using the pool as a context manager ensures
+                # close() and join() are called.
                 with self._setup_pool(threads, instance, len(jobs)) as pool:
                     results = pool.starmap(func=_calc_M, iterable=jobs_by_name)
-                    pool.close()
-                    pool.join()
             else:
                 _thread_local.model = instance
                 _thread_local.solver = self._config.solver
@@ -823,29 +830,23 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         return transformed_constraints
 
     def _setup_pool(self, threads, instance, num_jobs):
-        method = (
-            self._config.process_start_method
-            if self._config.process_start_method is not None
-            else (
-                ProcessStartMethod.spawn
-                if os.name == 'nt'
-                else (
-                    ProcessStartMethod.forkserver
-                    if len(threading.enumerate()) > 1
-                    else ProcessStartMethod.fork
-                )
-            )
-        )
+        if self._config.process_start_method is not None:
+            method = self._config.process_start_method
+        elif os.name == 'nt':
+            method = ProcessStartMethod.spawn
+        elif len(threading.enumerate()) > 1:
+            method = ProcessStartMethod.forkserver
+        else:
+            method = ProcessStartMethod.fork
         logger.info(
-            f"Running {num_jobs} jobs on {threads} worker "
-            f"processes with process start method {method}."
+            f"Running {num_jobs} jobs on {threads} worker processes with {method}."
         )
         if (
             method == ProcessStartMethod.spawn
             or method == ProcessStartMethod.forkserver
         ):
             if not dill_available:
-                raise GDP_Error(
+                logger.error(
                     "Dill is required when spawning processes using "
                     "methods 'spawn' or 'forkserver', but it could "
                     "not be imported."
