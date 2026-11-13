@@ -29,12 +29,13 @@ from pyomo.environ import (
     SolverFactory,
     value,
     ConcreteModel,
+    Constraint,
     Var,
     Objective,
     minimize,
     maximize,
 )
-from pyomo.gdp import Disjunction
+from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverResults, TerminationCondition
 
 currdir = dirname(abspath(__file__))
@@ -46,6 +47,28 @@ solver_available = SolverFactory(minlp_solver).available()
 license_available = (
     SolverFactory(minlp_solver).license_is_valid() if solver_available else False
 )
+
+
+class TestGDPopt_LBB_TimeLimit(unittest.TestCase):
+    """Tests for solver-independent LBB termination paths."""
+
+    def test_time_limit_returns_pyomo_results_object(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 2))
+        m.d1 = Disjunct()
+        m.d2 = Disjunct()
+        m.d1.c = Constraint(expr=m.x <= 0.5)
+        m.d2.c = Constraint(expr=m.x >= 1.5)
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+        m.obj = Objective(expr=m.x)
+
+        results = SolverFactory('gdpopt.lbb').solve(m, time_limit=1e-6, tee=False)
+
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.maxTimeLimit
+        )
+        self.assertEqual(results.problem.lower_bound, float('-inf'))
+        self.assertEqual(results.problem.upper_bound, float('inf'))
 
 
 @unittest.skipUnless(
