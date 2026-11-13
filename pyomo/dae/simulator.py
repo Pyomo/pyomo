@@ -56,6 +56,17 @@ def _finalize_casadi(casadi, available):
 
 casadi, casadi_available = attempt_import('casadi', callback=_finalize_casadi)
 
+# Integrators available through scipy.integrate.solve_ivp
+scipy_ivp_integrators = ['RK45', 'RK23', 'DOP853', 'Radau', 'BDF', 'LSODA']
+
+# Integrators available through the legacy scipy.integrate.ode interface
+scipy_ode_integrators = ['vode', 'zvode', 'lsoda', 'dopri5', 'dop853']
+
+# Default tolerances for the solve_ivp integrators. These match the
+# defaults of the legacy scipy.integrate.ode integrators (the solve_ivp
+# defaults of rtol=1e-3 and atol=1e-6 are much looser)
+scipy_ivp_default_options = {'rtol': 1e-6, 'atol': 1e-12}
+
 
 def _check_getitemexpression(expr, i):
     """
@@ -751,8 +762,14 @@ class Simulator:
             'numpoints'.
 
         integrator : string
-            The string name of the integrator to use for simulation. The
-            default is 'lsoda' when using Scipy and 'idas' when using CasADi
+            The string name of the integrator to use for simulation. When
+            using Scipy, the integrators 'RK45', 'RK23', 'DOP853', 'Radau',
+            'BDF', and 'LSODA' are called through
+            ``scipy.integrate.solve_ivp``. A subclass of
+            ``scipy.integrate.OdeSolver`` may also be given. The legacy
+            integrators 'vode', 'zvode', 'lsoda', 'dopri5', and 'dop853' are
+            called through ``scipy.integrate.ode``. The default is 'LSODA'
+            when using Scipy and 'idas' when using CasADi
 
         varying_inputs : ``pyomo.environ.Suffix``
             A :py:class:`Suffix<pyomo.environ.Suffix>` object containing the
@@ -768,7 +785,12 @@ class Simulator:
         integrator_options : dict
             Dictionary containing options that should be passed to the
             integrator. See the documentation for a specific integrator for a
-            list of valid options.
+            list of valid options. For the ``scipy.integrate.solve_ivp``
+            integrators these are passed as keyword arguments to
+            ``solve_ivp`` (e.g. 'rtol', 'atol', 'max_step', 'first_step',
+            'jac', 'events'). Unless specified, these integrators use
+            rtol=1e-6 and atol=1e-12 to match the defaults of the legacy
+            ``scipy.integrate.ode`` integrators.
 
         Returns
         -------
@@ -788,11 +810,16 @@ class Simulator:
 
         if self._intpackage == 'scipy':
             # Specify the scipy integrator to use for simulation
-            valid_integrators = ['vode', 'zvode', 'lsoda', 'dopri5', 'dop853']
+            valid_integrators = scipy_ivp_integrators + scipy_ode_integrators
             if integrator is None:
-                integrator = 'lsoda'
+                integrator = 'LSODA'
             elif integrator == 'odeint':
                 integrator = 'lsoda'
+            elif isinstance(integrator, type) and issubclass(
+                integrator, scipy.integrate.OdeSolver
+            ):
+                # User-defined solve_ivp integrator
+                valid_integrators = valid_integrators + [integrator]
         else:
             # Specify the casadi integrator to use for simulation.
             # Only a subset of these integrators may be used for
@@ -923,9 +950,24 @@ class Simulator:
                 raise ValueError(
                     "The scipy module is not available. Cannot simulate the model."
                 )
-            tsim, profile = self._simulate_with_scipy(
-                initcon, tsim, switchpts, varying_inputs, integrator, integrator_options
-            )
+            if integrator in scipy_ode_integrators:
+                tsim, profile = self._simulate_with_scipy(
+                    initcon,
+                    tsim,
+                    switchpts,
+                    varying_inputs,
+                    integrator,
+                    integrator_options,
+                )
+            else:
+                tsim, profile = self._simulate_with_scipy_ivp(
+                    initcon,
+                    tsim,
+                    switchpts,
+                    varying_inputs,
+                    integrator,
+                    integrator_options,
+                )
         else:
             if len(switchpts) != 0:
                 tsim, profile = self._simulate_with_casadi_with_inputs(
@@ -949,7 +991,7 @@ class Simulator:
         )
         scipyint.set_initial_value(initcon, tsim[0])
 
-        profile = np.array(initcon)
+        profile = [np.array(initcon)]
         i = 1
         while scipyint.successful() and scipyint.t < tsim[-1]:
             # check if tsim[i-1] is a switching time and update value
@@ -958,10 +1000,18 @@ class Simulator:
                     if tsim[i - 1] in varying_inputs[v]:
                         p = self._templatemap[self._siminputvars[v]]
                         p.set_value(varying_inputs[v][tsim[i - 1]])
+                # Restart the integrator at the switching time.
+                # Otherwise, integrators that step past the requested
+                # time point (e.g. vode and lsoda) would integrate past
+                # the discontinuity using the previous input values.
+                scipyint.set_initial_value(scipyint.y, tsim[i - 1])
 
+            # Copy the result because some integrators (e.g. lsoda)
+            # modify the returned array in place on subsequent calls
             profilestep = scipyint.integrate(tsim[i])
-            profile = np.vstack([profile, profilestep])
+            profile.append(np.array(profilestep))
             i += 1
+        profile = np.vstack(profile)
 
         if not scipyint.successful():
             raise DAE_Error(
@@ -969,6 +1019,70 @@ class Simulator:
                 "successfully." % integrator
             )
         return [tsim, profile]
+
+    def _simulate_with_scipy_ivp(
+        self, initcon, tsim, switchpts, varying_inputs, integrator, integrator_options
+    ):
+        # These arguments to solve_ivp are set by the Simulator
+        for opt in ('fun', 't_span', 'y0', 'method', 't_eval', 'args'):
+            if opt in integrator_options:
+                raise DAE_Error(
+                    "The '%s' argument to scipy.integrate.solve_ivp is set "
+                    "by the Simulator and cannot be specified in "
+                    "'integrator_options'" % opt
+                )
+        options = dict(scipy_ivp_default_options)
+        options.update(integrator_options)
+
+        # Integrate piecewise between the input switching points so
+        # that the integrator is restarted at every discontinuity in
+        # the time-varying inputs
+        segments = [tsim[0]]
+        segments += [t for t in switchpts if tsim[0] < t < tsim[-1]]
+        segments.append(tsim[-1])
+
+        x0 = np.array(initcon, dtype=float)
+        tprofile = [tsim[:1]]
+        profile = [x0.reshape(1, -1).copy()]
+        for tstart, tend in zip(segments[:-1], segments[1:]):
+            self._set_varying_inputs(tstart, varying_inputs)
+            teval = tsim[(tsim >= tstart) & (tsim <= tend)]
+            sol = scipy.integrate.solve_ivp(
+                self._rhsfun,
+                (tstart, tend),
+                x0,
+                method=integrator,
+                t_eval=teval,
+                **options,
+            )
+            if not sol.success:
+                raise DAE_Error(
+                    "The Scipy integrator %s did not terminate "
+                    "successfully: %s" % (integrator, sol.message)
+                )
+            # The first point in each segment was stored by the
+            # previous segment
+            tprofile.append(sol.t[1:])
+            profile.append(sol.y[:, 1:].T)
+            if sol.status == 1:
+                # A terminal event stopped the integration early
+                logger.warning(
+                    "The Scipy integrator %s was stopped by a terminal "
+                    "event. The simulation results only include the time "
+                    "points before the event." % (integrator,)
+                )
+                break
+            x0 = sol.y[:, -1].copy()
+
+        return [np.concatenate(tprofile), np.vstack(profile)]
+
+    def _set_varying_inputs(self, t, varying_inputs):
+        # Set each time-varying input to its value at the most recent
+        # switching point at or before time t
+        for v, alg in self._siminputvars.items():
+            tswitch = [i for i in varying_inputs[v].keys() if i <= t]
+            if tswitch:
+                self._templatemap[alg].set_value(varying_inputs[v][max(tswitch)])
 
     def _simulate_with_casadi_no_inputs(
         self, initcon, tsim, integrator, integrator_options
@@ -1038,8 +1152,7 @@ class Simulator:
         # This approach removes the time scaling from tsim so must
         # create an array with the time step between consecutive
         # time points
-        tsimtemp = np.hstack([0, tsim[1:] - tsim[0:-1]])
-        tsimtemp.shape = (1, len(tsimtemp))
+        tsimtemp = np.hstack([0, tsim[1:] - tsim[0:-1]]).reshape(1, -1)
 
         palltemp = [casadi.DM(tsimtemp)]
 
