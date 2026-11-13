@@ -21,6 +21,7 @@ from pyomo.common.numeric_types import native_complex_types
 from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.timing import HierarchicalTimer
 
+from pyomo.contrib.solver.common.base import Availability
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.util import NoSolutionError
 from .gurobi_direct_base import GurobiDirectBase, GurobiDirectSolutionLoaderBase
@@ -614,6 +615,13 @@ class GurobiDirectMINLP(GurobiDirectBase):
     def __init__(self, **kwds):
         super().__init__(**kwds)
         self._var_map = None
+
+    def available(self):
+        if self._available is None:
+            if super().available():
+                if self.version() >= (14,):
+                    self.__class__._available = Availability.BadVersion
+        return self._available
 
     def _pyomo_gurobi_var_iter(self):
         return self._var_map.items()
