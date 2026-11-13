@@ -54,6 +54,19 @@ class TestRooneyBieglerExamples(unittest.TestCase):
 
         likelihood_ratio_example.main()
 
+    def test_multistart_example(self):
+        from pyomo.contrib.parmest.examples.rooney_biegler import multistart_example
+
+        multistart_example.main()
+
+    @unittest.skipUnless(matplotlib_available, "test requires matplotlib")
+    def test_profile_likelihood_example(self):
+        from pyomo.contrib.parmest.examples.rooney_biegler import (
+            profile_likelihood_example,
+        )
+
+        profile_likelihood_example.main()
+
     def test_regularization_example(self):
         from pyomo.contrib.parmest.examples.rooney_biegler import regularization_example
 
@@ -153,6 +166,11 @@ class TestReactorDesignExamples(unittest.TestCase):
         )
 
         parameter_estimation_example.main()
+
+    def test_multistart_example(self):
+        from pyomo.contrib.parmest.examples.reactor_design import multistart_example
+
+        multistart_example.main()
 
     @unittest.skipUnless(seaborn_available, "test requires seaborn")
     def test_bootstrap_example(self):

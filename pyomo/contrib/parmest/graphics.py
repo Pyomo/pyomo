@@ -488,6 +488,91 @@ def pairwise_plot(
         plt.close()
 
 
+def profile_likelihood_plot(
+    profiles, intervals=None, filename=None, y="lr_stat", ylabel=None, show=True
+):
+    """
+    Plot profile likelihood curves from Estimator.profile_likelihood results.
+
+    Parameters
+    ----------
+    profiles: DataFrame
+        Profiles returned by ``Estimator.profile_likelihood()``, indexed by
+        ``profiled_theta`` and ``theta_value``.
+    intervals: DataFrame, optional
+        Intervals returned by ``Estimator.profile_likelihood()``. If provided
+        and y is ``lr_stat``, draw the chi-square threshold line of each alpha.
+    filename: string, optional
+        Filename used to save the figure.
+    y: string, optional
+        Y-axis column to plot. Default is ``lr_stat``.
+    ylabel: string, optional
+        Y-axis label. Default is the value of ``y``.
+    show: bool, optional
+        If True and filename is not given, show the figure. Default is True.
+
+    Returns
+    -------
+    tuple containing the figure and axes objects
+    """
+    assert isinstance(profiles, pd.DataFrame)
+    assert isinstance(intervals, (type(None), pd.DataFrame))
+    assert isinstance(filename, (type(None), str))
+    assert isinstance(y, str)
+    assert isinstance(ylabel, (type(None), str))
+
+    if profiles.empty:
+        raise ValueError("profiles DataFrame is empty.")
+    if y not in profiles.columns:
+        raise KeyError(f"profiles DataFrame is missing the '{y}' column.")
+
+    thetas = list(profiles.index.unique(level="profiled_theta"))
+
+    fig, axes = plt.subplots(
+        nrows=len(thetas),
+        ncols=1,
+        figsize=(6.5, max(3.0, 2.8 * len(thetas))),
+        squeeze=False,
+    )
+
+    if ylabel is None:
+        ylabel = y
+
+    for i, theta in enumerate(thetas):
+        ax = axes[i, 0]
+        subset = profiles.loc[theta]
+        ax.plot(subset.index, subset[y], marker="o", linewidth=1.5)
+        failed = subset[~subset["success"]]
+        if len(failed) > 0:
+            # Failed solves have no y value, so mark them on the x-axis
+            ax.scatter(
+                failed.index,
+                np.zeros(len(failed)),
+                marker="x",
+                color="tab:red",
+                s=24,
+                label="failed",
+                transform=ax.get_xaxis_transform(),
+                clip_on=False,
+            )
+            ax.legend(loc="best", prop={"size": 8})
+        # The thresholds are on the lr_stat scale
+        if intervals is not None and y == "lr_stat":
+            for threshold in intervals.loc[theta, "threshold"]:
+                ax.axhline(threshold, color="tab:orange", linestyle="--", linewidth=1.0)
+        ax.set_xlabel(str(theta))
+        ax.set_ylabel(ylabel)
+        ax.set_title(f"profiled_theta: {theta}")
+
+    if filename is not None:
+        fig.savefig(filename)
+        plt.close(fig)
+    elif show:
+        plt.show()
+
+    return fig, axes
+
+
 def fit_rect_dist(theta_values, alpha):
     """
     Fit an alpha-level rectangular distribution to theta values
