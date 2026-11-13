@@ -351,6 +351,113 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         self.assertTrue(np.all(repn.c == ref))
         self._verify_solution(soln, repn, True)
 
+    def test_nonlinear_fields_none_when_not_allowed(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.c = pyo.Constraint(expr=m.x <= 1)
+        m.o = pyo.Objective(expr=m.x)
+
+        repn = LinearStandardFormCompiler().write(m, mixed_form=True)
+        self.assertIsNone(repn.nonlinear_constraints)
+        self.assertIsNone(repn.nonlinear_objectives)
+
+    def test_allow_nonlinear_constraints(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.c_lin = pyo.Constraint(expr=m.x + m.y <= 5)
+        m.c_nl = pyo.Constraint(expr=m.x**2 + m.y <= 3)
+        m.o = pyo.Objective(expr=m.x + m.y)
+
+        # Default (allow_nonlinear=False) must raise on the nonlinear constraint.
+        with self.assertRaises(Exception):
+            LinearStandardFormCompiler().write(m, mixed_form=True)
+
+        # allow_nonlinear=True: nonlinear constraint is collected separately;
+        # the linear constraint still appears in A.
+        repn = LinearStandardFormCompiler().write(
+            m, mixed_form=True, allow_nonlinear=True
+        )
+        self.assertEqual(repn.nonlinear_constraints, [m.c_nl])
+        self.assertEqual(repn.nonlinear_objectives, [])
+        # Only the linear constraint appears in A.
+        self.assertEqual(len(repn.rows), 1)
+        self.assertEqual(repn.rows[0].constraint, m.c_lin)
+        # Linear objective is still compiled into c.
+        self.assertEqual(repn.objectives, [m.o])
+        self.assertTrue(np.all(repn.c.toarray() != 0))
+
+    def test_allow_nonlinear_objective(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.c_lin = pyo.Constraint(expr=m.x + m.y <= 5)
+        m.o_nl = pyo.Objective(expr=m.x**2 + m.y)
+
+        # Default must raise on the nonlinear objective.
+        with self.assertRaises(Exception):
+            LinearStandardFormCompiler().write(m, mixed_form=True)
+
+        repn = LinearStandardFormCompiler().write(
+            m, mixed_form=True, allow_nonlinear=True
+        )
+        # Nonlinear objective is NOT compiled into c; it appears in nonlinear_objectives.
+        self.assertEqual(repn.nonlinear_objectives, [m.o_nl])
+        self.assertEqual(repn.objectives, [])
+        # c is empty (no linear objectives).
+        self.assertEqual(repn.c.shape[0], 0)
+        # The linear constraint is still compiled normally.
+        self.assertEqual(len(repn.rows), 1)
+        self.assertEqual(repn.rows[0].constraint, m.c_lin)
+
+    def test_allow_nonlinear_mixed(self):
+        """Linear constraints/objectives compiled; nonlinear ones passed through."""
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.c_lin = pyo.Constraint(expr=m.x + 2 * m.y >= 1)
+        m.c_nl = pyo.Constraint(expr=m.x * m.y <= 4)
+        m.o_lin = pyo.Objective(expr=m.x + m.y)
+
+        repn = LinearStandardFormCompiler().write(
+            m, mixed_form=True, allow_nonlinear=True
+        )
+
+        # Exactly one linear row, one nonlinear constraint.
+        self.assertEqual(len(repn.rows), 1)
+        self.assertEqual(repn.rows[0].constraint, m.c_lin)
+        self.assertEqual(repn.nonlinear_constraints, [m.c_nl])
+        # Linear objective compiles normally.
+        self.assertEqual(repn.objectives, [m.o_lin])
+        self.assertEqual(repn.nonlinear_objectives, [])
+        # Both variables appear as columns (referenced by the linear constraint).
+        col_ids = {id(v) for v in repn.columns}
+        self.assertIn(id(m.x), col_ids)
+        self.assertIn(id(m.y), col_ids)
+
+    def test_ignore_ctypes(self):
+        """Component types in ignore_ctypes are permitted but not compiled."""
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.y)
+        m.sos = pyo.SOSConstraint(var=m.x, sos=1)
+
+        # Without ignore_ctypes, LSFC raises on the SOSConstraint.
+        with self.assertRaises(ValueError):
+            LinearStandardFormCompiler().write(m, mixed_form=True)
+
+        # With ignore_ctypes, the SOSConstraint is silently skipped.
+        repn = LinearStandardFormCompiler().write(
+            m, mixed_form=True, ignore_ctypes=[pyo.SOSConstraint]
+        )
+        # Only m.y appears in the objective; m.x[i] are unreferenced by
+        # linear constraints/objectives so not included in repn.columns.
+        self.assertEqual(len(repn.rows), 0)
+        col_ids = {id(v) for v in repn.columns}
+        self.assertIn(id(m.y), col_ids)
+        self.assertNotIn(id(m.x[1]), col_ids)
+
 
 class TestTemplatedLinearStandardFormCompiler(TestLinearStandardFormCompiler):
     def setUp(self):
