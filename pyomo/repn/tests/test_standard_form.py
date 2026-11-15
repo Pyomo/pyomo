@@ -15,6 +15,8 @@ import pyomo.environ as pyo
 from pyomo.common.dependencies import numpy as np, scipy_available, numpy_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.repn.plugins.standard_form import (
+    BoundType,
+    LinearStandardFormInfo,
     LinearStandardFormCompiler,
     StandardFormFormat,
 )
@@ -28,6 +30,121 @@ for sol in ['glpk', 'cbc', 'gurobi', 'cplex', 'xpress']:
         break
 else:
     linear_solver = None
+
+
+class TestLinearStandardFormInfo(unittest.TestCase):
+    def test_argument_names_and_ordering(self):
+        with LoggingIntercept() as LOG:
+            lsfi1 = LinearStandardFormInfo(
+                c=[],
+                c_offset=[],
+                A=[],
+                rhs=[],
+                rows=[],
+                columns=[],
+                objectives=[],
+                eliminated_vars=[],
+                rhs_range=[],
+                format=StandardFormFormat.STANDARD_FORM,
+            )
+            lsfi2 = LinearStandardFormInfo(
+                lsfi1.c,
+                lsfi1.c_offset,
+                lsfi1.A,
+                lsfi1.rhs,
+                lsfi1.rows,
+                lsfi1.columns,
+                lsfi1.objectives,
+                lsfi1.eliminated_vars,
+                lsfi1.rhs_range,
+                lsfi1.format,
+            )
+        self.assertEqual(LOG.getvalue(), "")
+        for key in dir(lsfi1):
+            if key.startswith("_"):
+                continue
+            self.assertIs(getattr(lsfi1, key), getattr(lsfi2, key))
+
+    def test_deprecation(self):
+        with LoggingIntercept() as LOG:
+            lsfi = LinearStandardFormInfo(
+                c=[],
+                c_offset=[],
+                A=[],
+                rhs=[],
+                rows=[],
+                columns=[],
+                objectives=[],
+                eliminated_vars=[],
+            )
+        lines = LOG.getvalue().splitlines()
+        self.assertEqual(len(lines), 4)
+        self.assertEqual(
+            "DEPRECATED: LinearStandardFormInfo requires the format argument", lines[0]
+        )
+        # Note: line[1] is the version line[2] is the file/line number
+        self.assertEqual(
+            "LinearStandardFormInfo: assuming STANDARD_FORM; this could be "
+            "incorrect, which will result in the wrong sign convention for "
+            "lower-bounded inequalities",
+            lines[3],
+        )
+        self.assertIs(lsfi.format, StandardFormFormat.STANDARD_FORM)
+
+        with LoggingIntercept() as LOG:
+            lsfi = LinearStandardFormInfo(
+                c=[],
+                c_offset=[],
+                A=[],
+                rhs=[],
+                rows=[(None, BoundType.EQUALITY), (None, BoundType.EQUALITY)],
+                columns=[],
+                objectives=[],
+                eliminated_vars=[],
+            )
+        lines = LOG.getvalue().splitlines()
+        self.assertEqual(len(lines), 3)
+        self.assertEqual(
+            "DEPRECATED: LinearStandardFormInfo requires the format argument", lines[0]
+        )
+        self.assertIs(lsfi.format, StandardFormFormat.SLACK_STANDARD_FORM)
+
+        with LoggingIntercept() as LOG:
+            lsfi = LinearStandardFormInfo(
+                c=[],
+                c_offset=[],
+                A=[],
+                rhs=[],
+                rows=[(None, BoundType.LOWER), (None, BoundType.EQUALITY)],
+                columns=[],
+                objectives=[],
+                eliminated_vars=[],
+            )
+        lines = LOG.getvalue().splitlines()
+        self.assertEqual(len(lines), 3)
+        self.assertEqual(
+            "DEPRECATED: LinearStandardFormInfo requires the format argument", lines[0]
+        )
+        self.assertIs(lsfi.format, StandardFormFormat.MIXED_STANDARD_FORM)
+
+        with LoggingIntercept() as LOG:
+            lsfi = LinearStandardFormInfo(
+                c=[],
+                c_offset=[],
+                A=[],
+                rhs=[],
+                rows=[(None, BoundType.RANGE), (None, BoundType.EQUALITY)],
+                columns=[],
+                objectives=[],
+                eliminated_vars=[],
+                rhs_range=[],
+            )
+        lines = LOG.getvalue().splitlines()
+        self.assertEqual(len(lines), 3)
+        self.assertEqual(
+            "DEPRECATED: LinearStandardFormInfo requires the format argument", lines[0]
+        )
+        self.assertIs(lsfi.format, StandardFormFormat.EXTENDED_MIXED_STANDARD_FORM)
 
 
 @unittest.skipUnless(
@@ -48,6 +165,36 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
 
     def setUp(self):
         self.templatize_stack = []
+
+    def test_format_arguments(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var([1, 2, 3])
+        m.c = pyo.Constraint(expr=m.x + 2 * m.y[1] >= 3)
+        m.d = pyo.Constraint(expr=m.y[1] + 4 * m.y[3] <= 5)
+
+        repn = LinearStandardFormCompiler().write(m)
+        self.assertIs(repn.format, StandardFormFormat.STANDARD_FORM)
+        repn = LinearStandardFormCompiler().write(m, slack_form=True)
+        self.assertIs(repn.format, StandardFormFormat.SLACK_STANDARD_FORM)
+        repn = LinearStandardFormCompiler().write(m, mixed_form=True)
+        self.assertIs(repn.format, StandardFormFormat.MIXED_STANDARD_FORM)
+        repn = LinearStandardFormCompiler().write(
+            m, format=StandardFormFormat.MIXED_STANDARD_FORM
+        )
+        self.assertIs(repn.format, StandardFormFormat.MIXED_STANDARD_FORM)
+        with self.assertRaisesRegex(
+            ValueError,
+            "Cannot specify more than one of `format`, `slack_form`, and `mixed_form`",
+        ):
+            LinearStandardFormCompiler().write(
+                m, format=StandardFormFormat.MIXED_STANDARD_FORM, mixed_form=True
+            )
+        with self.assertRaisesRegex(
+            ValueError,
+            "Cannot specify more than one of `format`, `slack_form`, and `mixed_form`",
+        ):
+            LinearStandardFormCompiler().write(m, slack_form=True, mixed_form=True)
 
     def test_linear_model(self):
         m = pyo.ConcreteModel()
