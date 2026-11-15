@@ -39,6 +39,7 @@ from pyomo.contrib.gdpopt.solve_discrete_problem import (
     solve_MILP_discrete_problem,
     distinguish_mip_infeasible_or_unbounded,
 )
+from pyomo.core.expr.visitor import replace_expressions
 from pyomo.environ import (
     Block,
     ConcreteModel,
@@ -437,40 +438,55 @@ class TestGDPoptUnit(unittest.TestCase):
         self.assertEqual(c2.lower, 0)
         self.assertIsNone(c2.upper)
 
+    @unittest.skipUnless(LOA_solvers_available, "MIP and NLP solvers are not available")
     @unittest.skipIf(not mcpp_available(), "MC++ is not available")
     def test_gloa_affine_cut_uses_convex_slope_for_upper_cut(self):
         m = ConcreteModel()
         m.P = Var(bounds=(0, 10), initialize=0.05)
-        m.Q = Var(bounds=(1, 10), initialize=1.000002190520329)
-        m.F = Var(bounds=(0, 10), initialize=0.050000453446344)
-        m.QP = Var(bounds=(0, 10), initialize=1.0)
+        m.Q = Var(bounds=(1, 10), initialize=1)
+        m.F = Var(bounds=(0, 10), initialize=0.05)
+        m.QP = Var(bounds=(0, 10), initialize=1)
         m.c = Constraint(expr=m.P * m.Q - m.F * m.QP == 0)
-
-        m.GDPopt_utils = Block()
-        util_block = m.GDPopt_utils
-        util_block.algebraic_variable_list = [m.P, m.Q, m.F, m.QP]
-        util_block.global_constraint_list = [m.c]
-        util_block.constraints_by_disjunct = {}
-
-        config = Bunch(
-            logger=logging.getLogger('pyomo.contrib.gdpopt.tests'),
-            integer_tolerance=1e-6,
-            constraint_tolerance=1e-6,
+        m.disjunction = Disjunction(
+            expr=[
+                [m.P == 0.05, m.Q == 1, m.QP == 1],
+                [m.P == 0.05, m.Q == 1.1, m.QP == 1],
+            ]
         )
+        m.obj = Objective(expr=m.F)
+        m.disjunction.disjuncts[0].indicator_var.set_value(True)
+        m.disjunction.disjuncts[1].indicator_var.set_value(False)
+        cuts_checked = []
 
-        SolverFactory('gdpopt.gloa')._add_cuts_to_discrete_problem(
-            util_block, util_block, None, config, Bunch()
+        def check_affine_cuts(solver, discrete, util_block):
+            aff_utils = discrete.component('GDPopt_aff')
+            if aff_utils is None:
+                return  # The initialization MIP has no affine cuts yet.
+            aff_cuts = aff_utils.GDPopt_aff_cons
+            self.assertEqual(len(aff_cuts), 2)
+            convex_cut = aff_cuts[1]
+            feasible_point = {
+                id(discrete.P): 0.05,
+                id(discrete.Q): 1.1,
+                id(discrete.F): 0.055,
+                id(discrete.QP): 1.0,
+            }
+            cut_value = value(replace_expressions(convex_cut.body, feasible_point))
+            self.assertLessEqual(cut_value, value(convex_cut.upper) + 1e-12)
+            self.assertAlmostEqual(cut_value, -0.5)
+            cuts_checked.append(True)
+
+        SolverFactory('gdpopt.gloa').solve(
+            m,
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver,
+            init_algorithm='fix_disjuncts',
+            mip_presolve=False,
+            subproblem_presolve=False,
+            iterlim=1,
+            call_before_discrete_problem_solve=check_affine_cuts,
         )
-
-        feasible_point = [(m.P, 0.05), (m.Q, 1.1), (m.F, 0.055), (m.QP, 1.0)]
-        for var, val in feasible_point:
-            var.set_value(val)
-
-        aff_cuts = m.GDPopt_aff.GDPopt_aff_cons
-        self.assertEqual(len(aff_cuts), 2)
-        convex_cut = aff_cuts[1]
-        self.assertLessEqual(value(convex_cut.body), value(convex_cut.upper) + 1e-12)
-        self.assertAlmostEqual(value(convex_cut.body), -0.5)
+        self.assertTrue(cuts_checked)
 
     def test_relative_gap_near_zero_primal_bound(self):
         solver = GDP_LOA_Solver()

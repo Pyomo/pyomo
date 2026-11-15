@@ -8,7 +8,6 @@
 # ____________________________________________________________________________________
 
 from pyomo.common.config import document_kwargs_from_configdict
-from pyomo.common.errors import DeveloperError
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
@@ -208,18 +207,40 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
             concave_cut_is_variable = is_potentially_variable(concave_cut_body)
             convex_cut_is_variable = is_potentially_variable(convex_cut_body)
 
+            # Relax the bounds when checking constant cuts so that violations
+            # within constraint_tolerance do not cause an error.
             if not concave_cut_is_variable:
-                if (
-                    value(concave_cut_body + ccStart)
-                    < lb_int - config.constraint_tolerance
-                ):
-                    raise DeveloperError("One of the affine cuts is trivially False.")
+                cut_value = value(concave_cut_body + ccStart)
+                if cut_value < lb_int - config.constraint_tolerance:
+                    raise RuntimeError(
+                        "Constant concave affine cut for constraint '%s' is "
+                        "infeasible: value %s is below lower bound %s by %s, "
+                        "exceeding constraint_tolerance %s. This may be caused "
+                        "by numerical error."
+                        % (
+                            constr.name,
+                            cut_value,
+                            lb_int,
+                            lb_int - cut_value,
+                            config.constraint_tolerance,
+                        )
+                    )
             if not convex_cut_is_variable:
-                if (
-                    value(convex_cut_body + cvStart)
-                    > ub_int + config.constraint_tolerance
-                ):
-                    raise DeveloperError("One of the affine cuts is trivially False.")
+                cut_value = value(convex_cut_body + cvStart)
+                if cut_value > ub_int + config.constraint_tolerance:
+                    raise RuntimeError(
+                        "Constant convex affine cut for constraint '%s' is "
+                        "infeasible: value %s is above upper bound %s by %s, "
+                        "exceeding constraint_tolerance %s. This may be caused "
+                        "by numerical error."
+                        % (
+                            constr.name,
+                            cut_value,
+                            ub_int,
+                            cut_value - ub_int,
+                            config.constraint_tolerance,
+                        )
+                    )
 
             if not concave_cut_is_variable and not convex_cut_is_variable:
                 # We won't add them, but nothing is wrong--they hold
