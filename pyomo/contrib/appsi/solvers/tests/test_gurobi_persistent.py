@@ -225,6 +225,9 @@ class TestGurobiPersistent(unittest.TestCase):
         #
         # Update: as of Gurobi 11, this test no longer tests the
         # intended behavior (the solver has improved)
+        #
+        # Update: as of Gurobi 14.0, the expected result reverted back
+        # to pre-Gurobi 11 behavior.
         m = pyo.ConcreteModel()
         m.x = pyo.Var(bounds=(-5, 5))
         m.y = pyo.Var(bounds=(-5, 5))
@@ -236,7 +239,7 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.gurobi_options['MIPGap'] = 0.5
         res = opt.solve(m)
         self.assertAlmostEqual(res.best_feasible_objective, -4)
-        if opt.version() < (11, 0):
+        if opt.version() < (11, 0) or opt.version() > (14,):
             self.assertAlmostEqual(res.best_objective_bound, -6)
         else:
             self.assertAlmostEqual(res.best_objective_bound, -4)

@@ -20,6 +20,7 @@ import time
 import pyomo.common.unittest as unittest
 from pyomo.common.collections import Bunch
 from pyomo.common.errors import InvalidValueError
+from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
 from pyomo.core.base.set_types import NonNegativeIntegers
@@ -5441,34 +5442,37 @@ class TestPyROSCacheUncertaintySetBounds(unittest.TestCase):
         local_subsolver = SolverFactory("ipopt")
         global_subsolver = SolverFactory("ipopt")
 
-        # Call the PyROS solver
-        results_cache = pyros_solver.solve(
-            model=m,
-            first_stage_variables=[m.x1],
-            second_stage_variables=[m.x2],
-            uncertain_params=[m.u],
-            uncertainty_set=interval_cache,
-            local_solver=local_subsolver,
-            global_solver=global_subsolver,
-            options={
-                "objective_focus": ObjectiveType.worst_case,
-                "solve_master_globally": True,
-            },
-        )
+        # Pause the garbage collector so that a collection doesn't
+        # impact the timing.
+        with PauseGC():
+            # Call the PyROS solver
+            results_cache = pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[m.x2],
+                uncertain_params=[m.u],
+                uncertainty_set=interval_cache,
+                local_solver=local_subsolver,
+                global_solver=global_subsolver,
+                options={
+                    "objective_focus": ObjectiveType.worst_case,
+                    "solve_master_globally": True,
+                },
+            )
 
-        results_no_cache = pyros_solver.solve(
-            model=m,
-            first_stage_variables=[m.x1],
-            second_stage_variables=[m.x2],
-            uncertain_params=[m.u],
-            uncertainty_set=interval_no_cache,
-            local_solver=local_subsolver,
-            global_solver=global_subsolver,
-            options={
-                "objective_focus": ObjectiveType.worst_case,
-                "solve_master_globally": True,
-            },
-        )
+            results_no_cache = pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[m.x2],
+                uncertain_params=[m.u],
+                uncertainty_set=interval_no_cache,
+                local_solver=local_subsolver,
+                global_solver=global_subsolver,
+                options={
+                    "objective_focus": ObjectiveType.worst_case,
+                    "solve_master_globally": True,
+                },
+            )
 
         # caching should always result in less time,
         # as not caching reruns the slow solver multiple times
