@@ -268,7 +268,7 @@ class LinearStandardFormInfo:
                 logger.warning(
                     "LinearStandardFormInfo: assuming STANDARD_FORM; this could "
                     "be incorrect, which will result in the wrong sign convention "
-                    "for lower-bounded inequalitied"
+                    "for lower-bounded inequalities"
                 )
                 format = StandardFormFormat.STANDARD_FORM
         self.format = format
