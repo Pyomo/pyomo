@@ -7,6 +7,8 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 #
+import io
+import logging
 
 import pyomo.common.unittest as unittest
 
@@ -14,8 +16,10 @@ import pyomo.environ as pyo
 
 from pyomo.common.dependencies import numpy as np, scipy_available, numpy_available
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.timing import report_timing
 from pyomo.repn.plugins.standard_form import (
     BoundType,
+    InfeasibleConstraintException,
     LinearStandardFormInfo,
     LinearStandardFormCompiler,
     StandardFormFormat,
@@ -211,6 +215,46 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         self.assertEqual(repn.rows, [(m.c, -1), (m.d, 1)])
         self.assertEqual(repn.columns, [m.x, m.y[1], m.y[3]])
 
+    def test_debug_timing(self):
+        m = pyo.ConcreteModel()
+        m.I = pyo.Set(initialize=[1, 2, 3])
+        m.x = pyo.Var()
+        m.y = pyo.Var(m.I)
+        m.o = pyo.Objective(expr=m.x)
+        m.c = pyo.Constraint(expr=m.x + 2 * m.y[1] >= 3)
+
+        @m.Constraint(m.I)
+        def d(m, i):
+            return m.y[i] + i <= 5
+
+        all0 = str.maketrans("123456789", "000000000")
+
+        LOG = io.StringIO()
+        with report_timing(LOG):
+            repn = LinearStandardFormCompiler().write(m)
+        lines = [l.strip() for l in LOG.getvalue().translate(all0).splitlines()]
+        self.assertEqual(
+            lines, ['[    0.00] Generated linear standard form representation']
+        )
+
+        LOG = io.StringIO()
+        with report_timing(LOG, logging.DEBUG):
+            repn = LinearStandardFormCompiler().write(m)
+        lines = [l.strip() for l in LOG.getvalue().translate(all0).splitlines()]
+        print(lines)
+        self.assertEqual(
+            lines,
+            [
+                '[+   0.00] Initialized column order',
+                '[+   0.00] Objective o',
+                '[+   0.00] Constraint c',
+                '[+   0.00] Constraint d',
+                '[+   0.00] Formed matrices',
+                '[+   0.00] Eliminated 0 unused columns',
+                '[    0.00] Generated linear standard form representation',
+            ],
+        )
+
     def test_almost_dense_linear_model(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
@@ -263,6 +307,25 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         self.assertTrue(np.all(repn.rhs == np.array([-3, -35])))
         self.assertEqual(repn.rows, [(m.c, -1), (m.d, 1)])
         self.assertEqual(repn.columns, [m.x, m.y[1]])
+
+        # Fixing a constraint will remove it
+        m.y[1].fix(-35)
+        repn = LinearStandardFormCompiler().write(m)
+
+        self.assertTrue(np.all(repn.c == np.array([5])))
+        self.assertEqual(repn.c_offset, 3001)
+        self.assertTrue(np.all(repn.A == np.array([[-1]])))
+        self.assertTrue(np.all(repn.rhs == np.array([-73])))
+        self.assertEqual(repn.rows, [(m.c, -1)])
+        self.assertEqual(repn.columns, [m.x])
+
+        # Fixing a constraint could make it infeasible
+        m.y[1].fix(-34)
+        with self.assertRaisesRegex(
+            InfeasibleConstraintException,
+            "model contains a trivially infeasible constraint, 'd'",
+        ):
+            repn = LinearStandardFormCompiler().write(m)
 
     def test_suffix_warning(self):
         m = pyo.ConcreteModel()
@@ -335,6 +398,7 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
     )
     def test_alternative_forms(self):
         m = pyo.ConcreteModel()
+        m.p = pyo.Param(mutable=True, initialize=float('inf'))
         m.x = pyo.Var()
         m.y = pyo.Var(
             [0, 1, 3], bounds=lambda m, i: (-1 * (i % 2) * 5, 10 - 12 * (i // 2))
@@ -343,6 +407,11 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         m.d = pyo.Constraint(expr=m.y[1] + 4 * m.y[3] <= 5)
         m.e = pyo.Constraint(expr=pyo.inequality(-2, m.y[0] + 1 + 6 * m.y[1], 7))
         m.f = pyo.Constraint(expr=m.x + m.y[0] + 2 == 10)
+        # m.g tests several things:
+        #  - bound expressions are resolved to numbers
+        #  - inf / -inf are mapped to None
+        #  - unbounded constraints are ignored
+        m.g = pyo.Constraint(expr=pyo.inequality(-m.p, m.x + m.y[0], m.p))
         m.o = pyo.Objective([1, 3], rule=lambda m, i: m.x + i * 5 * m.y[i])
         m.o[1].sense = pyo.maximize
 
