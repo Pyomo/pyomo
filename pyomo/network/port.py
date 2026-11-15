@@ -31,7 +31,6 @@ from pyomo.core.base.label import alphanum_label_from_name
 
 from pyomo.network.util import create_var, tighten_var_domain
 
-
 logger = logging.getLogger('pyomo.network')
 
 
@@ -398,6 +397,7 @@ class Port(IndexedComponent):
                     "Cannot connect Port '%s' to Port '%s' because neither port has a parent block. Please specify a block to construct the Arc on."
                     % (self.name, port.name)
                 )
+
         # remove any special characters from port name commonly present in var names
         def get_safe_name(name):
             return (
@@ -406,11 +406,12 @@ class Port(IndexedComponent):
                 .replace("[", "_")
                 .replace("]", "")
             )
+
         if arc_name is None:
             current_port_name = get_safe_name(self.name)
             dest_port_name = get_safe_name(port.name)
             arc_name = f"{current_port_name}_to_{dest_port_name}"
-        
+
         block.add_component(arc_name, Arc(source=self, destination=port))
         # verify its created as add_component can fail silently
         created_arc = block.find_component(arc_name)
