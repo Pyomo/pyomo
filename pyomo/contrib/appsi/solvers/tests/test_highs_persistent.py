@@ -181,7 +181,9 @@ class TestBugs(unittest.TestCase):
         with capture_output() as output:
             pyo.SolverFactory("appsi_highs").solve(m, tee=True, warmstart=True)
         log = output.getvalue()
-        self.assertIn("MIP start solution is feasible, objective value is 25", log)
+        self.assertRegex(
+            log, "MIP start solution is feasible[,:] objective value is 25", log
+        )
 
     @unittest.skipUnless(
         opt.version()[:2] >= (1, 11),
