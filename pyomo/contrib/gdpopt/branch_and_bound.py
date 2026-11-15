@@ -438,11 +438,11 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
         )
         return new_node_data
 
-    def _get_rnGDP_subproblem_solver(self, subproblem, config, discrete_solver_name):
+    def _get_rnGDP_subproblem_solver(
+        self, subproblem, config, discrete_solver, discrete_solver_args
+    ):
+        """Choose the node solver based on the remaining discrete variables."""
         unfixed_discrete_vars = detect_unfixed_discrete_vars(subproblem)
-        discrete_solver = getattr(config, discrete_solver_name)
-        discrete_solver_args_name = discrete_solver_name + "_args"
-        discrete_solver_args = dict(getattr(config, discrete_solver_args_name))
         if len(unfixed_discrete_vars) == 0:
             if config.relaxed_nlp_solver is not None:
                 config.logger.debug(
@@ -456,20 +456,20 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                     "but relaxed_nlp_solver is not specified. Solving with "
                     "mixed-integer solver %s." % discrete_solver
                 )
-                return discrete_solver, discrete_solver_args
+                return discrete_solver, dict(discrete_solver_args)
         else:
             config.logger.debug(
-                "Transformed node subproblem has unfixed discrete variables: %s. "
-                "Solving with mixed-integer solver %s."
-                % (", ".join(v.name for v in unfixed_discrete_vars), discrete_solver)
+                "Transformed node subproblem has unfixed discrete variables. "
+                "Solving with mixed-integer solver %s." % discrete_solver
             )
-            return discrete_solver, discrete_solver_args
+            return discrete_solver, dict(discrete_solver_args)
 
     def _apply_rnGDP_subproblem_time_limit(self, solver_name, solver_args, config):
+        """Apply the remaining GAMS time limit to this solve's arguments."""
         if config.time_limit and solver_name == 'gams':
             elapsed = get_main_elapsed_time(self.timing)
             remaining = max(config.time_limit - elapsed, 1)
-            solver_args['add_options'] = solver_args.get('add_options', [])
+            solver_args['add_options'] = list(solver_args.get('add_options', []))
             solver_args['add_options'].append('option reslim=%s;' % remaining)
 
     def _solve_rnGDP_subproblem(self, model, config):
@@ -491,7 +491,7 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                 )
                 return float('inf'), float('inf')
             solver_name, solver_args = self._get_rnGDP_subproblem_solver(
-                subproblem, config, 'minlp_solver'
+                subproblem, config, config.minlp_solver, config.minlp_solver_args
             )
             self._apply_rnGDP_subproblem_time_limit(solver_name, solver_args, config)
             result = SolverFactory(solver_name).solve(subproblem, **solver_args)
@@ -573,7 +573,10 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
 
         with SuppressInfeasibleWarning():
             solver_name, solver_args = self._get_rnGDP_subproblem_solver(
-                subproblem, config, 'local_minlp_solver'
+                subproblem,
+                config,
+                config.local_minlp_solver,
+                config.local_minlp_solver_args,
             )
             self._apply_rnGDP_subproblem_time_limit(solver_name, solver_args, config)
             result = SolverFactory(solver_name).solve(subproblem, **solver_args)

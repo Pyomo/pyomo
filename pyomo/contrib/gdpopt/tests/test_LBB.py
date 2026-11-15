@@ -18,12 +18,14 @@ import pyomo.common.unittest as unittest
 
 from pyomo.common.fileutils import import_file
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.tee import capture_output
 import pyomo.contrib.gdpopt.tests.common_tests as ct
 from pyomo.contrib.gdpopt.branch_and_bound import GDP_LBB_Solver
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_algebraic_variable_list,
     add_util_block,
 )
+from pyomo.contrib.gdpopt.util import time_code
 from pyomo.contrib.satsolver.satsolver import z3_available
 from pyomo.environ import (
     Binary,
@@ -71,6 +73,37 @@ class TestGDPopt_LBB_TimeLimit(unittest.TestCase):
         self.assertEqual(results.problem.lower_bound, float('-inf'))
         self.assertEqual(results.problem.upper_bound, float('inf'))
 
+    def test_node_time_limit_does_not_accumulate_in_configured_gams_options(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 1))
+        m.obj = Objective(expr=m.x)
+        solver = GDP_LBB_Solver()
+        config = solver.CONFIG()
+        config.time_limit = 10
+        config.minlp_solver = 'gams'
+        config.minlp_solver_args = {'add_options': ['option optcr=0;']}
+        config.relaxed_nlp_solver_args = {'add_options': ['option optca=0;']}
+
+        with time_code(solver.timing, 'total', is_main_timer=True):
+            for relaxed_solver in (None, 'gams'):
+                config.relaxed_nlp_solver = relaxed_solver
+                for _ in range(2):
+                    solver_name, solver_args = solver._get_rnGDP_subproblem_solver(
+                        m, config, config.minlp_solver, config.minlp_solver_args
+                    )
+                    solver._apply_rnGDP_subproblem_time_limit(
+                        solver_name, solver_args, config
+                    )
+                    self.assertEqual(len(solver_args['add_options']), 2)
+                    self.assertRegex(
+                        solver_args['add_options'][1], r'^option reslim=.+;$'
+                    )
+
+        self.assertEqual(config.minlp_solver_args['add_options'], ['option optcr=0;'])
+        self.assertEqual(
+            config.relaxed_nlp_solver_args['add_options'], ['option optca=0;']
+        )
+
 
 @unittest.skipUnless(
     SolverFactory('glpk').available(exception_flag=False)
@@ -89,12 +122,36 @@ class TestGDPoptLBBNodeSolverDispatch(unittest.TestCase):
     def _make_config(self, solver, relaxed_nlp_solver=None):
         config = solver.CONFIG()
         config.minlp_solver = 'glpk'
+        config.minlp_solver_args = dict(tee=True, options={'mipgap': 0.05})
         config.nlp_solver = 'sentinel_nlp'
         config.local_minlp_solver = 'glpk'
+        config.local_minlp_solver_args = dict(tee=True, options={'mipgap': 0.1})
         config.relaxed_nlp_solver = relaxed_nlp_solver
+        config.relaxed_nlp_solver_args = dict(
+            tee=True, options={'tol': 1e-9, 'print_user_options': 'yes'}
+        )
         config.integer_tolerance = 1e-5
         config.time_limit = None
         return config
+
+    def _assert_ipopt_output(self, output):
+        self.assertIn('This is Ipopt version', output)
+        self.assertRegex(output, r'\btol\s*=\s*1e-09\s+yes')
+
+    def _assert_glpk_output(self, output, mipgap):
+        self.assertIn('GLPSOL--GLPK LP/MIP Solver', output)
+        self.assertRegex(
+            output, r'--mipgap\s+' + str(mipgap).replace('.', r'\.') + r'\b'
+        )
+
+    def _make_mixed_integer_model(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 2))
+        m.y = Var(domain=Binary)
+        # FBBT must leave y unfixed so this exercises mixed-integer dispatch.
+        m.c = Constraint(expr=m.x + m.y >= 0.5)
+        m.obj = Objective(expr=m.x + 0.75 * m.y)
+        return m
 
     def test_continuous_node_subproblem_uses_relaxed_nlp_solver(self):
         m = ConcreteModel()
@@ -103,8 +160,10 @@ class TestGDPoptLBBNodeSolverDispatch(unittest.TestCase):
 
         solver = self._make_lbb_solver(m)
         config = self._make_config(solver, relaxed_nlp_solver='ipopt')
-        solver._solve_rnGDP_subproblem(m, config)
+        with capture_output() as output:
+            solver._solve_rnGDP_subproblem(m, config)
 
+        self._assert_ipopt_output(output.getvalue())
         self.assertAlmostEqual(value(m.x), 1.0, places=6)
 
     def test_continuous_node_subproblem_defaults_to_minlp_solver(self):
@@ -114,21 +173,23 @@ class TestGDPoptLBBNodeSolverDispatch(unittest.TestCase):
 
         solver = self._make_lbb_solver(m)
         config = self._make_config(solver)
-        solver._solve_rnGDP_subproblem(m, config)
+        with capture_output() as output:
+            solver._solve_rnGDP_subproblem(m, config)
 
+        self._assert_glpk_output(output.getvalue(), 0.05)
         self.assertAlmostEqual(value(m.x), 1.0)
 
     def test_mixed_integer_node_subproblem_uses_minlp_solver(self):
-        m = ConcreteModel()
-        m.y = Var(domain=Binary)
-        m.c = Constraint(expr=m.y >= 0.5)
-        m.obj = Objective(expr=m.y)
+        m = self._make_mixed_integer_model()
 
         solver = self._make_lbb_solver(m)
         config = self._make_config(solver, relaxed_nlp_solver='ipopt')
-        solver._solve_rnGDP_subproblem(m, config)
+        with capture_output() as output:
+            solver._solve_rnGDP_subproblem(m, config)
 
-        self.assertAlmostEqual(value(m.y), 1.0)
+        self._assert_glpk_output(output.getvalue(), 0.05)
+        self.assertAlmostEqual(value(m.x), 0.5)
+        self.assertAlmostEqual(value(m.y), 0.0)
 
     def test_continuous_local_node_subproblem_uses_relaxed_nlp_solver(self):
         m = ConcreteModel()
@@ -137,9 +198,53 @@ class TestGDPoptLBBNodeSolverDispatch(unittest.TestCase):
 
         solver = self._make_lbb_solver(m)
         config = self._make_config(solver, relaxed_nlp_solver='ipopt')
-        solver._solve_local_rnGDP_subproblem(m, config)
+        with capture_output() as output:
+            solver._solve_local_rnGDP_subproblem(m, config)
 
+        self._assert_ipopt_output(output.getvalue())
         self.assertAlmostEqual(value(m.x), 1.0, places=6)
+
+    def test_continuous_local_node_subproblem_defaults_to_local_minlp_solver(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(1, 2))
+        m.obj = Objective(expr=m.x)
+
+        solver = self._make_lbb_solver(m)
+        config = self._make_config(solver)
+        with capture_output() as output:
+            solver._solve_local_rnGDP_subproblem(m, config)
+
+        self._assert_glpk_output(output.getvalue(), 0.1)
+        self.assertAlmostEqual(value(m.x), 1.0)
+
+    def test_mixed_integer_local_node_subproblem_uses_local_minlp_solver(self):
+        m = self._make_mixed_integer_model()
+
+        solver = self._make_lbb_solver(m)
+        config = self._make_config(solver, relaxed_nlp_solver='ipopt')
+        with capture_output() as output:
+            solver._solve_local_rnGDP_subproblem(m, config)
+
+        self._assert_glpk_output(output.getvalue(), 0.1)
+        self.assertAlmostEqual(value(m.x), 0.5)
+        self.assertAlmostEqual(value(m.y), 0.0)
+
+    def test_fixed_discrete_node_subproblem_uses_relaxed_nlp_solver(self):
+        for method in ('_solve_rnGDP_subproblem', '_solve_local_rnGDP_subproblem'):
+            with self.subTest(method=method):
+                m = ConcreteModel()
+                m.x = Var(bounds=(0, 2), initialize=1.5)
+                m.y = Var(domain=Binary, initialize=1)
+                m.y.fix()
+                m.obj = Objective(expr=(m.x - m.y) ** 2)
+
+                solver = self._make_lbb_solver(m)
+                config = self._make_config(solver, relaxed_nlp_solver='ipopt')
+                with capture_output() as output:
+                    getattr(solver, method)(m, config)
+
+                self._assert_ipopt_output(output.getvalue())
+                self.assertAlmostEqual(value(m.x), 1.0, places=6)
 
 
 @unittest.skipUnless(
