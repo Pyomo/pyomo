@@ -28,7 +28,7 @@ relocated_module_attribute(
 )
 
 qtconsole_app, qtconsole_available = attempt_import(
-    "qtconsole.qtconsoleapp", defer_import=False
+    "qtconsole.qtconsoleapp", defer_import=True
 )
 
 

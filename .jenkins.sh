@@ -34,6 +34,9 @@
 # PYOMO_DOWNLOAD_ARGS: passed to the 'pyomo download-extensions' command
 #     (e.g., to set up local SSL certificate authorities)
 #
+# PYOMO_SKIP_EXTENSIONS: if non-empty, then skip calling "pyomo
+#     download-extensions" and "pyomo-build-extensions"
+#
 # PYTEST_EXTRA_ARGS: passed to the 'pytest' command
 #     (e.g., to add extra pytest options like '--collect-only')
 #
@@ -135,22 +138,24 @@ if test -z "$MODE" -o "$MODE" == setup; then
     fi
 
     # Use Pyomo to download & compile binary extensions
-    i=0
-    while /bin/true; do
-        i=$[$i+1]
-        echo ""
-        echo "Downloading pyomo extensions (attempt $i)"
-        pyomo download-extensions $PYOMO_DOWNLOAD_ARGS
-        if test $? == 0; then
-            break
-        elif test $i -ge 3; then
-            exit 1
-        fi
-        DELAY=$(( RANDOM % 30 + 15))
-        echo "Pausing $DELAY seconds before re-attempting download"
-        sleep $DELAY
-    done
-    pyomo build-extensions || exit 1
+    if test -z "$PYOMO_SKIP_EXTENSIONS"; then
+        i=0
+        while /bin/true; do
+            i=$[$i+1]
+            echo ""
+            echo "Downloading pyomo extensions (attempt $i)"
+            pyomo download-extensions $PYOMO_DOWNLOAD_ARGS
+            if test $? == 0; then
+                break
+            elif test $i -ge 3; then
+                exit 1
+            fi
+            DELAY=$(( RANDOM % 30 + 15))
+            echo "Pausing $DELAY seconds before re-attempting download"
+            sleep $DELAY
+        done
+        pyomo build-extensions || exit 1
+    fi
 
     # Print useful version information
     echo ""

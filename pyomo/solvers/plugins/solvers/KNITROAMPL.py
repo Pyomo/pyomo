@@ -7,6 +7,8 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 import logging
+import os
+import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.collections import Bunch
@@ -64,17 +66,25 @@ class KNITROAMPL(ASL):
         self._capabilities.sos2 = False
 
     def _default_executable(self):
-        try:
-            # If knitro Python package is available, use the executable it contains
-            import knitro
+        executable = None
+        knitrodir = os.environ.get('KNITRODIR')
+        if knitrodir:
+            knitroampl_path = pathlib.Path(knitrodir) / 'knitroampl' / 'knitroampl'
+            executable = Executable(str(knitroampl_path))
+        if not executable:
+            try:
+                # If knitro Python package is available, use the executable it contains
+                import knitro
 
-            package_knitroampl_path = (
-                pathlib.Path(knitro.__file__).resolve().parent
-                / 'knitroampl'
-                / 'knitroampl'
-            )
-            executable = Executable(str(package_knitroampl_path))
-        except ModuleNotFoundError:
+                package_knitroampl_path = (
+                    pathlib.Path(knitro.__file__).resolve().parent
+                    / 'knitroampl'
+                    / 'knitroampl'
+                )
+                executable = Executable(str(package_knitroampl_path))
+            except ModuleNotFoundError:
+                pass
+        if not executable:
             # Otherwise, search usual path list
             executable = Executable('knitroampl')
         if not executable:
@@ -85,3 +95,17 @@ class KNITROAMPL(ASL):
             self.enable = False
             return None
         return executable.path()
+
+    def license_is_valid(self):
+        if not super().available(exception_flag=False):
+            return False
+        try:
+            check = subprocess.run(
+                [self.executable(), '--help'], capture_output=True, text=True
+            )
+        except:
+            return False
+        return (
+            check.returncode == 0
+            and 'Could not find a valid license' not in check.stdout
+        )

@@ -117,7 +117,7 @@ class TestDaeMisc(unittest.TestCase):
         m.t = ContinuousSet(bounds=(0, 10))
         m.s1 = Set(initialize=[1, 2, 3])
         m.s2 = Set(initialize=[(1, 1), (2, 2)])
-        m.p1 = Param(m.t, initialize=1)
+        m.p1 = Param(m.t, initialize={0: 0, 10: 10})
         m.p2 = Param(m.t, default=2)
         m.p3 = Param(m.t, initialize=1, default=2)
 
@@ -131,22 +131,26 @@ class TestDaeMisc(unittest.TestCase):
         m.p5 = Param(m.t, initialize=_rule1, default=_rule2)
 
         generate_finite_elements(m.t, 5)
-        # Expected ValueError because no default value was specified
-        with self.assertRaises(ValueError):
-            for i in m.t:
-                m.p1[i]
+
+        self.assertEqual(len(m.p1), 2)  # No default, initialize contains indices
+        self.assertEqual(len(m.p2), 6)
+        self.assertEqual(len(m.p3), 6)
+        self.assertEqual(len(m.p4), 6)
+        self.assertEqual(len(m.p5), 6)
 
         for i in m.t:
             self.assertEqual(m.p2[i], 2)
+            self.assertEqual(m.p3[i], 1)
+            self.assertEqual(m.p5[i], i**2)
 
             if i == 0 or i == 10:
-                self.assertEqual(m.p3[i], 1)
+                self.assertEqual(m.p1[i], i)
                 self.assertEqual(m.p4[i], 5)
-                self.assertEqual(m.p5[i], i**2)
             else:
-                self.assertEqual(m.p3[i], 2)
+                # Expected ValueError because no default value was specified
+                with self.assertRaises(ValueError):
+                    m.p1[i]
                 self.assertEqual(m.p4[i], i**2)
-                self.assertEqual(m.p5[i], 2 * i)
 
     # test Params with multiple indexing sets after discretizing
     def test_discretized_params_multiple(self):
@@ -158,7 +162,7 @@ class TestDaeMisc(unittest.TestCase):
         def _rule1(m, i):
             return i**2
 
-        m.p1 = Param(m.s1, m.t, initialize=2, default=_rule1)
+        m.p1 = Param(m.s1, m.t, default=_rule1)
         m.p2 = Param(m.t, m.s1, default=5)
 
         def _rule2(m, i, j):
@@ -175,21 +179,21 @@ class TestDaeMisc(unittest.TestCase):
 
         # Expected TypeError because a function with the wrong number of
         # arguments was specified as the default
-
-        with self.assertRaises(TypeError):
-            for i in m.p1:
+        self.assertEqual(len(m.p1), 18)
+        for i in m.p1:
+            with self.assertRaises(TypeError):
                 m.p1[i]
 
+        self.assertEqual(len(m.p2), 18)
         for i in m.p2:
             self.assertEqual(m.p2[i], 5)
 
+        self.assertEqual(len(m.p3), 18)
         for i in m.t:
             for j in m.s1:
-                if i == 0 or i == 10:
-                    self.assertEqual(m.p3[j, i], 2)
-                else:
-                    self.assertEqual(m.p3[j, i], i + j)
+                self.assertEqual(m.p3[j, i], 2)
 
+        self.assertEqual(len(m.p4), 12)
         for i in m.t:
             for j in m.s2:
                 self.assertEqual(m.p4[j, i], sum(j, i))

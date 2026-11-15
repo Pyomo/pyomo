@@ -28,19 +28,19 @@ def create_model():
 
     m.t = ContinuousSet(bounds=(0.0, 20.0))
 
-    def _b_default(m, t):
+    def _b_init(m, t):
         if t >= 15:
             return 0.025
         return 0.25
 
-    m.b = pyo.Param(m.t, initialize=0.25, default=_b_default)
+    m.b = pyo.Param(m.t, initialize=_b_init)
 
-    def _c_default(m, t):
+    def _c_init(m, t):
         if t >= 7:
             return 50
         return 5
 
-    m.c = pyo.Param(m.t, initialize=5.0, default=_c_default)
+    m.c = pyo.Param(m.t, initialize=_c_init)
 
     m.omega = pyo.Var(m.t)
     m.theta = pyo.Var(m.t)

@@ -12,10 +12,10 @@
 
 import pyomo.common.unittest as unittest
 from pyomo.contrib.mindtpy.tests.eight_process_problem import EightProcessFlowsheet
-from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP as SimpleMINLP
-from pyomo.contrib.mindtpy.tests.MINLP2_simple import SimpleMINLP as SimpleMINLP2
-from pyomo.contrib.mindtpy.tests.MINLP3_simple import SimpleMINLP as SimpleMINLP3
-from pyomo.contrib.mindtpy.tests.from_proposal import ProposalModel
+from pyomo.contrib.mindtpy.tests.minlp_simple import MinlpSimple
+from pyomo.contrib.mindtpy.tests.minlp2_simple import Minlp2Simple
+from pyomo.contrib.mindtpy.tests.minlp3_simple import Minlp3Simple
+from pyomo.contrib.mindtpy.tests.from_proposal import FromProposalModel
 from pyomo.contrib.mindtpy.tests.constraint_qualification_example import (
     ConstraintQualificationExample,
 )
@@ -37,10 +37,10 @@ else:
 model_list = [
     EightProcessFlowsheet(convex=True),
     ConstraintQualificationExample(),
-    SimpleMINLP(),
-    SimpleMINLP2(),
-    SimpleMINLP3(),
-    ProposalModel(),
+    MinlpSimple(),
+    Minlp2Simple(),
+    Minlp3Simple(),
+    FromProposalModel(),
 ]
 
 
@@ -49,9 +49,18 @@ model_list = [
     'Required subsolvers %s are not available' % (required_solvers,),
 )
 class TestMindtPy(unittest.TestCase):
-    """Tests for the MindtPy solver plugin."""
+    """Tests for the MindtPy solver."""
 
     def check_optimal_solution(self, model, places=1):
+        """Assert that variable values match the model's known optimum.
+
+        Parameters
+        ----------
+        model : Block
+            Model containing ``optimal_solution`` values for comparison.
+        places : int, optional
+            Decimal places used by ``assertAlmostEqual``.
+        """
         for var in model.optimal_solution:
             self.assertAlmostEqual(
                 var.value, model.optimal_solution[var], places=places
