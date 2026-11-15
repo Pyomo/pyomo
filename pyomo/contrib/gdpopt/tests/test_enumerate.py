@@ -25,6 +25,71 @@ from pyomo.gdp import Disjunction
 import pyomo.gdp.tests.models as models
 
 
+class _ExpiredEnumerationSolver(GDP_Enumeration_Solver):
+    """Enumeration solver that enters its GDP solve after the time limit."""
+
+    def _solve_gdp(self, original_model, config):
+        """Expire the active timer before running the real GDP solve."""
+        self.timing.main_timer_start_time -= config.time_limit
+        return super()._solve_gdp(original_model, config)
+
+    def _discrete_solution_iterator(self, *args):
+        """Fail instead of requesting a discrete solution."""
+        raise AssertionError('discrete solutions were enumerated')
+
+
+class TestGDPoptEnumerateUnit(unittest.TestCase):
+    def test_large_space_not_enumerated_after_time_limit(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-1, 1))
+        m.i = Var(domain=Integers, bounds=(0.5, 10**20))
+        m.obj = Objective(expr=m.x + m.i)
+
+        def disjunction_rule(m, _):
+            return [[m.x <= 0], [m.x >= 0]]
+
+        m.disjunctions = Disjunction(range(32), rule=disjunction_rule)
+        solver = _ExpiredEnumerationSolver()
+        results = solver.solve(m, force_subproblem_nlp=True, time_limit=1)
+
+        self.assertEqual(solver.num_discrete_solns, 2**32 * 10**20)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.maxTimeLimit
+        )
+
+    def test_noninteger_integer_bounds(self):
+        m = ConcreteModel()
+        m.i = Var(domain=Integers, bounds=(0.5, 3.5))
+        solver = GDP_Enumeration_Solver(force_subproblem_nlp=True)
+
+        solutions = solver._discrete_solution_iterator([], [], [m.i], solver.config)
+
+        self.assertEqual([solution[2] for solution in solutions], [(1,), (2,), (3,)])
+
+    def test_unbounded_integer_variable(self):
+        m = ConcreteModel()
+        m.i = Var(domain=Integers)
+        m.disjunction = Disjunction(expr=[[m.i >= 0], [m.i <= 0]])
+        m.obj = Objective(expr=m.i)
+
+        with self.assertRaisesRegex(ValueError, 'finite bounds'):
+            GDP_Enumeration_Solver().solve(m, force_subproblem_nlp=True)
+
+    def test_completion(self):
+        m = ConcreteModel()
+        m.disjunction = Disjunction(
+            expr=[[Constraint.Infeasible], [Constraint.Infeasible]]
+        )
+        m.obj = Objective(expr=0)
+
+        results = GDP_Enumeration_Solver().solve(m, iterlim=2)
+
+        self.assertEqual(results.solver.iterations, 2)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.infeasible
+        )
+
+
 @unittest.skipUnless(SolverFactory('gurobi').available(), 'Gurobi not available')
 @unittest.skipUnless(SolverFactory('gurobi').license_is_valid(), 'Gurobi not licensed')
 class TestGDPoptEnumerate(unittest.TestCase):

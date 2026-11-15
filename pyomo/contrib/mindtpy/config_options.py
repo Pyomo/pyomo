@@ -714,6 +714,14 @@ def _add_tolerance_configs(CONFIG):
         ),
     )
     CONFIG.declare(
+        'eigenvalue_tolerance',
+        ConfigValue(
+            default=1e-10,
+            domain=NonNegativeFloat,
+            description='Numerical tolerance for eigenvalue-based convexity checks.',
+        ),
+    )
+    CONFIG.declare(
         'small_dual_tolerance',
         ConfigValue(
             default=1e-8,
