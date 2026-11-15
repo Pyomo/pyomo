@@ -63,7 +63,7 @@ Originally written by Ben Knueven as part of the `WaterTAP project
 <https://github.com/watertap-org/watertap>`__.  Copied by DLW 18Feb2024
 and edited.
 
-See: http://www.sce.carleton.ca/faculty/chinneck/docs/CPAIOR07InfeasibilityTutorial.pdf
+See: https://raw.githubusercontent.com/Pyomo/pyomo-tutorials/main/references/CPAIOR07InfeasibilityTutorial.pdf
 
 """
 

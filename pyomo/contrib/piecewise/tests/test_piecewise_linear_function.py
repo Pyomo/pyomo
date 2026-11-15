@@ -14,7 +14,7 @@ import pickle
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
-from pyomo.contrib.piecewise import PiecewiseLinearFunction, Triangulation
+from pyomo.contrib.piecewise import PiecewiseLinearFunction, Triangulation, FunctionType
 from pyomo.core.expr.compare import (
     assertExpressionsEqual,
     assertExpressionsStructurallyEqual,
@@ -461,6 +461,75 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         self.assertAlmostEqual(m.pw(1, 3), g1(1, 3))
         self.assertAlmostEqual(m.pw(2.5, 6), g2(2.5, 6))
         self.assertAlmostEqual(m.pw(0.2, 4.3), g2(0.2, 4.3))
+
+
+class TestConvexOption(unittest.TestCase):
+    def test_scalar_pw_convex_option(self):
+        """Test that convex option is correctly set for ScalarPiecewiseLinearFunction"""
+        m = ConcreteModel()
+        m.x = Var(bounds=(1, 10))
+
+        # convex
+        m.pw_convex = PiecewiseLinearFunction(
+            points=[1, 3, 6, 10], function=log, function_type=FunctionType.CONVEX
+        )
+        self.assertIs(m.pw_convex.function_type, FunctionType.CONVEX)
+
+        # concave
+        m.pw_concave = PiecewiseLinearFunction(
+            points=[1, 3, 6, 10], function=log, function_type=FunctionType.CONCAVE
+        )
+        self.assertIs(m.pw_concave.function_type, FunctionType.CONCAVE)
+
+        # unspecified
+        m.pw_none = PiecewiseLinearFunction(points=[1, 3, 6, 10], function=log)
+        self.assertIs(m.pw_none.function_type, FunctionType.UNSPECIFIED)
+
+    def test_indexed_pw_convex_option_points(self):
+        """Test that convex option is correctly set for
+        IndexedPiecewiseLinearFunction"""
+        m = ConcreteModel()
+        m.x = Var([1, 2], bounds=(1, 10))
+
+        def g1(x):
+            return x**2
+
+        def g2(x):
+            return log(x)
+
+        m.funcs = {1: g1, 2: g2}
+
+        # convex and concave
+        m.pw_convex = PiecewiseLinearFunction(
+            [1, 2],
+            points=[1, 3, 6, 10],
+            function_rule=m.funcs,
+            function_type={1: FunctionType.CONVEX, 2: FunctionType.CONCAVE},
+        )
+        self.assertIs(m.pw_convex[1].function_type, FunctionType.CONVEX)
+        self.assertIs(m.pw_convex[2].function_type, FunctionType.CONCAVE)
+
+        def convex_rule(m, i):
+            if i == 1:
+                return FunctionType.CONVEX
+            return FunctionType.UNSPECIFIED
+
+        # convex and unspecified
+        m.pw_concave = PiecewiseLinearFunction(
+            [1, 2],
+            points=[1, 3, 6, 10],
+            function_rule=m.funcs,
+            function_type=convex_rule,
+        )
+        self.assertIs(m.pw_concave[1].function_type, FunctionType.CONVEX)
+        self.assertIs(m.pw_concave[2].function_type, FunctionType.UNSPECIFIED)
+
+        # default on both indices
+        m.pw_none = PiecewiseLinearFunction(
+            [1, 2], points=[1, 3, 6, 10], function_rule=lambda m, i: m.funcs[i]
+        )
+        self.assertIs(m.pw_none[1].function_type, FunctionType.UNSPECIFIED)
+        self.assertIs(m.pw_none[2].function_type, FunctionType.UNSPECIFIED)
 
 
 class TestTriangulationProducesDegenerateSimplices(unittest.TestCase):
