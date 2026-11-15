@@ -36,7 +36,7 @@ from pyomo.environ import (
     maximize,
     minimize,
 )
-from pyomo.gdp import Disjunction
+from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverResults, TerminationCondition
 
 currdir = dirname(abspath(__file__))
@@ -48,6 +48,28 @@ solver_available = SolverFactory(minlp_solver).available()
 license_available = (
     SolverFactory(minlp_solver).license_is_valid() if solver_available else False
 )
+
+
+class TestGDPopt_LBB_TimeLimit(unittest.TestCase):
+    """Tests for solver-independent LBB termination paths."""
+
+    def test_time_limit_returns_pyomo_results_object(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 2))
+        m.d1 = Disjunct()
+        m.d2 = Disjunct()
+        m.d1.c = Constraint(expr=m.x <= 0.5)
+        m.d2.c = Constraint(expr=m.x >= 1.5)
+        m.disj = Disjunction(expr=[m.d1, m.d2])
+        m.obj = Objective(expr=m.x)
+
+        results = SolverFactory('gdpopt.lbb').solve(m, time_limit=1e-6, tee=False)
+
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.maxTimeLimit
+        )
+        self.assertEqual(results.problem.lower_bound, float('-inf'))
+        self.assertEqual(results.problem.upper_bound, float('inf'))
 
 
 @unittest.skipUnless(
@@ -368,6 +390,63 @@ class TestGDPopt_LBB_Z3(unittest.TestCase):
         )
         objective_value = value(model.obj.expr)
         self.assertAlmostEqual(objective_value, 4.46, 2)
+
+
+class _FailingSolver:
+    """Stand-in solver that fails the way an infrastructure error would."""
+
+    def solve(self, model, **kwds):
+        raise RuntimeError("simulated solver infrastructure failure")
+
+
+class TestGDPoptLBBSubproblemErrors(unittest.TestCase):
+    """LBB must not report a solver failure as an infeasible bound."""
+
+    _failing_solver_name = '_gdpopt_lbb_test_failing_solver'
+
+    @classmethod
+    def setUpClass(cls):
+        SolverFactory.register(
+            cls._failing_solver_name, doc='Test solver that always fails'
+        )(_FailingSolver)
+
+    @classmethod
+    def tearDownClass(cls):
+        SolverFactory.unregister(cls._failing_solver_name)
+
+    def _make_solver_model_and_config(self):
+        model = ConcreteModel()
+        model.x = Var(bounds=(0, 1))
+        model.objective = Objective(expr=model.x, sense=minimize)
+
+        solver = GDP_LBB_Solver()
+        solver.pyomo_results = SolverResults()
+        solver.pyomo_results.problem.sense = minimize
+        solver.original_util_block = add_util_block(model)
+        add_algebraic_variable_list(solver.original_util_block)
+
+        config = solver.CONFIG()
+        config.minlp_solver = self._failing_solver_name
+        config.minlp_solver_args = {}
+        config.local_minlp_solver = self._failing_solver_name
+        config.local_minlp_solver_args = {}
+        config.integer_tolerance = 1e-5
+        config.time_limit = None
+        return solver, model, config
+
+    def test_evaluated_node_solver_error_propagates(self):
+        solver, model, config = self._make_solver_model_and_config()
+        with self.assertRaisesRegex(
+            RuntimeError, "simulated solver infrastructure failure"
+        ):
+            solver._solve_rnGDP_subproblem(model, config)
+
+    def test_screening_solver_error_propagates(self):
+        solver, model, config = self._make_solver_model_and_config()
+        with self.assertRaisesRegex(
+            RuntimeError, "simulated solver infrastructure failure"
+        ):
+            solver._solve_local_rnGDP_subproblem(model, config)
 
 
 if __name__ == '__main__':
