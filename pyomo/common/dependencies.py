@@ -976,7 +976,13 @@ def _finalize_multiprocessing(module, available):
     # triggers the multiprocessing import.
 
     global capture_output_lock
-    capture_output_lock = module.Lock()
+    try:
+        capture_output_lock = module.Lock()
+    except PermissionError:
+        # AWS Lambda has no usable /dev/shm, so multiprocessing.Lock()
+        # raises PermissionError (Errno 13; see #3977).  Keep the
+        # threading.Lock instead of failing the import.
+        pass
 
 
 def _finalize_scipy(module, available):
