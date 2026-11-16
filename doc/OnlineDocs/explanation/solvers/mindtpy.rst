@@ -270,7 +270,9 @@ MindtPy provides two ways to guarantee the finite convergence of the algorithm.
 Bound Calculation
 """""""""""""""""
 
-Since no-good cuts or tabu list is applied in the Global Outer-Approximation (GOA) method, the MILP master problem cannot provide a valid bound for the original problem. After the GOA method has converged, MindtPy will remove the no-good cuts or the tabu integer combinations added when and after the optimal solution has been found. Solving this problem will give us a valid bound for the original problem.
+With no-good cuts or a tabu list, the MILP master problem bounds only the remaining integer assignments. MindtPy combines that bound with the incumbent objective: it takes the minimum for minimization, or the maximum for maximization. If no feasible assignments remain in the master problem, the incumbent gives both bounds and MindtPy terminates as optimal. No additional master solve is required.
+
+This calculation assumes that every excluded fixed NLP was solved to optimality or proven infeasible, and that the master problem provides a valid relaxation. OA requires model convexity; GOA requires global NLP solves. A local optimum is sufficient under the convex algorithms' assumptions, but not for GOA. If a fixed NLP instead reports a merely feasible solution, no solution, or a solver limit, MindtPy retains the dual bound obtained before that assignment was excluded. Exhausting the remaining assignments then reports a feasible solution (or no solution if there is no incumbent), without claiming optimality or infeasibility from the exhausted master alone. Using OA as a heuristic on a nonconvex model does not guarantee valid bounds.
 
 
 The GOA method also has a single-tree implementation with ``cplex_persistent`` and ``gurobi_persistent``. Notice that this method is more computationally expensive than the other strategies implemented for convex MINLP like OA and ECP, which can be used as heuristics for nonconvex MINLP problems.
