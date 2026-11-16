@@ -157,7 +157,7 @@ class CUOPTTests(unittest.TestCase):
         m.cap = Constraint(expr=sum(weight[i] * m.x[i] for i in m.I) <= capacity)
 
         opt = SolverFactory('cuopt')
-        res = opt.solve(m)
+        opt.solve(m)
 
         # Add second dummy objective
         m.obj2 = Objective(expr=sum(m.x[i] for i in m.I), sense=minimize)
@@ -165,13 +165,13 @@ class CUOPTTests(unittest.TestCase):
         with pytest.raises(
             ValueError, match=r"Solver interface does not support multiple objectives."
         ):
-            res = opt.solve(m)
+            opt.solve(m)
         m.obj2.deactivate()
 
         # Raise error due to unsupported suffix
         m.slack = Suffix(direction=Suffix.IMPORT)
         with pytest.raises(RuntimeError, match=r"cannot extract solution suffix=slack"):
-            res = opt.solve(m)
+            opt.solve(m)
 
     @unittest.skipIf(not cuopt_available, "The CuOpt solver is not available")
     def test_infeasible_trivial_constraint(self):
@@ -220,7 +220,10 @@ class CUOPTTests(unittest.TestCase):
         with pytest.raises(ValueError, match=r"contains nonlinear terms"):
             opt.solve(m)
 
-    @unittest.skipIf(not cuopt_available, "The CuOpt solver is not available")
+    @unittest.skipIf(
+        not (cuopt_available and CUOPTDirect._supports_quadratic_objective),
+        "The CuOpt solver is not available or does not support quadratic objectives",
+    )
     def test_quadratic_objective_matrix(self):
         m = ConcreteModel()
         m.x = Var(domain=NonNegativeReals)
@@ -241,6 +244,24 @@ class CUOPTTests(unittest.TestCase):
         c = opt._solver_model.get_objective_coefficients()
         self.assertAlmostEqual(c[0], 2.0)
         self.assertAlmostEqual(c[1], 0.0)
+
+    @unittest.skipIf(not cuopt_available, "The CuOpt solver is not available")
+    def test_quadratic_objective_unsupported(self):
+        m = ConcreteModel()
+        m.x = Var(domain=NonNegativeReals)
+        m.obj = Objective(expr=m.x**2 + m.x, sense=minimize)
+        m.c = Constraint(expr=m.x >= 1)
+
+        orig = CUOPTDirect._supports_quadratic_objective
+        try:
+            CUOPTDirect._supports_quadratic_objective = False
+            opt = SolverFactory('cuopt')
+            with pytest.raises(
+                ValueError, match=r"does not support quadratic objectives"
+            ):
+                opt._set_instance(m)
+        finally:
+            CUOPTDirect._supports_quadratic_objective = orig
 
     @unittest.skipUnless(
         _cuopt_supports_qc(),

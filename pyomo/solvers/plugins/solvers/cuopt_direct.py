@@ -39,10 +39,14 @@ def _get_cuopt_version(cuopt, avail):
     CUOPTDirect._name = "cuOpt %s" % (cuopt.__version__,)
     try:
         dm = cuopt.linear_programming.DataModel()
+        CUOPTDirect._supports_quadratic_objective = hasattr(
+            dm, "set_quadratic_objective_matrix"
+        )
         CUOPTDirect._supports_quadratic_constraint = hasattr(
             dm, "add_quadratic_constraint"
         )
     except Exception:
+        CUOPTDirect._supports_quadratic_objective = False
         CUOPTDirect._supports_quadratic_constraint = False
 
 
@@ -55,6 +59,7 @@ cuopt, cuopt_available = attempt_import(
 
 @SolverFactory.register("cuopt", doc="Direct python interface to CUOPT")
 class CUOPTDirect(DirectSolver):
+    _supports_quadratic_objective = False
     _supports_quadratic_constraint = False
 
     def __init__(self, **kwds):
@@ -64,7 +69,9 @@ class CUOPTDirect(DirectSolver):
         # Note: Undefined capabilities default to None
         self._capabilities.linear = True
         self._capabilities.integer = True
-        self._capabilities.quadratic_objective = True
+        self._capabilities.quadratic_objective = (
+            CUOPTDirect._supports_quadratic_objective
+        )
         self._capabilities.quadratic_constraint = (
             CUOPTDirect._supports_quadratic_constraint
         )
@@ -332,6 +339,12 @@ class CUOPTDirect(DirectSolver):
         self._solver_model.set_maximize(objective.sense == maximize)
 
         if repn.quadratic:
+            if not CUOPTDirect._supports_quadratic_objective:
+                raise ValueError(
+                    "Objective contains quadratic terms, but the installed "
+                    f"version of cuOpt ({self.version()}) does not support "
+                    "quadratic objectives."
+                )
             var_id_to_ndx = {
                 id(var): ndx for var, ndx in self._pyomo_var_to_ndx_map.items()
             }
