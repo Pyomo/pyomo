@@ -248,7 +248,7 @@ class TestToBaronVisitor(unittest.TestCase):
 
         e = m.x**m.y
         test = expression_to_string(e, variables, smap)
-        self.assertEqual(test, "exp((x) * log(y))")
+        self.assertEqual(test, "exp((y) * log(x))")
 
         e = m.x ** (3 + EXPR.ProductExpression((m.p, m.y)))
         test = expression_to_string(e, variables, smap)
