@@ -67,7 +67,7 @@ def _handle_PowExpression(visitor, node, values):
     if unfixed_count < 2:
         return f"{values[0]} ^ {values[1]}"
     else:
-        return f"exp(({values[0]}) * log({values[1]}))"
+        return f"exp(({values[1]}) * log({values[0]}))"
 
 
 _allowableUnaryFunctions = {'exp', 'log10', 'log', 'sqrt'}
