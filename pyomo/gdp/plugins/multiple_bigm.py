@@ -80,6 +80,7 @@ _thread_local = threading.local()
 _thread_local.solver = None
 _thread_local.model = None
 _thread_local.config_use_primal_bound = None
+_thread_local.config_skip_writing_references = None
 _thread_local.in_progress = False
 
 
@@ -297,6 +298,23 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             """,
         ),
     )
+    # TODO: Remove this after #1032 is resolved. There is similar
+    # machinery to remove (though probably not so performance sensitive)
+    # in hull.py and partition_disjuncts.py
+    CONFIG.declare(
+        'skip_writing_references',
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description="Skip writing Var references in the subproblem construction.",
+            doc="""
+            Skip writing Var references in the subproblem construction.
+
+            This breaks compatibility with certain legacy writers (as of
+            Nov 2026), but otherwise saves significant wasted effort.
+            """,
+        ),
+    )
     transformation_name = 'mbigm'
 
     def __init__(self):
@@ -324,6 +342,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 _thread_local.model = None
                 _thread_local.solver = None
                 _thread_local.config_use_primal_bound = None
+                _thread_local.config_skip_writing_references = None
                 _thread_local.in_progress = False
 
     def _apply_to_impl(self, instance, **kwds):
@@ -487,6 +506,9 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 _thread_local.model = instance
                 _thread_local.solver = self._config.solver
                 _thread_local.config_use_primal_bound = self._config.use_primal_bound
+                _thread_local.config_skip_writing_references = (
+                    self._config.skip_writing_references
+                )
                 logger.info(f"Running {len(jobs)} jobs single-threaded.")
                 results = itertools.starmap(_calc_M, jobs_by_name)
             deactivated = set()
@@ -858,12 +880,16 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     dill.dumps(self._config.solver.__class__),
                     dill.dumps(self._config.solver.options),
                     self._config.use_primal_bound,
+                    self._config.skip_writing_references,
                 ),
             )
         elif method == ProcessStartMethod.fork:
             _thread_local.model = instance
             _thread_local.solver = self._config.solver
             _thread_local.config_use_primal_bound = self._config.use_primal_bound
+            _thread_local.config_skip_writing_references = (
+                self._config.skip_writing_references
+            )
             pool = multiprocessing.get_context('fork').Pool(
                 processes=threads, initializer=_setup_fork, initargs=()
             )
@@ -945,7 +971,9 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
 # Things we call in subprocesses. These can't be member functions, or
 # else we'd have to pickle `self`, which is problematic.
-def _setup_spawn(model, solver_class, solver_options, use_primal_bound):
+def _setup_spawn(
+    model, solver_class, solver_options, use_primal_bound, skip_writing_references
+):
     # When using 'spawn' or 'forkserver', Python starts in a new
     # environment and executes only this file, so we need to manually
     # ensure necessary plugins are registered (even if the main process
@@ -955,6 +983,7 @@ def _setup_spawn(model, solver_class, solver_options, use_primal_bound):
     _thread_local.model = dill.loads(model)
     _thread_local.solver = dill.loads(solver_class)(options=dill.loads(solver_options))
     _thread_local.config_use_primal_bound = use_primal_bound
+    _thread_local.config_skip_writing_references = skip_writing_references
 
 
 def _setup_fork():
@@ -1060,13 +1089,14 @@ def _get_scratch_block(constraint, other_disjunct, is_upper):
     # Add references to every Var that appears in an active constraint.
     # TODO: If the writers don't assume Vars are declared on the Block
     # being solved, we won't need this!
-    seen = set()
-    for constraint in scratch.component_data_objects(
-        Constraint, active=True, sort=SortComponents.deterministic, descend_into=Block
-    ):
-        for var in EXPR.identify_variables(constraint.expr, include_fixed=True):
-            if id(var) not in seen:
-                seen.add(id(var))
-                ref = Reference(var)
-                scratch.add_component(unique_component_name(scratch, var.name), ref)
+    if not _thread_local.config_skip_writing_references:
+        seen = set()
+        for constraint in scratch.component_data_objects(
+            Constraint, active=True, sort=SortComponents.deterministic, descend_into=Block
+        ):
+            for var in EXPR.identify_variables(constraint.expr, include_fixed=True):
+                if id(var) not in seen:
+                    seen.add(id(var))
+                    ref = Reference(var)
+                    scratch.add_component(unique_component_name(scratch, var.name), ref)
     return scratch
