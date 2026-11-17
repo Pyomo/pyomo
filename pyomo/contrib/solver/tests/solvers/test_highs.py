@@ -149,8 +149,7 @@ class TestWarmStart(unittest.TestCase):
         # an LP for x2 (x2 = 5, objective value 26). If x2 = 4.5 were passed
         # as well, the objective value would be 25.
         self.assertRegex(
-            res.solver_log,
-            r"MIP start solution is feasible. objective value is 26",
+            res.solver_log, r"MIP start solution is feasible. objective value is 26"
         )
 
     @unittest.skipUnless(
@@ -190,8 +189,7 @@ class TestWarmStart(unittest.TestCase):
         m.x3 = 1
         res = opt.solve(m, warmstart_discrete_vars=True)
         self.assertRegex(
-            res.solver_log,
-            r"MIP start solution is feasible. objective value is 26",
+            res.solver_log, r"MIP start solution is feasible. objective value is 26"
         )
 
         # Second solve on the same persistent instance: x3 = 1 is still set
@@ -201,8 +199,7 @@ class TestWarmStart(unittest.TestCase):
         m.x1 = 3
         res = opt.solve(m, warmstart_discrete_vars=True)
         self.assertRegex(
-            res.solver_log,
-            r"MIP start solution is feasible. objective value is 25",
+            res.solver_log, r"MIP start solution is feasible. objective value is 25"
         )
 
     @unittest.skipUnless(
