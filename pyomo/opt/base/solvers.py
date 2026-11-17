@@ -7,6 +7,7 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+import ast
 import re
 import sys
 import time
@@ -436,8 +437,8 @@ class OptSolver:
         istr = istr.strip()
         if not istr:
             return ans
-        if istr[0] == "'" or istr[0] == '"':
-            istr = eval(istr)
+        if istr[0] in "'\"" and len(istr) >= 2 and istr[-1] == istr[0]:
+            istr = istr[1:-1]
         tokens = shlex.split(istr)
         for token in tokens:
             index = token.find('=')
@@ -446,8 +447,8 @@ class OptSolver:
                     "Solver options must have the form option=value: '%s'" % istr
                 )
             try:
-                val = eval(token[(index + 1) :])
-            except:
+                val = ast.literal_eval(token[(index + 1) :])
+            except Exception:
                 val = token[(index + 1) :]
             ans[token[:index]] = val
         return ans

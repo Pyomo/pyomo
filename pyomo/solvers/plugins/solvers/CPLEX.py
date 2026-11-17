@@ -889,7 +889,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
             elif tokens[0].startswith("solutionStatusValue"):
                 pieces = tokens[0].split("=")
-                solution_status = eval(pieces[1])
+                solution_status = int(pieces[1].strip().strip('"'))
                 # solution status = 1 => optimal
                 # solution status = 3 => infeasible
                 if soln.status == SolutionStatus.unknown:
@@ -931,11 +931,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     time_limit_exceeded = True
             elif tokens[0].startswith("MIPNodes"):
                 if mip_problem:
-                    n = eval(
-                        eval((" ".join(tokens).split('=')[1]).strip())
-                        .lstrip("\"")
-                        .rstrip("\"")
-                    )
+                    n = int(" ".join(tokens).split('=')[1].strip().strip('"'))
                     results.solver.statistics.branch_and_bound.number_of_created_subproblems = (
                         n
                     )

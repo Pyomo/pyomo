@@ -333,11 +333,12 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                 universal_newlines=True,
             )
             ver = None
-            try:
-                ver = tuple(eval(results.stdout.strip()))
+            m = re.search(r'\(\s*(\d+(?:\s*,\s*\d+)*)\s*,?\s*\)', results.stdout)
+            if m:
+                ver = tuple(int(x) for x in m.group(1).split(','))
                 while len(ver) < 4:
                     ver += (0,)
-            except SyntaxError:
+            else:
                 ver = _extract_version('')
         if ver is not None:
             ver = ver[:4]
@@ -542,10 +543,13 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                         elif tokens[1] == 'maximize':
                             results.problem.sense = maximize
                     else:
-                        try:
-                            val = eval(tokens[1])
-                        except:
-                            val = tokens[1]
+                        val = tokens[1]
+                        for conv in (int, float):
+                            try:
+                                val = conv(tokens[1])
+                                break
+                            except ValueError:
+                                pass
                         setattr(results.problem, tokens[0], val)
                 elif section == 3:
                     if tokens[0] == 'status':
