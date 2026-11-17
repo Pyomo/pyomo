@@ -87,6 +87,8 @@ class TestGDPopt_LBB_TimeLimit(unittest.TestCase):
         with time_code(solver.timing, 'total', is_main_timer=True):
             for relaxed_solver in (None, 'gams'):
                 config.relaxed_nlp_solver = relaxed_solver
+                # Two successive node solves expose accumulation of reslim options
+                # if the configured add_options list is reused.
                 for _ in range(2):
                     solver_name, solver_args = solver._get_rnGDP_subproblem_solver(
                         m, config, config.minlp_solver, config.minlp_solver_args
