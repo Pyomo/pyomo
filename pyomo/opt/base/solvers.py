@@ -437,8 +437,11 @@ class OptSolver:
         istr = istr.strip()
         if not istr:
             return ans
-        if istr[0] in "'\"" and len(istr) >= 2 and istr[-1] == istr[0]:
-            istr = istr[1:-1]
+        if istr[0] in "'\"":
+            # Only unwrap if the entire string is a single quoted token
+            parts = shlex.split(istr)
+            if len(parts) == 1:
+                istr = parts[0]
         tokens = shlex.split(istr)
         for token in tokens:
             index = token.find('=')
@@ -448,7 +451,7 @@ class OptSolver:
                 )
             try:
                 val = ast.literal_eval(token[(index + 1) :])
-            except Exception:
+            except (ValueError, SyntaxError, TypeError):
                 val = token[(index + 1) :]
             ans[token[:index]] = val
         return ans
