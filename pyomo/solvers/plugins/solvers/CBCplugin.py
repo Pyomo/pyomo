@@ -448,7 +448,7 @@ class CBCSHELL(SystemCallSolver):
         upper_bound = None
         gap = None
         nodes = None
-        # See https://www.coin-or.org/Cbc/cbcuserguide.html#messages
+        # See https://www.coin-or.org/Cbc/messages
         for line in output.split("\n"):
             tokens = tuple(re.split('[ \t]+', line.strip()))
             n_tokens = len(tokens)

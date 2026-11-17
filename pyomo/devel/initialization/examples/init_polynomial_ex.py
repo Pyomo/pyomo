@@ -77,4 +77,19 @@ if __name__ == '__main__':
     # stat, x = pwl_init_ex()
     # stat, x = global_init_ex()
     stat, x = multistart_init_ex()
+def run_example(method='lp'):
+    if method == 'lp':
+        stat, x = lp_init_ex()
+    elif method == 'pwl':
+        stat, x = pwl_init_ex()
+    elif method == 'global':
+        stat, x = global_init_ex()
+    else:
+        raise ValueError(f"Unknown method: {method}")
+
+    return stat, x
+
+
+if __name__ == '__main__':
+    stat, x = run_example(method='lp')
     print(stat, round(x, 4))

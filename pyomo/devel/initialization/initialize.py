@@ -7,15 +7,12 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+import logging
+
+from enum import Enum
 from typing import Optional
 from pyomo.core.base.block import BlockData
-from enum import Enum
-from pyomo.devel.initialization.utils import get_vars
 from pyomo.common.collections import ComponentMap
-from pyomo.devel.initialization.pwl_init import (
-    _initialize_with_piecewise_linear_approximation,
-)
-from pyomo.devel.initialization.lp_approx_init import _initialize_with_LP_approximation
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.devel.initialization.global_init import _initialize_with_global_solver
 from pyomo.devel.initialization.multistart_init import (
@@ -23,9 +20,14 @@ from pyomo.devel.initialization.multistart_init import (
 )
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import Results
-import logging
 from pyomo.contrib.solver.common.results import SolutionStatus
 import pyomo.environ as pyo
+from pyomo.devel.initialization.pwl_init import (
+    _initialize_with_piecewise_linear_approximation,
+)
+from pyomo.devel.initialization.global_init import _initialize_with_global_solver
+from pyomo.devel.initialization.lp_approx_init import _initialize_with_LP_approximation
+from pyomo.util.vars_from_expressions import get_vars
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +103,7 @@ def initialize_with_piecewise_linear_approximation(
     nlp_solver: SolverBase | None = None,
     mip_solver: SolverBase | None = None,
     default_bound: float = 1.0e8,
+    num_initial_points: int = 2,
     max_pwl_refinement_iter: int = 100,
     num_pwl_cons_to_refine_per_iter: int = 5,
     aggressive_substitution: bool = True,
@@ -167,6 +170,7 @@ def initialize_with_piecewise_linear_approximation(
             mip_solver=mip_solver,
             nlp_solver=nlp_solver,
             default_bound=default_bound,
+            num_initial_points=num_initial_points,
             max_iter=max_pwl_refinement_iter,
             num_cons_to_refine_per_iter=num_pwl_cons_to_refine_per_iter,
             aggressive_substitution=aggressive_substitution,

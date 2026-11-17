@@ -8,9 +8,13 @@
 # ____________________________________________________________________________________
 
 # -*- coding: utf-8 -*-
-"""
-See David Bernal PhD proposal example.
-Link: https://www.researchgate.net/project/Convex-MINLP/update/5c7eb2ee3843b034242e9e4a
+"""MINLP test model adapted from material in David Bernal's PhD thesis proposal.
+
+References
+----------
+Bernal, D. E. Convex MINLP project update derived from the thesis-proposal
+material.
+ResearchGate project page: https://www.researchgate.net/project/Convex-MINLP/update/5c7eb2ee3843b034242e9e4a
 """
 
 from pyomo.environ import (
@@ -26,11 +30,21 @@ from pyomo.environ import (
 from pyomo.common.collections import ComponentMap
 
 
-class ProposalModel(ConcreteModel):
+class FromProposalModel(ConcreteModel):
+    """MINLP benchmark adapted from David Bernal's PhD thesis proposal material."""
+
     def __init__(self, *args, **kwargs):
-        """Create the problem."""
+        """Create the problem.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments forwarded to ``ConcreteModel``.
+        **kwargs
+            Keyword arguments forwarded to ``ConcreteModel``.
+        """
         kwargs.setdefault('name', 'DavidProposalExample')
-        super(ProposalModel, self).__init__(*args, **kwargs)
+        super(FromProposalModel, self).__init__(*args, **kwargs)
         m = self
 
         m.x = Var(domain=Reals, bounds=(0, 20), initialize=1)

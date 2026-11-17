@@ -474,7 +474,7 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
     nonl = []
     varkeys = idMap[None]
 
-    for e_ in itertools.islice(exp._args_, exp.nargs()):
+    for e_ in exp.args:
         if e_.__class__ is EXPR.MonomialTermExpression:
             lhs, v = e_.args
             if lhs.__class__ in native_numeric_types:
@@ -562,12 +562,12 @@ def _collect_term(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     # LHS is a numeric value
     #
-    if exp._args_[0].__class__ in native_numeric_types:
-        if exp._args_[0] == 0:  # TODO: coverage?
+    if exp.args[0].__class__ in native_numeric_types:
+        if exp.args[0] == 0:  # TODO: coverage?
             return Results()
         return _collect_standard_repn(
-            exp._args_[1],
-            multiplier * exp._args_[0],
+            exp.args[1],
+            multiplier * exp.args[0],
             idMap,
             compute_values,
             verbose,
@@ -578,21 +578,16 @@ def _collect_term(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     else:
         if compute_values:
-            val = value(exp._args_[0])
+            val = value(exp.args[0])
             if val == 0:
                 return Results()
             return _collect_standard_repn(
-                exp._args_[1],
-                multiplier * val,
-                idMap,
-                compute_values,
-                verbose,
-                quadratic,
+                exp.args[1], multiplier * val, idMap, compute_values, verbose, quadratic
             )
         else:
             return _collect_standard_repn(
-                exp._args_[1],
-                multiplier * exp._args_[0],
+                exp.args[1],
+                multiplier * exp.args[0],
                 idMap,
                 compute_values,
                 verbose,
@@ -604,12 +599,12 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     # LHS is a numeric value
     #
-    if exp._args_[0].__class__ in native_numeric_types:
-        if exp._args_[0] == 0:  # TODO: coverage?
+    if exp.args[0].__class__ in native_numeric_types:
+        if exp.args[0] == 0:  # TODO: coverage?
             return Results()
         return _collect_standard_repn(
-            exp._args_[1],
-            multiplier * exp._args_[0],
+            exp.args[1],
+            multiplier * exp.args[0],
             idMap,
             compute_values,
             verbose,
@@ -618,12 +613,12 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     # RHS is a numeric value
     #
-    if exp._args_[1].__class__ in native_numeric_types:
-        if exp._args_[1] == 0:  # TODO: coverage?
+    if exp.args[1].__class__ in native_numeric_types:
+        if exp.args[1] == 0:  # TODO: coverage?
             return Results()
         return _collect_standard_repn(
-            exp._args_[0],
-            multiplier * exp._args_[1],
+            exp.args[0],
+            multiplier * exp.args[1],
             idMap,
             compute_values,
             verbose,
@@ -632,23 +627,18 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     # LHS is a non-variable expression
     #
-    elif not exp._args_[0].is_potentially_variable():
+    elif not exp.args[0].is_potentially_variable():
         if compute_values:
-            val = value(exp._args_[0])
+            val = value(exp.args[0])
             if val == 0:
                 return Results()
             return _collect_standard_repn(
-                exp._args_[1],
-                multiplier * val,
-                idMap,
-                compute_values,
-                verbose,
-                quadratic,
+                exp.args[1], multiplier * val, idMap, compute_values, verbose, quadratic
             )
         else:
             return _collect_standard_repn(
-                exp._args_[1],
-                multiplier * exp._args_[0],
+                exp.args[1],
+                multiplier * exp.args[0],
                 idMap,
                 compute_values,
                 verbose,
@@ -657,23 +647,18 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     # RHS is a non-variable expression
     #
-    elif not exp._args_[1].is_potentially_variable():
+    elif not exp.args[1].is_potentially_variable():
         if compute_values:
-            val = value(exp._args_[1])
+            val = value(exp.args[1])
             if val == 0:
                 return Results()
             return _collect_standard_repn(
-                exp._args_[0],
-                multiplier * val,
-                idMap,
-                compute_values,
-                verbose,
-                quadratic,
+                exp.args[0], multiplier * val, idMap, compute_values, verbose, quadratic
             )
         else:
             return _collect_standard_repn(
-                exp._args_[0],
-                multiplier * exp._args_[1],
+                exp.args[0],
+                multiplier * exp.args[1],
                 idMap,
                 compute_values,
                 verbose,
@@ -685,7 +670,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     # Collect LHS
     #
     lhs = _collect_standard_repn(
-        exp._args_[0], 1, idMap, compute_values, verbose, quadratic
+        exp.args[0], 1, idMap, compute_values, verbose, quadratic
     )
     lhs_nonl_None = lhs.nonl.__class__ in native_numeric_types and not lhs.nonl
     #
@@ -704,16 +689,11 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
             if val == 0:  # TODO: coverage?
                 return Results()
             return _collect_standard_repn(
-                exp._args_[1],
-                multiplier * val,
-                idMap,
-                compute_values,
-                verbose,
-                quadratic,
+                exp.args[1], multiplier * val, idMap, compute_values, verbose, quadratic
             )
         else:
             return _collect_standard_repn(
-                exp._args_[1],
+                exp.args[1],
                 multiplier * lhs.constant,
                 idMap,
                 compute_values,
@@ -724,7 +704,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     # Collect RHS
     #
     rhs = _collect_standard_repn(
-        exp._args_[1], 1, idMap, compute_values, verbose, quadratic
+        exp.args[1], 1, idMap, compute_values, verbose, quadratic
     )
     rhs_nonl_None = rhs.nonl.__class__ in native_numeric_types and not rhs.nonl
     #
@@ -841,24 +821,24 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     # Exponent is a numeric value
     #
-    if exp._args_[1].__class__ in native_numeric_types:
-        exponent = exp._args_[1]
+    if exp.args[1].__class__ in native_numeric_types:
+        exponent = exp.args[1]
     #
     # Exponent is not potentially variable
     #
     # Compute its value if compute_values==True
     #
-    elif not exp._args_[1].is_potentially_variable():
+    elif not exp.args[1].is_potentially_variable():
         if compute_values:
-            exponent = value(exp._args_[1])
+            exponent = value(exp.args[1])
         else:
-            exponent = exp._args_[1]
+            exponent = exp.args[1]
     #
     # Otherwise collect a standard repn
     #
     else:
         res = _collect_standard_repn(
-            exp._args_[1], 1, idMap, compute_values, verbose, quadratic
+            exp.args[1], 1, idMap, compute_values, verbose, quadratic
         )
         #
         # If the expression is variable, then return a nonlinear expression
@@ -884,14 +864,14 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
         #
         elif exponent == 1:
             return _collect_standard_repn(
-                exp._args_[0], multiplier, idMap, compute_values, verbose, quadratic
+                exp.args[0], multiplier, idMap, compute_values, verbose, quadratic
             )
         #
         # Ignore #**2 unless quadratic==True
         #
         elif exponent == 2 and quadratic:
             res = _collect_standard_repn(
-                exp._args_[0], 1, idMap, compute_values, verbose, quadratic
+                exp.args[0], 1, idMap, compute_values, verbose, quadratic
             )
             #
             # If arg(0) is nonlinear, then this is a nonlinear repn
@@ -936,9 +916,9 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     # If args(0) is a numeric value or it is fixed, then we have a constant value
     #
-    if exp._args_[0].__class__ in native_numeric_types or exp._args_[0].is_fixed():
+    if exp.args[0].__class__ in native_numeric_types or exp.args[0].is_fixed():
         if compute_values:
-            return Results(constant=multiplier * value(exp._args_[0]) ** exponent)
+            return Results(constant=multiplier * value(exp.args[0]) ** exponent)
         else:
             return Results(constant=multiplier * exp)
     #
@@ -949,17 +929,17 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
 
 def _collect_division(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if (
-        exp._args_[1].__class__ in native_numeric_types
-        or not exp._args_[1].is_potentially_variable()
+        exp.args[1].__class__ in native_numeric_types
+        or not exp.args[1].is_potentially_variable()
     ):  # TODO: coverage?
         # Denominator is trivially constant
         if compute_values:
-            denom = 1.0 * value(exp._args_[1])
+            denom = 1.0 * value(exp.args[1])
         else:
-            denom = 1.0 * exp._args_[1]
+            denom = 1.0 * exp.args[1]
     else:
         res = _collect_standard_repn(
-            exp._args_[1], 1, idMap, compute_values, verbose, quadratic
+            exp.args[1], 1, idMap, compute_values, verbose, quadratic
         )
         if (
             not (res.nonl.__class__ in native_numeric_types and res.nonl == 0)
@@ -975,16 +955,16 @@ def _collect_division(exp, multiplier, idMap, compute_values, verbose, quadratic
         raise ZeroDivisionError
 
     if (
-        exp._args_[0].__class__ in native_numeric_types
-        or not exp._args_[0].is_potentially_variable()
+        exp.args[0].__class__ in native_numeric_types
+        or not exp.args[0].is_potentially_variable()
     ):
-        num = exp._args_[0]
+        num = exp.args[0]
         if compute_values:
             num = value(num)
         return Results(constant=multiplier * num / denom)
 
     return _collect_standard_repn(
-        exp._args_[0], multiplier / denom, idMap, compute_values, verbose, quadratic
+        exp.args[0], multiplier / denom, idMap, compute_values, verbose, quadratic
     )
 
 
@@ -1025,7 +1005,7 @@ def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, qua
 
 def _collect_nonl(exp, multiplier, idMap, compute_values, verbose, quadratic):
     res = _collect_standard_repn(
-        exp._args_[0], 1, idMap, compute_values, verbose, quadratic
+        exp.args[0], 1, idMap, compute_values, verbose, quadratic
     )
     if (
         not (res.nonl.__class__ in native_numeric_types and res.nonl == 0)
@@ -1041,7 +1021,7 @@ def _collect_nonl(exp, multiplier, idMap, compute_values, verbose, quadratic):
 
 def _collect_negation(exp, multiplier, idMap, compute_values, verbose, quadratic):
     return _collect_standard_repn(
-        exp._args_[0], -1 * multiplier, idMap, compute_values, verbose, quadratic
+        exp.args[0], -1 * multiplier, idMap, compute_values, verbose, quadratic
     )
 
 
@@ -1056,13 +1036,13 @@ def _collect_const(exp, multiplier, idMap, compute_values, verbose, quadratic):
 
 
 def _collect_identity(exp, multiplier, idMap, compute_values, verbose, quadratic):
-    if exp._args_[0].__class__ in native_numeric_types:
-        return Results(constant=multiplier * exp._args_[0])
-    if not exp._args_[0].is_potentially_variable():
+    if exp.args[0].__class__ in native_numeric_types:
+        return Results(constant=multiplier * exp.args[0])
+    if not exp.args[0].is_potentially_variable():
         if compute_values:
-            return Results(constant=multiplier * value(exp._args_[0]))
+            return Results(constant=multiplier * value(exp.args[0]))
         else:
-            return Results(constant=multiplier * exp._args_[0])
+            return Results(constant=multiplier * exp.args[0])
     return _collect_standard_repn(
         exp.expr, multiplier, idMap, compute_values, verbose, quadratic
     )
@@ -1284,7 +1264,7 @@ WEH - This code assumes the expression is linear and fills in a dictionary.
 def _linear_collect_sum(exp, multiplier, idMap, compute_values, verbose, coef):
     varkeys = idMap[None]
 
-    for e_ in itertools.islice(exp._args_, exp.nargs()):
+    for e_ in itertools.islice(exp.args, exp.nargs()):
         if e_.__class__ in native_numeric_types:
             coef[None] += multiplier*e_
 
@@ -1314,7 +1294,7 @@ def _linear_collect_sum(exp, multiplier, idMap, compute_values, verbose, coef):
                 coef[None] += multiplier * e_
 
         elif e_.__class__ is EXPR.NegationExpression:
-            arg = e_._args_[0]
+            arg = e_.args[0]
             if arg.is_variable_type():
                 if arg.fixed:
                     if compute_values:
@@ -1338,22 +1318,22 @@ def _linear_collect_sum(exp, multiplier, idMap, compute_values, verbose, coef):
 
         elif e_.__class__ is EXPR.MonomialTermExpression:
             if compute_values:
-                lhs = value(e_._args_[0])
+                lhs = value(e_.args[0])
             else:
-                lhs = e_._args_[0]
-            if e_._args_[1].fixed:
+                lhs = e_.args[0]
+            if e_.args[1].fixed:
                 if compute_values:
-                    coef[None] += multiplier*lhs*value(e_._args_[1])
+                    coef[None] += multiplier*lhs*value(e_.args[1])
                 else:
-                    coef[None] += multiplier*lhs*e_._args_[1]
+                    coef[None] += multiplier*lhs*e_.args[1]
             else:
-                id_ = id(e_._args_[1])
+                id_ = id(e_.args[1])
                 if id_ in varkeys:
                     key = varkeys[id_]
                 else:
                     key = len(idMap) - 1
                     varkeys[id_] = key
-                    idMap[key] = e_._args_[1]
+                    idMap[key] = e_.args[1]
                 if key in coef:
                     coef[key] += multiplier*lhs
                 else:
@@ -1399,69 +1379,69 @@ def _linear_collect_term(exp, multiplier, idMap, compute_values, verbose, coef):
     #
     # LHS is a numeric value
     #
-    if exp._args_[0].__class__ in native_numeric_types:
-        if isclose_default(exp._args_[0],0):
+    if exp.args[0].__class__ in native_numeric_types:
+        if isclose_default(exp.args[0],0):
             return
-        _collect_linear_standard_repn(exp._args_[1], multiplier * exp._args_[0], idMap,
+        _collect_linear_standard_repn(exp.args[1], multiplier * exp.args[0], idMap,
                                   compute_values, verbose, coef)
     #
     # LHS is a non-variable expression
     #
     else:
         if compute_values:
-            val = value(exp._args_[0])
+            val = value(exp.args[0])
             if isclose_default(val,0):
                 return
-            _collect_linear_standard_repn(exp._args_[1], multiplier * val, idMap,
+            _collect_linear_standard_repn(exp.args[1], multiplier * val, idMap,
                                   compute_values, verbose, coef)
         else:
-            _collect_linear_standard_repn(exp._args_[1], multiplier*exp._args_[0], idMap,
+            _collect_linear_standard_repn(exp.args[1], multiplier*exp.args[0], idMap,
                                   compute_values, verbose, coef)
 
 def _linear_collect_prod(exp, multiplier, idMap, compute_values, verbose, coef):
     #
     # LHS is a numeric value
     #
-    if exp._args_[0].__class__ in native_numeric_types:
-        if isclose_default(exp._args_[0],0):
+    if exp.args[0].__class__ in native_numeric_types:
+        if isclose_default(exp.args[0],0):
             return
-        _collect_linear_standard_repn(exp._args_[1], multiplier * exp._args_[0], idMap,
+        _collect_linear_standard_repn(exp.args[1], multiplier * exp.args[0], idMap,
                                   compute_values, verbose, coef)
     #
     # LHS is a non-variable expression
     #
-    elif not exp._args_[0].is_potentially_variable():
+    elif not exp.args[0].is_potentially_variable():
         if compute_values:
-            val = value(exp._args_[0])
+            val = value(exp.args[0])
             if isclose_default(val,0):
                 return
-            _collect_linear_standard_repn(exp._args_[1], multiplier * val, idMap,
+            _collect_linear_standard_repn(exp.args[1], multiplier * val, idMap,
                                   compute_values, verbose, coef)
         else:
-            _collect_linear_standard_repn(exp._args_[1], multiplier*exp._args_[0], idMap,
+            _collect_linear_standard_repn(exp.args[1], multiplier*exp.args[0], idMap,
                                   compute_values, verbose, coef)
     #
     # The LHS should never be variable
     #
-    elif exp._args_[0].is_fixed():
+    elif exp.args[0].is_fixed():
         if compute_values:
-            val = value(exp._args_[0])
+            val = value(exp.args[0])
             if isclose_default(val,0):
                 return
-            _collect_linear_standard_repn(exp._args_[1], multiplier * val, idMap,
+            _collect_linear_standard_repn(exp.args[1], multiplier * val, idMap,
                                   compute_values, verbose, coef)
         else:
-            _collect_linear_standard_repn(exp._args_[1], multiplier*exp._args_[0], idMap,
+            _collect_linear_standard_repn(exp.args[1], multiplier*exp.args[0], idMap,
                                   compute_values, verbose, coef)
     else:
         if compute_values:
-            val = value(exp._args_[1])
+            val = value(exp.args[1])
             if isclose_default(val,0):
                 return
-            _collect_linear_standard_repn(exp._args_[0], multiplier * val, idMap,
+            _collect_linear_standard_repn(exp.args[0], multiplier * val, idMap,
                                   compute_values, verbose, coef)
         else:
-            _collect_linear_standard_repn(exp._args_[0], multiplier*exp._args_[1], idMap,
+            _collect_linear_standard_repn(exp.args[0], multiplier*exp.args[1], idMap,
                                   compute_values, verbose, coef)
 
 def _linear_collect_var(exp, multiplier, idMap, compute_values, verbose, coef):
@@ -1484,10 +1464,10 @@ def _linear_collect_var(exp, multiplier, idMap, compute_values, verbose, coef):
             coef[key] = multiplier
 
 def _linear_collect_negation(exp, multiplier, idMap, compute_values, verbose, coef):
-    _collect_linear_standard_repn(exp._args_[0], -1*multiplier, idMap, compute_values, verbose, coef)
+    _collect_linear_standard_repn(exp.args[0], -1*multiplier, idMap, compute_values, verbose, coef)
 
 def _linear_collect_identity(exp, multiplier, idMap, compute_values, verbose, coef):
-    arg = exp._args_[0]
+    arg = exp.args[0]
     if arg.__class__ in native_numeric_types:
         coef[None] += arg
     elif not arg.is_potentially_variable():
@@ -1510,16 +1490,16 @@ def _linear_collect_branching_expr(exp, multiplier, idMap, compute_values, verbo
         _collect_linear_standard_repn(exp._else, multiplier, idMap, compute_values, verbose, coef)
 
 def _linear_collect_pow(exp, multiplier, idMap, compute_values, verbose, coef):
-    if exp._args_[1].__class__ in native_numeric_types:
-        exponent = exp._args_[1]
+    if exp.args[1].__class__ in native_numeric_types:
+        exponent = exp.args[1]
     else:
         # If this value is not constant, then the expression is nonlinear.
-        exponent = value(exp._args_[1])
+        exponent = value(exp.args[1])
 
     if exponent == 0:
         coef[None] += multiplier
     else: #exponent == 1
-        _collect_linear_standard_repn(exp._args_[0], multiplier, idMap, compute_values, verbose, coef)
+        _collect_linear_standard_repn(exp.args[0], multiplier, idMap, compute_values, verbose, coef)
 
 
 _linear_repn_collectors = {

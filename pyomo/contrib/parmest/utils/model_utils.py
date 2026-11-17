@@ -20,9 +20,27 @@ from pyomo.environ import ComponentUID
 logger = logging.getLogger(__name__)
 
 
+def _var_domain_from_param(param):
+    """
+    Return the domain of a Param if it is a continuous subset of the reals
+    (e.g., PositiveReals), else Reals.
+
+    A Param has no bounds; its domain is the only bound information it
+    carries. The default Param domain (Any) and discrete domains are not
+    valid for a continuous Var, so they become Reals.
+    """
+    domain = param.domain
+    if domain.issubset(pyo.Reals) and not domain.isdiscrete():
+        return domain
+    return pyo.Reals
+
+
 def convert_params_to_vars(model, param_names=None, fix_vars=False):
     """
     Convert select Params to Vars
+
+    The Vars keep the Param's domain when it is a continuous subset of the
+    reals (e.g., PositiveReals gives a lower bound of 0)
 
     Parameters
     ----------
@@ -58,8 +76,11 @@ def convert_params_to_vars(model, param_names=None, fix_vars=False):
         if theta_object.is_parameter_type():
             # Delete Param, add Var
             vals = theta_object.extract_values()
+            domain = _var_domain_from_param(theta_object)
             model.del_component(theta_object)
-            model.add_component(theta_object.name, pyo.Var(initialize=vals[None]))
+            model.add_component(
+                theta_object.name, pyo.Var(domain=domain, initialize=vals[None])
+            )
 
             # Update substitution map
             theta_var_cuid = ComponentUID(theta_object.name)
@@ -79,13 +100,14 @@ def convert_params_to_vars(model, param_names=None, fix_vars=False):
                 param_theta_objects.append(theta_cuid.find_component_on(model))
                 indexed_param_names.append(indexed_param_name)
 
+            domain = _var_domain_from_param(theta_object)
             model.del_component(theta_object)
 
             index_name = theta_object.index_set().name
             index_cuid = ComponentUID(index_name)
             index_object = index_cuid.find_component_on(model)
             model.add_component(
-                theta_object.name, pyo.Var(index_object, initialize=vals)
+                theta_object.name, pyo.Var(index_object, domain=domain, initialize=vals)
             )
 
             # Update substitution map (map each indexed param to indexed var)

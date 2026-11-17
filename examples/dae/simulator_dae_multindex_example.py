@@ -38,7 +38,7 @@ def create_model():
             return 1.0
         return 4.0
 
-    m.p1 = pyo.Param(m.t, initialize=4.0, default=_p1_init)
+    m.p1 = pyo.Param(m.t, initialize=_p1_init)
     m.p2 = pyo.Param(initialize=2.0)
     m.p3 = pyo.Param(initialize=40.0)
     m.p4 = pyo.Param(initialize=20.0)

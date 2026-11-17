@@ -8,6 +8,7 @@
 # ____________________________________________________________________________________
 import logging
 import os
+import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.collections import Bunch
@@ -94,3 +95,17 @@ class KNITROAMPL(ASL):
             self.enable = False
             return None
         return executable.path()
+
+    def license_is_valid(self):
+        if not super().available(exception_flag=False):
+            return False
+        try:
+            check = subprocess.run(
+                [self.executable(), '--help'], capture_output=True, text=True
+            )
+        except:
+            return False
+        return (
+            check.returncode == 0
+            and 'Could not find a valid license' not in check.stdout
+        )

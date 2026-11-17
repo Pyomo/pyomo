@@ -12,12 +12,12 @@
 from pyomo.core.expr.calculus.diff_with_sympy import differentiate_available
 import pyomo.common.unittest as unittest
 from pyomo.contrib.mindtpy.tests.eight_process_problem import EightProcessFlowsheet
-from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP as SimpleMINLP
-from pyomo.contrib.mindtpy.tests.MINLP2_simple import SimpleMINLP as SimpleMINLP2
-from pyomo.contrib.mindtpy.tests.MINLP3_simple import SimpleMINLP as SimpleMINLP3
-from pyomo.contrib.mindtpy.tests.MINLP4_simple import SimpleMINLP4
-from pyomo.contrib.mindtpy.tests.MINLP5_simple import SimpleMINLP5
-from pyomo.contrib.mindtpy.tests.from_proposal import ProposalModel
+from pyomo.contrib.mindtpy.tests.minlp_simple import MinlpSimple
+from pyomo.contrib.mindtpy.tests.minlp2_simple import Minlp2Simple
+from pyomo.contrib.mindtpy.tests.minlp3_simple import Minlp3Simple
+from pyomo.contrib.mindtpy.tests.minlp4_simple import Minlp4Simple
+from pyomo.contrib.mindtpy.tests.minlp5_simple import Minlp5Simple
+from pyomo.contrib.mindtpy.tests.from_proposal import FromProposalModel
 from pyomo.contrib.mindtpy.tests.constraint_qualification_example import (
     ConstraintQualificationExample,
 )
@@ -30,22 +30,22 @@ from pyomo.opt import TerminationCondition
 full_model_list = [
     EightProcessFlowsheet(convex=True),
     ConstraintQualificationExample(),
-    SimpleMINLP(),
-    SimpleMINLP2(),
-    SimpleMINLP3(),
-    SimpleMINLP4(),
-    SimpleMINLP5(),
-    ProposalModel(),
+    MinlpSimple(),
+    Minlp2Simple(),
+    Minlp3Simple(),
+    Minlp4Simple(),
+    Minlp5Simple(),
+    FromProposalModel(),
     OnlineDocExample(),
 ]
 model_list = [
     EightProcessFlowsheet(convex=True),
     ConstraintQualificationExample(),
-    SimpleMINLP2(),
+    Minlp2Simple(),
 ]
 nonconvex_model_list = [EightProcessFlowsheet(convex=False)]
 
-obj_nonlinear_sum_model_list = [SimpleMINLP(), SimpleMINLP5()]
+obj_nonlinear_sum_model_list = [MinlpSimple(), Minlp5Simple()]
 
 LP_model = LP_unbounded()
 LP_model._generate_model()
@@ -74,9 +74,18 @@ else:
     not differentiate_available, 'Symbolic differentiation is not available'
 )
 class TestMindtPy(unittest.TestCase):
-    """Tests for the MindtPy solver plugin."""
+    """Tests for the MindtPy solver."""
 
     def check_optimal_solution(self, model, places=1):
+        """Assert that variable values match the model's known optimum.
+
+        Parameters
+        ----------
+        model : Block
+            Model containing ``optimal_solution`` values for comparison.
+        places : int, optional
+            Decimal places used by ``assertAlmostEqual``.
+        """
         for var in model.optimal_solution:
             self.assertAlmostEqual(
                 var.value, model.optimal_solution[var], places=places
@@ -108,12 +117,19 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
 
-            def callback(model):
+            def force_zero_binary_pattern_callback(model):
+                """Set binaries to a fixed pattern to induce cycling behavior.
+
+                Parameters
+                ----------
+                model : Block
+                    Model whose binary variables are modified before subproblem solve.
+                """
                 model.Y[1].value = 0
                 model.Y[2].value = 0
                 model.Y[3].value = 0
 
-            model = SimpleMINLP2()
+            model = Minlp2Simple()
             # The callback function will make the OA method cycling.
             results = opt.solve(
                 model,
@@ -121,7 +137,7 @@ class TestMindtPy(unittest.TestCase):
                 init_strategy='rNLP',
                 mip_solver=required_solvers[1],
                 nlp_solver=required_solvers[0],
-                call_before_subproblem_solve=callback,
+                call_before_subproblem_solve=force_zero_binary_pattern_callback,
             )
             self.assertIs(
                 results.solver.termination_condition, TerminationCondition.feasible
@@ -283,7 +299,7 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_quadratic_strategy(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = ProposalModel().clone()
+            model = FromProposalModel().clone()
             if SolverFactory('cplex').available():
                 mip_solver = 'cplex'
             elif SolverFactory('gurobi').available():
@@ -488,6 +504,7 @@ class TestMindtPy(unittest.TestCase):
                 self.check_optimal_solution(model)
 
     def test_iteration_limit(self):
+        """Verify solve completes when a tight iteration limit is imposed."""
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             opt.solve(
@@ -500,6 +517,7 @@ class TestMindtPy(unittest.TestCase):
             # self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
     def test_time_limit(self):
+        """Verify solve respects a short global time limit setting."""
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             opt.solve(
@@ -513,7 +531,7 @@ class TestMindtPy(unittest.TestCase):
     def test_maximize_obj(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = ProposalModel().clone()
+            model = FromProposalModel().clone()
             model.objective.sense = maximize
             opt.solve(
                 model,
@@ -526,7 +544,7 @@ class TestMindtPy(unittest.TestCase):
     def test_infeasible_model(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = SimpleMINLP().clone()
+            model = MinlpSimple().clone()
             model.X[1].fix(0)
             model.Y[1].fix(0)
             results = opt.solve(

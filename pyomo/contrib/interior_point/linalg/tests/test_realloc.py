@@ -53,8 +53,9 @@ class TestReallocation(unittest.TestCase):
 
         predicted = linear_solver.get_infog(16)
 
-        # We predict that factorization will take 2 MB
-        self.assertEqual(predicted, 2)
+        # We predict that factorization will take 2-3 MB (depending on
+        # MUMPS version)
+        self.assertIn(predicted, [2, 3])
 
         # Explicitly set maximum memory to less than the predicted
         # requirement.

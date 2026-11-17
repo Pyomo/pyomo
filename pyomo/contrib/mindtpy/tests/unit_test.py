@@ -7,18 +7,23 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
+"""Unit tests for MindtPy utility helpers."""
+
 import pyomo.common.unittest as unittest
 from pyomo.contrib.mindtpy.util import set_var_valid_value
 
-from pyomo.environ import Var, Integers, ConcreteModel, Integers
+from pyomo.environ import Var, Integers, ConcreteModel
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_OA_config
-from pyomo.contrib.mindtpy.tests.MINLP5_simple import SimpleMINLP5
+from pyomo.contrib.mindtpy.tests.minlp5_simple import Minlp5Simple
 from pyomo.contrib.mindtpy.util import add_var_bound
 
 
 class UnitTestMindtPy(unittest.TestCase):
+    """Unit tests for selected MindtPy helper functions."""
+
     def test_set_var_valid_value(self):
+        """Verify value coercion and bound handling for integer variables."""
         m = ConcreteModel()
         m.x1 = Var(within=Integers, bounds=(-1, 4), initialize=0)
 
@@ -68,7 +73,8 @@ class UnitTestMindtPy(unittest.TestCase):
         self.assertEqual(m.x1.value, 0)
 
     def test_add_var_bound(self):
-        m = SimpleMINLP5().clone()
+        """Verify default bounds are added when variable bounds are missing."""
+        m = Minlp5Simple().clone()
         m.x.lb = None
         m.x.ub = None
         m.y.lb = None
