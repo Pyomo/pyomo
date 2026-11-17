@@ -103,7 +103,7 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(len(lin_constrs), 2)
         quad_constrs = grb_model.getQConstrs()
         self.assertEqual(len(quad_constrs), 1)
-        nonlinear_constrs = grb_model.getGenConstrs()
+        nonlinear_constrs = grb_model.getNLConstrs()
         self.assertEqual(len(nonlinear_constrs), 2)
 
         ## linear constraints
@@ -209,7 +209,7 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(len(lin_constrs), 1)
         quad_constrs = grb_model.getQConstrs()
         self.assertEqual(len(quad_constrs), 0)
-        nonlinear_constrs = grb_model.getGenConstrs()
+        nonlinear_constrs = grb_model.getNLConstrs()
         self.assertEqual(len(nonlinear_constrs), 0)
 
         # constraint
@@ -255,7 +255,7 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(len(lin_constrs), 1)
         quad_constrs = grb_model.getQConstrs()
         self.assertEqual(len(quad_constrs), 0)
-        nonlinear_constrs = grb_model.getGenConstrs()
+        nonlinear_constrs = grb_model.getNLConstrs()
         self.assertEqual(len(nonlinear_constrs), 0)
 
         # constraint
@@ -300,7 +300,7 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(len(lin_constrs), 0)
         quad_constrs = grb_model.getQConstrs()
         self.assertEqual(len(quad_constrs), 2)
-        nonlinear_constrs = grb_model.getGenConstrs()
+        nonlinear_constrs = grb_model.getNLConstrs()
         self.assertEqual(len(nonlinear_constrs), 0)
 
         # constraint 1
@@ -364,7 +364,7 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(len(lin_constrs), 2)
         quad_constrs = grb_model.getQConstrs()
         self.assertEqual(len(quad_constrs), 0)
-        nonlinear_constrs = grb_model.getGenConstrs()
+        nonlinear_constrs = grb_model.getNLConstrs()
         self.assertEqual(len(nonlinear_constrs), 2)
 
         c1 = lin_constrs[0]
@@ -466,7 +466,7 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(len(lin_constrs), 1)
         quad_constrs = grb_model.getQConstrs()
         self.assertEqual(len(quad_constrs), 0)
-        nonlinear_constrs = grb_model.getGenConstrs()
+        nonlinear_constrs = grb_model.getNLConstrs()
         self.assertEqual(len(nonlinear_constrs), 1)
 
         # this is the auxiliary variable equality

@@ -74,7 +74,7 @@ class TestGurobiMINLPWalker(CommonTest):
         aux = grb_model.addVar()
         grb_model.addConstr(aux == expr)
         grb_model.update()
-        constrs = grb_model.getGenConstrs()
+        constrs = grb_model.getNLConstrs()
         self.assertEqual(len(constrs), 1)
 
         aux_var, opcode, data, parent = grb_model.getGenConstrNLAdv(constrs[0])
@@ -301,12 +301,12 @@ class TestGurobiMINLPWalker(CommonTest):
 
         # It's just a single var
         self.assertIs(expr, x1)
-        self.assertEqual(len(visitor.grb_model.getGenConstrs()), 0)
+        self.assertEqual(len(visitor.grb_model.getNLConstrs()), 0)
 
         # now try a linear expression
         m.c2 = Constraint(expr=(m.x1 + 2 * m.x2) ** m.devious >= 5)
         _, lin_expr = visitor.walk_expression(m.c2.body)
-        self.assertEqual(len(visitor.grb_model.getGenConstrs()), 0)
+        self.assertEqual(len(visitor.grb_model.getNLConstrs()), 0)
         x2 = visitor.var_map[m.x2]
         self.assertEqual(lin_expr.size(), 2)
         self.assertEqual(lin_expr.getConstant(), 0)
@@ -318,7 +318,7 @@ class TestGurobiMINLPWalker(CommonTest):
         # now do a quadratic expression
         m.c3 = Constraint(expr=(m.x1**2 + 5.4) ** m.devious >= 8)
         _, quad_expr = visitor.walk_expression(m.c3.body)
-        self.assertEqual(len(visitor.grb_model.getGenConstrs()), 0)
+        self.assertEqual(len(visitor.grb_model.getNLConstrs()), 0)
         self.assertEqual(quad_expr.size(), 1)
         expr = quad_expr.getLinExpr()
         # no vars in linear part, just the constant
@@ -421,7 +421,7 @@ class TestGurobiMINLPWalker(CommonTest):
 
         x1 = visitor.var_map[m.x1]
 
-        self.assertEqual(len(visitor.grb_model.getGenConstrs()), 0)
+        self.assertEqual(len(visitor.grb_model.getNLConstrs()), 0)
         self.assertEqual(expr.size(), 1)
         self.assertEqual(expr.getConstant(), 2.4)
         self.assertIs(expr.getVar(0), x1)
@@ -450,7 +450,7 @@ class TestGurobiMINLPWalker(CommonTest):
         self.assertEqual(grb_model.numConstrs, 0)
         self.assertEqual(grb_model.numQConstrs, 0)
 
-        cons = grb_model.getGenConstrs()[0]
+        cons = grb_model.getNLConstrs()[0]
         aux, v = grb_model.getGenConstrAbs(cons)
         self.assertIs(aux, expr)
         self.assertIs(v, x1)
@@ -481,7 +481,7 @@ class TestGurobiMINLPWalker(CommonTest):
         self.assertEqual(grb_model.numConstrs, 1)
         self.assertEqual(grb_model.numQConstrs, 0)
 
-        cons = grb_model.getGenConstrs()[0]
+        cons = grb_model.getNLConstrs()[0]
         aux2, aux1 = grb_model.getGenConstrAbs(cons)
         self.assertIs(aux2, expr)
 
