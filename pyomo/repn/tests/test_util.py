@@ -24,6 +24,7 @@ from pyomo.core.expr import (
     DivisionExpression,
     NPV_DivisionExpression,
 )
+from pyomo.core.expr.base import BinaryExpression_Mixin
 from pyomo.environ import (
     ConcreteModel,
     Block,
@@ -709,8 +710,8 @@ class TestRepnUtils(unittest.TestCase):
         self.assertEqual(len(end), 8)
         self.assertIn(NewProductExpression, end)
 
-        class UnknownExpression(NumericExpression):
-            pass
+        class UnknownExpression(BinaryExpression_Mixin, NumericExpression):
+            __slots__ = ('_l_arg', '_r_arg')
 
         node = UnknownExpression((6, 7))
         with self.assertRaisesRegex(
@@ -877,6 +878,23 @@ class TestRepnUtils(unittest.TestCase):
             {id(m.x[5]): 0, id(m.x[3]): 1, id(m.x[1]): 2, id(m.x[2]): 3, id(m.x[4]): 4},
             vr.var_order,
         )
+
+    def test_TemplateVarRecorder_kernel_variable(self):
+        """TemplateVarRecorder.add() must handle kernel variables, which do
+        not have a parent_component() method."""
+        from pyomo.core.kernel.variable import variable
+
+        v1 = variable()
+        v2 = variable()
+
+        vm = {}
+        vr = TemplateVarRecorder(vm, SortComponents.deterministic)
+        vr.add(v1)
+        self.assertIn(id(v1), vm)
+        vr.add(v2)
+        self.assertIn(id(v2), vm)
+        self.assertEqual(len(vm), 2)
+        self.assertEqual({id(v1): 0, id(v2): 1}, vr.var_order)
 
 
 if __name__ == "__main__":
