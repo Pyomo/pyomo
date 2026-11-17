@@ -43,6 +43,7 @@ import logging
 import time
 import types
 import json
+import numbers
 from collections.abc import Callable
 from itertools import combinations
 from functools import singledispatchmethod
@@ -551,7 +552,7 @@ class MultistartSamplingMethod(Enum):
 
 
 def _sample_initial_theta(
-    multistart_sampling_method, n_restarts, lower_bound, upper_bound, seed=None
+    multistart_sampling_method, n_starts, lower_bounds, upper_bounds, seed=None
 ):
     """
     Sample starting theta values within the theta bounds.
@@ -560,9 +561,9 @@ def _sample_initial_theta(
     ----------
     multistart_sampling_method : str or MultistartSamplingMethod
         Sampling method.
-    n_restarts : int
+    n_starts : int
         Number of starts.
-    lower_bound, upper_bound : np.ndarray
+    lower_bounds, upper_bounds : np.ndarray
         Theta bounds.
     seed : int, optional
         Random seed. Default is None.
@@ -570,7 +571,7 @@ def _sample_initial_theta(
     Returns
     -------
     np.ndarray
-        Starting values, shape (n_restarts, number of thetas).
+        Starting values, shape (n_starts, number of thetas).
     """
     try:
         multistart_sampling_method = MultistartSamplingMethod(
@@ -582,27 +583,28 @@ def _sample_initial_theta(
             f"'{multistart_sampling_method}'. Choose from: "
             f"{[e.value for e in MultistartSamplingMethod]}."
         )
-    if not isinstance(n_restarts, int):
-        raise TypeError("n_restarts must be an integer.")
-    if n_restarts <= 0:
-        raise ValueError("n_restarts must be greater than zero.")
+    # numbers.Integral also accepts numpy integers; bool is not a count
+    if not isinstance(n_starts, numbers.Integral) or isinstance(n_starts, bool):
+        raise TypeError("n_starts must be an integer.")
+    if n_starts <= 0:
+        raise ValueError("n_starts must be greater than zero.")
 
-    # Each method gives samples in [0, 1], shape (n_restarts, n_theta)
-    n_theta = len(lower_bound)
+    # Each method gives samples in [0, 1], shape (n_starts, n_theta)
+    n_theta = len(lower_bounds)
     if multistart_sampling_method == MultistartSamplingMethod.uniform_random:
         # Local RNG, so the global random state is unchanged
         rng = np.random.default_rng(seed)
-        samples = rng.random((n_restarts, n_theta))
+        samples = rng.random((n_starts, n_theta))
     elif multistart_sampling_method == MultistartSamplingMethod.latin_hypercube:
         sampler = scipy.stats.qmc.LatinHypercube(d=n_theta, seed=seed)
-        samples = sampler.random(n=n_restarts)
+        samples = sampler.random(n=n_starts)
     else:
         # Scrambled, so the first point is not the origin
         sampler = scipy.stats.qmc.Sobol(d=n_theta, scramble=True, seed=seed)
-        samples = sampler.random(n=n_restarts)
+        samples = sampler.random(n=n_starts)
 
     # Scale the samples to the theta bounds
-    return lower_bound + (upper_bound - lower_bound) * samples
+    return lower_bounds + (upper_bounds - lower_bounds) * samples
 
 
 def _build_multistart_table(theta_starts):
@@ -617,14 +619,15 @@ def _build_multistart_table(theta_starts):
     Returns
     -------
     pd.DataFrame
-        Starting values plus empty ``converged_<theta>``, ``final_objective``,
-        ``solver_termination`` and ``solve_time`` columns.
+        Starting values plus ``converged_<theta>``, ``final_objective``,
+        ``solver_termination`` and ``solve_time`` columns, all missing
+        (NaN or None) until filled.
     """
     multistart_result = theta_starts.copy()
     for name in theta_starts.columns:
         multistart_result[f"converged_{name}"] = np.nan
     multistart_result["final_objective"] = np.nan
-    multistart_result["solver_termination"] = ""
+    multistart_result["solver_termination"] = None
     multistart_result["solve_time"] = np.nan
     return multistart_result
 
@@ -1566,7 +1569,7 @@ class Estimator:
     def _generate_initial_theta(
         self,
         seed=None,
-        n_restarts=None,
+        n_starts=None,
         multistart_sampling_method=None,
         user_supplied_vals=None,
     ):
@@ -1580,7 +1583,7 @@ class Estimator:
         ----------
         seed : int, optional
             Random seed for sampling. Default is None.
-        n_restarts : int, optional
+        n_starts : int, optional
             Number of starts to sample. Not used with user_supplied_vals.
             Default is None.
         multistart_sampling_method : str or MultistartSamplingMethod, optional
@@ -1601,24 +1604,34 @@ class Estimator:
         # E.g., an indexed theta and one of its elements both labeled
         if len(theta_names) != len(set(theta_names)):
             raise ValueError(f"Duplicate theta names are not allowed: {theta_names}")
-        lower_bound = []
-        upper_bound = []
+        lower_bounds = []
+        upper_bounds = []
         for name in theta_names:
             theta_var = parmest_model.find_component(name)
-            lower_bound.append(theta_var.lb)
-            upper_bound.append(theta_var.ub)
+            lower_bounds.append(theta_var.lb)
+            upper_bounds.append(theta_var.ub)
         # Missing bounds (None) become NaN
-        lower_bound = np.array(lower_bound, dtype=float)
-        upper_bound = np.array(upper_bound, dtype=float)
+        lower_bounds = np.array(lower_bounds, dtype=float)
+        upper_bounds = np.array(upper_bounds, dtype=float)
 
-        if np.any(np.isnan(lower_bound)) or np.any(np.isnan(upper_bound)):
+        if np.any(np.isnan(lower_bounds)) or np.any(np.isnan(upper_bounds)):
             raise ValueError(
                 "The lower and upper bounds for the theta values must be defined."
             )
-        if np.any(lower_bound > upper_bound):
+        if np.any(lower_bounds > upper_bounds):
             raise ValueError(
                 "Each lower bound must be less than or equal to the corresponding "
                 "upper bound."
+            )
+        equal_bounds = [
+            name
+            for name, lb, ub in zip(theta_names, lower_bounds, upper_bounds)
+            if lb == ub
+        ]
+        if equal_bounds:
+            logger.warning(
+                f"Theta {equal_bounds} has equal lower and upper bounds. Fix it "
+                "instead of estimating it, or widen its bounds."
             )
 
         if user_supplied_vals is not None:
@@ -1628,6 +1641,10 @@ class Estimator:
                     "user_supplied_vals is given."
                 )
             if isinstance(user_supplied_vals, dict):
+                # Check the names before converting or counting the values
+                self._normalize_theta_dataframe(
+                    pd.DataFrame(columns=list(user_supplied_vals)), model=parmest_model
+                )
                 # A single value per theta is one start
                 starts = {}
                 for name, vals in user_supplied_vals.items():
@@ -1655,8 +1672,8 @@ class Estimator:
                 )
             # NaN fails both comparisons, so it is also rejected
             theta_arr = theta_starts.to_numpy(dtype=float)
-            above_lower = theta_arr >= lower_bound
-            below_upper = theta_arr <= upper_bound
+            above_lower = theta_arr >= lower_bounds
+            below_upper = theta_arr <= upper_bounds
             if not (above_lower & below_upper).all():
                 raise ValueError(
                     "user_supplied_vals must be finite and within the theta bounds."
@@ -1667,9 +1684,9 @@ class Estimator:
             theta_starts = pd.DataFrame(
                 _sample_initial_theta(
                     multistart_sampling_method,
-                    n_restarts,
-                    lower_bound,
-                    upper_bound,
+                    n_starts,
+                    lower_bounds,
+                    upper_bounds,
                     seed=seed,
                 ),
                 columns=theta_names,
@@ -2477,12 +2494,11 @@ class Estimator:
 
     def theta_est_multistart(
         self,
-        n_restarts=20,
+        n_starts=20,
         multistart_sampling_method=None,
         user_supplied_vals=None,
         seed=None,
-        save_results=False,
-        file_name="multistart_result.csv",
+        file_name=None,
     ):
         """
         Parameter estimation using all scenarios in the data, from multiple
@@ -2494,7 +2510,7 @@ class Estimator:
 
         Parameters
         ----------
-        n_restarts: int, optional
+        n_starts: int, optional
             Number of starts to sample. Not used with user_supplied_vals.
             Default is 20.
         multistart_sampling_method: str or MultistartSamplingMethod, optional
@@ -2507,10 +2523,9 @@ class Estimator:
             Default is None.
         seed: int, optional
             Random seed for sampling. Default is None.
-        save_results: bool, optional
-            If True, write multistart_result to file_name. Default is False.
         file_name: str, optional
-            CSV file name. Default is "multistart_result.csv".
+            If given, write multistart_result to this CSV file. Default is
+            None (not written).
 
         Returns
         -------
@@ -2530,7 +2545,7 @@ class Estimator:
 
         theta_starts = self._generate_initial_theta(
             seed=seed,
-            n_restarts=n_restarts,
+            n_starts=n_starts,
             multistart_sampling_method=multistart_sampling_method,
             user_supplied_vals=user_supplied_vals,
         )
@@ -2565,7 +2580,9 @@ class Estimator:
                 multistart_result.at[i, "solver_termination"] = f"exception: {exc}"
             multistart_result.at[i, "solve_time"] = time.time() - t0
 
-            # theta_hat is None unless the solve terminated optimally
+            # theta_hat is None unless the solve terminated optimally:
+            # _Q_opt(multistart=True) applies check_optimal_termination, the
+            # check assert_optimal_termination makes in theta_est
             if theta_hat is not None:
                 multistart_result.at[i, "final_objective"] = obj
                 for name in theta_names:
@@ -2590,7 +2607,7 @@ class Estimator:
             self.estimated_theta = best_theta
             self.obj_value = best_obj
 
-        if save_results:
+        if file_name is not None:
             multistart_result.to_csv(file_name, index=False)
 
         return multistart_result, best_theta, best_obj
