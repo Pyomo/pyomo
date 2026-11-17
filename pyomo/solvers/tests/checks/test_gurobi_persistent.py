@@ -263,6 +263,10 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.set_instance(m)
         opt.set_linear_constraint_attr(m.c, 'Lazy', 1)
         self.assertEqual(opt.get_linear_constraint_attr(m.c, 'Lazy'), 1)
+        with self.assertRaisesRegex(
+            ValueError, "Linear constraint attr RHS cannot be set with"
+        ):
+            opt.set_linear_constraint_attr(m.c, 'RHS', 2)
 
     def test_quadratic_constraint_attr(self):
         m = pyo.ConcreteModel()
@@ -282,6 +286,8 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.set_instance(m)
         opt.set_var_attr(m.x, 'Start', 1)
         self.assertEqual(opt.get_var_attr(m.x, 'Start'), 1)
+        with self.assertRaisesRegex(ValueError, "Var attr LB cannot be set with"):
+            opt.set_var_attr(m.x, 'LB', 0)
 
     def test_callback(self):
         m = pyo.ConcreteModel()

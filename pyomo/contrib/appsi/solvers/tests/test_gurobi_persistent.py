@@ -225,6 +225,9 @@ class TestGurobiPersistent(unittest.TestCase):
         #
         # Update: as of Gurobi 11, this test no longer tests the
         # intended behavior (the solver has improved)
+        #
+        # Update: as of Gurobi 14.0, the expected result reverted back
+        # to pre-Gurobi 11 behavior.
         m = pyo.ConcreteModel()
         m.x = pyo.Var(bounds=(-5, 5))
         m.y = pyo.Var(bounds=(-5, 5))
@@ -236,7 +239,7 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.gurobi_options['MIPGap'] = 0.5
         res = opt.solve(m)
         self.assertAlmostEqual(res.best_feasible_objective, -4)
-        if opt.version() < (11, 0):
+        if opt.version() < (11, 0) or opt.version() > (14,):
             self.assertAlmostEqual(res.best_objective_bound, -6)
         else:
             self.assertAlmostEqual(res.best_objective_bound, -4)
@@ -382,6 +385,10 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.set_instance(m)
         opt.set_linear_constraint_attr(m.c, 'Lazy', 1)
         self.assertEqual(opt.get_linear_constraint_attr(m.c, 'Lazy'), 1)
+        with self.assertRaisesRegex(
+            ValueError, "Linear constraint attr RHS cannot be set with"
+        ):
+            opt.set_linear_constraint_attr(m.c, 'RHS', 2)
 
     def test_quadratic_constraint_attr(self):
         m = pyo.ConcreteModel()
@@ -402,6 +409,8 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.set_instance(m)
         opt.set_var_attr(m.x, 'Start', 1)
         self.assertEqual(opt.get_var_attr(m.x, 'Start'), 1)
+        with self.assertRaisesRegex(ValueError, "Var attr LB cannot be set with"):
+            opt.set_var_attr(m.x, 'LB', 0)
 
     def test_callback(self):
         m = pyo.ConcreteModel()
