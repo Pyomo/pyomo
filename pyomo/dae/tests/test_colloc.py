@@ -739,9 +739,7 @@ class TestCollocation(unittest.TestCase):
         disc.apply_to(m, wrt=m.t, nfe=5, ncp=3)
 
         # The first reduction should use the original helper name.
-        disc.reduce_collocation_points(
-            m, contset=m.t, var=m.block1.setpoint, ncp=1
-        )
+        disc.reduce_collocation_points(m, contset=m.t, var=m.block1.setpoint, ncp=1)
 
         self.assertTrue(hasattr(m, 'setpoint_interpolation_constraints'))
         first_constraints = m.setpoint_interpolation_constraints
@@ -751,9 +749,7 @@ class TestCollocation(unittest.TestCase):
         component_names_before = set(m.component_map())
 
         # This call raised RuntimeError before the fix.
-        disc.reduce_collocation_points(
-            m, contset=m.t, var=m.block2.setpoint, ncp=1
-        )
+        disc.reduce_collocation_points(m, contset=m.t, var=m.block2.setpoint, ncp=1)
 
         # Exactly one new component should have been added.
         new_names = set(m.component_map()) - component_names_before
