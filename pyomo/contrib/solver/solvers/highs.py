@@ -151,8 +151,6 @@ class _MutableObjective:
 
     def _build_and_pass_hessian(self):
         """Build and pass the Hessian to HiGHS in CSC format"""
-        if not self.quad_coef_dict:
-            return
 
         dim = self.highs.getNumCol()
 
