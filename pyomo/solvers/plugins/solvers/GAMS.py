@@ -7,7 +7,6 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-import ast
 from io import StringIO
 import shlex
 from tempfile import mkdtemp
@@ -17,7 +16,7 @@ from pyomo.core.base import Constraint, Var, value, Objective
 from pyomo.opt import ProblemFormat, SolverFactory
 
 import pyomo.common
-from pyomo.common.dependencies import pathlib
+from pyomo.common.dependencies import ast, pathlib
 from pyomo.common.collections import Bunch
 from pyomo.common.tee import TeeStream
 

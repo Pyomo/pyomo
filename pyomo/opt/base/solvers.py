@@ -7,7 +7,6 @@
 # software.  This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________________
 
-import ast
 import re
 import sys
 import time
@@ -16,6 +15,7 @@ import shlex
 from typing import overload
 
 from pyomo.common import Factory
+from pyomo.common.dependencies import ast
 from pyomo.common.enums import SolverAPIVersion
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
