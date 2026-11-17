@@ -898,18 +898,33 @@ class TestModelVariants(unittest.TestCase):
 
         # SSE includes a 1/2: half the sum of squared residuals, 4.3317112
         self.assertAlmostEqual(objval, 2.1658556, places=2)
-        self.assertAlmostEqual(
-            cov.iloc[asymptote_index, asymptote_index], 6.155892, places=2
-        )  # 6.22864 from paper
-        self.assertAlmostEqual(
-            cov.iloc[asymptote_index, rate_constant_index], -0.425232, places=2
-        )  # -0.4322 from paper
-        self.assertAlmostEqual(
-            cov.iloc[rate_constant_index, asymptote_index], -0.425232, places=2
-        )  # -0.4322 from paper
-        self.assertAlmostEqual(
-            cov.iloc[rate_constant_index, rate_constant_index], 0.040571, places=2
-        )  # 0.04124 from paper
+
+        if cov_method in ("finite_difference", "automatic_differentiation_kaug"):
+            self.assertAlmostEqual(
+                cov.iloc[asymptote_index, asymptote_index], 6.229612, places=2
+            )  # 6.22864 from paper
+            self.assertAlmostEqual(
+                cov.iloc[asymptote_index, rate_constant_index], -0.432265, places=2
+            )  # -0.4322 from paper
+            self.assertAlmostEqual(
+                cov.iloc[rate_constant_index, asymptote_index], -0.432265, places=2
+            )  # -0.4322 from paper
+            self.assertAlmostEqual(
+                cov.iloc[rate_constant_index, rate_constant_index], 0.041242, places=2
+            )  # 0.04124 from paper
+        else:
+            self.assertAlmostEqual(
+                cov.iloc[asymptote_index, asymptote_index], 6.155892, places=2
+            )  # 6.22864 from paper
+            self.assertAlmostEqual(
+                cov.iloc[asymptote_index, rate_constant_index], -0.425232, places=2
+            )  # -0.4322 from paper
+            self.assertAlmostEqual(
+                cov.iloc[rate_constant_index, asymptote_index], -0.425232, places=2
+            )  # -0.4322 from paper
+            self.assertAlmostEqual(
+                cov.iloc[rate_constant_index, rate_constant_index], 0.040571, places=2
+            )  # 0.04124 from paper
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics(self):
