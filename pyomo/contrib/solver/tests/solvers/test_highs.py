@@ -148,8 +148,9 @@ class TestWarmStart(unittest.TestCase):
         # Only the discrete variables are passed to HiGHS, which then solves
         # an LP for x2 (x2 = 5, objective value 26). If x2 = 4.5 were passed
         # as well, the objective value would be 25.
-        self.assertIn(
-            "MIP start solution is feasible, objective value is 26", res.solver_log
+        self.assertRegex(
+            res.solver_log,
+            r"MIP start solution is feasible. objective value is 26",
         )
 
     @unittest.skipUnless(
@@ -188,8 +189,9 @@ class TestWarmStart(unittest.TestCase):
         m.x1 = 4
         m.x3 = 1
         res = opt.solve(m, warmstart_discrete_vars=True)
-        self.assertIn(
-            "MIP start solution is feasible, objective value is 26", res.solver_log
+        self.assertRegex(
+            res.solver_log,
+            r"MIP start solution is feasible. objective value is 26",
         )
 
         # Second solve on the same persistent instance: x3 = 1 is still set
@@ -198,8 +200,9 @@ class TestWarmStart(unittest.TestCase):
         # solve would give 26 again.
         m.x1 = 3
         res = opt.solve(m, warmstart_discrete_vars=True)
-        self.assertIn(
-            "MIP start solution is feasible, objective value is 25", res.solver_log
+        self.assertRegex(
+            res.solver_log,
+            r"MIP start solution is feasible. objective value is 25",
         )
 
     @unittest.skipUnless(
