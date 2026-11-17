@@ -113,7 +113,7 @@ class TestBugs(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
         m.y = pyo.Var()
-        m.obj = pyo.Objective(expr=(m.x - 1)**2 + m.y)
+        m.obj = pyo.Objective(expr=(m.x - 1) ** 2 + m.y)
         m.c1 = pyo.Constraint(expr=m.x >= -5)
         m.c2 = pyo.Constraint(expr=m.y >= -4)
         opt = Highs()
@@ -123,7 +123,7 @@ class TestBugs(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, -4, places=5)
 
         m.x.value, m.y.value
-        m.obj.expr = (m.x - 1)**2 + (m.y - 2)**2
+        m.obj.expr = (m.x - 1) ** 2 + (m.y - 2) ** 2
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, 1, places=5)
         self.assertAlmostEqual(m.y.value, 2, places=5)
