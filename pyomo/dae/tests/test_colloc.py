@@ -10,7 +10,7 @@
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import Var, Set, ConcreteModel, TransformationFactory, pyomo
+from pyomo.environ import Var, Set, ConcreteModel, TransformationFactory, pyomo, Block
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
