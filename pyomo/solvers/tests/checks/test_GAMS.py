@@ -37,6 +37,7 @@ if gamspy_available:
 
 opt_gms = SolverFactory('gams', solver_io='gms')
 gamsgms_available = opt_gms.available(exception_flag=False)
+highs_available = SolverFactory('highs').available(exception_flag=False)
 
 
 def _nug12_model():
@@ -376,14 +377,17 @@ class GAMSTests(unittest.TestCase):
             )
 
     @unittest.skipIf(
-        not gamspy_available, "The 'gams' python bindings are not available"
+        not (gamspy_available and highs_available),
+        "The 'gams' python bindings or HiGHs are not available",
     )
     def test_issue_2542_time_limit_with_integer_solution_py(self):
         # Specifically triggering the case where SOLVESTAT == 3
         # and MODELSTAT == 8
         with SolverFactory("gams", solver_io="python") as opt:
             results = opt.solve(
-                _nug12_model(), add_options=['option reslim=0.2;'], load_solutions=False
+                _nug12_model(),
+                io_options={'solver': 'highs', 'add_options': ['option reslim=0.2;']},
+                load_solutions=False,
             )
         self.assertEqual(results.solver.status, SolverStatus.ok)
         self.assertEqual(
@@ -391,13 +395,18 @@ class GAMSTests(unittest.TestCase):
         )
         self.assertEqual(results.solution(0).status, SolutionStatus.feasible)
 
-    @unittest.skipIf(not gamsgms_available, "The 'gams' executable is not available")
+    @unittest.skipIf(
+        not (gamsgms_available and highs_available),
+        "The 'gams' executable or HiGHs are not available",
+    )
     def test_issue_2542_time_limit_with_integer_solution_gms(self):
         # Specifically triggering the case where SOLVESTAT == 3
         # and MODELSTAT == 8
         with SolverFactory("gams", solver_io="gms") as opt:
             results = opt.solve(
-                _nug12_model(), add_options=['option reslim=0.2;'], load_solutions=False
+                _nug12_model(),
+                io_options={'solver': 'highs', 'add_options': ['option reslim=0.2;']},
+                load_solutions=False,
             )
         self.assertEqual(results.solver.status, SolverStatus.ok)
         self.assertEqual(
