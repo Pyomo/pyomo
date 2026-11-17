@@ -20,12 +20,12 @@ implemented in parmest.
 1. Reduced Hessian Method
 
     When the objective function is the sum of squared errors (SSE) for homogeneous data, defined as
-    :math:`\text{SSE} = \sum_{i = 1}^{n} \left(\boldsymbol{y}_{i} - \boldsymbol{f}(\boldsymbol{x}_{i};
+    :math:`\text{SSE} = \frac{1}{2} \sum_{i = 1}^{n} \left(\boldsymbol{y}_{i} - \boldsymbol{f}(\boldsymbol{x}_{i};
     \boldsymbol{\theta})\right)^\text{T} \left(\boldsymbol{y}_{i} - \boldsymbol{f}(\boldsymbol{x}_{i};
     \boldsymbol{\theta})\right)`, the covariance matrix is:
 
     .. math::
-       \boldsymbol{V}_{\boldsymbol{\theta}} = 2 \sigma^2 \left(\frac{\partial^2 \text{SSE}}
+       \boldsymbol{V}_{\boldsymbol{\theta}} = \sigma^2 \left(\frac{\partial^2 \text{SSE}}
         {\partial \boldsymbol{\theta}^2}\right)^{-1}_{\boldsymbol{\theta}
         = \hat{\boldsymbol{\theta}}}
 
