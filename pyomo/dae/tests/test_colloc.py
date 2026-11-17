@@ -725,6 +725,48 @@ class TestCollocation(unittest.TestCase):
         self.assertTrue(hasattr(m3, 'u_interpolation_constraints'))
         self.assertEqual(len(m3.u_interpolation_constraints), 15)
 
+    def test_reduce_colloc_same_local_name(self):
+        m = self.m.clone()
+
+        # Different blocks contain variables with the same local name.
+        m.block1 = Block()
+        m.block1.setpoint = Var(m.t)
+
+        m.block2 = Block()
+        m.block2.setpoint = Var(m.t)
+
+        disc = TransformationFactory('dae.collocation')
+        disc.apply_to(m, wrt=m.t, nfe=5, ncp=3)
+
+        # The first reduction should use the original helper name.
+        disc.reduce_collocation_points(
+            m, contset=m.t, var=m.block1.setpoint, ncp=1
+        )
+
+        self.assertTrue(hasattr(m, 'setpoint_interpolation_constraints'))
+        first_constraints = m.setpoint_interpolation_constraints
+        self.assertEqual(len(first_constraints), 10)
+
+        # Record existing names without assuming a particular random suffix.
+        component_names_before = set(m.component_map())
+
+        # This call raised RuntimeError before the fix.
+        disc.reduce_collocation_points(
+            m, contset=m.t, var=m.block2.setpoint, ncp=1
+        )
+
+        # Exactly one new component should have been added.
+        new_names = set(m.component_map()) - component_names_before
+        self.assertEqual(len(new_names), 1)
+
+        second_constraints = m.component(new_names.pop())
+        self.assertEqual(len(second_constraints), 10)
+
+        # The two lists must be distinct, and the first must remain unchanged.
+        self.assertIsNot(first_constraints, second_constraints)
+        self.assertIs(m.setpoint_interpolation_constraints, first_constraints)
+        self.assertEqual(len(first_constraints), 10)
+
 
 if __name__ == '__main__':
     unittest.main()
