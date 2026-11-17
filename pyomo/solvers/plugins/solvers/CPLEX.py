@@ -15,6 +15,7 @@ import logging
 import subprocess
 
 from pyomo.common import Executable
+from pyomo.common.dependencies import ast
 from pyomo.common.enums import maximize, minimize
 from pyomo.common.errors import ApplicationError
 from pyomo.common.tempfiles import TempfileManager
@@ -931,7 +932,11 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     time_limit_exceeded = True
             elif tokens[0].startswith("MIPNodes"):
                 if mip_problem:
-                    n = int(" ".join(tokens).split('=')[1].strip().strip('"'))
+                    n = ast.literal_eval(
+                        ast.literal_eval((" ".join(tokens).split('=')[1]).strip())
+                        .lstrip("\"")
+                        .rstrip("\"")
+                    )
                     results.solver.statistics.branch_and_bound.number_of_created_subproblems = (
                         n
                     )
