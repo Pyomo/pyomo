@@ -295,6 +295,7 @@ class TestInit(unittest.TestCase):
         results = ini.initialize_with_multistart_opt(
             nlp=m, multistart_solver=multistart_solver
         )
+
     # Test solver support for global and pwl with no refinement
     def test_pwl_solver_solution_limit(self):
 

@@ -14,7 +14,6 @@ from typing import Optional
 from pyomo.core.base.block import BlockData
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.solver.common.base import SolverBase
-from pyomo.devel.initialization.global_init import _initialize_with_global_solver
 from pyomo.devel.initialization.multistart_init import (
     _initialize_with_multistart_solver,
 )

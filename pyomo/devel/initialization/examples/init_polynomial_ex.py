@@ -58,11 +58,6 @@ def multistart_init_ex():
     nlp_solver = SolverFactory('ipopt')
     multistart_solver = SolverFactory('multistart')
     multistart_solver.config.subsolver = nlp_solver
-
-    # multistart_solver.config.sampling_method = "uniform"
-    # multistart_solver.config.sampling_method = "lhs"
-    # multistart_solver.config.sampling_method = "sobol
-
     multistart_solver.config.iterations = 10
     multistart_solver.config.break_on_solution = True
 
@@ -72,11 +67,6 @@ def multistart_init_ex():
     return results, m.x.value
 
 
-if __name__ == '__main__':
-    # stat, x = lp_init_ex()
-    # stat, x = pwl_init_ex()
-    # stat, x = global_init_ex()
-    stat, x = multistart_init_ex()
 def run_example(method='lp'):
     if method == 'lp':
         stat, x = lp_init_ex()
@@ -84,6 +74,8 @@ def run_example(method='lp'):
         stat, x = pwl_init_ex()
     elif method == 'global':
         stat, x = global_init_ex()
+    elif method == 'multistart':
+        stat, x = multistart_init_ex()
     else:
         raise ValueError(f"Unknown method: {method}")
 
