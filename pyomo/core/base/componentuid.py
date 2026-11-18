@@ -37,6 +37,12 @@ def _pickle(x):
     if cls in ComponentUID.Serializer:
         dat = str(ComponentUID.Serializer[cls](x))
         return f"!{cls!r}:{dat!r}"
+    if not ComponentUID.EnablePickle:
+        raise RuntimeError(
+            "Attempting to serialize a ComponentUID containing an object of type "
+            f"{x.__class__.__name__} for which no Serializer is registered and "
+            "the general use of `pickle` is disabled by ComponentUID.EnablePickle."
+        )
     return '|' + repr(pickle.dumps(x, protocol=2))
 
 
@@ -93,6 +99,19 @@ class ComponentUID:
     #: string and return the object, and if it is anything other than a
     #: string, then it serializes the object and returns a string.
     Serializer: dict[str, Callable[[Any | str], str | Any]] = {}
+
+    #: If True, :class:`ComponentUID` can use `pickle` to serialize
+    #: types other than :class:`int`, :class:`float`, or :class:`str`.
+    #:
+    #: Historically :class:`ComponentUID` supported serializing
+    #: arbitrary indices using pickle.  However pickle has known security
+    #: risks.  We have disabled this feature by default and encourage
+    #: users who need to serialize :class:`ComponentUID` with custom types
+    #: to register serialization callbacks with the
+    #: :attr:`ComponentUID.Serializer` dictionary.  However, if users
+    #: understand and accept the risks inherent in using pickle, you can
+    #: re-enable pickle support by setting this class attribute to ``True``.
+    EnablePickle: bool = False
 
     def __init__(self, component, cuid_buffer=None, context=None):
         # A CUID can be initialized from either a reference component or
