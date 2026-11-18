@@ -2889,6 +2889,7 @@ class TestParmestMultistart(unittest.TestCase):
             saved["final_objective"], multistart_result["final_objective"]
         )
 
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_some_starts_fail(self):
         # Start -9 is not optimal and start 0 raises, so the best start is the
         # only optimal one (9), and the failed starts are recorded, not raised
