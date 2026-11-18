@@ -1765,26 +1765,23 @@ class Estimator:
                     )
 
                     if cov_method == CovarianceMethod.reduced_hessian:
-                        # in the "reduced_hessian" method, use the objective value
-                        # to calculate the measurement error variance because this
-                        # method scales the objective function by a probability constant
-                        # when computing the inverse of the reduced hessian
-                        # (the 1/2 in SSE cancels between the objective value
-                        # and the inverse of the reduced hessian)
-                        measurement_var = self.obj_value / (
-                            n - l
+                        # in the "reduced_hessian" method, we only use the objective value
+                        # to calculate the variance of the measurement error because the
+                        # probability constant used to scale the objective function cancels out
+                        # when computing the covariance matrix from the hessian
+                        # the 2 in the formula comes from using 1/2 in the SSE function
+                        measurement_var = (
+                            2 * self.obj_value / (n - l)
                         )  # estimate of the measurement error variance
-                        cov = (
-                            2 * measurement_var * self.inv_red_hes
-                        )  # covariance matrix
+                        cov = measurement_var * self.inv_red_hes  # covariance matrix
                         cov = pd.DataFrame(
                             cov,
                             index=self.estimated_theta.keys(),
                             columns=self.estimated_theta.keys(),
                         )
                     else:
-                        # SSE includes a 1/2, so the sum of squared residuals
-                        # is 2 * sse
+                        # SSE includes a 1/2
+                        # the variance of the measurement error will include a 2
                         measurement_var = (2 * sse) / (
                             n - l
                         )  # estimate of the measurement error variance
