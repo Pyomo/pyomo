@@ -386,7 +386,7 @@ class GAMSTests(unittest.TestCase):
         with SolverFactory("gams", solver_io="python") as opt:
             results = opt.solve(
                 _nug12_model(),
-                io_options={'solver': 'highs', 'add_options': ['option reslim=0.2;']},
+                io_options={'solver': 'highs', 'add_options': ['option reslim=0.1;']},
                 load_solutions=False,
             )
         self.assertEqual(results.solver.status, SolverStatus.ok)
@@ -405,7 +405,7 @@ class GAMSTests(unittest.TestCase):
         with SolverFactory("gams", solver_io="gms") as opt:
             results = opt.solve(
                 _nug12_model(),
-                io_options={'solver': 'highs', 'add_options': ['option reslim=0.2;']},
+                io_options={'solver': 'highs', 'add_options': ['option reslim=0.1;']},
                 load_solutions=False,
             )
         self.assertEqual(results.solver.status, SolverStatus.ok)
