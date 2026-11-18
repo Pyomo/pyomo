@@ -25,6 +25,7 @@ import pyomo.common.unittest as unittest
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.tee import capture_output
 import os, shutil
+import random
 from tempfile import mkdtemp
 
 opt_py = SolverFactory('gams', solver_io='python')
@@ -37,43 +38,33 @@ if gamspy_available:
 
 opt_gms = SolverFactory('gams', solver_io='gms')
 gamsgms_available = opt_gms.available(exception_flag=False)
-highs_available = SolverFactory('highs').available(exception_flag=False)
 
 
-def _nug12_model():
-    """Nug12 model but actually just the first 5x5 of it. Based on
-    https://coral.ise.lehigh.edu/data-sets/qaplib/qaplib-problem-instances-and-solutions/#NVR
-    """
-    dist = [
-        [0, 1, 2, 3, 1],
-        [1, 0, 1, 2, 2],
-        [2, 1, 0, 1, 3],
-        [3, 2, 1, 0, 4],
-        [1, 2, 3, 4, 0],
-    ]
-    flow = [
-        [0, 5, 2, 4, 1],
-        [5, 0, 3, 0, 2],
-        [2, 3, 0, 0, 0],
-        [4, 0, 0, 0, 5],
-        [1, 2, 0, 5, 0],
-    ]
-    N = range(5)
-    P = [(i, j, k, n) for i in N for j in N for k in N for n in N if k != i and n != j]
+def _market_split_model():
+    """We got this from Google AI, but it did seem pretty difficult for
+    Gurobi to solve."""
+    rng = random.Random(42)
     m = ConcreteModel()
-    m.x = Var(N, N, within=pyo.Binary)
-    m.y = Var(P, within=pyo.Binary)
-    m.obj = Objective(
-        expr=sum(flow[i][k] * dist[j][n] * m.y[i, j, k, n] for (i, j, k, n) in P)
+    m.I = pyo.RangeSet(0, 7)
+    m.J = pyo.RangeSet(0, 69)
+    m.a = pyo.Param(
+        m.I, m.J, initialize={(i, j): int(100 * rng.random()) for i in m.I for j in m.J}
     )
-    m.c = pyo.ConstraintList()
-    for i in N:
-        m.c.add(sum(m.x[i, j] for j in N) == 1)
-        m.c.add(sum(m.x[j, i] for j in N) == 1)
-    for i, j, k, n in P:
-        m.c.add(m.y[i, j, k, n] <= m.x[i, j])
-        m.c.add(m.y[i, j, k, n] <= m.x[k, n])
-        m.c.add(m.y[i, j, k, n] >= m.x[i, j] + m.x[k, n] - 1)
+    m.b = pyo.Param(m.I, initialize={i: sum(m.a[i, j] for j in m.J) // 2 for i in m.I})
+    m.x = Var(m.J, within=pyo.Binary)
+    m.s_plus = Var(m.I, within=pyo.NonNegativeReals)
+    m.s_minus = Var(m.I, within=pyo.NonNegativeReals)
+
+    @m.Objective()
+    def obj(m):
+        return sum(m.s_plus[i] + m.s_minus[i] for i in m.I)
+
+    @m.Constraint(m.I)
+    def split(m, i):
+        return (
+            sum(m.a[i, j] * m.x[j] for j in m.J) + m.s_plus[i] - m.s_minus[i] == m.b[i]
+        )
+
     return m
 
 
@@ -377,16 +368,15 @@ class GAMSTests(unittest.TestCase):
             )
 
     @unittest.skipIf(
-        not (gamspy_available and highs_available),
-        "The 'gams' python bindings or HiGHs are not available",
+        not gamspy_available, "The 'gams' python bindings are not available"
     )
     def test_issue_2452_time_limit_with_integer_solution_py(self):
         # Specifically triggering the case where SOLVESTAT == 3
         # and MODELSTAT == 8
         with SolverFactory("gams", solver_io="python") as opt:
             results = opt.solve(
-                _nug12_model(),
-                io_options={'solver': 'highs', 'add_options': ['option reslim=0.2;']},
+                _market_split_model(),
+                io_options={'add_options': ['option reslim=0.2;']},
                 load_solutions=False,
             )
         self.assertEqual(results.solver.status, SolverStatus.ok)
@@ -395,16 +385,13 @@ class GAMSTests(unittest.TestCase):
         )
         self.assertEqual(results.solution(0).status, SolutionStatus.feasible)
 
-    @unittest.skipIf(
-        not (gamsgms_available and highs_available),
-        "The 'gams' executable or HiGHs are not available",
-    )
+    @unittest.skipIf(not gamsgms_available, "The 'gams' executable is not available")
     def test_issue_2452_time_limit_with_integer_solution_gms(self):
         # Specifically triggering the case where SOLVESTAT == 3
         # and MODELSTAT == 8
         with SolverFactory("gams", solver_io="gms") as opt:
             results = opt.solve(
-                _nug12_model(),
+                _market_split_model(),
                 io_options={'solver': 'highs', 'add_options': ['option reslim=0.2;']},
                 load_solutions=False,
             )
