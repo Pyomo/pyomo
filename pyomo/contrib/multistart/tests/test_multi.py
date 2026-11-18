@@ -179,8 +179,12 @@ class MultistartTests(unittest.TestCase):
 
     def test_HCS_requires_rand_strategy(self):
         m = build_model()
-        with self.assertRaisesRegex(ValueError, "requires rand strategy"):
-            SolverFactory('multistart').solve(m, iterations=-1, strategy='midpoint')
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.INFO):
+            with self.assertRaisesRegex(ValueError, "requires rand strategy"):
+                SolverFactory('multistart').solve(m, iterations=-1, strategy='midpoint')
+        # The settings are checked before the initial solve
+        self.assertNotIn("Running initial solve", output.getvalue())
 
     def test_unsupported_sampling_method(self):
         m = ConcreteModel()
@@ -263,10 +267,23 @@ class MultistartTests(unittest.TestCase):
     def test_HCS_requires_uniform_sampling(self):
         # The stopping rule assumes independent random starts
         m = build_model()
-        with self.assertRaisesRegex(ValueError, "requires random_uniform"):
-            SolverFactory('multistart').solve(
-                m, iterations=-1, sampling_method='latin_hypercube'
-            )
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.INFO):
+            with self.assertRaisesRegex(ValueError, "requires random_uniform"):
+                SolverFactory('multistart').solve(
+                    m, iterations=-1, sampling_method='latin_hypercube'
+                )
+        # The settings are checked before the initial solve
+        self.assertNotIn("Running initial solve", output.getvalue())
+
+    def test_break_on_solution_initial_solve(self):
+        # A feasible initial solve is the first solution, so no other starts run
+        m = build_model()
+        res = SolverFactory('multistart').solve(m, break_on_solution=True, seed=1)
+        self.assertEqual(res.feasible_iter_list, [0])
+        self.assertEqual(
+            res.incumbent_objective, res.feasible_solution_list[0].incumbent_objective
+        )
 
     def test_max_time_limit(self):
         simple_model = build_model()

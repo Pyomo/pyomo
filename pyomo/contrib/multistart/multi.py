@@ -307,6 +307,20 @@ class MultiStart(SolverBase):
             n_points=config.iterations if config.iterations > 0 else None,
         )
 
+        # The high confidence stopping rule (HCS) is used when iterations is -1.
+        # Check its settings before any solve.
+        using_HCS = config.iterations == -1
+        if using_HCS:
+            if config.strategy != "rand":
+                raise ValueError(
+                    "High confidence stopping rule requires rand strategy."
+                )
+            if sampler.method != "uniform":
+                raise ValueError(
+                    "High confidence stopping rule requires random_uniform "
+                    "sampling, because it assumes independent random starts."
+                )
+
         # Allocate the results object so we can populate it as we go
         results = MultiStartResults()
         results.solver_name = self.name
@@ -409,6 +423,14 @@ class MultiStart(SolverBase):
 
         max_iter = config.iterations
 
+        # The initial solve counts as a start: with break_on_solution, a
+        # feasible initial solve is the solution and no other starts run
+        if config.break_on_solution and result.solution_status in {
+            SolutionStatus.feasible,
+            SolutionStatus.optimal,
+        }:
+            max_iter = 0
+
         if self._timing_lim:
             self._update_solver_timelimit(num_iter, timer, subsolver_args)
             if self.remaining_time_limit == 0:
@@ -419,18 +441,8 @@ class MultiStart(SolverBase):
 
         # if HCS rule is specified, reinitialize completely randomly until
         # rule specifies stopping
-        using_HCS = config.iterations == -1
         HCS_completed = False
         if using_HCS and num_iter != max_iter:
-            if config.strategy != "rand":
-                raise ValueError(
-                    "High confidence stopping rule requires rand strategy."
-                )
-            if sampler.method != "uniform":
-                raise ValueError(
-                    "High confidence stopping rule requires random_uniform "
-                    "sampling, because it assumes independent random starts."
-                )
             max_iter = config.HCS_max_iterations
 
         timer.start('iterative_solves')
