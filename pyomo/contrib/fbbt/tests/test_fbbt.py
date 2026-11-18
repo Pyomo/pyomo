@@ -1346,6 +1346,15 @@ class TestFBBT(FbbtTestBase, unittest.TestCase):
         self.assertEqual(m.z.lb, 2)
         self.assertIsNone(m.z.ub)
 
+        # Negative base with an odd exponent: z has no lower bound
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(-1e200, -1))
+        m.z = pyo.Var()
+        m.c = pyo.Constraint(expr=m.z == m.x**3)
+        self.tightener(m)
+        self.assertIsNone(m.z.lb)
+        self.assertEqual(m.z.ub, -1)
+
     def test_ranged_expression(self):
         # The python version of FBBT is slightly more flexible than
         # APPSI's cmodel (it allows - and correctly handles -

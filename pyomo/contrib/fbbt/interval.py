@@ -211,10 +211,10 @@ def pow_or_inf(x, y):
     except OverflowError:
         if x > 0:
             z = inf
-        elif x < 0:
-            z = -inf
         else:
-            raise ValueError(f"Unexpected overflow error: {x}**{y}")
+            # 0**y never overflows, so x is negative here. power() only passes
+            # a negative x with an integer y, so the sign follows its parity.
+            z = -inf if y % 2 == 1 else inf
     return z
 
 
@@ -261,29 +261,29 @@ def power(xl, xu, yl, yu, feasibility_tol):
         if xu <= 0:
             if y < 0:
                 if y % 2 == 0:
-                    lb = xl**y
+                    lb = pow_or_inf(xl, y)
                     if xu == 0:
                         ub = inf
                     else:
-                        ub = xu**y
+                        ub = pow_or_inf(xu, y)
                 else:
                     if xu == 0:
                         lb = -inf
                         ub = inf
                     else:
-                        lb = xu**y
-                        ub = xl**y
+                        lb = pow_or_inf(xu, y)
+                        ub = pow_or_inf(xl, y)
             else:
                 if y % 2 == 0:
-                    lb = xu**y
-                    ub = xl**y
+                    lb = pow_or_inf(xu, y)
+                    ub = pow_or_inf(xl, y)
                 else:
-                    lb = xl**y
-                    ub = xu**y
+                    lb = pow_or_inf(xl, y)
+                    ub = pow_or_inf(xu, y)
         else:  # xu is positive
             if y < 0:
                 if y % 2 == 0:
-                    lb = min(xl**y, xu**y)
+                    lb = min(pow_or_inf(xl, y), pow_or_inf(xu, y))
                     ub = inf
                 else:
                     lb = -inf
@@ -292,10 +292,10 @@ def power(xl, xu, yl, yu, feasibility_tol):
                 if y % 2 == 0:
                     # xl is negative and xu is positive, so lb is 0
                     lb = 0
-                    ub = max(xl**y, xu**y)
+                    ub = max(pow_or_inf(xl, y), pow_or_inf(xu, y))
                 else:
-                    lb = xl**y
-                    ub = xu**y
+                    lb = pow_or_inf(xl, y)
+                    ub = pow_or_inf(xu, y)
     elif yl == yu:
         # the exponent has to be fractional, so x must be positive
         if xu < 0:

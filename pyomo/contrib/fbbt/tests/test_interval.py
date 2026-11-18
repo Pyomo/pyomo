@@ -444,19 +444,24 @@ class TestInterval(IntervalTestBase, unittest.TestCase):
         lb, ub = self.power(1e-200, 2, -2, -1, 1e-8)
         self.assertEqual(lb, 0.25)
         self.assertEqual(ub, interval.inf)
+        # Negative x with an integer exponent: the infinite bound has the sign
+        # of the true power, + for even exponents and - for odd ones
+        cases = [
+            ((-1e200, -1, 2), (1, interval.inf)),
+            ((-1e200, -1, 3), (-interval.inf, -1)),
+            ((-1e200, 5, 2), (0, interval.inf)),
+            ((-1e200, 5, 3), (-interval.inf, 125)),
+            ((-1, -1e-200, -2), (1, interval.inf)),
+            ((-1, -1e-200, -3), (-interval.inf, -1)),
+        ]
+        for (xl, xu, y), expected in cases:
+            with self.subTest(x=(xl, xu), y=y):
+                self.assertEqual(self.power(xl, xu, y, y, 1e-8), expected)
 
     def test_pow_or_inf(self):
-        # power() only passes x >= 0, so the other branches are tested directly
+        # Each branch, called directly
         self.assertEqual(interval.pow_or_inf(2.0, 3.0), 8.0)
         self.assertEqual(interval.pow_or_inf(1e200, 2.0), interval.inf)
+        # A negative x overflows to -inf for odd y and to +inf for even y
         self.assertEqual(interval.pow_or_inf(-1e200, 3.0), -interval.inf)
-
-        class ZeroThatOverflows(float):
-            # A real 0 never overflows, so this stand-in number equals 0 but
-            # raises OverflowError when raised to a power. It reaches the
-            # check for an overflow that is neither positive nor negative.
-            def __pow__(self, other):
-                raise OverflowError
-
-        with self.assertRaisesRegex(ValueError, "Unexpected overflow error"):
-            interval.pow_or_inf(ZeroThatOverflows(0.0), 2.0)
+        self.assertEqual(interval.pow_or_inf(-1e200, 2.0), interval.inf)
