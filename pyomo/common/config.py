@@ -1164,7 +1164,11 @@ class numpydoc_ConfigFormatter(ConfigFormatter):
                     (
                         'optional'
                         if obj._default is None
-                        else f'default={obj._default!r}'
+                        else (
+                            f"default={str(obj._default).split('.')[-1]}"
+                            if isinstance(obj._default, enum.Enum)
+                            else f"default={obj._default!r}"
+                        )
                     ),
                 ],
             )
