@@ -61,8 +61,7 @@ def _context_err(_type):
 
 
 class ComponentUID:
-    """
-    A Component unique identifier
+    """A Component unique identifier
 
     This class provides a system to generate "component unique
     identifiers".  Any component in a model can be described by a CUID,
@@ -75,8 +74,9 @@ class ComponentUID:
 
     The CUID has a string representation that can specify a specific
     component or a group of related components through the use of index
-    wildcards (* for a single element in the index, and ** for all
-    indexes)
+    wildcards (``*`` for a single element in the index, and ``**`` for
+    all indexes)
+
     """
 
     __slots__ = ('_cids',)
