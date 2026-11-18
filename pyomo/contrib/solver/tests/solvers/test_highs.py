@@ -110,6 +110,32 @@ class TestBugs(unittest.TestCase):
         self.assertAlmostEqual(m.fy.value, 0, places=5)
         self.assertAlmostEqual(r.objective_bound, 0.5, places=5)
 
+    def test_quadratic_to_linear(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=(m.x - 1) ** 2 + m.y)
+        m.c1 = pyo.Constraint(expr=m.x >= -5)
+        m.c2 = pyo.Constraint(expr=m.y >= -4)
+        opt = Highs()
+        res = opt.solve(m)
+
+        self.assertAlmostEqual(m.x.value, 1, places=5)
+        self.assertAlmostEqual(m.y.value, -4, places=5)
+
+        m.x.value, m.y.value
+        m.obj.expr = (m.x - 1) ** 2 + (m.y - 2) ** 2
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 1, places=5)
+        self.assertAlmostEqual(m.y.value, 2, places=5)
+
+        m.x.value, m.y.value
+        m.obj.expr = m.x + m.y
+        res = opt.solve(m)
+        m.x.value, m.y.value
+        self.assertAlmostEqual(m.x.value, -5, places=5)
+        self.assertAlmostEqual(m.y.value, -4, places=5)
+
 
 @unittest.pytest.mark.solver("highs")
 class TestWarmStart(unittest.TestCase):
