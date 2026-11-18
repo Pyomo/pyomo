@@ -100,7 +100,7 @@ class ComponentUID:
     #: string, then it serializes the object and returns a string.
     Serializer: dict[str, Callable[[Any | str], str | Any]] = {}
 
-    #: If True, :class:`ComponentUID` can use `pickle` to serialize
+    #: If True, :class:`ComponentUID` can use :mod:`pickle` to serialize
     #: types other than :class:`int`, :class:`float`, or :class:`str`.
     #:
     #: Historically :class:`ComponentUID` supported serializing
@@ -108,9 +108,9 @@ class ComponentUID:
     #: risks.  We have disabled this feature by default and encourage
     #: users who need to serialize :class:`ComponentUID` with custom types
     #: to register serialization callbacks with the
-    #: :attr:`ComponentUID.Serializer` dictionary.  However, if users
-    #: understand and accept the risks inherent in using pickle, you can
-    #: re-enable pickle support by setting this class attribute to ``True``.
+    #: :attr:`ComponentUID.Serializer` dictionary.  However users who
+    #: *understand and accept the risks* inherent in using :mod:`pickle`
+    #: can re-enable support by setting this class attribute to ``True``.
     EnablePickle: bool = False
 
     def __init__(self, component, cuid_buffer=None, context=None):
@@ -638,7 +638,9 @@ class ComponentUID:
 
         This is equivalent to:
 
-            `component in ComponentSet(self.list_components())`
+        .. code::
+
+            component in ComponentSet(self.list_components())
         """
         for i, (name, idx) in enumerate(self._generate_cuid(component)):
             if i == len(self._cids):
