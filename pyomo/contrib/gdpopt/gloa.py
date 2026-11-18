@@ -8,7 +8,6 @@
 # ____________________________________________________________________________________
 
 from pyomo.common.config import document_kwargs_from_configdict
-from pyomo.common.errors import DeveloperError
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
@@ -195,31 +194,71 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                 aff_utils_blocks[parent_block] = aff_utils
                 aff_utils.GDPopt_aff_cons = Constraint(NonNegativeIntegers)
             aff_cuts = aff_utils.GDPopt_aff_cons
-            cut_body = sum(
+            concave_cut_body = sum(
                 ccSlope[var] * (var - var.value)
                 for var in vars_in_constr
                 if not var.fixed
             )
-            if not is_potentially_variable(cut_body):
-                if (
-                    cut_body + ccStart >= lb_int - config.constraint_tolerance
-                    and cut_body + cvStart <= ub_int + config.constraint_tolerance
-                ):
-                    # We won't add them, but nothing is wrong--they hold
-                    config.logger.debug("Affine cut is trivially True.")
-                else:
-                    # something went wrong.
-                    raise DeveloperError("One of the affine cuts is trivially False.")
+            convex_cut_body = sum(
+                cvSlope[var] * (var - var.value)
+                for var in vars_in_constr
+                if not var.fixed
+            )
+            concave_cut_is_variable = is_potentially_variable(concave_cut_body)
+            convex_cut_is_variable = is_potentially_variable(convex_cut_body)
+
+            # Relax the bounds when checking constant cuts so that violations
+            # within constraint_tolerance do not cause an error.
+            if not concave_cut_is_variable:
+                cut_value = value(concave_cut_body + ccStart)
+                if cut_value < lb_int - config.constraint_tolerance:
+                    raise RuntimeError(
+                        "Constant concave affine cut for constraint '%s' is "
+                        "infeasible: value %s is below lower bound %s by %s, "
+                        "exceeding constraint_tolerance %s. This may be caused "
+                        "by numerical error."
+                        % (
+                            constr.name,
+                            cut_value,
+                            lb_int,
+                            lb_int - cut_value,
+                            config.constraint_tolerance,
+                        )
+                    )
+            if not convex_cut_is_variable:
+                cut_value = value(convex_cut_body + cvStart)
+                if cut_value > ub_int + config.constraint_tolerance:
+                    raise RuntimeError(
+                        "Constant convex affine cut for constraint '%s' is "
+                        "infeasible: value %s is above upper bound %s by %s, "
+                        "exceeding constraint_tolerance %s. This may be caused "
+                        "by numerical error."
+                        % (
+                            constr.name,
+                            cut_value,
+                            ub_int,
+                            cut_value - ub_int,
+                            config.constraint_tolerance,
+                        )
+                    )
+
+            if not concave_cut_is_variable and not convex_cut_is_variable:
+                # We won't add them, but nothing is wrong--they hold
+                config.logger.debug("Affine cut is trivially True.")
             else:
-                concave_cut = cut_body + ccStart >= lb_int
-                convex_cut = cut_body + cvStart <= ub_int
                 idx = len(aff_cuts)
-                aff_cuts[idx] = concave_cut
-                aff_cuts[idx + 1] = convex_cut
-                _add_bigm_constraint_to_transformed_model(m, aff_cuts[idx], aff_cuts)
-                _add_bigm_constraint_to_transformed_model(
-                    m, aff_cuts[idx + 1], aff_cuts
-                )
-                counter += 2
+                if concave_cut_is_variable:
+                    aff_cuts[idx] = concave_cut_body + ccStart >= lb_int
+                    _add_bigm_constraint_to_transformed_model(
+                        m, aff_cuts[idx], aff_cuts
+                    )
+                    idx += 1
+                    counter += 1
+                if convex_cut_is_variable:
+                    aff_cuts[idx] = convex_cut_body + cvStart <= ub_int
+                    _add_bigm_constraint_to_transformed_model(
+                        m, aff_cuts[idx], aff_cuts
+                    )
+                    counter += 1
 
                 config.logger.debug("Added %s affine cuts" % counter)
