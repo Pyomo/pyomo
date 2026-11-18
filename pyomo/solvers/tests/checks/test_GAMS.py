@@ -392,7 +392,7 @@ class GAMSTests(unittest.TestCase):
         with SolverFactory("gams", solver_io="gms") as opt:
             results = opt.solve(
                 _market_split_model(),
-                io_options={'solver': 'highs', 'add_options': ['option reslim=0.2;']},
+                io_options={'add_options': ['option reslim=0.2;']},
                 load_solutions=False,
             )
         self.assertEqual(results.solver.status, SolverStatus.ok)
