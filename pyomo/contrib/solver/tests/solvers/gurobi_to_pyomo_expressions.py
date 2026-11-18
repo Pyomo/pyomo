@@ -67,23 +67,23 @@ class GurobiPyomoOpMap(defaultdict):
         GRB = gurobipy.GRB
         self.update(
             {
-                GRB.OPCODE_PLUS: (SumExpression, ()),
-                # GRB.OPCODE_MINUS: , # This is sum of negated term for us
-                GRB.OPCODE_UMINUS: (NegationExpression, ()),
-                GRB.OPCODE_MULTIPLY: (_make_product, ()),
-                GRB.OPCODE_DIVIDE: (DivisionExpression, ()),
-                GRB.OPCODE_SQUARE: (_make_square, ()),
-                GRB.OPCODE_SQRT: (UnaryFunctionExpression, ('sqrt', sqrt)),
-                GRB.OPCODE_EXP: (UnaryFunctionExpression, ('exp', exp)),
-                GRB.OPCODE_LOG: (UnaryFunctionExpression, ('log', log)),
-                GRB.OPCODE_LOG2: (UnaryFunctionExpression, ('log', log)),
-                GRB.OPCODE_LOG10: (UnaryFunctionExpression, ('log10', log10)),
-                GRB.OPCODE_POW: (PowExpression, ()),
-                GRB.OPCODE_SIN: (UnaryFunctionExpression, ('sin', sin)),
-                GRB.OPCODE_COS: (UnaryFunctionExpression, ('cos', cos)),
-                GRB.OPCODE_TAN: (UnaryFunctionExpression, ('tan', tan)),
+                GRB.OPCODE_PLUS: SumExpression,
+                GRB.OPCODE_MINUS: lambda args: SumExpression([args[0], NegationExpression([args[1]])]), # This is sum of negated term for us
+                GRB.OPCODE_UMINUS: NegationExpression,
+                GRB.OPCODE_MULTIPLY: _make_product,
+                GRB.OPCODE_DIVIDE: DivisionExpression,
+                GRB.OPCODE_SQUARE: _make_square,
+                GRB.OPCODE_SQRT: lambda args: UnaryFunctionExpression(args,'sqrt', sqrt),
+                GRB.OPCODE_EXP: lambda args: UnaryFunctionExpression(args, 'exp', exp),
+                GRB.OPCODE_LOG: lambda args: UnaryFunctionExpression(args, 'log', log),
+                GRB.OPCODE_LOG2: lambda args: UnaryFunctionExpression(args, 'log', log),
+                GRB.OPCODE_LOG10: lambda args: UnaryFunctionExpression(args, 'log10', log10),
+                GRB.OPCODE_POW: PowExpression,
+                GRB.OPCODE_SIN: lambda args: UnaryFunctionExpression(args, 'sin', sin),
+                GRB.OPCODE_COS: lambda args: UnaryFunctionExpression(args, 'cos', cos),
+                GRB.OPCODE_TAN: lambda args: UnaryFunctionExpression(args, 'tan', tan),
                 # GRB.OPCODE_LOGISTIC: We don't have this one.
-                GRB.OPCODE_CONSTANT: (_make_const, ()),
+                GRB.OPCODE_CONSTANT: _make_const,
             }
         )
         return self[key]
@@ -103,13 +103,13 @@ def grb_nl_to_pyo_expr(opcodes, data, parents, var_map):
         if op == OPCODE_VARIABLE:
             node = var_map[dat]
         else:
-            fcn, args = grb_op_to_pyo[op]
+            fcn = grb_op_to_pyo[op]
             if dat.__class__ is list:
                 # Because we are walking the prefix notation in reverse,
                 # we are processing arguments right-to-left.  Reverse
                 # the arguments to recover the original argument ordering.
                 dat.reverse()
-            node = fcn(dat, *args)
+            node = fcn(dat)
         # Data starts off holding "-1" for any operators.  If `parent`
         # is anything other than -1, then that is pointing to an
         # operator (whose initial data entry will start as -1).  We can
