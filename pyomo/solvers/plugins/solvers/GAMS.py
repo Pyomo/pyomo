@@ -514,8 +514,16 @@ class GAMSDirect(_GAMSSolver):
             soln.status = SolutionStatus.feasible
         elif modelstat == 8:
             # 'Integer solution model found'
-            results.solver.termination_condition = TerminationCondition.optimal
-            soln.status = SolutionStatus.optimal
+            # It was reported in Issue 2452 that this logic overrides what
+            # was set in the solvestat check a few lines up.
+            # The solution is NOT optimal, nor is the termination_condition.
+            # So we add a bit of logic here to NOT override the existing
+            # termination_condition and instead set the status to feasible.
+            if results.solver.termination_condition is None:
+                results.solver.termination_condition = TerminationCondition.optimal
+                soln.status = SolutionStatus.optimal
+            else:
+                soln.status = SolutionStatus.feasible
         elif modelstat == 9:
             results.solver.termination_condition = (
                 TerminationCondition.intermediateNonInteger
@@ -1089,8 +1097,16 @@ class GAMSShell(_GAMSSolver):
             soln.status = SolutionStatus.feasible
         elif modelstat == 8:
             # 'Integer solution model found'
-            results.solver.termination_condition = TerminationCondition.optimal
-            soln.status = SolutionStatus.optimal
+            # It was reported in Issue 2452 that this logic overrides what
+            # was set in the solvestat check a few lines up.
+            # The solution is NOT optimal, nor is the termination_condition.
+            # So we add a bit of logic here to NOT override the existing
+            # termination_condition and instead set the status to feasible.
+            if results.solver.termination_condition is None:
+                results.solver.termination_condition = TerminationCondition.optimal
+                soln.status = SolutionStatus.optimal
+            else:
+                soln.status = SolutionStatus.feasible
         elif modelstat == 9:
             results.solver.termination_condition = (
                 TerminationCondition.intermediateNonInteger

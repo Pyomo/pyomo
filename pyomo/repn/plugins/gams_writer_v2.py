@@ -28,7 +28,6 @@ from pyomo.core.base import (
     Var,
     Param,
     Expression,
-    SOSConstraint,
     Suffix,
     SymbolMap,
     minimize,
@@ -305,7 +304,7 @@ class _GMSWriter_impl(object):
                 RangeSet,
                 Port,
             },
-            targets={Suffix, SOSConstraint, Objective},
+            targets={Suffix, Objective},
         )
         if unknown:
             raise ValueError(
