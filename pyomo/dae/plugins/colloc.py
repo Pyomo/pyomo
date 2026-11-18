@@ -33,6 +33,7 @@ from pyomo.dae.misc import get_index_information
 from pyomo.dae.diffvar import DAE_Error
 
 from pyomo.common.config import ConfigBlock, ConfigValue, PositiveInt, In
+from pyomo.common.modeling import unique_component_name
 
 logger = logging.getLogger('pyomo.dae')
 
@@ -676,8 +677,9 @@ class Collocation_Discretization_Transformation(Transformation):
         else:
             self._reduced_cp[var.name] = {ds.name: ncp}
 
-        # TODO: Use unique_component_name for this
-        list_name = var.local_name + "_interpolation_constraints"
+        list_name = unique_component_name(
+            instance, var.local_name + "_interpolation_constraints"
+        )
 
         instance.add_component(list_name, ConstraintList())
         conlist = instance.find_component(list_name)

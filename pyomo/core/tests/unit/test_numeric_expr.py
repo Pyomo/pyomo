@@ -1447,9 +1447,9 @@ class TestGenerate_ProductExpression(unittest.TestCase):
             ),
         )
         # Verify shared args...
-        self.assertIs(e1._args_, e2._args_)
-        self.assertIsNot(e1._args_, e3._args_)
-        self.assertIs(e1._args_, e.arg(0)._args_)
+        self.assertIs(e1._args, e2._args)
+        self.assertIsNot(e1._args, e3._args)
+        self.assertIs(e1._args, e.arg(0)._args)
         self.assertIs(e.arg(0).arg(0), e.arg(1).arg(0))
         self.assertIs(e.arg(0).arg(1), e.arg(1).arg(1))
 
@@ -3952,7 +3952,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1(), 11)
             self.assertEqual(expr2(), 11)
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._args_), id(expr2._args_))
+            self.assertNotEqual(id(expr1._args), id(expr2._args))
             self.assertEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             self.assertEqual(id(expr1.arg(1)), id(expr2.arg(1)))
             #
@@ -3976,7 +3976,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1(), 11)
             self.assertEqual(expr2(), 11)
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._args_), id(expr2._args_))
+            self.assertNotEqual(id(expr1._args), id(expr2._args))
             self.assertNotEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             self.assertNotEqual(id(expr1.arg(1)), id(expr2.arg(1)))
             #
@@ -3991,14 +3991,14 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1(), 15)
             self.assertEqual(expr2(), 15)
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._args_), id(expr2._args_))
+            self.assertNotEqual(id(expr1._args), id(expr2._args))
             self.assertIs(expr1.arg(0), expr2.arg(0))
             self.assertIs(expr1.arg(1), expr2.arg(1))
             expr1 += self.m.b
             self.assertEqual(expr1(), 25)
             self.assertEqual(expr2(), 15)
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._args_), id(expr2._args_))
+            self.assertNotEqual(id(expr1._args), id(expr2._args))
             self.assertIs(expr1.arg(0), expr2.arg(0))
             self.assertIs(expr1.arg(1), expr2.arg(1))
             #
@@ -4013,14 +4013,14 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1(), 15)
             self.assertEqual(expr2(), 15)
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._args_), id(expr2._args_))
+            self.assertNotEqual(id(expr1._args), id(expr2._args))
             self.assertNotEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             self.assertNotEqual(id(expr1.arg(1)), id(expr2.arg(1)))
             expr1 += self.m.b
             self.assertEqual(expr1(), 25)
             self.assertEqual(expr2(), 15)
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._args_), id(expr2._args_))
+            self.assertNotEqual(id(expr1._args), id(expr2._args))
             self.assertNotEqual(id(expr1.arg(1)), id(expr2.arg(1)))
             self.assertNotEqual(id(expr1.arg(1)), id(expr2.arg(1)))
             #
@@ -4040,14 +4040,14 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1(), 25)
             self.assertEqual(expr2(), 25)
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._args_), id(expr2._args_))
+            self.assertNotEqual(id(expr1._args), id(expr2._args))
             self.assertNotEqual(id(expr1.linear_vars[0]), id(expr2.linear_vars[0]))
             self.assertNotEqual(id(expr1.linear_vars[1]), id(expr2.linear_vars[1]))
             expr1 += self.m.b
             self.assertEqual(expr1(), 35)
             self.assertEqual(expr2(), 25)
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._args_), id(expr2._args_))
+            self.assertNotEqual(id(expr1._args), id(expr2._args))
             #
             total = counter.count - start
             self.assertEqual(total, 0)
@@ -4061,7 +4061,8 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1(), 50)
             self.assertEqual(expr2(), 50)
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertEqual(id(expr1._args_), id(expr2._args_))
+            self.assertEqual(id(expr1._l_arg), id(expr2._l_arg))
+            self.assertEqual(id(expr1._r_arg), id(expr2._r_arg))
             self.assertEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             self.assertEqual(id(expr1.arg(1)), id(expr2.arg(1)))
 
@@ -4069,8 +4070,10 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1(), 500)
             self.assertEqual(expr2(), 50)
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._args_), id(expr2._args_))
-            self.assertEqual(id(expr1.arg(0)._args_), id(expr2._args_))
+            self.assertNotEqual(id(expr1._l_arg), id(expr2._l_arg))
+            self.assertEqual(id(expr1._r_arg), id(expr2._r_arg))
+            self.assertEqual(id(expr1.arg(0)._l_arg), id(expr2._l_arg))
+            self.assertEqual(id(expr1.arg(0)._r_arg), id(expr2._r_arg))
             self.assertEqual(id(expr1.arg(1)), id(expr2.arg(1)))
             self.assertEqual(id(expr1.arg(0).arg(0)), id(expr2.arg(0)))
             self.assertEqual(id(expr1.arg(0).arg(1)), id(expr2.arg(1)))
@@ -4079,11 +4082,12 @@ class TestCloneExpression(unittest.TestCase):
             expr2 = expr1.clone()
             self.assertEqual(expr1(), 75)
             self.assertEqual(expr2(), 75)
-            # Note that since one of the args is a sum expression, the _args_
+            # Note that since one of the args is a sum expression, the _args
             # in the sum is a *list*, which will be duplicated by deepcopy.
             # This will cause the two args in the Product to be different.
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._args_), id(expr2._args_))
+            self.assertEqual(id(expr1._l_arg), id(expr2._l_arg))
+            self.assertNotEqual(id(expr1._r_arg), id(expr2._r_arg))
             self.assertEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             self.assertNotEqual(id(expr1.arg(1)), id(expr2.arg(1)))
             #
@@ -4099,8 +4103,9 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1(), 0.5)
             self.assertEqual(expr2(), 0.5)
             self.assertNotEqual(id(expr1), id(expr2))
-            # Note: _args_ are the same because tuples are not copied
-            self.assertEqual(id(expr1._args_), id(expr2._args_))
+            # Note: _args are the same because tuples are not copied
+            self.assertEqual(id(expr1._l_arg), id(expr2._l_arg))
+            self.assertEqual(id(expr1._r_arg), id(expr2._r_arg))
             self.assertEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             self.assertEqual(id(expr1.arg(1)), id(expr2.arg(1)))
 
@@ -4108,8 +4113,10 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1(), 0.05)
             self.assertEqual(expr2(), 0.5)
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._args_), id(expr2._args_))
-            self.assertEqual(id(expr1.arg(0)._args_), id(expr2._args_))
+            self.assertNotEqual(id(expr1._l_arg), id(expr2._l_arg))
+            self.assertEqual(id(expr1._r_arg), id(expr2._r_arg))
+            self.assertEqual(id(expr1.arg(0)._l_arg), id(expr2._l_arg))
+            self.assertEqual(id(expr1.arg(0)._r_arg), id(expr2._r_arg))
             self.assertEqual(id(expr1.arg(0).arg(0)), id(expr2.arg(0)))
             self.assertEqual(id(expr1.arg(0).arg(1)), id(expr2.arg(1)))
 
@@ -4117,11 +4124,12 @@ class TestCloneExpression(unittest.TestCase):
             expr2 = expr1.clone()
             self.assertEqual(expr1(), 1 / 3.0)
             self.assertEqual(expr2(), 1 / 3.0)
-            # Note that since one of the args is a sum expression, the _args_
+            # Note that since one of the args is a sum expression, the _args
             # in the sum is a *list*, which will be duplicated by deepcopy.
             # This will cause the two args in the Product to be different.
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._args_), id(expr2._args_))
+            self.assertEqual(id(expr1._l_arg), id(expr2._l_arg))
+            self.assertNotEqual(id(expr1._r_arg), id(expr2._r_arg))
             self.assertEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             self.assertNotEqual(id(expr1.arg(1)), id(expr2.arg(1)))
             #
@@ -4137,7 +4145,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1(), 75)
             self.assertEqual(expr2(), 75)
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._args_), id(expr2._args_))
+            self.assertNotEqual(id(expr1._args), id(expr2._args))
             self.assertEqual(expr1.arg(0)(), expr2.arg(0)())
             self.assertEqual(expr1.arg(1)(), expr2.arg(1)())
             self.assertNotEqual(id(expr1.arg(0)), id(expr2.arg(0)))
@@ -4146,7 +4154,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1(), 85)
             self.assertEqual(expr2(), 75)
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._args_), id(expr2._args_))
+            self.assertNotEqual(id(expr1._args), id(expr2._args))
             self.assertEqual(expr1.nargs(), 3)
             self.assertEqual(expr2.nargs(), 2)
             self.assertEqual(expr1.arg(0)(), 50)
@@ -4166,7 +4174,8 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1(), 150)
             self.assertEqual(expr2(), 150)
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._args_), id(expr2._args_))
+            self.assertNotEqual(id(expr1._l_arg), id(expr2._l_arg))
+            self.assertNotEqual(id(expr1._r_arg), id(expr2._r_arg))
             self.assertNotEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             self.assertNotEqual(id(expr1.arg(1)), id(expr2.arg(1)))
             self.assertEqual(expr1.arg(0)(), expr2.arg(0)())
@@ -4205,7 +4214,8 @@ class TestCloneExpression(unittest.TestCase):
             expr2 = expr1.clone()
 
             self.assertNotEqual(id(expr1), id(expr2))
-            self.assertNotEqual(id(expr1._args_), id(expr2._args_))
+            self.assertNotEqual(id(expr1._l_arg), id(expr2._l_arg))
+            self.assertNotEqual(id(expr1._r_arg), id(expr2._r_arg))
             self.assertNotEqual(id(expr1.arg(0)), id(expr2.arg(0)))
             self.assertNotEqual(id(expr1.arg(1)), id(expr2.arg(1)))
             self.assertEqual(expr1.arg(0)(), expr2.arg(0)())
@@ -4256,7 +4266,7 @@ class TestCloneExpression(unittest.TestCase):
         # turns out that two empty tuples, a and b, return True for a is b
         # self.assertIsNot(e.linear_coefs, f.linear_coefs)
         # self.assertIsNot(e.linear_vars, f.linear_vars)
-        self.assertIsNot(e._args_, f._args_)
+        self.assertIsNot(e._args, f._args)
         self.assertEqual(e.constant, f.constant)
         self.assertEqual(e.linear_coefs, f.linear_coefs)
         self.assertEqual(e.linear_vars, f.linear_vars)
@@ -4351,11 +4361,11 @@ class TestCloneExpression(unittest.TestCase):
 
         f = e.create_node_with_local_data([self.m.b, self.m.p])
         self.assertIs(type(f), MonomialTermExpression)
-        self.assertStructuredAlmostEqual(f._args_, [self.m.p, self.m.b])
+        self.assertStructuredAlmostEqual(f.args, [self.m.p, self.m.b])
 
         g = e.create_node_with_local_data([self.m.b, self.m.p], ProductExpression)
         self.assertIs(type(g), ProductExpression)
-        self.assertStructuredAlmostEqual(g._args_, [self.m.b, self.m.p])
+        self.assertStructuredAlmostEqual(g.args, [self.m.b, self.m.p])
 
 
 #
@@ -4838,7 +4848,7 @@ class TestLinearExpression(unittest.TestCase):
         with LoggingIntercept() as OUT:
             e = LinearExpression(args)
         self.assertEqual(OUT.getvalue(), "")
-        self.assertIs(e._args_, args)
+        self.assertIs(e._args, args)
         self.assertEqual(e.constant, 10)
         self.assertEqual(e.linear_vars, (m.y, m.x))
         self.assertEqual(e.linear_coefs, (4, 5))

@@ -18,12 +18,14 @@ from pyomo.environ import (
     log10,
 )
 from pyomo.opt import SolverFactory, TerminationCondition
+from pyomo.opt import SolverStatus, SolutionStatus
 
 from pyomo.solvers.plugins.solvers.GAMS import GAMSShell, GAMSDirect, gdxcc_available
 import pyomo.common.unittest as unittest
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.tee import capture_output
 import os, shutil
+import random
 from tempfile import mkdtemp
 
 opt_py = SolverFactory('gams', solver_io='python')
@@ -36,6 +38,34 @@ if gamspy_available:
 
 opt_gms = SolverFactory('gams', solver_io='gms')
 gamsgms_available = opt_gms.available(exception_flag=False)
+
+
+def _market_split_model():
+    """We got this from Google AI, but it did seem pretty difficult for
+    Gurobi to solve."""
+    rng = random.Random(42)
+    m = ConcreteModel()
+    m.I = pyo.RangeSet(0, 7)
+    m.J = pyo.RangeSet(0, 69)
+    m.a = pyo.Param(
+        m.I, m.J, initialize={(i, j): int(100 * rng.random()) for i in m.I for j in m.J}
+    )
+    m.b = pyo.Param(m.I, initialize={i: sum(m.a[i, j] for j in m.J) // 2 for i in m.I})
+    m.x = Var(m.J, within=pyo.Binary)
+    m.s_plus = Var(m.I, within=pyo.NonNegativeReals)
+    m.s_minus = Var(m.I, within=pyo.NonNegativeReals)
+
+    @m.Objective()
+    def obj(m):
+        return sum(m.s_plus[i] + m.s_minus[i] for i in m.I)
+
+    @m.Constraint(m.I)
+    def split(m, i):
+        return (
+            sum(m.a[i, j] * m.x[j] for j in m.J) + m.s_plus[i] - m.s_minus[i] == m.b[i]
+        )
+
+    return m
 
 
 @unittest.pytest.mark.solver("gams")
@@ -336,6 +366,40 @@ class GAMSTests(unittest.TestCase):
             self.assertEqual(
                 res.solution[0].Variable[f'a_long_var_name_{i}_']['Value'], 1
             )
+
+    @unittest.skipIf(
+        not gamspy_available, "The 'gams' python bindings are not available"
+    )
+    def test_issue_2452_time_limit_with_integer_solution_py(self):
+        # Specifically triggering the case where SOLVESTAT == 3
+        # and MODELSTAT == 8
+        with SolverFactory("gams", solver_io="python") as opt:
+            results = opt.solve(
+                _market_split_model(),
+                io_options={'add_options': ['option reslim=0.2;']},
+                load_solutions=False,
+            )
+        self.assertEqual(results.solver.status, SolverStatus.ok)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.maxTimeLimit
+        )
+        self.assertEqual(results.solution(0).status, SolutionStatus.feasible)
+
+    @unittest.skipIf(not gamsgms_available, "The 'gams' executable is not available")
+    def test_issue_2452_time_limit_with_integer_solution_gms(self):
+        # Specifically triggering the case where SOLVESTAT == 3
+        # and MODELSTAT == 8
+        with SolverFactory("gams", solver_io="gms") as opt:
+            results = opt.solve(
+                _market_split_model(),
+                io_options={'add_options': ['option reslim=0.2;']},
+                load_solutions=False,
+            )
+        self.assertEqual(results.solver.status, SolverStatus.ok)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.maxTimeLimit
+        )
+        self.assertEqual(results.solution(0).status, SolutionStatus.feasible)
 
 
 class GAMSLogfileTestBase(unittest.TestCase):
