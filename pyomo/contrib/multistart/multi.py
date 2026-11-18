@@ -70,7 +70,6 @@ class MultistartConfig(SolverConfig):
                 doc="""Specify the restart strategy.
 
             - "rand": random choice between variable bounds
-            - "rand_vector": random choice, vectorized approach with sampler
             - "midpoint_guess_and_bound": midpoint between current value and farthest bound
             - "rand_guess_and_bound": random choice between current value and farthest bound
             - "rand_distributed": random choice among evenly distributed values
@@ -159,6 +158,17 @@ class MultistartConfig(SolverConfig):
                 default="random_uniform",
                 description="Method for sampling random starting points for reinitialization step. "
                 "Supported options are 'random_uniform', 'latin_hypercube', and 'sobol_sampling'. ",
+                doc="""Method for sampling the starting points.
+
+            - "random_uniform": independent uniform points
+            - "latin_hypercube": one Latin hypercube design with one point per
+              iteration, so it needs a fixed number of iterations
+            - "sobol_sampling": a scrambled Sobol sequence, best when the number
+              of iterations is a power of 2
+
+            The high confidence stopping rule (iterations = -1) requires
+            "random_uniform".
+            """,
             ),
         )
         self.seed = self.declare(
@@ -291,7 +301,10 @@ class MultiStart(SolverBase):
 
         # Create centralized sampler once
         sampler = SamplingManager(
-            method=config.sampling_method, rng=config.rng, seed=config.seed
+            method=config.sampling_method,
+            rng=config.rng,
+            seed=config.seed,
+            n_points=config.iterations if config.iterations > 0 else None,
         )
 
         # Allocate the results object so we can populate it as we go
@@ -412,6 +425,11 @@ class MultiStart(SolverBase):
             if config.strategy != "rand":
                 raise ValueError(
                     "High confidence stopping rule requires rand strategy."
+                )
+            if sampler.method != "uniform":
+                raise ValueError(
+                    "High confidence stopping rule requires random_uniform "
+                    "sampling, because it assumes independent random starts."
                 )
             max_iter = config.HCS_max_iterations
 
@@ -540,12 +558,21 @@ class MultiStart(SolverBase):
 
 # Sampling class to organize and configure random samplers
 class SamplingManager:
-    def __init__(self, method, rng=None, seed=None):
+    """Provide the starting point for each start as a point in the unit cube.
+
+    Each start draws one point for all eligible variables together, and the
+    restart strategy maps each coordinate onto that variable's range. This
+    keeps Latin hypercube and Sobol points spread out across the starts.
+    """
+
+    def __init__(self, method, rng=None, seed=None, n_points=None):
 
         self.method = method
         self._check_method()
 
         self.seed = seed
+        # Number of sampled starts; Latin hypercube needs it in advance
+        self.n_points = n_points
 
         # Define or create a random number generator
         if rng is not None:
@@ -554,6 +581,8 @@ class SamplingManager:
             self.rng = np.random.default_rng(seed)
 
         self.qmc_sampler = None
+        self._dim = None
+        self._lhs_rows = []
 
     def _check_method(self):
         # Define accepted method names.
@@ -575,32 +604,33 @@ class SamplingManager:
                 "or sobol_sampling."
             )
 
-    def _ensure_qmc(self, dim):
-        if self.qmc_sampler is not None:
-            return
-        if self.method == "lhs":
+    def unit_point(self, dim):
+        """Return the point for the next start, in [0, 1)^dim."""
+        if self._dim is None:
+            self._dim = dim
+        elif dim != self._dim:
+            raise ValueError(
+                f"Sampler was set up for {self._dim} variables, but {dim} were "
+                "requested. The eligible variables must not change between starts."
+            )
+
+        if self.method == "uniform":
+            return self.rng.random(dim)
+
+        if self.method == "sobol":
+            if self.qmc_sampler is None:
+                self.qmc_sampler = stats.qmc.Sobol(d=dim, scramble=True, seed=self.rng)
+            # Sobol is a sequence, so drawing one point at a time gives the
+            # same points as drawing them all at once
+            return self.qmc_sampler.random(1)[0]
+
+        # Latin hypercube is a fixed-size design, stratified only across its
+        # own rows, so draw every start at once and hand out one row per start
+        if not self._lhs_rows:
+            if not self.n_points:
+                raise ValueError(
+                    "Latin hypercube sampling needs a fixed number of iterations."
+                )
             self.qmc_sampler = stats.qmc.LatinHypercube(d=dim, seed=self.rng)
-        elif self.method == "sobol":
-            self.qmc_sampler = stats.qmc.Sobol(d=dim, scramble=True, seed=self.rng)
-
-    def sample_scalar(self, lower, upper):
-        if self.method == "uniform":
-            return self.rng.uniform(lower, upper)
-
-        if self.method in ("lhs", "sobol"):
-            self._ensure_qmc(dim=1)
-            x = self.qmc_sampler.random(n=1)  # shape (1, d)
-            return stats.qmc.scale(x, lower, upper).item()
-
-    def sample_vector(self, lower, upper):
-        """Vector sample for uniform/lhs/sobol over all vars at once."""
-        lower = np.asarray(lower, dtype=float)
-        upper = np.asarray(upper, dtype=float)
-
-        if self.method == "uniform":
-            return self.rng.uniform(lower, upper)
-
-        if self.method in ("lhs", "sobol"):
-            self._ensure_qmc(dim=len(lower))
-            x = self.qmc_sampler.random(n=1)  # shape (1, d)
-            return stats.qmc.scale(x, lower, upper)[0]
+            self._lhs_rows = list(self.qmc_sampler.random(self.n_points))
+        return self._lhs_rows.pop(0)

@@ -16,7 +16,8 @@ import pyomo.common.unittest as unittest
 from pyomo.common.dependencies import attempt_import, numpy_available, scipy_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.multistart.high_conf_stop import should_stop
-from pyomo.contrib.multistart.reinit import strategies
+from pyomo.contrib.multistart.multi import SamplingManager
+from pyomo.contrib.multistart.reinit import reinitialize_variables, strategies
 from pyomo.environ import (
     ConcreteModel,
     Constraint,
@@ -95,6 +96,9 @@ class MultistartTests(unittest.TestCase):
         m.x = Var(domain=NonNegativeReals)
         m.obj = Objective(expr=m.x)
         output = StringIO()
+        # x has no upper bound, so no start can be sampled for it. Instead of
+        # raising, reinitialization skips x with a warning and returns None,
+        # and the solve finishes from x's current value.
         with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.WARNING):
             SolverFactory('multistart').solve(m)
             self.assertIn(
@@ -102,10 +106,6 @@ class MultistartTests(unittest.TestCase):
                 "variable x with bounds (0, None).",
                 output.getvalue().strip(),
             )
-        # rand_vector samples all eligible variables at once and raises
-        # if none has both bounds (x has no upper bound)
-        with self.assertRaisesRegex(ValueError, "No eligible variables"):
-            SolverFactory('multistart').solve(m, strategy="rand_vector")
 
     def test_var_value_None(self):
         m = ConcreteModel()
@@ -226,20 +226,47 @@ class MultistartTests(unittest.TestCase):
         )
 
     @parameterized.expand(
-        product(["uniform", "latin_hypercube", "sobol"], ["rand", "rand_vector"]),
-        name_func=lambda f, n, p: f"{f.__name__}_{p.args[0]}_{p.args[1]}",
+        ["uniform", "latin_hypercube", "sobol"],
+        name_func=lambda f, n, p: f"{f.__name__}_{p.args[0]}",
     )
     # skipIf must be inside expand to apply to the generated tests
     @unittest.skipIf(not scipy_available, "Scipy not available")
-    def test_sampling_methods(self, method, strategy):
+    def test_sampling_methods(self, method):
         # For the simple model, check all sampling methods converge
         m = build_model()
-        res = SolverFactory("multistart").solve(
-            m, strategy=strategy, sampling_method=method, seed=145
-        )
+        res = SolverFactory("multistart").solve(m, sampling_method=method, seed=145)
         self.assertEqual(
             res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
         )
+
+    @parameterized.expand(
+        ["latin_hypercube", "sobol"],
+        name_func=lambda f, n, p: f"{f.__name__}_{p.args[0]}",
+    )
+    @unittest.skipIf(not scipy_available, "Scipy not available")
+    def test_sampled_starts_cover_all_strata(self, method):
+        # Over n starts, each variable lands once in each 1/n of its range.
+        # This holds only if every start is one point of one LHS/Sobol set.
+        n = 8
+        m = ConcreteModel()
+        m.x = Var(range(3), bounds=(0, 1))
+        var_list = list(m.x.values())
+        config = SolverFactory('multistart').config
+        sampler = SamplingManager(method, seed=0, n_points=n)
+        starts = []
+        for _ in range(n):
+            reinitialize_variables(var_list, config, sampler)
+            starts.append([v.value for v in var_list])
+        for k in range(len(var_list)):
+            self.assertEqual(len({int(s[k] * n) for s in starts}), n)
+
+    def test_HCS_requires_uniform_sampling(self):
+        # The stopping rule assumes independent random starts
+        m = build_model()
+        with self.assertRaisesRegex(ValueError, "requires random_uniform"):
+            SolverFactory('multistart').solve(
+                m, iterations=-1, sampling_method='latin_hypercube'
+            )
 
     def test_max_time_limit(self):
         simple_model = build_model()
