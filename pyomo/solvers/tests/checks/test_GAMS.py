@@ -380,7 +380,7 @@ class GAMSTests(unittest.TestCase):
         not (gamspy_available and highs_available),
         "The 'gams' python bindings or HiGHs are not available",
     )
-    def test_issue_2542_time_limit_with_integer_solution_py(self):
+    def test_issue_2452_time_limit_with_integer_solution_py(self):
         # Specifically triggering the case where SOLVESTAT == 3
         # and MODELSTAT == 8
         with SolverFactory("gams", solver_io="python") as opt:
