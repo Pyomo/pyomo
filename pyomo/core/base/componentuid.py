@@ -10,6 +10,8 @@
 import codecs
 import re
 
+from typing import Callable, Any
+
 import pyomo.tpl.ply.lex as lex
 
 from pyomo.common.collections import ComponentMap
@@ -31,6 +33,10 @@ class _NotSpecified:
 
 
 def _pickle(x):
+    cls = x.__class__.__name__
+    if cls in ComponentUID.Serializer:
+        dat = str(ComponentUID.Serializer[cls](x))
+        return f"!{cls!r}:{dat!r}"
     return '|' + repr(pickle.dumps(x, protocol=2))
 
 
@@ -77,6 +83,16 @@ class ComponentUID:
         float: lambda x: '#' + str(x),
         str: lambda x: '$' + str(x),
     }
+
+    #: Registry of serialization / deserialization functions used by
+    #: :class:`ComponentUID`.
+    #:
+    #: Maps a class name to a callback that will serialize / deserialize
+    #: instances of it.  The callback takes a single argument.  If the
+    #: argument is a string, then the callable should deserialize the
+    #: string and return the object, and if it is anything other than a
+    #: string, then it serializes the object and returns a string.
+    Serializer: dict[str, Callable[[Any | str], str | Any]] = {}
 
     def __init__(self, component, cuid_buffer=None, context=None):
         # A CUID can be initialized from either a reference component or
@@ -488,7 +504,13 @@ class ComponentUID:
                 elif tok.type == 'STAR':
                     idx_stack[-1].append(tok.value)
                 else:
-                    assert tok.type in {'WORD', 'STRING', 'NUMBER', 'PICKLE'}
+                    assert tok.type in {
+                        'WORD',
+                        'STRING',
+                        'NUMBER',
+                        'PICKLE',
+                        'CALLBACK',
+                    }
                     idx_stack[-1].append(tok.value)
             else:
                 assert tok.type in {'WORD', 'STRING'}
@@ -667,6 +689,7 @@ tokens = [
     "NUMBER",  # raw number
     "STAR",  # either * or **
     "PICKLE",  # a pickled index object
+    "CALLBACK",  # an index object serialized by callback
 ]
 
 
@@ -714,6 +737,13 @@ def t_PICKLE(t):
     unescaped = _re_escape_sequences.sub(_match_escape, t.value[start:-1])
     rawstr = bytes(list(ord(_) for _ in unescaped))
     t.value = pickle.loads(rawstr)
+    return t
+
+
+@lex.TOKEN(r'!(?:' + _general_str + "):(?:" + _general_str + ")")
+def t_CALLBACK(t):
+    classname, data = t.value[1:].split(':', maxsplit=1)
+    t.value = ComponentUID.Serializer[classname[1:-1]](data[1:-1])
     return t
 
 
