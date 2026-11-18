@@ -10,16 +10,11 @@
 """Helper functions for variable reinitialization."""
 
 import logging
-import random
-from pyomo.common.dependencies import numpy as np
-from pyomo.common.dependencies.scipy import stats
-from pyomo.util.vars_from_expressions import get_vars_from_components
 
 logger = logging.getLogger('pyomo.contrib.multistart')
 
 
 def rand(val, lb, ub, sampler):
-    # sample = sampler.rng.uniform(lb, ub)
     sample = sampler.sample_scalar(lb, ub)  # uniform distribution between lb and ub
     return sample
 
@@ -72,15 +67,15 @@ strategies = {
 }
 
 
-def reinitialize_variables(model, config, sampler):
-    """Reinitializes all variable values in the model.
+def reinitialize_variables(var_list, config, sampler):
+    """Reinitializes the values of the variables in var_list.
 
     Excludes fixed, noncontinuous, and unbounded variables.
 
     """
 
     eligible_vars = []
-    for var in model._vars_list:
+    for var in var_list:
         if var.is_fixed() or not var.is_continuous():
             continue
         if var.lb is None or var.ub is None:
@@ -99,7 +94,7 @@ def reinitialize_variables(model, config, sampler):
 
         if len(eligible_vars) == 0:
             raise ValueError(
-                "No eligible variables to reinitialize." "Please add bounds."
+                "No eligible variables to reinitialize. Please add bounds."
             )
         # Collect lower and upper bounds for sampler
         lowers = [v.lb for v in eligible_vars]
@@ -117,7 +112,6 @@ def reinitialize_variables(model, config, sampler):
     else:
         for var in eligible_vars:
             val = var.value if var.value is not None else (var.lb + var.ub) / 2
-            # print(f"val = {val}\n")
             # apply reinitialization strategy to variable
             var.set_value(
                 strategies[config.strategy](val, var.lb, var.ub, sampler),

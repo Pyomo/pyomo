@@ -8,8 +8,6 @@
 # ____________________________________________________________________________________
 
 from pyomo.core.base.block import BlockData
-from pyomo.contrib.solver.common.base import SolverBase
-from pyomo.common.dependencies import numpy as np
 import pyomo.environ as pyo
 from pyomo.contrib.solver.common.results import SolutionStatus
 from pyomo.devel.initialization.bounds.bound_variables import (
@@ -24,7 +22,7 @@ logger = logging.getLogger(__name__)
 def _initialize_with_multistart_solver(
     nlp: BlockData,
     multistart_solver,
-    seed,
+    seed=None,
     default_bound=1.0e8,
     use_univariate_nonlinear_decomposition: bool = True,
     aggressive_substitution: bool = True,
@@ -51,12 +49,11 @@ def _initialize_with_multistart_solver(
     fix_vars_with_equal_bounds(nlp)
     logger.info('fixed variables with equal bounds')
 
-    # Set multistart solver configs
-    multistart_solver.config.seed = seed
-    multistart_solver.config.load_solutions = False
-    multistart_solver.config.raise_exception_on_nonoptimal_result = False
-
-    res = multistart_solver.solve(nlp)
+    # Pass settings to solve() so the caller's solver config is not modified
+    solve_kwds = dict(load_solutions=False, raise_exception_on_nonoptimal_result=False)
+    if seed is not None:
+        solve_kwds['seed'] = seed
+    res = multistart_solver.solve(nlp, **solve_kwds)
     logger.info('Finished multistart optimization iterations.')
     if res.solution_status in {SolutionStatus.feasible, SolutionStatus.optimal}:
         res.solution_loader.load_vars()

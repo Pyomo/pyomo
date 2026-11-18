@@ -169,6 +169,19 @@ class MultistartTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "multiple active objectives"):
             SolverFactory('multistart').solve(m)
 
+    def test_model_not_modified(self):
+        # The solver must not attach attributes to the user's model or objective
+        m = build_model()
+        m._vars_list = 'user attribute'
+        SolverFactory('multistart').solve(m, iterations=2)
+        self.assertEqual(m._vars_list, 'user attribute')
+        self.assertFalse(hasattr(m.objtv, 'sign'))
+
+    def test_HCS_requires_rand_strategy(self):
+        m = build_model()
+        with self.assertRaisesRegex(ValueError, "requires rand strategy"):
+            SolverFactory('multistart').solve(m, iterations=-1, strategy='midpoint')
+
     def test_unsupported_sampling_method(self):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 1))
@@ -239,7 +252,7 @@ class MultistartTests(unittest.TestCase):
                 time_limit=1e-6,
             )
             self.assertIn(
-                "Time limit reached after 1 iterations.", output.getvalue().strip()
+                "Time limit reached after 0 iterations.", output.getvalue().strip()
             )
             self.assertEqual(
                 res.termination_condition, TerminationCondition.maxTimeLimit

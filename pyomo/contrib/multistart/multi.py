@@ -11,25 +11,20 @@
 import logging
 
 from pyomo.common.config import (
-    ConfigBlock,
-    ConfigDict,
     ConfigValue,
     In,
-    document_kwargs_from_configdict,
     document_class_CONFIG,
     document_configdict,
-    ADVANCED_OPTION,
 )
 
 from typing import Any, Optional
 import datetime
 
 from pyomo.common.timing import HierarchicalTimer, default_timer
-from pyomo.common.modeling import unique_component_name
 from pyomo.common.dependencies import numpy as np
 from pyomo.contrib.multistart.high_conf_stop import should_stop
 from pyomo.contrib.multistart.reinit import reinitialize_variables, strategies
-from pyomo.core import Objective, Constraint, Var, minimize, value
+from pyomo.core import Objective, Constraint, Var, minimize
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.common.config import SolverConfig
 from pyomo.contrib.solver.common.factory import SolverFactory
@@ -87,15 +82,15 @@ class MultistartConfig(SolverConfig):
             "subsolver",
             ConfigValue(
                 default=None,
-                description="solver to use, If none, defaults to ipopt"
-                "Accepts solver names as string or solver objects.",
+                description="Solver to use. If None, defaults to ipopt. "
+                "Accepts solver names as strings or solver objects.",
             ),
         )
         self.subsolver_args = self.declare(
             "subsolver_args",
             ConfigValue(
                 default={},
-                description="Dictionary of keyword arguments to pass to the chosen solver."
+                description="Dictionary of keyword arguments to pass to the chosen solver. "
                 "Default subsolver is 'ipopt'.",
             ),
         )
@@ -125,7 +120,7 @@ class MultistartConfig(SolverConfig):
                 description="1 minus the confidence level required for the stopping rule.",
                 doc="""1 minus the confidence level required for the stopping rule for the
             high confidence stopping rule, only used with the random strategy.
-            The lower the parameter, the stricter the rule.               visibility=DEVELOPER_OPTION,
+            The lower the parameter, the stricter the rule.
             Value bounded in (0, 1].""",
             ),
         )
@@ -177,8 +172,8 @@ class MultistartConfig(SolverConfig):
             "rng",
             ConfigValue(
                 default=None,
-                description="Random number generator for reproducibility in random sampling methods. \
-                    Preferred over seed.",
+                description="Random number generator for reproducibility in random "
+                "sampling methods. Preferred over seed.",
             ),
         )
 
@@ -208,7 +203,7 @@ class MultiStartResults(Results):
         self.feasible_iter_list: Optional[list] = self.declare(
             'feasible_iter_list',
             ConfigValue(
-                description="Object for loading the solution back into the model."
+                description="Iteration numbers of the results in feasible_solution_list."
             ),
         )
 
@@ -267,10 +262,8 @@ class MultiStart(SolverBase):
 
     def version(self):
         """Get solver version."""
-        """
-            Original implementation: 0.1.0,
-            Current implementation: 0.2.0,
-        """
+        # Original implementation: 0.1.0
+        # Current implementation: 0.2.0
         current = (0, 2, 0)
         return current
 
@@ -348,8 +341,7 @@ class MultiStart(SolverBase):
             )
         elif len(objectives) == 1:
             obj = objectives[0]
-            obj.sign = 1 if obj.sense == minimize else -1
-            obj_sign = obj.sign
+            obj_sign = 1 if obj.sense == minimize else -1
 
         else:
             obj = None
@@ -372,23 +364,14 @@ class MultiStart(SolverBase):
         # As we are about to run a solver, update the stale flag
         StaleFlagManager.mark_all_as_stale()
 
-        # create temporary variable list for value transfer
-        tmp_var_list_name = unique_component_name(model, "_vars_list")
-        setattr(
-            model,
-            tmp_var_list_name,
-            list(model.component_data_objects(Var, descend_into=True)),
-        )
+        # variables to reinitialize at each start
+        var_list = list(model.component_data_objects(Var, descend_into=True))
         # If the list has nothing in it, check components
-        if len(model._vars_list) == 0:
-            setattr(
-                model,
-                tmp_var_list_name,
-                list(
-                    get_vars_from_components(
-                        model, ctype=(Constraint, Objective), active=True
-                    )
-                ),
+        if len(var_list) == 0:
+            var_list = list(
+                get_vars_from_components(
+                    model, ctype=(Constraint, Objective), active=True
+                )
             )
 
         num_iter = 0
@@ -409,7 +392,7 @@ class MultiStart(SolverBase):
                 obj_val = result.incumbent_objective
                 best_objective = obj_val
                 objectives.append(obj_val)
-        timer.start(f"timer_iter_{num_iter}")
+        timer.stop(f"timer_iter_{num_iter}")
 
         max_iter = config.iterations
 
@@ -426,9 +409,10 @@ class MultiStart(SolverBase):
         using_HCS = config.iterations == -1
         HCS_completed = False
         if using_HCS and num_iter != max_iter:
-            assert (
-                config.strategy == "rand"
-            ), "High confidence stopping rule requires rand strategy."
+            if config.strategy != "rand":
+                raise ValueError(
+                    "High confidence stopping rule requires rand strategy."
+                )
             max_iter = config.HCS_max_iterations
 
         timer.start('iterative_solves')
@@ -449,7 +433,7 @@ class MultiStart(SolverBase):
 
             # at first iteration, solve the originally passed model
             m = model
-            reinitialize_variables(m, config, sampler)
+            reinitialize_variables(var_list, config, sampler)
             result = self._subsolver.solve(m, **subsolver_args)
             logger.info(
                 f'solved NLP: {result.solution_status}, {result.termination_condition}'
@@ -486,7 +470,6 @@ class MultiStart(SolverBase):
                     break
 
         timer.stop('iterative_solves')
-        delattr(model, tmp_var_list_name)
 
         if using_HCS:
             if not HCS_completed:
@@ -587,7 +570,7 @@ class SamplingManager:
             self.method = aliases[key]
         else:
             raise ValueError(
-                f"Unknown sampling method '{self.method}'."
+                f"Unknown sampling method '{self.method}'. "
                 "Supported methods: random_uniform, latin_hypercube, "
                 "or sobol_sampling."
             )
@@ -596,7 +579,7 @@ class SamplingManager:
         if self.qmc_sampler is not None:
             return
         if self.method == "lhs":
-            self.qmc_sampler = stats.qmc.LatinHypercube(d=dim, rng=self.rng)
+            self.qmc_sampler = stats.qmc.LatinHypercube(d=dim, seed=self.rng)
         elif self.method == "sobol":
             self.qmc_sampler = stats.qmc.Sobol(d=dim, scramble=True, seed=self.rng)
 

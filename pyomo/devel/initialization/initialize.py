@@ -20,7 +20,6 @@ from pyomo.devel.initialization.multistart_init import (
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import Results
 from pyomo.contrib.solver.common.results import SolutionStatus
-import pyomo.environ as pyo
 from pyomo.devel.initialization.pwl_init import (
     _initialize_with_piecewise_linear_approximation,
 )
@@ -330,7 +329,7 @@ def initialize_with_multistart_opt(
     multistart_solver=None,
     skip_initial_nlp_solve: bool = False,
     default_bound: float = 1e8,
-    seed=0,
+    seed: int | None = None,
     use_univariate_nonlinear_decomposition: bool = False,
     aggressive_substitution: bool = True,
 ) -> Results:
@@ -346,13 +345,28 @@ def initialize_with_multistart_opt(
     nlp_solver: Optional[SolverBase]
         A solver interface appropriate for NLPs.
         Default: ipopt
-    multistart_solver: Optional[SolverFactory]
-        A configured multistart solver object for performing multistart optimization
+    multistart_solver: Optional[SolverBase]
+        A configured multistart solver (``SolverFactory('multistart')``).
+        Each start is solved with this solver's own ``subsolver``, not with
+        ``nlp_solver``.
+        Default: a multistart solver with Latin hypercube sampling,
+        ``seed=0`` and ``break_on_solution=True``
     skip_initial_nlp_solve: bool
         If True, the initial attempt at solving the NLP without initialization
         will be skipped.
-    seed: 0
-        Set reproducibility seed to make result deterministic.
+    default_bound: float
+        All nonlinear variables without bounds will be given lower and upper
+        bounds of -default_bound and default_bound.
+    seed: int | None
+        Seed for the multistart sampler, to make the result deterministic.
+        If given, it is used instead of the seed set on ``multistart_solver``
+        for this call only. If None, the solver's own seed is used.
+    use_univariate_nonlinear_decomposition: bool
+        If True, the contrib.piecewise.univariate_nonlinear_decomposition
+        transformation is applied before the variables are bounded.
+    aggressive_substitution: bool
+        This is passed along to the contrib.piecewise.univariate_nonlinear_decomposition
+        transformation.
 
     Returns
     -------
@@ -365,8 +379,8 @@ def initialize_with_multistart_opt(
         nlp_solver = _get_solver('ipopt', 'local NLP solver')
 
     if multistart_solver is None:
-        multistart_solver = pyo.SolverFactory("multistart")
-        multistart_solver.config.seed = seed
+        multistart_solver = SolverFactory("multistart")
+        multistart_solver.config.seed = 0
         multistart_solver.config.sampling_method = "lhs"
         multistart_solver.config.break_on_solution = True
 
