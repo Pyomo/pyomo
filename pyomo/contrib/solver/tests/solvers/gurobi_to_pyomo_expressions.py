@@ -68,16 +68,22 @@ class GurobiPyomoOpMap(defaultdict):
         self.update(
             {
                 GRB.OPCODE_PLUS: SumExpression,
-                GRB.OPCODE_MINUS: lambda args: SumExpression([args[0], NegationExpression([args[1]])]), # This is sum of negated term for us
+                GRB.OPCODE_MINUS: lambda args: SumExpression(
+                    [args[0], NegationExpression([args[1]])]
+                ),  # This is sum of negated term for us
                 GRB.OPCODE_UMINUS: NegationExpression,
                 GRB.OPCODE_MULTIPLY: _make_product,
                 GRB.OPCODE_DIVIDE: DivisionExpression,
                 GRB.OPCODE_SQUARE: _make_square,
-                GRB.OPCODE_SQRT: lambda args: UnaryFunctionExpression(args,'sqrt', sqrt),
+                GRB.OPCODE_SQRT: lambda args: UnaryFunctionExpression(
+                    args, 'sqrt', sqrt
+                ),
                 GRB.OPCODE_EXP: lambda args: UnaryFunctionExpression(args, 'exp', exp),
                 GRB.OPCODE_LOG: lambda args: UnaryFunctionExpression(args, 'log', log),
                 GRB.OPCODE_LOG2: lambda args: UnaryFunctionExpression(args, 'log', log),
-                GRB.OPCODE_LOG10: lambda args: UnaryFunctionExpression(args, 'log10', log10),
+                GRB.OPCODE_LOG10: lambda args: UnaryFunctionExpression(
+                    args, 'log10', log10
+                ),
                 GRB.OPCODE_POW: PowExpression,
                 GRB.OPCODE_SIN: lambda args: UnaryFunctionExpression(args, 'sin', sin),
                 GRB.OPCODE_COS: lambda args: UnaryFunctionExpression(args, 'cos', cos),

@@ -46,8 +46,7 @@ if gurobipy_14_available and not GurobiDirectMINLP().available():
 old_gurobipy_available = False
 if not gurobipy_14_available:
     gurobipy, old_gurobipy_available = attempt_import(
-        'gurobipy',
-        minimum_version='12.0.0'
+        'gurobipy', minimum_version='12.0.0'
     )
     if old_gurobipy_available and not GurobiDirectMINLP().available():
         old_gurobipy_available = False
@@ -71,43 +70,39 @@ class CommonTest(unittest.TestCase):
         return GurobiMINLPVisitor(grb_model, symbolic_solver_labels=True)
 
 
-class Gurobi14Test():
+class Gurobi14Test:
     def get_nonlinear_constraints(self, grb_model):
         return grb_model.getNLConstrs()
 
-    def check_grb_expr_tree(self, grb_model, nl_cons, aux_var, pyo_expr,
-                            reverse_var_map, pyo_model):
+    def check_grb_expr_tree(
+        self, grb_model, nl_cons, aux_var, pyo_expr, reverse_var_map, pyo_model
+    ):
         opcode, data, parent = grb_model.getNLConstrLHSAdv(nl_cons)
 
         pyo_model._dummy_aux_var = Var()
         default_var_map = defaultdict(lambda: pyo_model._dummy_aux_var)
         for grb_var, pyo_var in reverse_var_map.items():
             default_var_map[grb_var] = pyo_var
-        
+
         expr = grb_nl_to_pyo_expr(opcode, data, parent, default_var_map)
-        assertExpressionsEqual(
-            self,
-            expr,
-            pyo_model._dummy_aux_var - pyo_expr
-        )
+        assertExpressionsEqual(self, expr, pyo_model._dummy_aux_var - pyo_expr)
 
 
-class OldGurobiTest():
+class OldGurobiTest:
     def get_nonlinear_constraints(self, grb_model):
         return grb_model.getGenConstrs()
 
-    def check_grb_expr_tree(self, grb_model, nl_cons, aux_var, pyo_expr,
-                            reverse_var_map, pyo_model):
+    def check_grb_expr_tree(
+        self, grb_model, nl_cons, aux_var, pyo_expr, reverse_var_map, pyo_model
+    ):
         res_var, opcode, data, parent = grb_model.getGenConstrNLAdv(nl_cons)
         self.assertIs(res_var, aux_var)
         assertExpressionsEqual(
-            self,
-            grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map),
-            pyo_expr,
+            self, grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map), pyo_expr
         )
 
 
-class GurobiMINLPWalkerTests():
+class GurobiMINLPWalkerTests:
     def _add_nl_constr(self, visitor, expr):
         # This is a bit hacky, but the only way that I know to get the expression tree
         # publicly is from a general nonlinear constraint. So we can create it, and
@@ -297,7 +292,7 @@ class GurobiMINLPWalkerTests():
                 (ProductExpression((MonomialTermExpression((0.0, m.x1)), m.x2)), m.x3)
             ),
             reverse_var_map,
-            m
+            m,
         )
 
     def test_write_division(self):
@@ -313,12 +308,7 @@ class GurobiMINLPWalkerTests():
             grb_var: py_var for py_var, grb_var in visitor.var_map.items()
         }
         self.check_grb_expr_tree(
-            visitor.grb_model,
-            nl_cons,
-            aux,
-            1.0 / m.x1,
-            grb_to_pyo_var_map,
-            m
+            visitor.grb_model, nl_cons, aux, 1.0 / m.x1, grb_to_pyo_var_map, m
         )
 
     def test_write_division_linear(self):
@@ -410,7 +400,7 @@ class GurobiMINLPWalkerTests():
             aux,
             SumExpression((3.0, MonomialTermExpression((2.0, m.x2)), m.x1**2)) ** 2,
             reverse_var_map,
-            m
+            m,
         )
 
     def test_write_nonquadratic_power_expression_var_const(self):
@@ -423,12 +413,7 @@ class GurobiMINLPWalkerTests():
         nl_cons, aux = self._add_nl_constr(visitor, expr)
         reverse_var_map = {grb_v: pyo_v for pyo_v, grb_v in visitor.var_map.items()}
         self.check_grb_expr_tree(
-            visitor.grb_model,
-            nl_cons,
-            aux,
-            m.x1**3.0,
-            reverse_var_map,
-            m
+            visitor.grb_model, nl_cons, aux, m.x1**3.0, reverse_var_map, m
         )
 
     def test_write_power_expression_var_var(self):
@@ -446,12 +431,7 @@ class GurobiMINLPWalkerTests():
         nl_cons, aux = self._add_nl_constr(visitor, expr)
         reverse_var_map = {grb_v: pyo_v for pyo_v, grb_v in visitor.var_map.items()}
         self.check_grb_expr_tree(
-            visitor.grb_model,
-            nl_cons,
-            aux,
-            m.x1**m.x2,
-            reverse_var_map,
-            m
+            visitor.grb_model, nl_cons, aux, m.x1**m.x2, reverse_var_map, m
         )
 
     def test_write_power_expression_const_var(self):
@@ -465,12 +445,7 @@ class GurobiMINLPWalkerTests():
         nl_cons, aux = self._add_nl_constr(visitor, expr)
         reverse_var_map = {grb_v: pyo_v for pyo_v, grb_v in visitor.var_map.items()}
         self.check_grb_expr_tree(
-            visitor.grb_model,
-            nl_cons,
-            aux,
-            2.0**m.x2,
-            reverse_var_map,
-            m
+            visitor.grb_model, nl_cons, aux, 2.0**m.x2, reverse_var_map, m
         )
 
     def test_write_absolute_value_of_constant(self):
@@ -574,12 +549,7 @@ class GurobiMINLPWalkerTests():
         nl_cons, aux = self._add_nl_constr(visitor, expr)
         reverse_var_map = {grb_v: pyo_v for pyo_v, grb_v in visitor.var_map.items()}
         self.check_grb_expr_tree(
-            visitor.grb_model,
-            nl_cons,
-            aux,
-            4.0**m.x2,
-            reverse_var_map,
-            m
+            visitor.grb_model, nl_cons, aux, 4.0**m.x2, reverse_var_map, m
         )
 
     def test_monomial_expression(self):
@@ -623,12 +593,7 @@ class GurobiMINLPWalkerTests():
         nl_cons, aux = self._add_nl_constr(visitor, expr)
         reverse_var_map = {grb_v: pyo_v for pyo_v, grb_v in visitor.var_map.items()}
         self.check_grb_expr_tree(
-            visitor.grb_model,
-            nl_cons,
-            aux,
-            log(m.x1),
-            reverse_var_map,
-            m
+            visitor.grb_model, nl_cons, aux, log(m.x1), reverse_var_map, m
         )
 
     def test_handle_complex_number_sqrt(self):
@@ -666,21 +631,18 @@ class TestGurobi14MINLPWalker(GurobiMINLPWalkerTests, CommonTest):
     def get_nonlinear_constraints(self, grb_model):
         return grb_model.getNLConstrs()
 
-    def check_grb_expr_tree(self, grb_model, nl_cons, aux_var, pyo_expr,
-                            reverse_var_map, pyo_model):
+    def check_grb_expr_tree(
+        self, grb_model, nl_cons, aux_var, pyo_expr, reverse_var_map, pyo_model
+    ):
         opcode, data, parent = grb_model.getNLConstrLHSAdv(nl_cons)
 
         pyo_model._dummy_aux_var = Var()
         default_var_map = defaultdict(lambda: pyo_model._dummy_aux_var)
         for grb_var, pyo_var in reverse_var_map.items():
             default_var_map[grb_var] = pyo_var
-        
+
         expr = grb_nl_to_pyo_expr(opcode, data, parent, default_var_map)
-        assertExpressionsEqual(
-            self,
-            expr,
-            pyo_model._dummy_aux_var - pyo_expr
-        )
+        assertExpressionsEqual(self, expr, pyo_model._dummy_aux_var - pyo_expr)
 
 
 @unittest.skipUnless(old_gurobipy_available, "Gurobipy >= 12 and < 14 is not available")
@@ -689,12 +651,11 @@ class TestOldGurobiMINLPWriter(GurobiMINLPWalkerTests, CommonTest):
     def get_nonlinear_constraints(self, grb_model):
         return grb_model.getGenConstrs()
 
-    def check_grb_expr_tree(self, grb_model, nl_cons, aux_var, pyo_expr,
-                            reverse_var_map, pyo_model):
+    def check_grb_expr_tree(
+        self, grb_model, nl_cons, aux_var, pyo_expr, reverse_var_map, pyo_model
+    ):
         res_var, opcode, data, parent = grb_model.getGenConstrNLAdv(nl_cons)
         self.assertIs(res_var, aux_var)
         assertExpressionsEqual(
-            self,
-            grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map),
-            pyo_expr,
+            self, grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map), pyo_expr
         )

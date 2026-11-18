@@ -45,7 +45,7 @@ from pyomo.opt import WriterFactory
 from pyomo.contrib.solver.solvers.gurobi.gurobi_direct_minlp import (
     GurobiDirectMINLP,
     GurobiMINLPVisitor,
-    GRB
+    GRB,
 )
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import TerminationCondition
@@ -55,7 +55,7 @@ from pyomo.contrib.solver.tests.solvers.test_gurobi_minlp_walker import (
     gurobipy_14_available,
     old_gurobipy_available,
     Gurobi14Test,
-    OldGurobiTest
+    OldGurobiTest,
 )
 
 
@@ -78,7 +78,7 @@ def make_model():
     return m
 
 
-class GurobiMINLPWriterTests():
+class GurobiMINLPWriterTests:
     def test_small_model(self):
         grb_model = gurobipy.Model()
         visitor = GurobiMINLPVisitor(grb_model, symbolic_solver_labels=True)
@@ -156,19 +156,15 @@ class GurobiMINLPWriterTests():
         self.assertEqual(obj.size(), 1)
         self.assertEqual(obj.getCoeff(0), 1)
         obj_aux = obj.getVar(0)
-        
+
         obj_cons = nonlinear_constrs[0]
         self.check_grb_expr_tree(
-            grb_model, obj_cons,
-            obj_aux, log(m.x1),
-            reverse_var_map, m
-        )    
+            grb_model, obj_cons, obj_aux, log(m.x1), reverse_var_map, m
+        )
 
         c1 = nonlinear_constrs[1]
         self.check_grb_expr_tree(
-            grb_model, c1,
-            aux_var, m.x3 + (- (2.0 ** m.x2)),
-            reverse_var_map, m
+            grb_model, c1, aux_var, m.x3 + (-(2.0**m.x2)), reverse_var_map, m
         )
 
     def test_write_NPV_negation_in_RHS(self):
@@ -371,20 +367,24 @@ class GurobiMINLPWriterTests():
 
         # log(x)**2 + y
         g1 = nonlinear_constrs[0]
-        self.check_grb_expr_tree(grb_model, g1, aux1, log(m.x) ** 2 + m.y,
-                                 reverse_var_map, m)
+        self.check_grb_expr_tree(
+            grb_model, g1, aux1, log(m.x) ** 2 + m.y, reverse_var_map, m
+        )
 
         # log(x)**2 + y + y**3 + log(x + y)
         g2 = nonlinear_constrs[1]
         self.check_grb_expr_tree(
-            grb_model, g2, aux2,
+            grb_model,
+            g2,
+            aux2,
             SumExpression(
                 (
                     SumExpression((SumExpression((log(m.x) ** 2, m.y)), m.y**3.0)),
                     log(SumExpression((m.x, m.y))),
                 )
             ),
-            reverse_var_map, m
+            reverse_var_map,
+            m,
         )
 
         # objective
@@ -459,11 +459,14 @@ class GurobiMINLPWriterTests():
         c = nonlinear_constrs[0]
         reverse_var_map = {grb_v: pyo_v for pyo_v, grb_v in var_map.items()}
         self.check_grb_expr_tree(
-            grb_model, c, aux_var,
+            grb_model,
+            c,
+            aux_var,
             ProductExpression(
                 (ProductExpression((MonomialTermExpression((0.0, m.x1)), m.x2)), m.x3)
             ),
-            reverse_var_map, m
+            reverse_var_map,
+            m,
         )
 
         opt = SolverFactory('gurobi_direct_minlp')
@@ -549,6 +552,7 @@ class GurobiMINLPWriterTests():
 @unittest.pytest.mark.solver("gurobi_direct_minlp")
 class TestGurobi14MINLPWriter(GurobiMINLPWriterTests, CommonTest, Gurobi14Test):
     pass
+
 
 @unittest.skipUnless(old_gurobipy_available, "Gurobipy >= 12 and < 14 is not available")
 @unittest.pytest.mark.solver("gurobi_direct_minlp")
