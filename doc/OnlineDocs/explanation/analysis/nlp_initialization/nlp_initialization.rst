@@ -105,7 +105,7 @@ Disadvantages
 * Requires all nonlinear variables to be bounded
 
 
-Method :func:`initialize_with_lp_approximation <pyomo.devel.initialization.initialize.initialize_with_lp_approximation>`
+Method :func:`initialize_with_LP_approximation <pyomo.devel.initialization.initialize.initialize_with_LP_approximation>`
 ------------------------------------------------------------------------------------------------------------------------
 
 This method is similar to the PWL approximation method, but it builds
