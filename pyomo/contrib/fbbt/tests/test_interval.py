@@ -431,3 +431,32 @@ class TestInterval(IntervalTestBase, unittest.TestCase):
         self.atan = interval.atan
         self._inverse_power1 = interval._inverse_power1
         self._inverse_power2 = interval._inverse_power2
+
+    def test_pow_overflow(self):
+        # A bound on x**y too large for a float is inf, not an OverflowError
+        lb, ub = self.power(2, 1e200, 1, 2, 1e-8)
+        self.assertEqual(lb, 2)
+        self.assertEqual(ub, interval.inf)
+        lb, ub = self.power(0, 1e200, 1, 2, 1e-8)
+        self.assertEqual(lb, 0)
+        self.assertEqual(ub, interval.inf)
+        # Negative exponent: (1e-200)**-2 overflows
+        lb, ub = self.power(1e-200, 2, -2, -1, 1e-8)
+        self.assertEqual(lb, 0.25)
+        self.assertEqual(ub, interval.inf)
+
+    def test_pow_or_inf(self):
+        # power() only passes x >= 0, so the other branches are tested directly
+        self.assertEqual(interval.pow_or_inf(2.0, 3.0), 8.0)
+        self.assertEqual(interval.pow_or_inf(1e200, 2.0), interval.inf)
+        self.assertEqual(interval.pow_or_inf(-1e200, 3.0), -interval.inf)
+
+        class ZeroThatOverflows(float):
+            # A real 0 never overflows, so this stand-in number equals 0 but
+            # raises OverflowError when raised to a power. It reaches the
+            # check for an overflow that is neither positive nor negative.
+            def __pow__(self, other):
+                raise OverflowError
+
+        with self.assertRaisesRegex(ValueError, "Unexpected overflow error"):
+            interval.pow_or_inf(ZeroThatOverflows(0.0), 2.0)

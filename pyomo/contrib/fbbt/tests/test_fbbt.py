@@ -1334,6 +1334,18 @@ class TestFBBT(FbbtTestBase, unittest.TestCase):
     def setUp(self) -> None:
         self.tightener = fbbt
 
+    def test_pow_overflow(self):
+        # The upper bound on x**y is too large for a float, so z has no
+        # upper bound instead of FBBT raising an OverflowError
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(2, 1e200))
+        m.y = pyo.Var(bounds=(1, 2))
+        m.z = pyo.Var()
+        m.c = pyo.Constraint(expr=m.z == m.x**m.y)
+        self.tightener(m)
+        self.assertEqual(m.z.lb, 2)
+        self.assertIsNone(m.z.ub)
+
     def test_ranged_expression(self):
         # The python version of FBBT is slightly more flexible than
         # APPSI's cmodel (it allows - and correctly handles -
