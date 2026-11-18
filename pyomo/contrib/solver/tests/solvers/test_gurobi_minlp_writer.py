@@ -94,9 +94,6 @@ def make_model():
 
 
 class GurobiMINLPWriterTests():
-    def get_expr_tree(self, grb_model, cons):
-        raise NotImplementedError("Must be defined by subclasses")
-
     def get_nonlinear_constraints(self, grb_model):
         raise NotImplementedError("Must be defined by subclasses")
 
@@ -113,6 +110,7 @@ class GurobiMINLPWriterTests():
         grb_model, var_map, obj, grb_cons, pyo_cons = WriterFactory(
             'gurobi_minlp'
         ).write(m, symbolic_solver_labels=True)
+        reverse_var_map = {grb_var: pyo_var for pyo_var, grb_var in var_map.items()}
 
         self.assertEqual(len(var_map), 7)
         x1 = var_map[m.x1]
@@ -173,47 +171,27 @@ class GurobiMINLPWriterTests():
         self.assertEqual(c2_expr.getCoeff(0), 1)
 
         ## general nonlinear constraints
-        obj_cons = nonlinear_constrs[0]
-        res_var, opcode, data, parent = self.get_expr_tree(grb_model, obj_cons)
-        self.assertEqual(len(opcode), 2)  # two nodes in the expression tree
-        self.assertEqual(opcode[0], GRB.OPCODE_LOG)
-        # log has no data
-        self.assertEqual(parent[0], -1)  # it's the root
-        self.assertEqual(opcode[1], GRB.OPCODE_VARIABLE)
-        self.assertIs(data[1], x1)
-        self.assertEqual(parent[1], 0)
 
-        # we can check that res_var is the objective
+        # auxiliary variable is the objective
         self.assertEqual(grb_model.ModelSense, 1)  # minimizing
         obj = grb_model.getObjective()
         self.assertEqual(obj.size(), 1)
         self.assertEqual(obj.getCoeff(0), 1)
-        self.assertIs(obj.getVar(0), res_var)
+        obj_aux = obj.getVar(0)
+        
+        obj_cons = nonlinear_constrs[0]
+        self.check_grb_expr_tree(
+            grb_model, obj_cons,
+            obj_aux, log(m.x1),
+            reverse_var_map
+        )    
 
         c1 = nonlinear_constrs[1]
-        res_var, opcode, data, parent = self.get_expr_tree(grb_model, c1)
-        # This is where we link into the linear inequality constraint
-        self.assertIs(res_var, aux_var)
-        # test the tree for the expression x3  + (- (2 ** x2))
-        self.assertEqual(len(opcode), 6)
-        self.assertEqual(opcode[0], GRB.OPCODE_PLUS)
-        # plus has no data
-        self.assertEqual(parent[0], -1)  # root
-        self.assertEqual(opcode[1], GRB.OPCODE_VARIABLE)
-        self.assertIs(data[1], x3)
-        self.assertEqual(parent[1], 0)
-        self.assertEqual(opcode[2], GRB.OPCODE_UMINUS)  # negation
-        # negation has no data
-        self.assertEqual(parent[2], 0)
-        self.assertEqual(opcode[3], GRB.OPCODE_POW)
-        # pow has no data
-        self.assertEqual(parent[3], 2)
-        self.assertEqual(opcode[4], GRB.OPCODE_CONSTANT)
-        self.assertEqual(data[4], 2)
-        self.assertEqual(parent[4], 3)
-        self.assertEqual(opcode[5], GRB.OPCODE_VARIABLE)
-        self.assertIs(data[5], x2)
-        self.assertEqual(parent[5], 3)
+        self.check_grb_expr_tree(
+            grb_model, c1,
+            aux_var, m.x3 + (- (2.0 ** m.x2)),
+            reverse_var_map
+        )
 
     def test_write_NPV_negation_in_RHS(self):
         m = ConcreteModel()
@@ -509,16 +487,6 @@ class GurobiMINLPWriterTests():
             ),
             reverse_var_map
         )
-        # res_var, opcode, data, parent = grb_model.getGenConstrNLAdv(c)
-        # # This is where we link into the linear inequality constraint
-        # self.assertIs(res_var, aux_var)
-        # pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
-
-        # assertExpressionsEqual(
-        #     self,
-        #     pyo_expr,
-        #     ProductExpression((ProductExpression((0.0, m.x1, m.x2, m.x3)),)),
-        # )
 
         opt = SolverFactory('gurobi_direct_minlp')
         opt.config.raise_exception_on_nonoptimal_result = False
@@ -602,55 +570,63 @@ class GurobiMINLPWriterTests():
 @unittest.skipUnless(gurobipy_14_available, "Gurobipy >= 14 is not available")
 @unittest.pytest.mark.solver("gurobi_direct_minlp")
 class TestGurobi14MINLPWriter(GurobiMINLPWriterTests, CommonTest):
-    def get_expr_tree(self, grb_model, cons):
-        opcode, data, parent = grb_model.getNLConstrLHSAdv(cons)
+    # def get_expr_tree(self, grb_model, cons):
+    #     opcode, data, parent = grb_model.getNLConstrLHSAdv(cons)
 
-        # Now we have to go on an adventure to find the auxiliary var...
-        # Root node (0) should be minus: We have "y - f(x)"
-        if opcode[0] != GRB.OPCODE_MINUS:
-            raise ValueError(
-                "Can't find the auxiliary variable--the top expression in the "
-                "tree isn't subtraction!"
-            )
+    #     # Now we have to go on an adventure to find the auxiliary var...
+    #     # Root node (0) should be minus: We have "y - f(x)"
+    #     if opcode[0] != GRB.OPCODE_MINUS:
+    #         raise ValueError(
+    #             "Can't find the auxiliary variable--the top expression in the "
+    #             "tree isn't subtraction!"
+    #         )
 
-        # Get the minus' children
-        from pytest import set_trace
-        set_trace()
-        first_child_idx, second_child_idx = [i for i, p in enumerate(parent) if p == 0]
+    #     # Get the minus' children
+    #     from pytest import set_trace
+    #     set_trace()
+    #     first_child_idx, second_child_idx = [i for i, p in enumerate(parent) if p == 0]
         
-        #all_vars = model.getVars()
-        #left_idx, right_idx = root_children
+    #     #all_vars = model.getVars()
+    #     #left_idx, right_idx = root_children
 
-        # Check if the first child is a single variable (y == f(x))
-        if opcode[first_child_idx] == GRB.OPCODE_VARIABLE:
-            aux_var = data[first_child_idx]
+    #     # Check if the first child is a single variable (y == f(x))
+    #     if opcode[first_child_idx] == GRB.OPCODE_VARIABLE:
+    #         aux_var = data[first_child_idx]
 
-            #y_var = all_vars[int(data[left_idx])]
-            fx_root = right_idx
-            return y_var, fx_root, (opcode, data, parent)
+    #         #y_var = all_vars[int(data[left_idx])]
+    #         fx_root = right_idx
+    #         return y_var, fx_root, (opcode, data, parent)
 
-        # Check if the right child is a standalone variable (f(x) == y)
-        if opcode[right_idx] == GRB.OPCODE_VARIABLE:
-            y_var = all_vars[int(data[right_idx])]
-            fx_root = left_idx
-            return y_var, fx_root, (opcode, data, parent)
+    #     # Check if the right child is a standalone variable (f(x) == y)
+    #     if opcode[right_idx] == GRB.OPCODE_VARIABLE:
+    #         y_var = all_vars[int(data[right_idx])]
+    #         fx_root = left_idx
+    #         return y_var, fx_root, (opcode, data, parent)
 
     def get_nonlinear_constraints(self, grb_model):
         return grb_model.getNLConstrs()
+
+    def check_grb_expr_tree(self, grb_model, nl_cons, aux_var, pyo_expr,
+                            reverse_var_map):
+        opcode, data, parent = grb_model.getNLConstrLHSAdv(nl_cons)
+        
+        pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
+        from pytest import set_trace
+        set_trace()
 
 
 @unittest.skipUnless(old_gurobipy_available, "Gurobipy >= 12 and < 14 is not available")
 @unittest.pytest.mark.solver("gurobi_direct_minlp")
 class TestOldGurobiMINLPWriter(GurobiMINLPWriterTests, CommonTest):
-    def get_expr_tree(self, grb_model, cons):
-        return grb_model.getGenConstrNLAdv(cons)
+    # def get_expr_tree(self, grb_model, cons):
+    #     return grb_model.getGenConstrNLAdv(cons)
 
     def get_nonlinear_constraints(self, grb_model):
         return grb_model.getGenConstrs()
 
     def check_grb_expr_tree(self, grb_model, nl_cons, aux_var, pyo_expr,
                             reverse_var_map):
-        res_var, opcode, data, parent = self.get_expr_tree(grb_model, nl_cons)
+        res_var, opcode, data, parent = grb_model.getGenConstrNLAdv(cons)
         self.assertIs(res_var, aux_var)
         assertExpressionsEqual(
             self,
