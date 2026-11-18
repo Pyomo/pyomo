@@ -18,7 +18,7 @@ tools will not help you. Example usage is shown below.
 .. literalinclude:: /../../pyomo/devel/initialization/examples/init_polynomial_ex.py
     :start-after: # === Required imports ===
 
-This example shows the three different initialization methods currently available.
+This example shows the four different initialization methods currently available.
 Each method tries to find a good starting point for the NLP solver and then attempts
 to solve the problem with the given NLP solver.
 
@@ -30,7 +30,7 @@ to solve the problem with the given NLP solver.
 Initialization Methods
 ======================
 
-There are currently three initialization methods available.
+There are currently four initialization methods available.
 
 .. note::
 
@@ -128,3 +128,49 @@ Disadvantages
 
 * This method only attempts to initialize the problem once. If it does
   not succeed, it is done.
+
+
+Method :func:`initialize_with_multistart_opt <pyomo.devel.initialization.initialize.initialize_with_multistart_opt>`
+--------------------------------------------------------------------------------------------------------------------
+
+This method uses the :doc:`multistart </explanation/solvers/multistart>` solver to solve
+the NLP from several starting points sampled between the variable bounds. Any
+variable without a bound that FBBT can derive is given bounds of
+``±default_bound``. The best feasible solution found is then used to
+initialize the NLP solver. Setting ``break_on_solution`` makes the
+multistart solver stop at the first feasible solution, which is usually all
+initialization needs. The ``seed`` argument makes the sampled starting points
+reproducible. The multistart solver can be
+configured before calling
+:func:`initialize_with_multistart_opt <pyomo.devel.initialization.initialize.initialize_with_multistart_opt>`:
+
+.. testcode::
+
+   import pyomo.environ as pyo
+   from pyomo.contrib.solver.common.factory import SolverFactory
+
+   multistart_solver = SolverFactory('multistart')
+   multistart_solver.config.subsolver = 'ipopt'  # local NLP solver for each start
+   multistart_solver.config.iterations = 10  # number of starting points after the first
+   multistart_solver.config.sampling_method = 'sobol'
+   multistart_solver.config.break_on_solution = True
+   # now call initialize_with_multistart_opt
+
+Note that ``nlp_solver`` is used only for the solves before and after
+multistart. Each start is solved with the multistart solver's own
+``subsolver``.
+
+Advantages
+^^^^^^^^^^
+
+* Requires only a local NLP solver; no MILP or MINLP solver is needed
+* Simple to configure, and reproducible with a seed
+
+Disadvantages
+^^^^^^^^^^^^^
+
+* Sampling gives no guarantee of finding a feasible solution
+* Each start costs a full NLP solve
+* Works best with tight bounds on all nonlinear variables. Sampling
+  between the default bounds of ``±default_bound`` rarely gives a useful
+  starting point.

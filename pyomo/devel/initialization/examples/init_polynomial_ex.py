@@ -64,7 +64,7 @@ def multistart_init_ex():
     results = ini.initialize_with_multistart_opt(
         nlp=m, nlp_solver=nlp_solver, multistart_solver=multistart_solver, seed=145
     )
-    return results, m.x.value
+    return results.solution_status, m.x.value
 
 
 def run_example(method='lp'):

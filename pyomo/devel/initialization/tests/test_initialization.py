@@ -11,16 +11,10 @@ from typing import Tuple
 
 import pyomo.environ as pyo
 import pyomo.devel.initialization as ini
-from pyomo.devel.initialization.examples.init_polynomial_ex import (
-    lp_init_ex,
-    pwl_init_ex,
-    global_init_ex,
-    multistart_init_ex,
-    run_example,
-)
+from pyomo.devel.initialization.examples.init_polynomial_ex import run_example
 from pyomo.devel.initialization.utils import get_solution_limit_options
 from pyomo.common import unittest
-from pyomo.common.dependencies import numpy_available, scipy_available
+from pyomo.common.dependencies import attempt_import, scipy_available
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import (
     SolutionStatus,
@@ -33,6 +27,9 @@ scip = SolverFactory('scip_direct')
 ipopt = SolverFactory('ipopt')
 highs = SolverFactory('highs')
 gurobi = SolverFactory('gurobi_direct_minlp')
+
+parameterized, param_available = attempt_import('parameterized')
+parameterized = parameterized.parameterized
 
 
 class MockNLPSolver(SolverBase):
@@ -72,35 +69,18 @@ class MockNLPSolver(SolverBase):
 @unittest.skipUnless(ipopt.available(), 'ipopt is not available')
 @unittest.skipUnless(scipy_available, 'scipy is not available')
 class TestExamples(unittest.TestCase):
-    @unittest.skipUnless(scip.available(), 'scip is not available')
-    def test_poly_global(self):
-        stat, x = global_init_ex()
+    # Each method with the extra solver it needs (multistart uses ipopt)
+    @parameterized.expand(
+        [('lp', highs), ('pwl', highs), ('global', scip), ('multistart', ipopt)]
+    )
+    def test_poly_example(self, method, solver):
+        if not solver.available():
+            self.skipTest(f'{solver.name} is not available')
+        stat, x = run_example(method=method)
         self.assertEqual(stat, SolutionStatus.optimal)
         self.assertAlmostEqual(x, -9.920159607881597)
 
-    @unittest.skipUnless(highs.available(), 'highs is not available')
-    def test_poly_pwl(self):
-        stat, x = pwl_init_ex()
-        self.assertEqual(stat, SolutionStatus.optimal)
-        self.assertAlmostEqual(x, -9.920159607881597)
-
-    @unittest.skipUnless(highs.available(), 'highs is not available')
-    def test_poly_lp(self):
-        stat, x = lp_init_ex()
-        self.assertEqual(stat, SolutionStatus.optimal)
-        self.assertAlmostEqual(x, -9.920159607881597)
-
-    def test_poly_multistart(self):
-        stat, x = lp_init_ex()
-        self.assertEqual(stat, SolutionStatus.optimal)
-        self.assertAlmostEqual(x, -9.920159607881597)
-
-    @unittest.skipUnless(highs.available(), 'highs is not available')
-    def test_run_example_and_unknown_method(self):
-        stat, x = run_example(method='lp')
-        self.assertEqual(stat, SolutionStatus.optimal)
-        self.assertAlmostEqual(x, -9.920159607881597)
-
+    def test_run_example_unknown_method(self):
         with self.assertRaises(ValueError):
             run_example(method='unknown')
 
@@ -278,23 +258,6 @@ class TestInit(unittest.TestCase):
 
         self.assertEqual(results.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(results.incumbent_objective, 1, 5)
-
-    @unittest.skipUnless(ipopt.available(), 'ipopt is not available')
-    @unittest.skipUnless(numpy_available, 'numpy is not available')
-    def test_multistart_init(self):
-        """
-        Same as test_pwl_init model
-        """
-        m = pyo.ConcreteModel()
-        m.x = pyo.Var(bounds=(-15, 5))
-        m.c = pyo.Constraint(expr=(m.x + 7) * (m.x + 5) * (m.x - 4) + 200 == 0)
-        m.obj = pyo.Objective(expr=m.x)
-        multistart_solver = SolverFactory("multistart")
-        multistart_solver.config.break_on_solution = True
-        multistart_solver.config.iterations = 2
-        results = ini.initialize_with_multistart_opt(
-            nlp=m, multistart_solver=multistart_solver
-        )
 
     # Test solver support for global and pwl with no refinement
     def test_pwl_solver_solution_limit(self):

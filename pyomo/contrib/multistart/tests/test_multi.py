@@ -32,6 +32,9 @@ from pyomo.contrib.solver.solvers.ipopt import Ipopt
 from pyomo.contrib.solver.common.util import NoOptimalSolutionError
 from pyomo.contrib.solver.common.results import TerminationCondition
 
+parameterized, param_available = attempt_import('parameterized')
+parameterized = parameterized.parameterized
+
 
 @unittest.skipIf(not numpy_available, "Numpy not available")
 @unittest.skipIf(not SolverFactory('ipopt').available(), "IPOPT not available")
@@ -99,7 +102,9 @@ class MultistartTests(unittest.TestCase):
                 "variable x with bounds (0, None).",
                 output.getvalue().strip(),
             )
-        with self.assertRaises(ValueError):
+        # rand_vector samples all eligible variables at once and raises
+        # if none has both bounds (x has no upper bound)
+        with self.assertRaisesRegex(ValueError, "No eligible variables"):
             SolverFactory('multistart').solve(m, strategy="rand_vector")
 
     def test_var_value_None(self):
@@ -186,9 +191,7 @@ class MultistartTests(unittest.TestCase):
             solver.solve(m)
         # Provided during solve
         with self.assertRaises(TypeError):
-            solver = SolverFactory('multistart')
-            solver.config.subsolver = bad_solver
-            solver.solve(m)
+            SolverFactory('multistart').solve(m, subsolver=bad_solver)
 
     def test_solver_object_matches_solver_string(self):
         nlp_solver = Ipopt()
@@ -209,22 +212,21 @@ class MultistartTests(unittest.TestCase):
             results_obj_obj.incumbent_objective, results_obj_str.incumbent_objective
         )
 
+    @parameterized.expand(
+        product(["uniform", "latin_hypercube", "sobol"], ["rand", "rand_vector"]),
+        name_func=lambda f, n, p: f"{f.__name__}_{p.args[0]}_{p.args[1]}",
+    )
+    # skipIf must be inside expand to apply to the generated tests
     @unittest.skipIf(not scipy_available, "Scipy not available")
-    def test_sampling_methods(self):
-        sampling_methods = ["uniform", "latin_hypercube", "sobol"]
-        strategies = ["rand", "rand_vector"]
-        seed = 145
+    def test_sampling_methods(self, method, strategy):
         # For the simple model, check all sampling methods converge
-        simple_model = build_model()
-        for method, strategy in product(sampling_methods, strategies):
-            m = simple_model.clone()
-            res = SolverFactory("multistart").solve(
-                m, strategy=strategy, sampling_method=method, seed=seed
-            )
-            self.assertEqual(
-                res.termination_condition,
-                TerminationCondition.convergenceCriteriaSatisfied,
-            )
+        m = build_model()
+        res = SolverFactory("multistart").solve(
+            m, strategy=strategy, sampling_method=method, seed=145
+        )
+        self.assertEqual(
+            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
+        )
 
     def test_max_time_limit(self):
         simple_model = build_model()
