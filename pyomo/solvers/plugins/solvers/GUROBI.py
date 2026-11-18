@@ -544,7 +544,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                             results.problem.sense = maximize
                     else:
                         try:
-                            val = float(tokens[1]):
+                            val = float(tokens[1])
                             ival = int(val)
                             if val == ival:
                                 val = ival
