@@ -45,33 +45,18 @@ from pyomo.opt import WriterFactory
 from pyomo.contrib.solver.solvers.gurobi.gurobi_direct_minlp import (
     GurobiDirectMINLP,
     GurobiMINLPVisitor,
-    GRB,
-    gurobipy,
-    gurobipy_available,
+    GRB
 )
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import TerminationCondition
-from pyomo.contrib.solver.tests.solvers.test_gurobi_minlp_walker import CommonTest
-
-
-gurobipy, gurobipy_14_available = attempt_import('gurobipy', minimum_version='14.0.0')
-if gurobipy_14_available:
-    from gurobipy import GRB
-
-    if not GurobiDirectMINLP().available():
-        gurobipy_14_available = False
-
-old_gurobipy_available = False
-if not gurobipy_14_available:
-    gurobipy, old_gurobipy_available = attempt_import(
-        'gurobipy',
-        minimum_version='12.0.0'
-    )
-    if old_gurobipy_available:
-        from gurobipy import GRB
-
-        if not GurobiDirectMINLP().available():
-            old_gurobipy_available = False
+from pyomo.contrib.solver.tests.solvers.test_gurobi_minlp_walker import (
+    CommonTest,
+    gurobipy,
+    gurobipy_14_available,
+    old_gurobipy_available,
+    Gurobi14Test,
+    OldGurobiTest
+)
 
 
 def make_model():
@@ -94,13 +79,6 @@ def make_model():
 
 
 class GurobiMINLPWriterTests():
-    def get_nonlinear_constraints(self, grb_model):
-        raise NotImplementedError("Must be defined by subclasses")
-
-    def check_grb_expr_tree(self, grb_model, nl_cons, aux_var, pyo_expr,
-                            reverse_var_map):
-        raise NotImplementedError("Must be defined by subclasses")
-    
     def test_small_model(self):
         grb_model = gurobipy.Model()
         visitor = GurobiMINLPVisitor(grb_model, symbolic_solver_labels=True)
@@ -183,14 +161,14 @@ class GurobiMINLPWriterTests():
         self.check_grb_expr_tree(
             grb_model, obj_cons,
             obj_aux, log(m.x1),
-            reverse_var_map
+            reverse_var_map, m
         )    
 
         c1 = nonlinear_constrs[1]
         self.check_grb_expr_tree(
             grb_model, c1,
             aux_var, m.x3 + (- (2.0 ** m.x2)),
-            reverse_var_map
+            reverse_var_map, m
         )
 
     def test_write_NPV_negation_in_RHS(self):
@@ -394,7 +372,7 @@ class GurobiMINLPWriterTests():
         # log(x)**2 + y
         g1 = nonlinear_constrs[0]
         self.check_grb_expr_tree(grb_model, g1, aux1, log(m.x) ** 2 + m.y,
-                                 reverse_var_map)
+                                 reverse_var_map, m)
 
         # log(x)**2 + y + y**3 + log(x + y)
         g2 = nonlinear_constrs[1]
@@ -406,7 +384,7 @@ class GurobiMINLPWriterTests():
                     log(SumExpression((m.x, m.y))),
                 )
             ),
-            reverse_var_map
+            reverse_var_map, m
         )
 
         # objective
@@ -485,7 +463,7 @@ class GurobiMINLPWriterTests():
             ProductExpression(
                 (ProductExpression((MonomialTermExpression((0.0, m.x1)), m.x2)), m.x3)
             ),
-            reverse_var_map
+            reverse_var_map, m
         )
 
         opt = SolverFactory('gurobi_direct_minlp')
@@ -569,67 +547,10 @@ class GurobiMINLPWriterTests():
 
 @unittest.skipUnless(gurobipy_14_available, "Gurobipy >= 14 is not available")
 @unittest.pytest.mark.solver("gurobi_direct_minlp")
-class TestGurobi14MINLPWriter(GurobiMINLPWriterTests, CommonTest):
-    # def get_expr_tree(self, grb_model, cons):
-    #     opcode, data, parent = grb_model.getNLConstrLHSAdv(cons)
-
-    #     # Now we have to go on an adventure to find the auxiliary var...
-    #     # Root node (0) should be minus: We have "y - f(x)"
-    #     if opcode[0] != GRB.OPCODE_MINUS:
-    #         raise ValueError(
-    #             "Can't find the auxiliary variable--the top expression in the "
-    #             "tree isn't subtraction!"
-    #         )
-
-    #     # Get the minus' children
-    #     from pytest import set_trace
-    #     set_trace()
-    #     first_child_idx, second_child_idx = [i for i, p in enumerate(parent) if p == 0]
-        
-    #     #all_vars = model.getVars()
-    #     #left_idx, right_idx = root_children
-
-    #     # Check if the first child is a single variable (y == f(x))
-    #     if opcode[first_child_idx] == GRB.OPCODE_VARIABLE:
-    #         aux_var = data[first_child_idx]
-
-    #         #y_var = all_vars[int(data[left_idx])]
-    #         fx_root = right_idx
-    #         return y_var, fx_root, (opcode, data, parent)
-
-    #     # Check if the right child is a standalone variable (f(x) == y)
-    #     if opcode[right_idx] == GRB.OPCODE_VARIABLE:
-    #         y_var = all_vars[int(data[right_idx])]
-    #         fx_root = left_idx
-    #         return y_var, fx_root, (opcode, data, parent)
-
-    def get_nonlinear_constraints(self, grb_model):
-        return grb_model.getNLConstrs()
-
-    def check_grb_expr_tree(self, grb_model, nl_cons, aux_var, pyo_expr,
-                            reverse_var_map):
-        opcode, data, parent = grb_model.getNLConstrLHSAdv(nl_cons)
-        
-        pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
-        from pytest import set_trace
-        set_trace()
-
+class TestGurobi14MINLPWriter(GurobiMINLPWriterTests, CommonTest, Gurobi14Test):
+    pass
 
 @unittest.skipUnless(old_gurobipy_available, "Gurobipy >= 12 and < 14 is not available")
 @unittest.pytest.mark.solver("gurobi_direct_minlp")
-class TestOldGurobiMINLPWriter(GurobiMINLPWriterTests, CommonTest):
-    # def get_expr_tree(self, grb_model, cons):
-    #     return grb_model.getGenConstrNLAdv(cons)
-
-    def get_nonlinear_constraints(self, grb_model):
-        return grb_model.getGenConstrs()
-
-    def check_grb_expr_tree(self, grb_model, nl_cons, aux_var, pyo_expr,
-                            reverse_var_map):
-        res_var, opcode, data, parent = grb_model.getGenConstrNLAdv(cons)
-        self.assertIs(res_var, aux_var)
-        assertExpressionsEqual(
-            self,
-            grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map),
-            pyo_expr,
-        )
+class TestOldGurobiMINLPWriter(GurobiMINLPWriterTests, CommonTest, OldGurobiTest):
+    pass
