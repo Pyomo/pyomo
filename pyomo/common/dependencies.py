@@ -1104,17 +1104,19 @@ def _pyutilib_importer():
     return importlib.import_module('pyutilib')
 
 
+def _pickle_importer():
+    # Pickle is used by Pyomo and by multiprocessing
+    try:
+        return importlib.import_module('cPickle')
+    except ImportError:
+        return importlib.import_module('pickle')
+
+
 with declare_modules_as_importable(globals()):
     # Standard libraries that we will unconditionally import.  We are
     # importing it here so that import timing is better reported from
     # pyomo.environ.tests.test_environ (hence the imports are not
     # necessarily alphebetical)
-    #
-    # Pickle is used by Pyomo and by multiprocessing
-    try:
-        import cPickle as pickle
-    except ImportError:
-        import pickle
 
     # Standard libraries that are slower to import and not strictly required
     # on all platforms / situations.
@@ -1124,6 +1126,7 @@ with declare_modules_as_importable(globals()):
     multiprocessing, _ = attempt_import(
         'multiprocessing', callback=_finalize_multiprocessing
     )
+    pickle, _ = attempt_import('pickle', importer=_pickle_importer)
     random, _ = attempt_import('random')
 
     # Necessary for minimum version checking for other optional dependencies
