@@ -1092,7 +1092,10 @@ def _get_scratch_block(constraint, other_disjunct, is_upper):
     if not _thread_local.config_skip_writing_references:
         seen = set()
         for constraint in scratch.component_data_objects(
-            Constraint, active=True, sort=SortComponents.deterministic, descend_into=Block
+            Constraint,
+            active=True,
+            sort=SortComponents.deterministic,
+            descend_into=Block,
         ):
             for var in EXPR.identify_variables(constraint.expr, include_fixed=True):
                 if id(var) not in seen:
