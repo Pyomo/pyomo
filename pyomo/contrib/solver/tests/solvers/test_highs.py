@@ -136,6 +136,7 @@ class TestBugs(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, -5, places=5)
         self.assertAlmostEqual(m.y.value, -4, places=5)
 
+
 @unittest.pytest.mark.solver("highs")
 class TestWarmStart(unittest.TestCase):
     def make_model(self):
