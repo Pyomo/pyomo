@@ -543,13 +543,13 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                         elif tokens[1] == 'maximize':
                             results.problem.sense = maximize
                     else:
-                        val = tokens[1]
-                        for conv in (int, float):
-                            try:
-                                val = conv(tokens[1])
-                                break
-                            except ValueError:
-                                pass
+                        try:
+                            val = float(tokens[1]):
+                            ival = int(val)
+                            if val == ival:
+                                val = ival
+                        except ValueError:
+                            val = tokens[1]
                         setattr(results.problem, tokens[0], val)
                 elif section == 3:
                     if tokens[0] == 'status':
