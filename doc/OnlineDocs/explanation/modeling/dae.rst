@@ -868,6 +868,12 @@ integrator, such as tolerances, may be specified using the
     >>> tsim, profiles = sim.simulate(numpoints=100, integrator='Radau',
     ...                               integrator_options={'rtol': 1e-8}) # doctest: +SKIP
 
+The columns of ``profiles``, and the state vector passed to functions such
+as ``events`` in ``integrator_options``, follow the order returned by
+:py:meth:`get_variable_order<pyomo.dae.Simulator.get_variable_order>`.
+This order follows the differential equations in the model, not the order
+in which the variables were declared.
+
 `Simulator Limitations`:
     - Differential equations must be first-order and separable
     - Model can only contain a single ContinuousSet

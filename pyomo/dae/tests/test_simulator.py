@@ -9,6 +9,7 @@
 
 import json
 import pyomo.common.unittest as unittest
+from parameterized import parameterized
 
 import pyomo.core.expr as EXPR
 from pyomo.environ import (
@@ -1327,18 +1328,19 @@ class TestScipyIntegrators(unittest.TestCase):
             x0 = u + (x0 - u) * np.exp(-(tend - tstart))
         return x
 
-    def test_integrators(self):
-        for integrator in scipy_ivp_integrators + scipy_ode_integrators + [None]:
-            if integrator == 'zvode':
-                # zvode is for complex-valued ODEs
-                continue
-            m = self._linear_model()
-            sim = Simulator(m, package='scipy')
-            tsim, profiles = sim.simulate(numpoints=51, integrator=integrator)
-            self.assertEqual(profiles.shape, (51, 2))
-            self.assertStructuredAlmostEqual(
-                profiles.tolist(), self._linear_exact(tsim).tolist(), abstol=1e-5
-            )
+    # zvode is for complex-valued ODEs, so it is not tested here
+    @parameterized.expand(
+        [(i,) for i in scipy_ivp_integrators + scipy_ode_integrators if i != 'zvode']
+        + [(None,)]
+    )
+    def test_integrators(self, integrator):
+        m = self._linear_model()
+        sim = Simulator(m, package='scipy')
+        tsim, profiles = sim.simulate(numpoints=51, integrator=integrator)
+        self.assertEqual(profiles.shape, (51, 2))
+        self.assertStructuredAlmostEqual(
+            profiles.tolist(), self._linear_exact(tsim).tolist(), abstol=1e-5
+        )
 
     def test_default_integrator(self):
         m = self._linear_model()
@@ -1368,26 +1370,28 @@ class TestScipyIntegrators(unittest.TestCase):
         self.assertEqual(kwds['atol'], 1e-12)
         self.assertEqual(kwds['max_step'], 0.5)
 
-    def test_varying_inputs(self):
+    @parameterized.expand(
+        [(i,) for i in scipy_ivp_integrators + ['vode', 'lsoda', 'dopri5']]
+    )
+    def test_varying_inputs(self, integrator):
         # The integrators must be restarted at each input switching
         # point or the solution will be inaccurate
-        for integrator in scipy_ivp_integrators + ['vode', 'lsoda', 'dopri5']:
-            m = self._input_model()
-            sim = Simulator(m, package='scipy')
-            with unittest.mock.patch(
-                'scipy.integrate.solve_ivp', wraps=scipy.integrate.solve_ivp
-            ) as solve_ivp:
-                tsim, profiles = sim.simulate(
-                    numpoints=61, integrator=integrator, varying_inputs=m.var_input
-                )
-            if integrator in scipy_ivp_integrators:
-                # One call to solve_ivp for each segment between
-                # switching points
-                self.assertEqual(solve_ivp.call_count, 3)
-            self.assertEqual(len(tsim), 61)
-            self.assertStructuredAlmostEqual(
-                profiles[:, 0].tolist(), self._input_exact(tsim).tolist(), abstol=1e-4
+        m = self._input_model()
+        sim = Simulator(m, package='scipy')
+        with unittest.mock.patch(
+            'scipy.integrate.solve_ivp', wraps=scipy.integrate.solve_ivp
+        ) as solve_ivp:
+            tsim, profiles = sim.simulate(
+                numpoints=61, integrator=integrator, varying_inputs=m.var_input
             )
+        if integrator in scipy_ivp_integrators:
+            # One call to solve_ivp for each segment between
+            # switching points
+            self.assertEqual(solve_ivp.call_count, 3)
+        self.assertEqual(len(tsim), 61)
+        self.assertStructuredAlmostEqual(
+            profiles[:, 0].tolist(), self._input_exact(tsim).tolist(), abstol=1e-4
+        )
 
     def test_tstep(self):
         m = self._linear_model()
@@ -1426,15 +1430,23 @@ class TestScipyIntegrators(unittest.TestCase):
 
     def test_terminal_event(self):
         m = self._linear_model()
+        # Declare deq1 after deq2 so that x1 is not first in x
+        m.del_component(m.deq1)
+        m.deq1 = Constraint(m.t, rule=lambda m, t: m.dx1[t] == -m.x1[t])
         sim = Simulator(m, package='scipy')
+
+        # The event function receives x in the order of get_variable_order
+        order = [v.base for v in sim.get_variable_order()]
+        self.assertEqual(order, [m.x2, m.x1])
+        ix1 = order.index(m.x1)
 
         # Stop when x1 = 0.5, i.e. t = ln(2)
         def _event(t, x):
-            return x[0] - 0.5
+            return x[ix1] - 0.5
 
         _event.terminal = True
 
-        with LoggingIntercept(module='pyomo.core') as LOG:
+        with LoggingIntercept(module='pyomo.dae') as LOG:
             tsim, profiles = sim.simulate(
                 numpoints=51, integrator='RK45', integrator_options={'events': _event}
             )
@@ -1443,8 +1455,9 @@ class TestScipyIntegrators(unittest.TestCase):
         self.assertEqual(profiles.shape, (7, 2))
         self.assertLessEqual(tsim[-1], np.log(2))
         self.assertGreater(tsim[-1] + 0.1, np.log(2))
+        # The profile columns are in the same order as x
         self.assertStructuredAlmostEqual(
-            profiles.tolist(), self._linear_exact(tsim).tolist(), abstol=1e-5
+            profiles.tolist(), self._linear_exact(tsim)[:, ::-1].tolist(), abstol=1e-5
         )
 
     def test_integrator_failure(self):

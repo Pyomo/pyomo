@@ -23,7 +23,7 @@ from pyomo.common.dependencies import (
     attempt_import,
 )
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.dae')
 
 casadi_intrinsic = {}
 
@@ -790,7 +790,10 @@ class Simulator:
             ``solve_ivp`` (e.g. 'rtol', 'atol', 'max_step', 'first_step',
             'jac', 'events'). Unless specified, these integrators use
             rtol=1e-6 and atol=1e-12 to match the defaults of the legacy
-            ``scipy.integrate.ode`` integrators.
+            ``scipy.integrate.ode`` integrators. Functions such as 'events'
+            and 'jac' receive the differential variables in the order given
+            by :py:meth:`get_variable_order`, which is the order of the
+            columns in the returned profiles.
 
         Returns
         -------
