@@ -15,7 +15,11 @@ from pyomo.contrib.solver.tests.solvers.gurobi_to_pyomo_expressions import (
     grb_nl_to_pyo_expr,
 )
 from pyomo.core.expr.compare import assertExpressionsEqual
-from pyomo.core.expr.numeric_expr import SumExpression, ProductExpression
+from pyomo.core.expr.numeric_expr import (
+    MonomialTermExpression,
+    ProductExpression,
+    SumExpression,
+)
 from pyomo.environ import (
     Binary,
     BooleanVar,
@@ -41,6 +45,9 @@ from pyomo.opt import WriterFactory
 from pyomo.contrib.solver.solvers.gurobi.gurobi_direct_minlp import (
     GurobiDirectMINLP,
     GurobiMINLPVisitor,
+    GRB,
+    gurobipy,
+    gurobipy_available,
 )
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import TerminationCondition
@@ -497,7 +504,9 @@ class GurobiMINLPWriterTests():
         reverse_var_map = {grb_v: pyo_v for pyo_v, grb_v in var_map.items()}
         self.check_grb_expr_tree(
             grb_model, c, aux_var,
-            ProductExpression((ProductExpression((0.0, m.x1, m.x2, m.x3)),)),
+            ProductExpression(
+                (ProductExpression((MonomialTermExpression((0.0, m.x1)), m.x2)), m.x3)
+            ),
             reverse_var_map
         )
         # res_var, opcode, data, parent = grb_model.getGenConstrNLAdv(c)

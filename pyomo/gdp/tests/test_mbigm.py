@@ -338,6 +338,7 @@ class LinearModelDecisionTreeExample(CommonTests):
         )
 
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    @unittest.skipUnless(dill_available, "Dill is not available")
     def test_calculated_Ms_correct(self):
         # Calculating all the Ms is expensive, so we just do it in this one test
         # and then specify them for most of the others
@@ -604,6 +605,7 @@ class LinearModelDecisionTreeExample(CommonTests):
         self.check_all_untightened_bounds_constraints(m, mbm)
 
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    @unittest.skipUnless(dill_available, "Dill is not available")
     def test_var_bounds_substituted_for_missing_bound_constraints(self):
         m = self.make_model()
         # Add a new thing with constraints that don't give both bounds on x1 and
@@ -682,6 +684,7 @@ class LinearModelDecisionTreeExample(CommonTests):
             TransformationFactory('gdp.mbigm').apply_to(m)
 
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    @unittest.skipUnless(dill_available, "Dill is not available")
     def test_logical_constraints_on_disjuncts(self):
         m = self.make_model()
         m.d1.Y = BooleanVar()

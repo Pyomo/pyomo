@@ -9,12 +9,15 @@
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.core.expr.compare import assertExpressionsEqual
-from pyomo.core.expr import ProductExpression, SumExpression
+from pyomo.core.expr import ProductExpression, SumExpression, MonomialTermExpression
 from pyomo.common.errors import InvalidValueError
 import pyomo.common.unittest as unittest
 from pyomo.contrib.solver.solvers.gurobi.gurobi_direct_minlp import (
     GurobiMINLPVisitor,
     GurobiDirectMINLP,
+    GRB,
+    gurobipy,
+    gurobipy_available,
 )
 from pyomo.contrib.solver.tests.solvers.gurobi_to_pyomo_expressions import (
     grb_nl_to_pyo_expr,
@@ -36,13 +39,8 @@ from pyomo.environ import (
     Var,
 )
 
-gurobipy, gurobipy_available = attempt_import('gurobipy', minimum_version='12.0.0')
-
-if gurobipy_available:
-    from gurobipy import GRB
-
-    if not GurobiDirectMINLP().available():
-        gurobipy_available = False
+if gurobipy_available and not GurobiDirectMINLP().available():
+    gurobipy_available = False
 
 
 class CommonTest(unittest.TestCase):
@@ -251,7 +249,9 @@ class TestGurobiMINLPWalker(CommonTest):
         assertExpressionsEqual(
             self,
             pyo_expr,
-            ProductExpression((ProductExpression((0.0, m.x1, m.x2, m.x3)),)),
+            ProductExpression(
+                (ProductExpression((MonomialTermExpression((0.0, m.x1)), m.x2)), m.x3)
+            ),
         )
 
     def test_write_division(self):
@@ -360,7 +360,7 @@ class TestGurobiMINLPWalker(CommonTest):
         assertExpressionsEqual(
             self,
             pyo_expr,
-            SumExpression((3.0, ProductExpression((2.0, m.x2)), m.x1**2)) ** 2,
+            SumExpression((3.0, MonomialTermExpression((2.0, m.x2)), m.x1**2)) ** 2,
         )
 
     def test_write_nonquadratic_power_expression_var_const(self):

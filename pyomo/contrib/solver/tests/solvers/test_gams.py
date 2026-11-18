@@ -691,3 +691,18 @@ sys.exit(3)
                 + "\n",
                 LOG.getvalue(),
             )
+
+    def test_gams_sos_constraint_error(self):
+        # The GAMS writer does not currently support SOS constraints.
+        # As of now, Pyomo should raise an error instead of
+        # silently dropping them
+        model = self.create_model()
+        model.sos = pyo.SOSConstraint(var=model.x, sos=1)
+        with self.assertRaisesRegex(
+            ValueError,
+            r"The model \('TestModel'\) contains the following active "
+            r"components that the gams writer does not know how to "
+            r"process:\n\t<class 'pyomo.core.base.sos.SOSConstraint'>:"
+            r"\n\t\tsos",
+        ):
+            gams.GAMS().solve(model)

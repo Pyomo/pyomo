@@ -81,6 +81,38 @@ class TestUtils(unittest.TestCase):
             self.assertEqual(pyo.value(c), pyo.value(c_old))
             self.assertTrue(c in m_vars.unknown_parameters)
 
+    def test_convert_param_to_var_keeps_continuous_domain(self):
+        m = pyo.ConcreteModel()
+        m.I = pyo.Set(initialize=["a", "b"])
+        m.k = pyo.Param(initialize=2.0, mutable=True, within=pyo.PositiveReals)
+        m.k_indexed = pyo.Param(
+            m.I,
+            initialize={"a": 0.25, "b": 0.75},
+            mutable=True,
+            within=pyo.UnitInterval,
+        )
+        m.k_any = pyo.Param(initialize=1.0, mutable=True)
+        m.k_int = pyo.Param(initialize=1, mutable=True, within=pyo.Integers)
+        m.x = pyo.Var()
+        m.c = pyo.Constraint(
+            expr=m.x == m.k + m.k_indexed["a"] + m.k_indexed["b"] + m.k_any + m.k_int
+        )
+
+        m_vars = parmest.utils.convert_params_to_vars(
+            m, ["k", "k_indexed", "k_any", "k_int"]
+        )
+
+        # continuous domains become the Var domain (and so its bounds)
+        self.assertIs(m_vars.k.domain, pyo.PositiveReals)
+        self.assertEqual(m_vars.k.bounds, (0, None))
+        for idx in m_vars.I:
+            self.assertIs(m_vars.k_indexed[idx].domain, pyo.UnitInterval)
+            self.assertEqual(m_vars.k_indexed[idx].bounds, (0, 1))
+        # the default Param domain (Any) and discrete domains become Reals
+        self.assertIs(m_vars.k_any.domain, pyo.Reals)
+        self.assertIs(m_vars.k_int.domain, pyo.Reals)
+        self.assertEqual(pyo.value(m_vars.k), 2.0)
+
     def test_update_model_from_suffix_experiment_outputs(self):
         from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
             ReactorDesignExperiment,

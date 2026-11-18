@@ -236,7 +236,7 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                 config.logger.info(
                     'Final bound values: LB: {}  UB: {}'.format(self.LB, self.UB)
                 )
-                return self._get_final_results_object()
+                return self._get_final_pyomo_results_object()
 
             # Handle current node
             if not node_data.is_screened:
