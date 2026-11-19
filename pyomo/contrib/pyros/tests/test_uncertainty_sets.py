@@ -96,6 +96,17 @@ def bounded_and_nonempty_check(test, unc_set):
     test.assertTrue(unc_set.is_nonempty(config=CONFIG), "Set is empty.")
 
 
+class UnknownSolver:
+    def available(self, exception_flag=None):
+        return True
+
+    def solve(self, model, *args, **kwargs):
+        res = SolverResults()
+        res.solver.termination_condition = TerminationCondition.unknown
+        res.solver.status = SolverStatus.warning
+        return res
+
+
 class TestBoxSet(unittest.TestCase):
     """
     Tests for the BoxSet.
@@ -487,6 +498,46 @@ class TestBoxSet(unittest.TestCase):
             box_set._is_coordinate_fixed(config=Bunch()), [False, False, False]
         )
 
+    def test_has_positive_measure(self):
+        """
+        Tests for BoxSet positive measure checks.
+        """
+        # compare bounds
+        self.assertTrue(BoxSet([[0.0, 2], [1, 2]])._has_positive_measure(Bunch()))
+        self.assertTrue(BoxSet([[0.0, 1.1e-8], [1, 2]])._has_positive_measure(Bunch()))
+        self.assertFalse(BoxSet([[0.0, 9e-9], [1, 2]])._has_positive_measure(Bunch()))
+        self.assertFalse(BoxSet([[0.0, 2], [2, 1]])._has_positive_measure(Bunch()))
+
+        # check fixed values vs bounds
+        self.assertTrue(
+            BoxSet([[0.0, 2], [1, 2]])._has_positive_measure(Bunch(), {0: 1})
+        )
+        self.assertTrue(
+            BoxSet([[0.0, 2], [1, 2]])._has_positive_measure(Bunch(), {0: -1e-8})
+        )
+        self.assertFalse(
+            BoxSet([[0.0, 2], [1, 2]])._has_positive_measure(Bunch(), {0: -1e-7})
+        )
+        self.assertTrue(
+            BoxSet([[0.0, 2], [1, 2]])._has_positive_measure(Bunch(), {1: 2 + 1e-8})
+        )
+        self.assertFalse(
+            BoxSet([[0.0, 2], [1, 2]])._has_positive_measure(Bunch(), {1: 2 + 1e-7})
+        )
+        self.assertTrue(
+            BoxSet([[0.0, 2], [1, 2]])._has_positive_measure(Bunch(), {1: 2, 0: -1e-8})
+        )
+        self.assertFalse(
+            BoxSet([[0.0, 2], [1, 2]])._has_positive_measure(Bunch(), {1: 2, 0: -1e-7})
+        )
+        # compare only unfixed coordinate bounds
+        self.assertTrue(
+            BoxSet([[0.0, 1.1e-8], [1, 1]])._has_positive_measure(Bunch(), {1: 1})
+        )
+        self.assertFalse(
+            BoxSet([[0.0, 9.9e-9], [1, 1]])._has_positive_measure(Bunch(), {1: 1})
+        )
+
 
 class TestBudgetSet(unittest.TestCase):
     """
@@ -837,6 +888,94 @@ class TestBudgetSet(unittest.TestCase):
         )
         self.assertEqual(
             buset._is_coordinate_fixed(config=Bunch()), [False, True, False]
+        )
+
+    def test_has_positive_measure(self):
+        """
+        Tests for BudgetSet positive measure checks.
+        """
+        # budgets allow nonzero deviations
+        self.assertTrue(
+            BudgetSet([[1, 0, 1], [1, 1, 0]], [2, 2], [1] * 3)._has_positive_measure(
+                Bunch()
+            )
+        )
+        # budgets large enough to allow nonzer odeviations
+        self.assertTrue(
+            BudgetSet([[1, 0, 1], [1, 1, 0]], [1, 1e-8], [1] * 3)._has_positive_measure(
+                Bunch()
+            )
+        )
+        # zero budgets disallow nonzero deviations
+        self.assertFalse(
+            BudgetSet([[1, 0, 1], [1, 1, 0]], [0, 0], [1] * 3)._has_positive_measure(
+                Bunch()
+            )
+        )
+        # budgets not considered large enough to allow nonzero deviations
+        self.assertFalse(
+            BudgetSet([[1, 0, 1], [1, 1, 0]], [1, 9e-9], [0] * 3)._has_positive_measure(
+                Bunch()
+            )
+        )
+
+        # fixed coordinates agree with set data
+        self.assertTrue(
+            BudgetSet([[1, 0, 1], [1, 1, 0]], [2, 2], [0] * 3)._has_positive_measure(
+                Bunch(), {1: 0}
+            )
+        )
+        # fixed coordinates agree well enough with set data
+        self.assertTrue(
+            BudgetSet([[1, 0, 1], [1, 1, 0]], [2, 2], [0] * 3)._has_positive_measure(
+                Bunch(), {1: -1e-8}
+            )
+        )
+        # fixed coordinates are too far below origin
+        self.assertFalse(
+            BudgetSet([[1, 0, 1], [1, 1, 0]], [2, 2], [0] * 3)._has_positive_measure(
+                Bunch(), {1: -1e-7}
+            )
+        )
+        # fixed coordinates effectively limit budgets
+        # to disallow nonzero deviations
+        self.assertFalse(
+            BudgetSet([[1, 0, 1], [1, 1, 0]], [2, 2], [0] * 3)._has_positive_measure(
+                Bunch(), {1: 2}
+            )
+        )
+        # fixed coordinates are fine enough so that effective budget
+        # allows nonzero deviations
+        self.assertTrue(
+            BudgetSet([[1, 0, 1], [1, 1, 0]], [2, 2], [0] * 3)._has_positive_measure(
+                Bunch(), {1: 2 - 1e-6}
+            )
+        )
+        # fixed coordinates are not fine enough so that effective budget
+        # allows nonzero deviations
+        self.assertFalse(
+            BudgetSet([[1, 0, 1], [1, 1, 0]], [2, 2], [0] * 3)._has_positive_measure(
+                Bunch(), {1: 2}
+            )
+        )
+        # zero budgets don't restrict unrelated unfixed coordinates
+        # to origin
+        self.assertTrue(
+            BudgetSet([[1, 0, 1], [1, 1, 0]], [2, 0], [0.1] * 3)._has_positive_measure(
+                Bunch(), {0: 0.1, 1: 0.1}
+            )
+        )
+        # all coordinates are fixed to feasible values
+        self.assertTrue(
+            BudgetSet([[1, 0, 1], [1, 1, 0]], [2, 0], [0.1] * 3)._has_positive_measure(
+                Bunch(), {0: 0.1, 2: 0.1 + 2, 1: 0.1}
+            )
+        )
+        # some coordinates are fixed to infeasible values
+        self.assertFalse(
+            BudgetSet([[1, 0, 1], [1, 1, 0]], [2, 0], [0.1] * 3)._has_positive_measure(
+                Bunch(), {0: 0.1, 2: 0.1 + 2 + 1e-6, 1: 0.1}
+            )
         )
 
 
@@ -1321,6 +1460,46 @@ class TestFactorModelSet(unittest.TestCase):
         fset.beta = 0
         self.assertEqual(
             fset._is_coordinate_fixed(config=Bunch()), [False, False, True]
+        )
+
+    def test_has_positive_measure(self):
+        """
+        Tests for FactorModelSet positive measure checks.
+        """
+        self.assertTrue(
+            FactorModelSet([1, 1.5], 2, [[1, 2], [2, 1]], 0.1)._has_positive_measure(
+                Bunch()
+            )
+        )
+        # beta*F considered large enough for nonzero deviations
+        self.assertTrue(
+            FactorModelSet([1, 1.5], 2, [[1, 2], [2, 1]], 5e-9)._has_positive_measure(
+                Bunch()
+            )
+        )
+        # beta*F considered too small for nonzero deviations
+        self.assertFalse(
+            FactorModelSet([1, 1.5], 2, [[1, 2], [2, 1]], 4.9e-9)._has_positive_measure(
+                Bunch()
+            )
+        )
+        # some but not all coordinates are fixed
+        self.assertFalse(
+            FactorModelSet([1, 1.5], 2, [[1, 2], [2, 1]], 1)._has_positive_measure(
+                Bunch(), {0: 1}
+            )
+        )
+        # all coordinates are fixed to feasible point
+        self.assertTrue(
+            FactorModelSet([1, 1.5], 2, [[1, 2], [2, 1]], 1)._has_positive_measure(
+                Bunch(), {1: 1.5 + 1, 0: 1}
+            )
+        )
+        # all coordinates are fixed to point outside set
+        self.assertFalse(
+            FactorModelSet([1, 1.5], 2, [[1, 0], [0, 1]], 1)._has_positive_measure(
+                Bunch(), {1: 1.5 + 1 + 1e-6, 0: 1}
+            )
         )
 
 
@@ -1950,6 +2129,35 @@ class TestIntersectionSet(unittest.TestCase):
         self.assertFalse(uq.auxiliary_vars)
         self.assertFalse(uq.uncertainty_cons)
 
+    def test_has_positive_measure(self):
+        """
+        Tests for IntersectionSet positive measure checks.
+        """
+        # all coordinates fixed to point in set
+        self.assertTrue(
+            IntersectionSet(
+                BoxSet([[1, 2], [0, 2]]), AxisAlignedEllipsoidalSet([1, 2], [2, 3])
+            )._has_positive_measure(Bunch(), {1: 2, 0: 1.0})
+        )
+        # all coordinates fixed to point out of set
+        self.assertFalse(
+            IntersectionSet(
+                BoxSet([[1, 2], [0, 2]]), AxisAlignedEllipsoidalSet([1, 2], [2, 3])
+            )._has_positive_measure(Bunch(), {1: 2, 0: 5})
+        )
+        # no coordinates fixed
+        self.assertFalse(
+            IntersectionSet(
+                BoxSet([[1, 2], [0, 2]]), AxisAlignedEllipsoidalSet([0, 0], [2, 2])
+            )._has_positive_measure(Bunch())
+        )
+        # some but not all coordinates fixed
+        self.assertFalse(
+            IntersectionSet(
+                BoxSet([[1, 2], [0, 2]]), AxisAlignedEllipsoidalSet([0, 0], [2, 2])
+            )._has_positive_measure(Bunch(), {0: 2})
+        )
+
 
 class TestCardinalitySet(unittest.TestCase):
     """
@@ -2324,6 +2532,113 @@ class TestCardinalitySet(unittest.TestCase):
             cset._is_coordinate_fixed(config=Bunch()), [False, False, True]
         )
 
+    def test_has_positive_measure(self):
+        """
+        Tests for CardinalitySet positive measure checks.
+        """
+        # octahedron
+        self.assertTrue(
+            CardinalitySet([0, 0], 1, [1, 1], [1, 1])._has_positive_measure(Bunch())
+        )
+        # gamma large enough to allow deviations
+        self.assertTrue(
+            CardinalitySet([0, 0], 1e-8, [1, 1], [1, 1])._has_positive_measure(Bunch())
+        )
+        # gamma too small to allow deviations
+        self.assertFalse(
+            CardinalitySet([0, 0], 9e-9, [1, 1], [1, 1])._has_positive_measure(Bunch())
+        )
+        # nonzero deviations allowd
+        self.assertTrue(
+            CardinalitySet([0, 0], 1, [1e-8, 0], [0, 1])._has_positive_measure(Bunch())
+        )
+        self.assertTrue(
+            CardinalitySet([0, 0], 1, [0, 1], [1e-8, 0])._has_positive_measure(Bunch())
+        )
+        # nonzero deviations not allowed
+        self.assertFalse(
+            CardinalitySet([0, 0], 1, [1e-9, 0], [0, 1])._has_positive_measure(Bunch())
+        )
+        self.assertFalse(
+            CardinalitySet([0, 0], 1, [0, 1], [1e-9, 0])._has_positive_measure(Bunch())
+        )
+
+        # some coordinates fixed to valid point.
+        # may or may not allow unfixed coordinates to deviate
+        self.assertTrue(
+            CardinalitySet([0, 0], 1, [1, 1], [0, 0])._has_positive_measure(
+                Bunch(), {1: 0}
+            )
+        )
+        self.assertTrue(
+            CardinalitySet([0, 0], 1, [1, 1], [0, 0])._has_positive_measure(
+                Bunch(), {1: 0.5}
+            )
+        )
+        self.assertFalse(
+            CardinalitySet([0, 0], 1, [1, 1], [0, 0])._has_positive_measure(
+                Bunch(), {1: 1}
+            )
+        )
+        self.assertTrue(
+            CardinalitySet([0, 0], 1, [1e-8, 0], [0, 0])._has_positive_measure(
+                Bunch(), {1: 0}
+            )
+        )
+        self.assertTrue(
+            CardinalitySet([0, 0], 1, [0, 0], [1e-8, 0])._has_positive_measure(
+                Bunch(), {1: 0}
+            )
+        )
+        self.assertFalse(
+            CardinalitySet([0, 0], 1, [0, 0], [1e-9, 0])._has_positive_measure(
+                Bunch(), {1: 0}
+            )
+        )
+        # coordinates fixed to valid point, but no deviations allowed
+        self.assertFalse(
+            CardinalitySet([0, 0], 1, [1, 1], [0, 0])._has_positive_measure(
+                Bunch(), {1: 1}
+            )
+        )
+        # coordinate fixed to value outside set
+        self.assertTrue(
+            CardinalitySet([0, 0], 1, [1, 1], [0, 0])._has_positive_measure(
+                Bunch(), {1: 1e-6}
+            )
+        )
+
+        # coordinates fixed to point in set
+        self.assertTrue(
+            CardinalitySet([0, 0], 1, [0, 0], [0, 0])._has_positive_measure(
+                Bunch(), {1: 1e-8, 0: 0}
+            )
+        )
+        # coordinates fixed to point out of set
+        self.assertFalse(
+            CardinalitySet([0, 0], 1, [0, 0], [0, 0])._has_positive_measure(
+                Bunch(), {1: 1e-7, 0: 0}
+            )
+        )
+        # point outside set
+        self.assertFalse(
+            CardinalitySet([0, 0], 1, [1, 0], [0, 1])._has_positive_measure(
+                Bunch(), {1: 2, 0: 0.1}
+            )
+        )
+        # point outside set
+        self.assertFalse(
+            CardinalitySet([0, 0], 1, [1, 0], [0, 1])._has_positive_measure(
+                Bunch(), {1: 1 + 1e-4, 0: 0}
+            )
+        )
+        # point outside set
+        self.assertFalse(
+            CardinalitySet([0, 0], 1, [1, 0], [0, 1])._has_positive_measure(
+                Bunch(), {1: 0, 0: -1 - 1e-4}
+            )
+        )
+
 
 class TestDiscreteScenarioSet(unittest.TestCase):
     """
@@ -2516,6 +2831,31 @@ class TestDiscreteScenarioSet(unittest.TestCase):
         dset = DiscreteScenarioSet(scenarios=[[0, 0, 0], [0, 1, 2], [0, 3, 4]])
         self.assertEqual(
             dset._is_coordinate_fixed(config=Bunch()), [True, False, False]
+        )
+
+    def test_has_positive_measure(self):
+        """
+        Tests for DiscreteScenarioSet positive measure checks.
+        """
+        # all coordinates fixed to point inside set
+        self.assertTrue(
+            DiscreteScenarioSet([[0, 2], [3, 4]])._has_positive_measure(
+                Bunch(), {1: 2, 0: -1e-9}
+            )
+        )
+        # all coordinates fixed to point outside set
+        self.assertFalse(
+            DiscreteScenarioSet([[1, 2], [3, 4]])._has_positive_measure(
+                Bunch(), {1: 2, 0: -1e-8}
+            )
+        )
+        # no coordinates fixed
+        self.assertFalse(
+            DiscreteScenarioSet([[1, 2], [3, 4]])._has_positive_measure(Bunch())
+        )
+        # some but not all coordinates fixed
+        self.assertFalse(
+            DiscreteScenarioSet([[1, 2], [3, 4]])._has_positive_measure(Bunch(), {0: 0})
         )
 
 
@@ -2754,6 +3094,55 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         aeset = AxisAlignedEllipsoidalSet(center=np.zeros(3), half_lengths=[1, 2, 0])
         self.assertEqual(
             aeset._is_coordinate_fixed(config=Bunch()), [False, False, True]
+        )
+
+    def test_has_positive_measure(self):
+        """
+        Tests for AxisAlignedEllipsoidalSet positive measure checks.
+        """
+        # unfixed half-lengths allow deviations
+        self.assertTrue(
+            AxisAlignedEllipsoidalSet([1, 1], [2, 3])._has_positive_measure(Bunch())
+        )
+        self.assertTrue(
+            AxisAlignedEllipsoidalSet([1, 1], [1e-8, 1e-8])._has_positive_measure(
+                Bunch()
+            )
+        )
+        self.assertTrue(
+            AxisAlignedEllipsoidalSet([1, 1], [1e-8, 0])._has_positive_measure(
+                Bunch(), {1: 1}
+            )
+        )
+        # fixed coordinates have maximal deviation
+        self.assertFalse(
+            AxisAlignedEllipsoidalSet([1, 1], [1, 2])._has_positive_measure(
+                Bunch(), {1: 3}
+            )
+        )
+        # fixed coordinates allow unfixed coordinates to deviate
+        self.assertTrue(
+            AxisAlignedEllipsoidalSet([1, 1], [1, 2])._has_positive_measure(
+                Bunch(), {1: 2.99}
+            )
+        )
+        # fixed coordinate values not feasible
+        self.assertFalse(
+            AxisAlignedEllipsoidalSet([1, 1], [1, 2])._has_positive_measure(
+                Bunch(), {1: 3.01}
+            )
+        )
+        # coordinates fixed to point in tset
+        self.assertFalse(
+            AxisAlignedEllipsoidalSet([1, 1], [1, 2])._has_positive_measure(
+                Bunch(), {1: 3.0, 0: 1.0}
+            )
+        )
+        # coordinates fixed to point not in set
+        self.assertFalse(
+            AxisAlignedEllipsoidalSet([1, 1], [1, 2])._has_positive_measure(
+                Bunch(), {1: 3.01, 0: 1.0}
+            )
         )
 
 
@@ -3202,6 +3591,53 @@ class TestEllipsoidalSet(unittest.TestCase):
         eset.scale = 0
         self.assertEqual(eset._is_coordinate_fixed(config=Bunch()), [True, True, True])
 
+    def test_has_positive_measure(self):
+        """
+        Tests for EllipsoidalSet positive measure checks.
+        """
+        # nonzero scale
+        self.assertTrue(
+            EllipsoidalSet([0, 0, 0.0], np.diag([4, 1, 9]), 1)._has_positive_measure(
+                Bunch()
+            )
+        )
+        # scale large enough to allow deviations
+        self.assertTrue(
+            EllipsoidalSet([0, 0, 0.0], np.diag([4, 1, 9]), 1e-8)._has_positive_measure(
+                Bunch()
+            )
+        )
+        # scale too small to allow deviations
+        self.assertFalse(
+            EllipsoidalSet([0, 0, 0.0], np.diag([4, 1, 9]), 1e-9)._has_positive_measure(
+                Bunch()
+            )
+        )
+
+        # coordinates fixed to allow unfixed nonzero deviations
+        self.assertTrue(
+            EllipsoidalSet([0, 0, 0.0], np.diag([4, 1, 9]))._has_positive_measure(
+                Bunch(), {1: 0, 2: 0}
+            )
+        )
+        self.assertTrue(
+            EllipsoidalSet([0, 0, 0.0], np.diag([4, 1, 9]))._has_positive_measure(
+                Bunch(), {1: 0.99, 2: 0}
+            )
+        )
+        # coordinate fixing does not allow nonzero deviations
+        self.assertFalse(
+            EllipsoidalSet([0, 0, 0.0], np.diag([4, 1, 9]))._has_positive_measure(
+                Bunch(), {1: 1, 2: 0}
+            )
+        )
+        # coordinates fixed to point inside set
+        self.assertTrue(
+            EllipsoidalSet([0, 0, 0.0], np.diag([4, 1, 9]))._has_positive_measure(
+                Bunch(), {1: 0, 2: 3, 0: 0}
+            )
+        )
+
 
 class TestPolyhedralSet(unittest.TestCase):
     """
@@ -3480,16 +3916,6 @@ class TestPolyhedralSet(unittest.TestCase):
         pset = PolyhedralSet(lhs_coefficients_mat=[[1], [-1]], rhs_vec=[2, -3])
         self.assertFalse(pset.is_nonempty(config=CONFIG))
 
-        class UnknownSolver:
-            def available(self, exception_flag=None):
-                return True
-
-            def solve(self, model, *args, **kwargs):
-                res = SolverResults()
-                res.solver.termination_condition = TerminationCondition.unknown
-                res.solver.status = SolverStatus.warning
-                return res
-
         # nonemptiness check fails as nomemptiness/emptiness could
         # not be deduced using this solver
         CONFIG.global_solver = UnknownSolver()
@@ -3510,6 +3936,48 @@ class TestPolyhedralSet(unittest.TestCase):
         baron = SolverFactory("baron")
         self.assertEqual(
             pset._is_coordinate_fixed(config=Bunch(global_solver=baron)), [False, True]
+        )
+
+    @unittest.skipUnless(baron_available, "BARON is not available.")
+    def test_has_positive_measure(self):
+        """
+        Tests for PolyhedralSet positive measure checks.
+        """
+        # has interior point
+        self.assertTrue(
+            PolyhedralSet(
+                [[1, 0], [-1, 0], [0, 1], [0, -1]], [1.01, -1, 2.01, -2]
+            )._has_positive_measure(Bunch(global_solver=SolverFactory("baron")))
+        )
+        # has no interior point
+        self.assertFalse(
+            PolyhedralSet(
+                [[1, 0], [-1, 0], [0, 1], [0, -1]], [1, -1, 2, -2]
+            )._has_positive_measure(Bunch(global_solver=SolverFactory("baron")))
+        )
+        # slice has interior point
+        self.assertFalse(
+            PolyhedralSet(
+                [[1, 0], [-1, 0], [0, 1], [0, -1]], [1.01, -1, 2, -2]
+            )._has_positive_measure(Bunch(global_solver=SolverFactory("baron")), {1: 2})
+        )
+        # slice has no interior point
+        self.assertFalse(
+            PolyhedralSet(
+                [[1, 0], [-1, 0], [0, 1], [0, -1]], [1, -1, 2.01, -2]
+            )._has_positive_measure(Bunch(global_solver=SolverFactory("baron")), {1: 2})
+        )
+        # solver doesn't work
+        self.assertFalse(
+            PolyhedralSet(
+                [[1, 0], [-1, 0], [0, 1], [0, -1]], [1.01, -1, 2.01, -2]
+            )._has_positive_measure(Bunch(global_solver=UnknownSolver()))
+        )
+        # coordinates fixed to point inside set
+        self.assertTrue(
+            PolyhedralSet(
+                [[1, 0], [-1, 0], [0, 1], [0, -1]], [1.01, -1, 2.01, -2]
+            )._has_positive_measure(Bunch(), {1: 2, 0: 1})
         )
 
 
@@ -4321,6 +4789,67 @@ class TestCustomUncertaintySet(unittest.TestCase):
         self.assertEqual(
             custom_set._is_coordinate_fixed(config=Bunch(global_solver=baron)),
             [False, False, False],
+        )
+
+    def test_has_positive_measure(self):
+        """
+        Tests for CartesianProductSet positive measure checks.
+        """
+        # all factors have positive measure
+        self.assertTrue(
+            CartesianProductSet(
+                AxisAlignedEllipsoidalSet([0], [1]),
+                BoxSet([[0, 1], [2, 3], [1.5, 2]]),
+                CardinalitySet([0, 0], 1, [1.5, 2], [0, 0]),
+            )._has_positive_measure(Bunch())
+        )
+        # one factor with zero measure (singleton set)
+        self.assertFalse(
+            CartesianProductSet(
+                AxisAlignedEllipsoidalSet([0], [0]),
+                BoxSet([[0, 1], [2, 3], [1.5, 2]]),
+                CardinalitySet([0, 0], 1, [1.5, 2], [0, 0]),
+            )._has_positive_measure(Bunch())
+        )
+        # one factor has zero measure in one of its coordinates
+        self.assertFalse(
+            CartesianProductSet(
+                AxisAlignedEllipsoidalSet([0], [1]),
+                BoxSet([[0, 1], [3, 3], [1.5, 2]]),
+                CardinalitySet([0, 0], 1, [1.5, 2], [0, 0]),
+            )._has_positive_measure(Bunch(), {0: 0})
+        )
+        # positive measure with respect to unfixed coordinates
+        self.assertTrue(
+            CartesianProductSet(
+                AxisAlignedEllipsoidalSet([0], [0]),
+                BoxSet([[0, 1], [3, 3], [1.5, 2]]),
+                CardinalitySet([0, 0], 1, [1.5, 2], [0, 0]),
+            )._has_positive_measure(Bunch(), {2: 3, 0: 0})
+        )
+        # coordinates fixed to infeasible values
+        self.assertFalse(
+            CartesianProductSet(
+                AxisAlignedEllipsoidalSet([0], [0]),
+                BoxSet([[0, 1], [2, 3], [1.5, 2]]),
+                CardinalitySet([0, 0], 1, [1.5, 2], [0, 0]),
+            )._has_positive_measure(Bunch(), {1: 4})
+        )
+        # point in set
+        self.assertTrue(
+            CartesianProductSet(
+                AxisAlignedEllipsoidalSet([0], [0]),
+                BoxSet([[0, 1], [2, 3], [1.5, 2]]),
+                CardinalitySet([0, 0], 1, [1.5, 2], [0, 0]),
+            )._has_positive_measure(Bunch(), {1: 1, 3: 1.5, 4: 0, 5: 0, 0: 0, 2: 2.5})
+        )
+        # point not in set
+        self.assertFalse(
+            CartesianProductSet(
+                AxisAlignedEllipsoidalSet([0], [0]),
+                BoxSet([[0, 1], [2, 3], [1.5, 2]]),
+                CardinalitySet([0, 0], 1, [1.5, 2], [0, 0]),
+            )._has_positive_measure(Bunch(), {1: 1, 3: 1.5, 4: 0, 5: 3, 0: 0, 2: 2.5})
         )
 
 
