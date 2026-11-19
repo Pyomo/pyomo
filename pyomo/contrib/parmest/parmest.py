@@ -413,7 +413,7 @@ def _get_solver(solver, solver_options=None):
             "Solvers from pyomo.contrib.solver are not supported yet. Use "
             "SolverFactory from pyomo.opt, e.g., SolverFactory('ipopt_v2')."
         )
-    elif solver_options is not None:
+    elif solver_options:
         logger.warning(
             "solver_options are set on the given solver object. solver_options "
             "will be deprecated in a future release; set the options on the "
@@ -1636,9 +1636,8 @@ class Estimator:
         else:
             # A solver object is used as given for this call
             sol = _get_solver(solver)
-        # Currently, parmest is only tested with ipopt via ef_ipopt
-        # No other pyomo solvers have been verified to work with parmest from current release
-        # to my knowledge.
+        # Any solver from SolverFactory (pyomo.opt) can be used, but the parmest
+        # tests use ipopt.
 
         # Solve model without loading solution values until the termination
         # condition has been checked.
