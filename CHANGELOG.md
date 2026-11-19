@@ -35,7 +35,7 @@ CHANGELOG
   - Fix dae collocation name conflict (#4089)
 - Documentation
   - Add PyROS paper preprint to Pyomo docs reference list (#3992)
-  - Correct broken URLs (#4079, #4062, #4021)
+  - Correct broken URLs (#4079, #4062, #4021, #4004)
 - Solver Interfaces
   - Correct several incorrect legacy solver termination conditions (#4099)
   - Fix reduced costs dropped by legacy results (#3978)
@@ -60,7 +60,6 @@ CHANGELOG
   - Updates to support new MUMPS versions (#4053)
   - Add GHA dependency for pillow builds on pypy (#4049)
   - Upgrade actions to newest versions (#4045)
-  - URL Checker: resolve failure checking PLY documentation (#4004)
   - Revert pypy pin and skip stalled tests (#4002)
   - Move `cplex` and `docplex` to pypi-only installs (#3984)
 - Contributed Packages
