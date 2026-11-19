@@ -66,6 +66,8 @@ from pyomo.common.flags import NOTSET
 
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 from pyomo.opt.base.solvers import UnknownSolver
+from pyomo.solvers.plugins.solvers.IPOPT import IPOPT
+from pyomo.contrib.solver.solvers.ipopt import LegacyIpoptSolver
 
 import pyomo.contrib.parmest.utils as utils
 import pyomo.contrib.parmest.graphics as graphics
@@ -1738,11 +1740,25 @@ class Estimator:
             # retrieve the independent variables (i.e., estimated parameters)
             ind_vars = list(self.ef_instance.parmest_theta.values())
 
+            # The reduced hessian is computed with its own ipopt solver. If the
+            # solver is ipopt, its options are passed on; otherwise, a warning
+            # is logged and solver_options are used.
+            if isinstance(solver, (IPOPT, LegacyIpoptSolver)):
+                reduced_hessian_options = {
+                    key: solver.options[key] for key in solver.options
+                }
+            else:
+                logger.warning(
+                    f"The 'reduced_hessian' method solves with ipopt, not with "
+                    f"the {type(solver).__name__} solver; it uses solver_options."
+                )
+                reduced_hessian_options = self.solver_options
+
             solve_result, inv_red_hes = (
                 inverse_reduced_hessian.inv_reduced_hessian_barrier(
                     self.ef_instance,
                     independent_variables=ind_vars,
-                    solver_options=self.solver_options,
+                    solver_options=reduced_hessian_options,
                     tee=self.tee,
                 )
             )
@@ -2086,7 +2102,11 @@ class Estimator:
             Solver for this call only: a solver name, e.g., 'ipopt', which is
             created with ``SolverFactory`` (``pyomo.opt``) and
             ``solver_options``, or a solver object from ``SolverFactory``,
-            used as given. Default is None (the Estimator's solver)
+            used as given. Default is None (the Estimator's solver). The
+            'reduced_hessian' method solves with its own ipopt
+            (``SolverFactory('ipopt')``): if the solver is ipopt (``'ipopt'``
+            or ``'ipopt_v2'``), its options are used; otherwise a warning is
+            logged and ``solver_options`` are used.
         step : float, optional
             Float used for relative perturbation of the parameters,
             e.g., step=0.02 is a 2% perturbation. Default is 1e-3

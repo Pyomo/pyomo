@@ -2546,6 +2546,42 @@ class TestEstimatorSolver(unittest.TestCase):
 
         self.assertTrue(np.allclose(cov_default.values, cov_named.values))
 
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    @unittest.skipIf(not pynumero_ASL_available, "pynumero_ASL is not available")
+    def test_cov_est_reduced_hessian_uses_ipopt_solver_options(self):
+        # The reduced hessian is computed with its own ipopt, which gets the
+        # options of the Estimator's ipopt solver; ipopt lists the options it
+        # was given when print_user_options is set
+        solver = pyo.SolverFactory("ipopt")
+        solver.options["print_user_options"] = "yes"
+        pest = parmest.Estimator(
+            self.exp_list, obj_function="SSE", tee=True, solver=solver
+        )
+        pest.theta_est()
+
+        with capture_output() as output:
+            cov = pest.cov_est(method="reduced_hessian")
+
+        self.assertIn("print_user_options", output.getvalue())
+        self.assertEqual(cov.shape, (1, 1))
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    @unittest.skipIf(not pynumero_ASL_available, "pynumero_ASL is not available")
+    def test_cov_est_reduced_hessian_warns_about_other_solver(self):
+        pest = parmest.Estimator(self.exp_list, obj_function="SSE")
+        pest.theta_est()
+        cov_default = pest.cov_est(method="reduced_hessian")
+
+        # Another solver cannot compute the reduced hessian, so ipopt is used
+        # with solver_options, and a warning says so
+        with self.assertLogs("pyomo.contrib.parmest.parmest", level="WARNING") as log:
+            cov = pest.cov_est(
+                method="reduced_hessian", solver=pyo.SolverFactory("glpk")
+            )
+
+        self.assertIn("solves with ipopt, not with the", log.output[0])
+        self.assertTrue(np.allclose(cov.values, cov_default.values))
+
     def test_cov_est_invalid_solver_raises(self):
         pest = parmest.Estimator(self.exp_list, obj_function="SSE")
 
