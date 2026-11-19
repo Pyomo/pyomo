@@ -44,7 +44,7 @@ CHANGELOG
   - Make GAMS fail loudly when active SOSConstraints are present (#4093)
   - Correctly pass logfile to GAMS (#4042)
   - Baron writer: resolve bug for x^y when both variable (#4087)
-  - (Temporarily) Disable MINLP support for Gurobi 14 (#4083)
+  - Track Gurobi 14 Nonlinear API changes (#4083, #4104)
   - Fix attribute names in Gurobi persistent error messages (#4064)
   - Track changes to Xpress API from 9.9 and 10.0 releases (#4072)
   - Add `license_is_valid` for `knitroampl` (#4059)
@@ -52,7 +52,6 @@ CHANGELOG
   - Support trivial constraints in SCIP interfaces (#4001)
   - Fix cuOpt solver version parsing (#4027)
   - New z3-solver version fix (#4055)
-  - Correct Gurobi tests for Gurobi 14 (#4104)
   - Add v2 Xpress direct and persistent solver interfaces (#3987)
 - Testing
   - Fix intermittent MPI build issues (#4092)
@@ -75,8 +74,7 @@ CHANGELOG
   - GDPopt: Make GDP enumeration lazy (#4031)
   - GDPopt/MindtPy: Fix non-rigorous crossed bound results (#4013)
   - GDPopt/MindtPy: Convert `time_limit` to float (#4058)
-  - initialization: Extend pwl approximation init method to support
-    higher initial points and single solve. (#4028)
+  - initialization: Extend pwl approximation init method (#4028)
   - initialization: Fix bug to return solve with bounded nlp (#3991)
   - MindtPy: Track dual bound with no good cuts (#4038)
   - MindtPy: Update documentation (#3964)
@@ -85,14 +83,13 @@ CHANGELOG
   - parmest: Fixed bugs in cov_est function and Estimator class (#3980)
   - piecewise: Support convexity/concavity and pigraph/hypograph
     transformation (#3989)
-  - piecewise: Add special case for single-segment "piecewise"
-    linear functions (#3990)
+  - piecewise: Handle single-segment "piecewise" linear functions (#3990)
   - piecewise: Support evaluating PiecewiseLinearExpression objects (#4007)
   - PyROS: Update UncertaintySet implementations (#4043)
   - PyROS: Update (usage of) `UncertaintySet` validation routines (#4000)
   - PyROS: Convert `UncertaintySet` subclass docstrings to raw strings (#4077)
   - PyROS: Modify uncertainty set docs/logs (#3975)
-  - PyROS: pause the GC so it doesn't impact timing tests (#4081)
+  - PyROS: Pause the GC so it doesn't impact timing tests (#4081)
   - viewer: Fix issue with displaying numpy scalars (#4008)
   - viewer: Add menu items to set font (#4006)
 
