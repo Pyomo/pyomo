@@ -1660,7 +1660,7 @@ void prep_for_repn_helper(py::handle expr, py::handle named_exprs,
     break;
   }
   case product: {
-    py::tuple args = expr.attr("_args_");
+    py::tuple args = expr.attr("args");
     for (py::handle arg : args) {
       prep_for_repn_helper(arg, named_exprs, variables, fixed_vars,
                            external_funcs, expr_types);
@@ -1676,7 +1676,7 @@ void prep_for_repn_helper(py::handle expr, py::handle named_exprs,
     break;
   }
   case negation: {
-    py::tuple args = expr.attr("_args_");
+    py::tuple args = expr.attr("args");
     for (py::handle arg : args) {
       prep_for_repn_helper(arg, named_exprs, variables, fixed_vars,
                            external_funcs, expr_types);
@@ -1693,7 +1693,7 @@ void prep_for_repn_helper(py::handle expr, py::handle named_exprs,
     break;
   }
   case power: {
-    py::tuple args = expr.attr("_args_");
+    py::tuple args = expr.attr("args");
     for (py::handle arg : args) {
       prep_for_repn_helper(arg, named_exprs, variables, fixed_vars,
                            external_funcs, expr_types);
@@ -1701,7 +1701,7 @@ void prep_for_repn_helper(py::handle expr, py::handle named_exprs,
     break;
   }
   case division: {
-    py::tuple args = expr.attr("_args_");
+    py::tuple args = expr.attr("args");
     for (py::handle arg : args) {
       prep_for_repn_helper(arg, named_exprs, variables, fixed_vars,
                            external_funcs, expr_types);
@@ -1709,7 +1709,7 @@ void prep_for_repn_helper(py::handle expr, py::handle named_exprs,
     break;
   }
   case unary_func: {
-    py::tuple args = expr.attr("_args_");
+    py::tuple args = expr.attr("args");
     for (py::handle arg : args) {
       prep_for_repn_helper(arg, named_exprs, variables, fixed_vars,
                            external_funcs, expr_types);
@@ -1744,7 +1744,7 @@ void prep_for_repn_helper(py::handle expr, py::handle named_exprs,
     break;
   }
   case unary_abs: {
-    py::tuple args = expr.attr("_args_");
+    py::tuple args = expr.attr("args");
     for (py::handle arg : args) {
       prep_for_repn_helper(arg, named_exprs, variables, fixed_vars,
                            external_funcs, expr_types);

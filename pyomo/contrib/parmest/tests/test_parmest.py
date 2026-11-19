@@ -113,7 +113,8 @@ class TestParmestCovEst(unittest.TestCase):
                 standard deviation
         """
         if obj_function == "SSE":
-            self.assertAlmostEqual(obj_val, 4.33171, places=2)
+            # SSE includes a 1/2: half the sum of squared residuals, 4.33171
+            self.assertAlmostEqual(obj_val, 2.165856, places=2)
         elif obj_function == "SSE_weighted" and measurement_error is not None:
             self.assertAlmostEqual(obj_val, 216.58556, places=2)
 
@@ -908,7 +909,8 @@ class TestModelVariants(unittest.TestCase):
             idx for idx, s in enumerate(cov_cols) if "rate_constant" in s
         ][0]
 
-        self.assertAlmostEqual(objval, 4.3317112, places=2)
+        # SSE includes a 1/2: half the sum of squared residuals, 4.3317112
+        self.assertAlmostEqual(objval, 2.1658556, places=2)
         self.assertAlmostEqual(
             cov.iloc[asymptote_index, asymptote_index], 6.155892, places=2
         )  # 6.22864 from paper
@@ -939,7 +941,8 @@ class TestModelVariants(unittest.TestCase):
             self.check_rooney_biegler_results(objval, cov)
 
             obj_at_theta = pest.objective_at_theta(parmest_input["theta_vals"])
-            self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
+            # SSE includes a 1/2: half of 16.531953
+            self.assertAlmostEqual(obj_at_theta["obj"][0], 8.2659765, places=2)
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_initialize_parmest_model_option(self):
@@ -957,7 +960,8 @@ class TestModelVariants(unittest.TestCase):
                 parmest_input["theta_vals"], initialize_parmest_model=True
             )
 
-            self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
+            # SSE includes a 1/2: half of 16.531953
+            self.assertAlmostEqual(obj_at_theta["obj"][0], 8.2659765, places=2)
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_square_problem_solve(self):
@@ -975,7 +979,8 @@ class TestModelVariants(unittest.TestCase):
             cov = pest.cov_est(method="reduced_hessian")
             self.check_rooney_biegler_results(objval, cov)
 
-            self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
+            # SSE includes a 1/2: half of 16.531953
+            self.assertAlmostEqual(obj_at_theta["obj"][0], 8.2659765, places=2)
 
     def test_theta_est_multistart(self):
         for model_type, parmest_input in self.input.items():
@@ -990,7 +995,7 @@ class TestModelVariants(unittest.TestCase):
                     r"The lower and upper bounds for the theta values must be "
                     r"defined\.",
                 ):
-                    pest.theta_est_multistart(n_restarts=2, seed=0)
+                    pest.theta_est_multistart(n_starts=2, seed=0)
                 continue
 
             # Starts keyed by this variant's theta names (plain, quoted or
@@ -1182,8 +1187,10 @@ class TestReactorDesign_DAE(unittest.TestCase):
             # Model objective component names adjusted to prevent reserved name error.
             m.FirstStage = pyo.Expression(rule=ComputeFirstStageCost_rule)
 
+            # Includes the 1/2 of parmest's SSE, so test_covariance compares
+            # the same optimization problem
             def ComputeSecondStageCost_rule(m):
-                return sum(
+                return (1 / 2) * sum(
                     (m.ca[t] - ca_meas[t]) ** 2
                     + (m.cb[t] - cb_meas[t]) ** 2
                     + (m.cc[t] - cc_meas[t]) ** 2
@@ -1593,8 +1600,9 @@ class TestRegularizationCore(unittest.TestCase):
             obj_function=parmest.SSE,
         )
 
-        sse_expected = 9.0
-        l2_expected = 54.0
+        # SSE and the L2 penalty both include a 1/2
+        sse_expected = 0.5 * 9.0
+        l2_expected = 0.5 * 54.0
         expected = sse_expected + weight * l2_expected
 
         self.assertAlmostEqual(pyo.value(expr), expected)
@@ -1620,8 +1628,10 @@ class TestRegularizationCore(unittest.TestCase):
             regularization_weight=1.0,
         )
 
+        # zero residuals, so the objective is the penalty 0.5 * 2.0 (with the
+        # 1/2 of SSE); counting it once per scenario would give 2.0
         obj_val = self._obj_at_theta(pest, 0.0, 1.0)
-        self.assertAlmostEqual(obj_val, 2.0)
+        self.assertAlmostEqual(obj_val, 1.0)
 
     def test_regularization_requires_explicit_option_when_prior_supplied(self):
         # Guardrail: passing prior/FIM arguments without selecting a
@@ -1699,7 +1709,8 @@ class TestRegularizationCore(unittest.TestCase):
 
         obj_base_theta1 = self._obj_at_theta(pest_base, theta0=0.0, theta1=1.0)
         obj_l2_theta1 = self._obj_at_theta(pest_l2, theta0=0.0, theta1=1.0)
-        expected_penalty = 4.0 * (1.0**2)
+        # the L2 penalty includes a 1/2, as SSE does
+        expected_penalty = 0.5 * 4.0 * (1.0**2)
         self.assertAlmostEqual(obj_l2_theta1 - obj_base_theta1, expected_penalty)
 
     def test_negative_regularization_weight_raises(self):
@@ -1875,7 +1886,7 @@ class TestRegularizationCore(unittest.TestCase):
             )
         )
 
-    def test_compute_covariance_matrix_adds_twice_weighted_prior_fim_for_sse(self):
+    def test_compute_covariance_matrix_adds_weighted_prior_fim_for_sse(self):
         exp_list = [self.DummyExperiment()]
 
         data_fim = np.array([[5.0, 1.0], [1.0, 4.0]])
@@ -1908,7 +1919,8 @@ class TestRegularizationCore(unittest.TestCase):
         finally:
             parmest._finite_difference_FIM = original_finite_difference_FIM
 
-        expected_fim = data_fim + 2.0 * regularization_weight * prior_fim.values
+        # SSE includes a 1/2 like SSE_weighted, so the prior is not doubled
+        expected_fim = data_fim + regularization_weight * prior_fim.values
         expected_cov = np.linalg.inv(expected_fim)
 
         np.testing.assert_allclose(
@@ -2060,7 +2072,8 @@ class TestRegularizationCore(unittest.TestCase):
         theta_values = pd.DataFrame([[1.0, 2.0]], columns=["theta[a]", "theta[b]"])
         obj_val = pest.objective_at_theta(theta_values=theta_values).iloc[0]["obj"]
 
-        self.assertAlmostEqual(obj_val, 7.0)
+        # SSE and the L2 penalty both include a 1/2 (7.0 without it)
+        self.assertAlmostEqual(obj_val, 3.5)
 
 
 class LinearThetaExperiment(Experiment):
@@ -2351,7 +2364,7 @@ class TestParmestBlockEF(unittest.TestCase):
         obj, theta = pest._Q_opt()
 
         self.assertAlmostEqual(theta["theta"], 1.5, places=7)
-        self.assertAlmostEqual(obj, 0.25, places=7)
+        self.assertAlmostEqual(obj, 0.125, places=7)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_q_opt_returns_requested_values(self):
@@ -2374,7 +2387,7 @@ class TestParmestBlockEF(unittest.TestCase):
 
         self.assertEqual(status, pyo.TerminationCondition.optimal)
         self.assertEqual(theta, {"theta": 1.0})
-        self.assertAlmostEqual(obj, 0.5, places=8)
+        self.assertAlmostEqual(obj, 0.25, places=8)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_q_opt_fixed_theta_infeasible_returns_none(self):
@@ -2393,7 +2406,7 @@ class TestParmestBlockEF(unittest.TestCase):
         theta_values = pd.DataFrame([[1.0]], columns=["theta"])
         obj_at_theta = pest.objective_at_theta(theta_values=theta_values)
 
-        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 0.5, places=8)
+        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 0.25, places=8)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_objective_at_theta_none_uses_initial_theta(self):
@@ -2401,7 +2414,7 @@ class TestParmestBlockEF(unittest.TestCase):
 
         obj_at_theta = pest.objective_at_theta()
 
-        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 1.0, places=8)
+        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 0.5, places=8)
         self.assertAlmostEqual(obj_at_theta.loc[0, "theta"], 0.0, places=8)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
@@ -2415,7 +2428,7 @@ class TestParmestBlockEF(unittest.TestCase):
         self.assertEqual(len(obj_at_theta), 1)
         self.assertEqual(list(obj_at_theta.columns), ["theta", "obj"])
         self.assertAlmostEqual(obj_at_theta.loc[0, "theta"], 0.0, places=8)
-        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 1.0, places=8)
+        self.assertAlmostEqual(obj_at_theta.loc[0, "obj"], 0.5, places=8)
 
     def test_invalid_solver_name_raises_runtimeerror(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
@@ -2569,8 +2582,8 @@ class _FailingStartsEstimator(parmest.Estimator):
 class TestParmestMultistart(unittest.TestCase):
     def test_sampling_changes_with_different_seed(self):
         pest = _build_estimator(_LINEAR_DATA)
-        theta_starts_1 = pest._generate_initial_theta(seed=4, n_restarts=5)
-        theta_starts_2 = pest._generate_initial_theta(seed=5, n_restarts=5)
+        theta_starts_1 = pest._generate_initial_theta(seed=4, n_starts=5)
+        theta_starts_2 = pest._generate_initial_theta(seed=5, n_starts=5)
         self.assertFalse(theta_starts_1.equals(theta_starts_2))
 
     def test_invalid_bounds_raises(self):
@@ -2588,7 +2601,7 @@ class TestParmestMultistart(unittest.TestCase):
             r"Each lower bound must be less than or equal to the corresponding "
             r"upper bound\.",
         ):
-            pest._generate_initial_theta(seed=1, n_restarts=2)
+            pest._generate_initial_theta(seed=1, n_starts=2)
 
     def test_duplicate_model_theta_names_raises(self):
         class DuplicateThetaExperiment(IndexedThetaExperiment):
@@ -2606,7 +2619,7 @@ class TestParmestMultistart(unittest.TestCase):
             r"Duplicate theta names are not allowed: "
             r"\['theta\[a\]', 'theta\[b\]', 'theta\[a\]'\]",
         ):
-            pest._generate_initial_theta(seed=1, n_restarts=2)
+            pest._generate_initial_theta(seed=1, n_starts=2)
 
     def test_user_supplied_names_mismatch_raises(self):
         pest = _build_estimator(_LINEAR_DATA)
@@ -2697,7 +2710,7 @@ class TestParmestMultistart(unittest.TestCase):
 
     def test_indexed_unknown_parameters_supported_in_sampling(self):
         pest = _build_indexed_theta_estimator(_LINEAR_DATA)
-        theta_starts = pest._generate_initial_theta(seed=10, n_restarts=3)
+        theta_starts = pest._generate_initial_theta(seed=10, n_starts=3)
         self.assertEqual(list(theta_starts.columns), ["theta[a]", "theta[b]"])
 
     def test_user_supplied_duplicate_names_raises(self):
@@ -2742,6 +2755,13 @@ class TestParmestMultistart(unittest.TestCase):
                 user_supplied_vals={"theta[a]": [4.2, 4.1], "theta[b]": [0.3]}
             )
 
+    def test_user_supplied_dict_names_checked_before_lengths(self):
+        pest = _build_indexed_theta_estimator(_LINEAR_DATA)
+        with self.assertRaisesRegex(ValueError, r"do not match expected theta names"):
+            pest._generate_initial_theta(
+                user_supplied_vals={"theta[a]": [4.2, 4.1], "theta[c]": [0.3]}
+            )
+
     def test_user_supplied_invalid_type_raises(self):
         pest = _build_estimator(_LINEAR_DATA)
         with self.assertRaisesRegex(
@@ -2782,32 +2802,72 @@ class TestParmestMultistart(unittest.TestCase):
         pest = _build_estimator(_LINEAR_DATA)
         for method in parmest.MultistartSamplingMethod:
             from_enum = pest._generate_initial_theta(
-                seed=3, n_restarts=4, multistart_sampling_method=method
+                seed=3, n_starts=4, multistart_sampling_method=method
             )
             from_str = pest._generate_initial_theta(
-                seed=3, n_restarts=4, multistart_sampling_method=method.value
+                seed=3, n_starts=4, multistart_sampling_method=method.value
             )
             pd.testing.assert_frame_equal(from_enum, from_str)
 
     def test_default_sampling_method_is_uniform_random(self):
         pest = _build_estimator(_LINEAR_DATA)
-        from_default = pest._generate_initial_theta(seed=3, n_restarts=4)
+        from_default = pest._generate_initial_theta(seed=3, n_starts=4)
         from_uniform = pest._generate_initial_theta(
-            seed=3, n_restarts=4, multistart_sampling_method="uniform_random"
+            seed=3, n_starts=4, multistart_sampling_method="uniform_random"
         )
         pd.testing.assert_frame_equal(from_default, from_uniform)
 
-    def test_n_restarts_not_integer_raises(self):
+    def test_n_starts_not_integer_raises(self):
         pest = _build_estimator(_LINEAR_DATA)
-        with self.assertRaisesRegex(TypeError, r"n_restarts must be an integer\."):
-            pest._generate_initial_theta(seed=1, n_restarts=2.0)
+        with self.assertRaisesRegex(TypeError, r"n_starts must be an integer\."):
+            pest._generate_initial_theta(seed=1, n_starts=2.0)
 
-    def test_n_restarts_not_positive_raises(self):
+    def test_n_starts_numpy_integer_and_bool(self):
+        pest = _build_estimator(_LINEAR_DATA)
+        theta_starts = pest._generate_initial_theta(seed=1, n_starts=np.int64(3))
+        self.assertEqual(len(theta_starts), 3)
+        with self.assertRaisesRegex(TypeError, r"n_starts must be an integer\."):
+            pest._generate_initial_theta(seed=1, n_starts=True)
+
+    def test_multistart_table_placeholders_are_missing(self):
+        table = parmest._build_multistart_table(pd.DataFrame({"theta": [1.0, 2.0]}))
+        result_columns = [
+            "converged_theta",
+            "final_objective",
+            "solver_termination",
+            "solve_time",
+        ]
+        self.assertEqual(list(table.columns), ["theta"] + result_columns)
+        self.assertTrue(table[result_columns].isna().all().all())
+
+    def test_n_starts_not_positive_raises(self):
         pest = _build_estimator(_LINEAR_DATA)
         with self.assertRaisesRegex(
-            ValueError, r"n_restarts must be greater than zero\."
+            ValueError, r"n_starts must be greater than zero\."
         ):
-            pest._generate_initial_theta(seed=1, n_restarts=0)
+            pest._generate_initial_theta(seed=1, n_starts=0)
+
+    def test_equal_bounds_warns(self):
+        class EqualBoundsExperiment(LinearThetaExperiment):
+            def create_model(self):
+                super().create_model()
+                self.model.theta.setlb(2.0)
+                self.model.theta.setub(2.0)
+
+        pest = parmest.Estimator(
+            [EqualBoundsExperiment(x=x, y=y) for x, y in _LINEAR_DATA],
+            obj_function="SSE",
+        )
+        with self.assertLogs(parmest.logger.name, level="WARNING") as logs:
+            theta_starts = pest._generate_initial_theta(seed=1, n_starts=2)
+        self.assertEqual(
+            logs.output,
+            [
+                f"WARNING:{parmest.logger.name}:Theta ['theta'] has equal lower and "
+                "upper bounds. Fix it instead of estimating it, or widen its bounds."
+            ],
+        )
+        self.assertEqual(theta_starts["theta"].tolist(), [2.0, 2.0])
 
     def test_user_supplied_empty_raises(self):
         pest = _build_estimator(_LINEAR_DATA)
@@ -2824,7 +2884,7 @@ class TestParmestMultistart(unittest.TestCase):
             r"\['uniform_random', 'latin_hypercube', 'sobol_sampling'\]\.",
         ):
             pest._generate_initial_theta(
-                seed=1, n_restarts=2, multistart_sampling_method="bad_method"
+                seed=1, n_starts=2, multistart_sampling_method="bad_method"
             )
 
     def test_sampling_method_with_user_supplied_vals_warns(self):
@@ -2877,6 +2937,21 @@ class TestParmestMultistart(unittest.TestCase):
             )
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_file_name_writes_results(self):
+        pest = _build_estimator(_LINEAR_DATA)
+        with TempfileManager.new_context() as tempfiles:
+            file_name = os.path.join(tempfiles.mkdtemp(), "multistart.csv")
+            multistart_result, _, _ = pest.theta_est_multistart(
+                user_supplied_vals={"theta": [-1.0, 1.0]}, file_name=file_name
+            )
+            saved = pd.read_csv(file_name)
+        self.assertEqual(list(saved.columns), list(multistart_result.columns))
+        np.testing.assert_allclose(
+            saved["final_objective"], multistart_result["final_objective"]
+        )
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_some_starts_fail(self):
         # Start -9 is not optimal and start 0 raises, so the best start is the
         # only optimal one (9), and the failed starts are recorded, not raised
@@ -2916,7 +2991,7 @@ class TestParmestMultistart(unittest.TestCase):
         log = io.StringIO()
         with LoggingIntercept(log, "pyomo.contrib.parmest", logging.WARNING):
             multistart_result, best_theta, best_obj = pest.theta_est_multistart(
-                n_restarts=3, seed=3
+                n_starts=3, seed=3
             )
         self.assertTrue(
             (

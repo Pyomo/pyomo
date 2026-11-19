@@ -39,7 +39,7 @@ def main():
 
     # Multistart estimation
     multistart_result, best_theta, best_obj = pest.theta_est_multistart(
-        n_restarts=10, multistart_sampling_method="uniform_random", seed=42
+        n_starts=10, multistart_sampling_method="uniform_random", seed=42
     )
 
     print("\nMultistart best objective:", best_obj)
