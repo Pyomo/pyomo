@@ -36,9 +36,13 @@ from pyomo.common.fileutils import (
     _path,
     _exeExt,
     _libExt,
+    Executable,
     ExecutableData,
     import_file,
     to_legal_filename,
+    register_executable,
+    registered_executable,
+    unregister_executable,
 )
 from pyomo.common.download import FileDownloader
 
@@ -550,3 +554,49 @@ class TestFileUtils(unittest.TestCase):
         self.assertEqual(
             'a_b_c', to_legal_filename(''.join(['a', chr(0), 'b', chr(7), 'c']), True)
         )
+
+    def test_deprecations(self):
+        self.tmpdir = os.path.abspath(tempfile.mkdtemp())
+        envvar.PYOMO_CONFIG_DIR = self.tmpdir
+
+        fname = 'test_exe'
+
+        with LoggingIntercept() as LOG:
+            self.assertIsNone(register_executable(fname))
+        self.assertIn(
+            "pyomo.common.register_executable(name) has been deprecated",
+            LOG.getvalue().replace('\n', ' '),
+        )
+        with LoggingIntercept() as LOG:
+            self.assertIsNone(registered_executable(fname))
+        self.assertIn(
+            "pyomo.common.registered_executable(name) has been deprecated",
+            LOG.getvalue().replace('\n', ' '),
+        )
+
+        self._make_exec(os.path.join(self.tmpdir, fname))
+
+        with LoggingIntercept() as LOG:
+            self.assertIsNone(register_executable(fname))
+        self.assertIn(
+            "pyomo.common.register_executable(name) has been deprecated",
+            LOG.getvalue().replace('\n', ' '),
+        )
+        with LoggingIntercept() as LOG:
+            pth = Executable(fname).get_path()
+        self.assertIn("get_path() is deprecated", LOG.getvalue())
+
+        with LoggingIntercept() as LOG:
+            self.assertEqual(registered_executable(fname), pth)
+        self.assertIn(
+            "pyomo.common.registered_executable(name) has been deprecated",
+            LOG.getvalue().replace('\n', ' '),
+        )
+
+        with LoggingIntercept() as LOG:
+            self.assertIsNone(unregister_executable(fname))
+        self.assertIn(
+            "pyomo.common.unregister_executable(name) has been deprecated",
+            LOG.getvalue().replace('\n', ' '),
+        )
+        self.assertIsNone(Executable(fname).path())
