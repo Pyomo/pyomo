@@ -54,8 +54,8 @@ from pyomo.contrib.solver.tests.solvers.test_gurobi_minlp_walker import (
     gurobipy,
     gurobipy_14_available,
     old_gurobipy_available,
-    Gurobi14Test,
-    OldGurobiTest,
+    Gurobi14TestMixIn,
+    OldGurobiTestMixIn,
 )
 
 
@@ -550,11 +550,11 @@ class GurobiMINLPWriterTests:
 
 @unittest.skipUnless(gurobipy_14_available, "Gurobipy >= 14 is not available")
 @unittest.pytest.mark.solver("gurobi_direct_minlp")
-class TestGurobi14MINLPWriter(GurobiMINLPWriterTests, CommonTest, Gurobi14Test):
+class TestGurobi14MINLPWriter(GurobiMINLPWriterTests, CommonTest, Gurobi14TestMixIn):
     pass
 
 
 @unittest.skipUnless(old_gurobipy_available, "Gurobipy >= 12 and < 14 is not available")
 @unittest.pytest.mark.solver("gurobi_direct_minlp")
-class TestOldGurobiMINLPWriter(GurobiMINLPWriterTests, CommonTest, OldGurobiTest):
+class TestOldGurobiMINLPWriter(GurobiMINLPWriterTests, CommonTest, OldGurobiTestMixIn):
     pass

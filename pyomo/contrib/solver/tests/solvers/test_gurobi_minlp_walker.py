@@ -70,7 +70,7 @@ class CommonTest(unittest.TestCase):
         return GurobiMINLPVisitor(grb_model, symbolic_solver_labels=True)
 
 
-class Gurobi14Test:
+class Gurobi14TestMixIn:
     def get_nonlinear_constraints(self, grb_model):
         return grb_model.getNLConstrs()
 
@@ -88,7 +88,7 @@ class Gurobi14Test:
         assertExpressionsEqual(self, expr, pyo_model._dummy_aux_var - pyo_expr)
 
 
-class OldGurobiTest:
+class OldGurobiTestMixIn:
     def get_nonlinear_constraints(self, grb_model):
         return grb_model.getGenConstrs()
 
@@ -115,10 +115,6 @@ class GurobiMINLPWalkerTests:
         self.assertEqual(len(constrs), 1)
 
         return constrs[0], aux
-
-        # aux_var, opcode, data, parent = grb_model.getGenConstrNLAdv(constrs[0])
-        # self.assertIs(aux_var, aux)
-        # return opcode, data, parent
 
     def test_var_domains(self):
         m = self.get_model()
@@ -627,35 +623,11 @@ class GurobiMINLPWalkerTests:
 
 @unittest.skipUnless(gurobipy_14_available, "Gurobipy >= 14 is not available")
 @unittest.pytest.mark.solver("gurobi_direct_minlp")
-class TestGurobi14MINLPWalker(GurobiMINLPWalkerTests, CommonTest):
-    def get_nonlinear_constraints(self, grb_model):
-        return grb_model.getNLConstrs()
-
-    def check_grb_expr_tree(
-        self, grb_model, nl_cons, aux_var, pyo_expr, reverse_var_map, pyo_model
-    ):
-        opcode, data, parent = grb_model.getNLConstrLHSAdv(nl_cons)
-
-        pyo_model._dummy_aux_var = Var()
-        default_var_map = defaultdict(lambda: pyo_model._dummy_aux_var)
-        for grb_var, pyo_var in reverse_var_map.items():
-            default_var_map[grb_var] = pyo_var
-
-        expr = grb_nl_to_pyo_expr(opcode, data, parent, default_var_map)
-        assertExpressionsEqual(self, expr, pyo_model._dummy_aux_var - pyo_expr)
+class TestGurobi14MINLPWalker(GurobiMINLPWalkerTests, CommonTest, Gurobi14TestMixIn):
+    pass
 
 
 @unittest.skipUnless(old_gurobipy_available, "Gurobipy >= 12 and < 14 is not available")
 @unittest.pytest.mark.solver("gurobi_direct_minlp")
-class TestOldGurobiMINLPWriter(GurobiMINLPWalkerTests, CommonTest):
-    def get_nonlinear_constraints(self, grb_model):
-        return grb_model.getGenConstrs()
-
-    def check_grb_expr_tree(
-        self, grb_model, nl_cons, aux_var, pyo_expr, reverse_var_map, pyo_model
-    ):
-        res_var, opcode, data, parent = grb_model.getGenConstrNLAdv(nl_cons)
-        self.assertIs(res_var, aux_var)
-        assertExpressionsEqual(
-            self, grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map), pyo_expr
-        )
+class TestOldGurobiMINLPWalker(GurobiMINLPWalkerTests, CommonTest, OldGurobiTestMixIn):
+    pass
