@@ -142,7 +142,7 @@ def find_path(
         locations = [name]
     else:
         locations = []
-        if cwd:
+        if cwd or name.split(os.path.sep, maxsplit=1)[0] == '.':
             locations.append(os.getcwd())
 
         if allow_pathlist_deep_references or os.path.basename(name) == name:
