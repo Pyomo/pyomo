@@ -1127,6 +1127,7 @@ with declare_modules_as_importable(globals()):
         'multiprocessing', callback=_finalize_multiprocessing
     )
     pickle, _ = attempt_import('pickle', importer=_pickle_importer)
+    ast, _ = attempt_import('ast')
     random, _ = attempt_import('random')
 
     # Necessary for minimum version checking for other optional dependencies
