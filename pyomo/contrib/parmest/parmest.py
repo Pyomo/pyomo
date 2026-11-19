@@ -67,6 +67,7 @@ from pyomo.common.flags import NOTSET
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 from pyomo.opt.base.solvers import UnknownSolver
 from pyomo.solvers.plugins.solvers.IPOPT import IPOPT
+from pyomo.contrib.solver.common.base import LegacySolverWrapper, SolverBase
 from pyomo.contrib.solver.solvers.ipopt import LegacyIpoptSolver
 
 import pyomo.contrib.parmest.utils as utils
@@ -398,11 +399,19 @@ def _get_solver(solver, solver_options=None):
     solver : solver object
     """
     if isinstance(solver, str):
-        solver = SolverFactory(solver)
+        solver_name = solver
+        solver = SolverFactory(solver_name)
+        if isinstance(solver, UnknownSolver):
+            raise RuntimeError(f"Unknown solver: '{solver_name}'")
     elif not hasattr(solver, "solve"):
         raise TypeError(
             "Expected a solver name, e.g., 'ipopt', or a solver object from "
             "SolverFactory"
+        )
+    elif isinstance(solver, SolverBase) and not isinstance(solver, LegacySolverWrapper):
+        raise TypeError(
+            "Solvers from pyomo.contrib.solver are not supported yet. Use "
+            "SolverFactory from pyomo.opt, e.g., SolverFactory('ipopt_v2')."
         )
     elif solver_options is not None:
         logger.warning(
@@ -1089,13 +1098,13 @@ class Estimator:
         Weighting factor for the regularization term. Used with
         ``regularization="L2"``. Default is 1.0.
     solver: str or solver object, optional
-        Solver used by default for parameter estimation, ``objective_at_theta``
-        and the covariance calculation; each of these methods can be given a
-        different solver for one call. A solver name, e.g., 'ipopt', is
-        created with ``SolverFactory`` (``pyomo.opt``). A solver object from
-        ``SolverFactory`` is used as given, except that ``solver_options``, if
-        also given, are set on it with a warning. Default is None
-        (``SolverFactory('ipopt_v2')``).
+        Solver used for every solve, e.g., in ``theta_est``,
+        ``objective_at_theta``, bootstrap and the covariance calculation;
+        ``theta_est`` and ``cov_est`` can be given a different solver for one
+        call. A solver name, e.g., 'ipopt', is created with ``SolverFactory``
+        (``pyomo.opt``). A solver object from ``SolverFactory`` is used as
+        given, except that ``solver_options``, if also given, are set on it
+        with a warning. Default is None (``SolverFactory('ipopt_v2')``).
     """
 
     # The singledispatchmethod decorator is used here as a deprecation
@@ -1624,8 +1633,6 @@ class Estimator:
             sol = self.solver
         elif isinstance(solver, str):
             sol = _get_solver(solver, self.solver_options)
-            if isinstance(sol, UnknownSolver):
-                raise RuntimeError("Unknown solver in Q_Opt=" + solver)
         else:
             # A solver object is used as given for this call
             sol = _get_solver(solver)
@@ -2058,7 +2065,7 @@ class Estimator:
             Estimated values for theta
         var_values: pd.DataFrame
             Variable values for each variable name in
-            return_values (only for solver='ef_ipopt')
+            return_values
         """
         assert isinstance(return_values, list)
         assert (calc_cov is NOTSET) or isinstance(calc_cov, bool)
@@ -2408,32 +2415,10 @@ class Estimator:
         # Put columns in model order.
         return theta_values[expected_theta_names]
 
-    def objective_at_theta(
-        self, theta_values=None, initialize_parmest_model=False, solver="ef_ipopt"
-    ):
+    def objective_at_theta(self, theta_values=None, initialize_parmest_model=False):
         """
         Objective value for each theta, solving extensive form problem with
-        fixed theta values.
-
-        Parameters
-        ----------
-        theta_values: pd.DataFrame, optional
-            Values of theta, one column per parameter. If None, the theta
-            values in the model are used. Default is None.
-        initialize_parmest_model: bool, optional
-            DEPRECATED. Default is False.
-        solver: str or solver object, optional
-            "ef_ipopt" solves with the Estimator's solver. Another solver
-            name, e.g., 'ipopt', is created with ``SolverFactory``
-            (``pyomo.opt``) and ``solver_options``; a solver object from
-            ``SolverFactory`` is used as given. Either applies to this call
-            only. Default is "ef_ipopt".
-
-        Returns
-        -------
-        obj_at_theta: pd.DataFrame
-            Objective value for each theta, with theta values that could not
-            be solved left out
+        fixed theta values using the Estimator's solver.
         """
 
         if self.pest_deprecated is not None:
@@ -2470,7 +2455,7 @@ class Estimator:
         if len(all_thetas) > 0:
             for Theta in local_thetas:
                 obj, thetvals, worststatus = self._Q_opt(
-                    theta_vals=Theta, fix_theta=True, solver=solver
+                    theta_vals=Theta, fix_theta=True
                 )
 
                 if worststatus == pyo.TerminationCondition.infeasible or obj is None:
@@ -2479,9 +2464,7 @@ class Estimator:
                     all_obj.append([Theta[name] for name in theta_names] + [obj])
 
         else:
-            obj, thetvals, worststatus = self._Q_opt(
-                theta_vals=None, fix_theta=True, solver=solver
-            )
+            obj, thetvals, worststatus = self._Q_opt(theta_vals=None, fix_theta=True)
 
             if worststatus == pyo.TerminationCondition.infeasible or obj is None:
                 all_obj.append(None)

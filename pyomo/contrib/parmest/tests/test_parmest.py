@@ -25,6 +25,7 @@ from pyomo.common.fileutils import this_file_dir
 from pyomo.contrib.parmest.experiment import Experiment
 from pyomo.contrib.pynumero.asl import AmplInterface
 from pyomo.common.tee import capture_output
+from pyomo.contrib.solver.common.factory import SolverFactory as ContribSolverFactory
 
 ipopt_available = pyo.SolverFactory("ipopt").available()
 pynumero_ASL_available = AmplInterface.available()
@@ -365,7 +366,7 @@ class TestRooneyBiegler(unittest.TestCase):
         """
 
         # estimate the parameters
-        with pytest.raises(RuntimeError, match=r"Unknown solver in Q_Opt=random"):
+        with pytest.raises(RuntimeError, match=r"Unknown solver: 'random'"):
             obj_val, theta_vals = self.pest.theta_est(solver="random")
 
     def test_exp_outputs_exception(self):
@@ -2374,9 +2375,7 @@ class TestParmestBlockEF(unittest.TestCase):
     def test_invalid_solver_name_raises_runtimeerror(self):
         pest = _build_estimator([(1.0, 2.0), (2.0, 4.0)])
 
-        with self.assertRaisesRegex(
-            RuntimeError, "Unknown solver in Q_Opt=not_a_solver"
-        ):
+        with self.assertRaisesRegex(RuntimeError, "Unknown solver: 'not_a_solver'"):
             pest.theta_est(solver="not_a_solver")
 
     def test_theta_values_duplicate_columns_rejected(self):
@@ -2396,8 +2395,9 @@ class TestParmestBlockEF(unittest.TestCase):
 )
 class TestEstimatorSolver(unittest.TestCase):
     """The Estimator's solver argument, which follows Pyomo.DoE: the
-    Estimator's solver (default ipopt_v2) is used by every method, and each
-    method can be given another solver name or object for one call"""
+    Estimator's solver (default ipopt_v2) is used by every method, and
+    theta_est and cov_est can be given another solver name or object for one
+    call"""
 
     def setUp(self):
         self.exp_list = [
@@ -2492,37 +2492,36 @@ class TestEstimatorSolver(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "maxIterations"):
             pest.theta_est(solver="ipopt")
 
+    def test_unknown_solver_name_raises(self):
+        with self.assertRaisesRegex(RuntimeError, "Unknown solver: 'not_a_solver'"):
+            parmest.Estimator(self.exp_list, obj_function="SSE", solver="not_a_solver")
+
+        pest = parmest.Estimator(self.exp_list, obj_function="SSE")
+        with self.assertRaisesRegex(RuntimeError, "Unknown solver: 'ef_ipopt'"):
+            pest.cov_est(solver="ef_ipopt")
+
+    def test_newer_interface_solver_raises(self):
+        solver = ContribSolverFactory("ipopt")
+        with self.assertRaisesRegex(
+            TypeError, "pyomo.contrib.solver are not supported"
+        ):
+            parmest.Estimator(self.exp_list, obj_function="SSE", solver=solver)
+
+        pest = parmest.Estimator(self.exp_list, obj_function="SSE")
+        with self.assertRaisesRegex(
+            TypeError, "pyomo.contrib.solver are not supported"
+        ):
+            pest.theta_est(solver=solver)
+        with self.assertRaisesRegex(
+            TypeError, "pyomo.contrib.solver are not supported"
+        ):
+            pest.cov_est(solver=solver)
+
     def test_theta_est_invalid_solver_raises(self):
         pest = parmest.Estimator(self.exp_list, obj_function="SSE")
 
         with self.assertRaisesRegex(TypeError, "Expected a solver name"):
             pest.theta_est(solver=5)
-
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
-    def test_objective_at_theta_solver_object(self):
-        pest = parmest.Estimator(self.exp_list, obj_function="SSE", tee=True)
-        theta_values = pd.DataFrame([[0.0]], columns=["theta"])
-
-        # The ipopt log shows that the given solver, with its options, ran
-        solver = pyo.SolverFactory("ipopt")
-        solver.options["max_iter"] = 0
-        with capture_output() as output:
-            pest.objective_at_theta(theta_values=theta_values, solver=solver)
-        self.assertIn("Maximum Number of Iterations Exceeded", output.getvalue())
-
-        with capture_output() as output:
-            pest.objective_at_theta(theta_values=theta_values)
-        self.assertNotIn("Maximum Number of Iterations Exceeded", output.getvalue())
-
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
-    def test_objective_at_theta_solver_name(self):
-        pest = parmest.Estimator(self.exp_list, obj_function="SSE")
-        theta_values = pd.DataFrame([[0.0], [1.0]], columns=["theta"])
-
-        obj_default = pest.objective_at_theta(theta_values=theta_values)
-        obj_named = pest.objective_at_theta(theta_values=theta_values, solver="ipopt")
-
-        self.assertTrue(np.allclose(obj_default.values, obj_named.values))
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_cov_est_uses_estimator_solver(self):
