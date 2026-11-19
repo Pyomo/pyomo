@@ -136,15 +136,20 @@ def find_path(
     # Support shell-style paths like ~user and $HOME/bin
     name = os.path.expanduser(os.path.expandvars(name))
 
-    locations = []
-    if cwd:
-        locations.append(os.getcwd())
+    if os.path.isabs(name):
+        # This will be ignored thanks to os.path.join below, but we need
+        # locations to have exactly 1 non-empty entry.
+        locations = [name]
+    else:
+        locations = []
+        if cwd:
+            locations.append(os.getcwd())
 
-    if allow_pathlist_deep_references or os.path.basename(name) == name:
-        if isinstance(pathlist, str):
-            locations.extend(pathlist.split(os.pathsep))
-        else:
-            locations.extend(pathlist)
+        if allow_pathlist_deep_references or os.path.basename(name) == name:
+            if isinstance(pathlist, str):
+                locations.extend(pathlist.split(os.pathsep))
+            else:
+                locations.extend(pathlist)
 
     extlist = ['']
     if ext:
