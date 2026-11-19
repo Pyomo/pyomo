@@ -29,7 +29,9 @@ from pyomo.common.fileutils import (
     find_file,
     find_library,
     find_executable,
+    PathData,
     PathManager,
+    _PathSingletonMeta,
     _system,
     _path,
     _exeExt,
@@ -490,6 +492,32 @@ class TestFileUtils(unittest.TestCase):
         PM(f_in_path2).rehash()
         self.assertTrue(PM(f_in_path2).available())
         self.assertEqual(PM(f_in_path2).path(), f_loc)
+
+    def test_PM_search_override(self):
+        ans = []
+
+        def _finder(libname, cwd, include_PATH, pathlist):
+            ans.clear()
+            ans.extend((libname, cwd, include_PATH, pathlist))
+
+        class Tester(metaclass=_PathSingletonMeta):
+
+            _manager = PathManager(_finder, PathData)
+
+            def __new__(cls, path):
+                return cls._manager(path)
+
+        self.assertFalse(Tester('test1'))
+        self.assertEqual(ans, ['test1', False, True, None])
+        self.assertEqual(
+            ans, ['test1', Tester.cwd, Tester.include_PATH, Tester.pathlist]
+        )
+
+        Tester.cwd = True
+        Tester.include_PATH = False
+        Tester.pathlist = ['aaa', 'bbb']
+        self.assertFalse(Tester('test2'))
+        self.assertEqual(ans, ['test2', True, False, ['aaa', 'bbb']])
 
     def test_to_legal_filename(self):
         self.assertEqual('abc', to_legal_filename('abc'))

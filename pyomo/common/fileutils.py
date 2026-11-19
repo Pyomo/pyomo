@@ -574,7 +574,12 @@ class PathData:
                 target = self._path_override
             else:
                 target = self._registered_name
-            tmp = self._mngr._find(target, pathlist=self._mngr.pathlist)
+            tmp = self._mngr._find(
+                target,
+                cwd=self._mngr._cwd,
+                include_PATH=self._mngr._include_PATH,
+                pathlist=self._mngr._pathlist,
+            )
             self._path = tmp if tmp else self._path_override
             self._status = bool(tmp)
         return self._path
@@ -729,16 +734,27 @@ class PathManager:
         >>> # or all registered files
         >>> Executable.rehash()
 
-    The ``Executable`` singleton looks for executables in the system
-    ``PATH`` and in the list of directories specified by the ``pathlist``
-    attribute.  ``Executable.pathlist`` defaults to a list containing the
-    ``os.path.join(pyomo.common.envvar.PYOMO_CONFIG_DIR, 'bin')``.
+    The :class:`Executable` singleton factory relies on
+    :func:`find_executable` to locate executables, passing the
+    :attr:`Executable.cwd`, :attr:`Executable.include_PATH`, and
+    :attr:`Executable.pathlist` class attributes as function arguments.
+    These default to:
 
-    The ``Library`` singleton looks for executables in the system
-    ``LD_LIBRARY_PATH``, ``PATH`` and in the list of directories
-    specified by the ``pathlist`` attribute.  ``Library.pathlist``
-    defaults to a list containing the
-    ``os.path.join(pyomo.common.envvar.PYOMO_CONFIG_DIR, 'lib')``.
+    - ``cwd = False``
+    - ``include_PATH = True``
+    - ``pathlist = None``` (note that :func:`find_executable` interprets
+      ``None`` as ``[os.path.join(pyomo.common.envvar.PYOMO_CONFIG_DIR, 'bin')]``)
+
+    The ``Library`` singleton factory relies on :func:`find_library` to
+    locate libraries, passing the :attr:`Library.cwd`,
+    :attr:`Library.include_PATH`, and :attr:`Library.pathlist` class
+    attributes as function arguments.  These default to:
+
+    - ``cwd = False``
+    - ``include_PATH = True``
+    - ``pathlist = None`` (note that :func:`find_library` interprets
+      ``None`` as ``[os.path.join(pyomo.common.envvar.PYOMO_CONFIG_DIR, 'lib')]``
+      plus the contents of ``LD_LIBRARY_PATH`` (and ``DYLD_LIBRARY_PATH`` on macOS)
 
     Users may also override the normal file resolution by explicitly
     setting the location using :py:meth:`set_path`:
@@ -784,7 +800,9 @@ class PathManager:
         self._pathTo = {}
         self._find = finder
         self._dataClass = dataClass
-        self.pathlist = None
+        self._cwd = False
+        self._include_PATH = True
+        self._pathlist = None
 
     def __call__(self, path):
         if path not in self._pathTo:
@@ -808,7 +826,48 @@ class PathManager:
 #
 # Define singleton objects for Pyomo / Users to interact with
 #
-class Executable:
+class _PathSingletonMeta(type):
+    """Base class for singleton path registries"""
+
+    def rehash(cls):
+        """Requery the location of all registered paths
+
+        This method derives its name from the `csh` command of the same
+        name, which rebuilds the hash table of executables reachable
+        through the PATH.
+
+        """
+        return cls._manager.rehash()
+
+    @property
+    def cwd(cls) -> bool:
+        "If True, the registry will look in the current working directory for files"
+        return cls._manager._cwd
+
+    @cwd.setter
+    def cwd(cls, val):
+        cls._manager._cwd = val
+
+    @property
+    def include_PATH(cls):
+        "If True, the registry will look in the PATH environment variable for files"
+        return cls._manager._include_PATH
+
+    @include_PATH.setter
+    def include_PATH(cls, val):
+        cls._manager._include_PATH = val
+
+    @property
+    def pathlist(cls):
+        "If non-None, specifies additional paths to search for files"
+        return cls._manager._pathlist
+
+    @pathlist.setter
+    def pathlist(cls, val):
+        cls._manager._pathlist = val
+
+
+class Executable(metaclass=_PathSingletonMeta):
     """Singleton executable registry
 
     This class cannot be instantiated.  Instead, calling this type will
@@ -822,19 +881,8 @@ class Executable:
     def __new__(cls, path) -> ExecutableData:
         return cls._manager(path)
 
-    @classmethod
-    def rehash(cls):
-        """Requery the location of all registered executable paths
 
-        This method derives its name from the csh command of the same
-        name, which rebuilds the hash table of executables reachable
-        through the PATH.
-
-        """
-        return cls._manager.rehash()
-
-
-class Library:
+class Library(metaclass=_PathSingletonMeta):
     """Singleton library registry
 
     This class cannot be instantiated.  Instead, calling this type will
@@ -847,17 +895,6 @@ class Library:
 
     def __new__(cls, path) -> PathData:
         return cls._manager(path)
-
-    @classmethod
-    def rehash(cls):
-        """Requery the location of all registered library paths
-
-        This method derives its name from the csh command of the same
-        name, which rebuilds the hash table of executables reachable
-        through the PATH.
-
-        """
-        return cls._manager.rehash()
 
 
 @deprecated(
