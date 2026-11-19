@@ -16,6 +16,7 @@ import stat
 import sys
 import tempfile
 import subprocess
+import re
 
 from io import StringIO
 
