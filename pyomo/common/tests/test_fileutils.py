@@ -411,7 +411,7 @@ class TestFileUtils(unittest.TestCase):
         self.assertIsNone(find_executable(f_in_configbin, pathlist=pathdir))
 
     def test_PathManager(self):
-        Executable = PathManager(find_executable, ExecutableData)
+        PM = PathManager(find_executable, ExecutableData)
         self.tmpdir = os.path.abspath(tempfile.mkdtemp())
 
         envvar.PYOMO_CONFIG_DIR = self.tmpdir
@@ -431,71 +431,65 @@ class TestFileUtils(unittest.TestCase):
         self._make_exec(os.path.join(config_bindir, f_in_cfg))
 
         # Test availability
-        self.assertTrue(Executable(f_in_path).available())
-        if not Executable(f_in_path):
-            self.fail("Expected casting Executable(f_in_path) to bool=True")
+        self.assertTrue(PM(f_in_path).available())
+        if not PM(f_in_path):
+            self.fail("Expected casting PM(f_in_path) to bool=True")
 
         # Test getting the path to the executable
-        self._check_file(Executable(f_in_path).path(), os.path.join(pathdir, f_in_path))
-        self._check_file("%s" % Executable(f_in_path), os.path.join(pathdir, f_in_path))
-        self._check_file(
-            Executable(f_in_path).executable, os.path.join(pathdir, f_in_path)
-        )
+        self._check_file(PM(f_in_path).path(), os.path.join(pathdir, f_in_path))
+        self._check_file("%s" % PM(f_in_path), os.path.join(pathdir, f_in_path))
+        self._check_file(PM(f_in_path).executable, os.path.join(pathdir, f_in_path))
 
         # Test the above for a nonexistent file
-        self.assertFalse(Executable(f_in_tmp).available())
-        if Executable(f_in_tmp):
-            self.fail("Expected casting Executable(f_in_tmp) to bool=False")
-        self.assertIsNone(Executable(f_in_tmp).path())
-        self.assertEqual("%s" % Executable(f_in_tmp), "")
-        self.assertIsNone(Executable(f_in_tmp).executable)
+        self.assertFalse(PM(f_in_tmp).available())
+        if PM(f_in_tmp):
+            self.fail("Expected casting PM(f_in_tmp) to bool=False")
+        self.assertIsNone(PM(f_in_tmp).path())
+        self.assertEqual("%s" % PM(f_in_tmp), "")
+        self.assertIsNone(PM(f_in_tmp).executable)
 
         # If we override the pathlist, then we will not find the CONFIGDIR
-        Executable.pathlist = []
-        self.assertFalse(Executable(f_in_cfg).available())
-        Executable.pathlist.append(config_bindir)
+        PM._pathlist = []
+        self.assertFalse(PM(f_in_cfg).available())
+        PM._pathlist.append(config_bindir)
         # and adding it won't change things (status is cached)
-        self.assertFalse(Executable(f_in_cfg).available())
+        self.assertFalse(PM(f_in_cfg).available())
         # until we tell the manager to rehash the executables
-        Executable.rehash()
-        self.assertTrue(Executable(f_in_cfg).available())
-        self.assertEqual(
-            Executable(f_in_cfg).path(), os.path.join(config_bindir, f_in_cfg)
-        )
+        PM.rehash()
+        self.assertTrue(PM(f_in_cfg).available())
+        self.assertEqual(PM(f_in_cfg).path(), os.path.join(config_bindir, f_in_cfg))
         # Note that if we clear the pathlist, then the current value of
         # CONFIGDIR will be honored
-        Executable.pathlist = None
-        Executable.rehash()
-        self.assertTrue(Executable(f_in_cfg).available())
-        self.assertEqual(
-            Executable(f_in_cfg).path(), os.path.join(config_bindir, f_in_cfg)
-        )
+        PM._pathlist = None
+        PM.rehash()
+        self.assertTrue(PM(f_in_cfg).available())
+        self.assertEqual(PM(f_in_cfg).path(), os.path.join(config_bindir, f_in_cfg))
 
         # Another file that doesn't exist
         f_in_path2 = 'f_in_path2'
         f_loc = os.path.join(pathdir, f_in_path2)
-        self.assertFalse(Executable(f_in_path2).available())
+        self.assertFalse(PM(f_in_path2).available())
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.common', logging.WARNING):
-            Executable(f_in_path2).executable = f_loc
+            PM(f_in_path2).executable = f_loc
             self.assertIn(
                 "explicitly setting the path for '%s' to an "
                 "invalid object or nonexistent location ('%s')" % (f_in_path2, f_loc),
                 output.getvalue(),
             )
-        self.assertFalse(Executable(f_in_path2).available())
+        self.assertFalse(PM(f_in_path2).available())
         self._make_exec(os.path.join(pathdir, f_in_path2))
-        self.assertFalse(Executable(f_in_path2).available())
-        Executable(f_in_path2).rehash()
-        self.assertTrue(Executable(f_in_path2).available())
+        self.assertFalse(PM(f_in_path2).available())
+        PM(f_in_path2).rehash()
+        self.assertTrue(PM(f_in_path2).available())
 
         # And disabling it will "remove" it
-        Executable(f_in_path2).disable()
-        self.assertFalse(Executable(f_in_path2).available())
-        self.assertIsNone(Executable(f_in_path2).path())
-        Executable(f_in_path2).rehash()
-        self.assertTrue(Executable(f_in_path2).available())
-        self.assertEqual(Executable(f_in_path2).path(), f_loc)
+        PM(f_in_path2).disable()
+        self.assertFalse(PM(f_in_path2).available())
+        self.assertIsNone(PM(f_in_path2).path())
+        PM(f_in_path2).rehash()
+        self.assertTrue(PM(f_in_path2).available())
+        self.assertEqual(PM(f_in_path2).path(), f_loc)
 
     def test_to_legal_filename(self):
         self.assertEqual('abc', to_legal_filename('abc'))
