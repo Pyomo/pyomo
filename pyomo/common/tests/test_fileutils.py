@@ -150,7 +150,14 @@ class TestFileUtils(unittest.TestCase):
     def test_path(self):
         orig_path = os.environ.get('PATH', None)
         if orig_path:
-            self.assertEqual(os.pathsep.join(_path()), os.environ['PATH'])
+            # Weirdly, there are test platforms that have PATH
+            # environments wit consecutive delimiters (i.e.,
+            # "path1::path2:...").  _path() will remove them, so we need
+            # to update the orig_path, too:
+            self.assertEqual(
+                os.pathsep.join(_path()),
+                re.sub(os.pathsep + "+", os.pathsep, os.environ['PATH']),
+            )
         os.environ.pop('PATH', None)
         self.assertEqual(os.pathsep.join(_path()), os.defpath)
         # NOTE: PATH restored by tearDown()
@@ -380,6 +387,8 @@ class TestFileUtils(unittest.TestCase):
         self._make_exec(os.path.join(config_bindir, f_in_configbin))
 
         found = find_executable(f_in_cwd_notexe)
+        self.assertIsNone(found)
+        found = find_executable(f_in_cwd_notexe, cwd=True)
         if _system() in ('windows', 'cygwin'):
             self._check_file(found, os.path.join(self.tmpdir, f_in_cwd_notexe))
         else:
