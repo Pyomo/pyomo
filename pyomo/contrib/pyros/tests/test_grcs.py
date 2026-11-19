@@ -1626,6 +1626,43 @@ class RegressionTest(unittest.TestCase):
             msg="Returned termination condition is not return robust_optimal.",
         )
 
+    @unittest.skipUnless(baron_available, "BARON is not available.")
+    def test_quadratic_dr_fixing_rule_correct(self):
+        m = ConcreteModel()
+        m.q = Param(range(2), initialize=0, mutable=True)
+        m.z = Var()
+        m.obj = Objective(expr=m.z)
+        m.con1 = Constraint(expr=m.z <= sum(q**2 for q in m.q.values()))
+        m.con2 = Constraint(expr=m.z >= -sum((q + 2) ** 2 for q in m.q.values()) + 1)
+        m.con3 = Constraint(expr=m.z >= -sum((q - 2) ** 2 for q in m.q.values()) + 1)
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=[],
+            second_stage_variables=m.z,
+            uncertain_params=m.q,
+            uncertainty_set=BoxSet([[-2, 2]] * len(m.q)),
+            local_solver="ipopt",
+            global_solver="baron",
+            decision_rule_order=2,
+            objective_focus="worst_case",
+            solve_master_globally=True,
+            bypass_local_separation=True,
+            robust_feasibility_tolerance=1e-4,
+            # to confirm the DR fixing rule is correct,
+            # just need to confirm robust infeasible termination
+            # does not occur before this many iterations.
+            # test is otherwise expensive
+            max_iter=5,
+        )
+        self.assertIn(
+            res.pyros_termination_condition,
+            {
+                pyrosTerminationCondition.max_iter,
+                pyrosTerminationCondition.robust_optimal,
+            },
+        )
+        self.assertTrue(res.iterations <= 5)
+
     @unittest.skipUnless(scip_available, "Global NLP solver is not available.")
     def test_coefficient_matching_solve(self):
         # Write the deterministic Pyomo model
@@ -2151,7 +2188,8 @@ class RegressionTest(unittest.TestCase):
             # this constraint is subject to coefficient matching,
             # since there are no state variables and there are
             # uncertain parameters.
-            expr=sum(m.q[idx] * m.x[idx] for idx in range(ndim)) == 0,
+            expr=sum(m.q[idx] * m.x[idx] for idx in range(ndim))
+            == 0
         )
 
         with LoggingIntercept(level=logging.DEBUG) as LOG:
@@ -2166,18 +2204,26 @@ class RegressionTest(unittest.TestCase):
                 # of the above equality constraint
                 # should not take place
                 uncertainty_set=PolyhedralSet(
-                    lhs_coefficients_mat=np.vstack([
-                        np.hstack([np.ones(ndim - 1)[:, np.newaxis], -np.eye(ndim - 1)]),
-                        -np.hstack([np.ones(ndim - 1)[:, np.newaxis], -np.eye(ndim - 1)]),
-                        np.eye(ndim),
-                        -np.eye(ndim),
-                    ]),
-                    rhs_vec=np.hstack([
-                        np.zeros(ndim - 1),
-                        np.zeros(ndim - 1),
-                        np.ones(ndim),
-                        np.zeros(ndim),
-                    ]),
+                    lhs_coefficients_mat=np.vstack(
+                        [
+                            np.hstack(
+                                [np.ones(ndim - 1)[:, np.newaxis], -np.eye(ndim - 1)]
+                            ),
+                            -np.hstack(
+                                [np.ones(ndim - 1)[:, np.newaxis], -np.eye(ndim - 1)]
+                            ),
+                            np.eye(ndim),
+                            -np.eye(ndim),
+                        ]
+                    ),
+                    rhs_vec=np.hstack(
+                        [
+                            np.zeros(ndim - 1),
+                            np.zeros(ndim - 1),
+                            np.ones(ndim),
+                            np.zeros(ndim),
+                        ]
+                    ),
                 ),
                 local_solver="scip",
                 global_solver="scip",
@@ -2191,8 +2237,7 @@ class RegressionTest(unittest.TestCase):
             ),
         )
         self.assertEqual(
-            res.pyros_termination_condition,
-            pyrosTerminationCondition.robust_feasible,
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_feasible
         )
         # if coefficient matching occurred, the objective would have
         # been equal to 0
@@ -2213,8 +2258,7 @@ class RegressionTest(unittest.TestCase):
             global_solver="scip",
         )
         self.assertEqual(
-            res.pyros_termination_condition,
-            pyrosTerminationCondition.robust_feasible,
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_feasible
         )
         self.assertEqual(res.iterations, 1)
         self.assertEqual(res.final_objective_value, 0)

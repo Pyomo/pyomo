@@ -3982,8 +3982,7 @@ class TestPolyhedralSet(unittest.TestCase):
         # 1D line segment: no interior points in ambient space
         self.assertFalse(
             PolyhedralSet(
-                [[1, -1], [-1, 1], [1, 0], [0, 1], [-1, 0], [0, -1]],
-                [0, 0, 1, 1, 0, 0],
+                [[1, -1], [-1, 1], [1, 0], [0, 1], [-1, 0], [0, -1]], [0, 0, 1, 1, 0, 0]
             )._has_positive_measure(Bunch(global_solver=SolverFactory("baron")))
         )
 

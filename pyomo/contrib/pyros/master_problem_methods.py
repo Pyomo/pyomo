@@ -11,6 +11,7 @@
 Functions for construction and solution of the PyROS master problem.
 """
 
+import numpy as np
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import TransformationFactory
@@ -579,23 +580,15 @@ def minimize_dr_vars(master_data):
 
 def get_master_dr_degree(master_data):
     """
-    Determine DR polynomial degree to enforce based on
-    the iteration number and/or the presence of first-stage
-    equality constraints that depend on the decision rule variables.
+    Determine degree of the decision rule polynomials that should
+    be enforced given the current state of the master model's
+    uncertain parameter realizations.
 
-    If there are first-stage equality constraints that depend
+    Also, if there are first-stage equality constraints that depend
     on the decision rule variables, such as equalities derived
     from coefficient matching or discretization of state-variable
-    independent equalities, then the degree is set to
+    independent equalities, then the degree is always set to
     ``config.decision_rule_order``.
-
-    Otherwise, the degree is set to:
-
-    - 0 if iteration number is 0
-    - min(1, config.decision_rule_order) if iteration number
-      otherwise does not exceed number of effective
-      uncertain parameters
-    - min(2, config.decision_rule_order) otherwise.
 
     Parameters
     ----------
@@ -611,31 +604,62 @@ def get_master_dr_degree(master_data):
     if nom_scenario_blk.first_stage.dr_dependent_equality_cons:
         return master_data.config.decision_rule_order
 
-    if master_data.iteration == 0:
+    if not len(nom_scenario_blk.first_stage.decision_rule_vars):
         return 0
-    elif master_data.iteration <= len(nom_scenario_blk.effective_uncertain_params):
-        return min(1, master_data.config.decision_rule_order)
+
+    scenario_blks = master_data.master_model.scenarios
+    if len(scenario_blks) == 1:
+        return 0
+    elif master_data.config.decision_rule_order == 1:
+        return 1
     else:
-        return min(2, master_data.config.decision_rule_order)
+        dr_eqn_coeffs_mat = np.empty(
+            (
+                len(scenario_blks),
+                len(nom_scenario_blk.first_stage.decision_rule_vars[0]),
+            )
+        )
+        dr_eqn_term_powers = np.array(
+            [
+                nom_scenario_blk.dr_var_to_exponent_map[dr_var]
+                for dr_var in nom_scenario_blk.first_stage.decision_rule_vars[
+                    0
+                ].values()
+            ]
+        )
+        dr_eqn_coeffs_mat[:, 0] = 1
+        for blk_idx, blk in enumerate(master_data.master_model.scenarios.values()):
+            dr_expr = blk.second_stage.decision_rule_eqns[0].expr.args[0]
+            for term_expr in dr_expr.args[1:-1]:
+                param_factors, dr_var = term_expr.args[:-1], term_expr.args[-1]
+                dr_eqn_coeffs_mat[blk_idx, dr_var.index()] = value(prod(param_factors))
+
+        dr_ranks_by_degree = np.array(
+            [
+                np.linalg.matrix_rank(dr_eqn_coeffs_mat[:, dr_eqn_term_powers <= deg])
+                for deg in range(master_data.config.decision_rule_order + 1)
+            ]
+        )
+        # lowest degree for which there is no reduction in rank
+        # of the corresponding coefficient matrix of the
+        # unfixed DR expressions
+        return np.arange(master_data.config.decision_rule_order + 1)[
+            dr_ranks_by_degree == dr_ranks_by_degree[-1]
+        ][0]
 
 
 def higher_order_decision_rule_efficiency(master_data):
     """
-    Enforce DR coefficient variable efficiencies for
-    master problem-like formulation.
+    "Fix" a subset of the higher-order decision rule coefficients,
+    based on the current state of the master problem's added
+    scenarios and whether there are decision-rule-variable-depedent
+    equality constraints that were derived by the preprocessor's
+    equality constraint reformulations.
 
     Parameters
     ----------
     master_data : MasterProblemData
         Master problem data.
-
-    Note
-    ----
-    The DR coefficient variable efficiencies consist of
-    setting the degree of the DR polynomial expressions
-    by fixing the appropriate variables to 0. The degree
-    to be set depends on the iteration number;
-    see ``get_master_dr_degree``.
     """
     order_to_enforce = get_master_dr_degree(master_data)
     enforce_dr_degree(
@@ -775,8 +799,6 @@ def solver_call_master(master_data):
     solve_mode = "global" if config.solve_master_globally else "local"
     config.progress_logger.debug("Solving master problem")
 
-    higher_order_decision_rule_efficiency(master_data)
-
     for idx, opt in enumerate(solvers):
         if idx > 0:
             config.progress_logger.debug(
@@ -874,6 +896,8 @@ def solve_master(master_data):
     master_soln : MasterResults
         Master problem solve results.
     """
+    higher_order_decision_rule_efficiency(master_data)
+
     feasibility_problem_results = None
     time_out_after_feasibility = False
     if master_data.iteration > 0:
@@ -937,6 +961,28 @@ class MasterProblemData:
 
     def solve_dr_polishing(self):
         """
-        Solve the DR polishing problem.
+        "Polish" the decision rules, as needed.
+
+        Returns
+        -------
+        polishing_solver_res : SolverResults or None
+            If the polishing problem was set up and solved,
+            the SolverResults object produced by the subsolver
+            is returned. Otherwise, None is returned.
+        polishing_successful : bool
+            True if polishing was deemed successful, False otherwise.
         """
-        return minimize_dr_vars(self)
+        nom_scenario_blk = self.master_model.scenarios[0, 0]
+        if (
+            # there are DR variables in the model
+            nom_scenario_blk.first_stage.decision_rule_vars
+            and (
+                # there are unfixed non-static DR variables
+                len(self.master_model.scenarios) > 1
+                or nom_scenario_blk.first_stage.dr_dependent_equality_cons
+            )
+        ):
+            return minimize_dr_vars(self)
+        else:
+            # no need to polish if the DRs are already forced to be static
+            return None, True
