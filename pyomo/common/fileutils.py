@@ -317,7 +317,7 @@ def _path():
     return (os.environ.get('PATH', '') or os.defpath).split(os.pathsep)
 
 
-def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
+def find_library(libname, cwd=False, include_PATH=True, pathlist=None):
     """Find a dynamic library using find_file to search typical locations.
 
     Finds a specified library (file) by searching a specified set of
@@ -338,7 +338,7 @@ def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
 
     cwd : bool
         Start by looking in the current working directory
-        [default: True]
+        [default: False]
 
     include_PATH : bool
         Include the executable search PATH at the end of the list of
@@ -409,7 +409,7 @@ def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
     return lib
 
 
-def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
+def find_executable(exename, cwd=False, include_PATH=True, pathlist=None):
     """Find an executable using find_file to search typical locations.
 
     Finds a specified executable by searching a specified set of paths.
@@ -426,7 +426,7 @@ def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
 
     cwd : bool
         Start by looking in the current working directory
-        [default: True]
+        [default: False]
 
     include_PATH : bool
         Include the executable search PATH at the end of the list of

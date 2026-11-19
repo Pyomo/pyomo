@@ -289,12 +289,12 @@ class TestFileUtils(unittest.TestCase):
         open(os.path.join(config_bindir, f_in_configbin), 'w').close()
 
         self._check_file(
-            find_library(f_in_cwd_ldlib_path),
+            find_library(f_in_cwd_ldlib_path, cwd=True),
             os.path.join(self.tmpdir, f_in_cwd_ldlib_path),
         )
         self._check_file(
             os.path.join(ldlibdir, f_in_cwd_ldlib_path),
-            find_library(f_in_cwd_ldlib_path, cwd=False),
+            find_library(f_in_cwd_ldlib_path),
         )
         self._check_file(
             os.path.join(ldlibdir, f_in_ldlib_extension) + libExt,
@@ -380,12 +380,12 @@ class TestFileUtils(unittest.TestCase):
             self.assertIsNone(found)
 
         self._check_file(
-            find_executable(f_in_cwd_ldlib_path),
+            find_executable(f_in_cwd_ldlib_path, cwd=True),
             os.path.join(self.tmpdir, f_in_cwd_ldlib_path),
         )
         self._check_file(
             os.path.join(pathdir, f_in_cwd_ldlib_path),
-            find_executable(f_in_cwd_ldlib_path, cwd=False),
+            find_executable(f_in_cwd_ldlib_path),
         )
         self._check_file(
             find_executable(f_in_path_extension),
