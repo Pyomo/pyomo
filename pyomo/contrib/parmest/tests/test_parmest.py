@@ -24,11 +24,7 @@ from pyomo.common.dependencies import numpy as np, pandas as pd, scipy, matplotl
 from pyomo.common.fileutils import this_file_dir
 from pyomo.contrib.parmest.experiment import Experiment
 from pyomo.contrib.pynumero.asl import AmplInterface
-from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
-    RooneyBieglerExperiment,
-)
-from pyomo.contrib.solver.common.base import SolverBase
-from pyomo.contrib.solver.common.factory import SolverFactory as ContribSolverFactory
+from pyomo.common.tee import capture_output
 
 ipopt_available = pyo.SolverFactory("ipopt").available()
 pynumero_ASL_available = AmplInterface.available()
@@ -2398,6 +2394,130 @@ class TestParmestBlockEF(unittest.TestCase):
     not parmest.parmest_available,
     "Cannot test parmest: required dependencies are missing",
 )
+class TestEstimatorSolver(unittest.TestCase):
+    """The Estimator's solver argument, which follows Pyomo.DoE: a solver
+    object from SolverFactory is used as given, and the default is ipopt_v2
+    with solver_options"""
+
+    def setUp(self):
+        self.exp_list = [
+            LinearThetaExperiment(x=x, y=y) for x, y in [(1.0, 2.0), (2.0, 4.0)]
+        ]
+
+    def test_default_solver_is_ipopt_v2_with_solver_options(self):
+        pest = parmest.Estimator(
+            self.exp_list, obj_function="SSE", solver_options={"max_iter": 50}
+        )
+
+        self.assertIsInstance(pest.solver, type(pyo.SolverFactory("ipopt_v2")))
+        self.assertEqual(pest.solver.options["max_iter"], 50)
+
+    def test_solver_with_solver_options_raises(self):
+        with self.assertRaisesRegex(
+            ValueError, "solver_options applies only to the default solver"
+        ):
+            parmest.Estimator(
+                self.exp_list,
+                obj_function="SSE",
+                solver_options={"max_iter": 50},
+                solver=pyo.SolverFactory("ipopt"),
+            )
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_solver_object_used_as_given(self):
+        solver = pyo.SolverFactory("ipopt")
+        solver.options["tol"] = 1e-10
+        pest = parmest.Estimator(self.exp_list, obj_function="SSE", solver=solver)
+
+        obj, theta = pest.theta_est()
+        _, theta_default = parmest.Estimator(
+            self.exp_list, obj_function="SSE"
+        ).theta_est()
+
+        self.assertIs(pest.solver, solver)
+        self.assertEqual(dict(solver.options), {"tol": 1e-10})
+        self.assertAlmostEqual(theta["theta"], theta_default["theta"], places=6)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_solver_object_options_reach_estimation(self):
+        # With max_iter = 0, ipopt stops before converging, so the estimation
+        # raises; this shows the given solver (and its options) is used
+        solver = pyo.SolverFactory("ipopt")
+        solver.options["max_iter"] = 0
+        pest = parmest.Estimator(self.exp_list, obj_function="SSE", solver=solver)
+
+        with self.assertRaisesRegex(RuntimeError, "maxIterations"):
+            pest.theta_est()
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_theta_est_solver_object_for_one_call(self):
+        pest = parmest.Estimator(self.exp_list, obj_function="SSE")
+        _, theta_default = pest.theta_est()
+
+        # A solver passed to theta_est is used for that call only
+        solver = pyo.SolverFactory("ipopt")
+        solver.options["max_iter"] = 0
+        with self.assertRaisesRegex(RuntimeError, "maxIterations"):
+            pest.theta_est(solver=solver)
+
+        _, theta = pest.theta_est()
+        self.assertAlmostEqual(theta["theta"], theta_default["theta"], places=8)
+
+    def test_theta_est_invalid_solver_raises(self):
+        pest = parmest.Estimator(self.exp_list, obj_function="SSE")
+
+        with self.assertRaisesRegex(TypeError, "Expected 'ef_ipopt' or a solver"):
+            pest.theta_est(solver=5)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_objective_at_theta_solver_object(self):
+        pest = parmest.Estimator(self.exp_list, obj_function="SSE", tee=True)
+        theta_values = pd.DataFrame([[0.0]], columns=["theta"])
+
+        # The ipopt log shows that the given solver, with its options, ran
+        solver = pyo.SolverFactory("ipopt")
+        solver.options["max_iter"] = 0
+        with capture_output() as output:
+            pest.objective_at_theta(theta_values=theta_values, solver=solver)
+        self.assertIn("Maximum Number of Iterations Exceeded", output.getvalue())
+
+        with capture_output() as output:
+            pest.objective_at_theta(theta_values=theta_values)
+        self.assertNotIn("Maximum Number of Iterations Exceeded", output.getvalue())
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_cov_est_uses_estimator_solver(self):
+        solver = pyo.SolverFactory("ipopt")
+        pest = parmest.Estimator(self.exp_list, obj_function="SSE", solver=solver)
+        pest.theta_est()
+
+        # The covariance re-solve uses the Estimator's solver by default, so
+        # limiting its iterations makes the re-solve fail
+        solver.options["max_iter"] = 0
+        with self.assertRaisesRegex(RuntimeError, "maxIterations"):
+            pest.cov_est()
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_cov_est_solver_name_matches_default(self):
+        pest = parmest.Estimator(self.exp_list, obj_function="SSE")
+        pest.theta_est()
+
+        cov_default = pest.cov_est()
+        cov_named = pest.cov_est(solver="ipopt")
+
+        self.assertTrue(np.allclose(cov_default.values, cov_named.values))
+
+    def test_cov_est_invalid_solver_raises(self):
+        pest = parmest.Estimator(self.exp_list, obj_function="SSE")
+
+        with self.assertRaisesRegex(TypeError, "Expected a solver name"):
+            pest.cov_est(solver=5)
+
+
+@unittest.skipIf(
+    not parmest.parmest_available,
+    "Cannot test parmest: required dependencies are missing",
+)
 class TestCountTotalExperiments(unittest.TestCase):
     def test_count_total_experiments_multi_output(self):
         exp_list = [
@@ -3478,134 +3598,6 @@ class TestSquareInitialization_RooneyBiegler_Deprecated(unittest.TestCase):
         )  # 0.5311 from the paper
 
         self.pest.diagnostic_mode = False
-
-
-# The three ipopt solver objects accepted by Estimator(solver=...)
-_IPOPT_SOLVERS = [
-    ("legacy_ipopt", lambda: pyo.SolverFactory("ipopt")),
-    ("legacy_ipopt_v2", lambda: pyo.SolverFactory("ipopt_v2")),
-    ("newer_interface_ipopt", lambda: ContribSolverFactory("ipopt")),
-]
-
-
-def _solver_options_of(solver):
-    # Options of a legacy solver, or of a newer-interface solver
-    if isinstance(solver, SolverBase):
-        return solver.config.solver_options
-    return solver.options
-
-
-def _rooney_biegler_exp_list():
-    data = pd.DataFrame(
-        data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
-        columns=["hour", "y"],
-    )
-    return [RooneyBieglerExperiment(data.loc[i, :]) for i in range(data.shape[0])]
-
-
-@unittest.skipIf(
-    not parmest.parmest_available,
-    "Cannot test parmest: required dependencies are missing",
-)
-@unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
-class TestEstimatorSolverObject(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        # Reference estimate and covariance with the default solver (ipopt_v2)
-        pest = parmest.Estimator(_rooney_biegler_exp_list(), obj_function="SSE")
-        cls.obj, cls.theta = pest.theta_est()
-        cls.cov = pest.cov_est()
-
-    def assert_reference_estimate(self, obj, theta):
-        self.assertAlmostEqual(obj, self.obj, places=6)
-        for name, value in self.theta.items():
-            self.assertAlmostEqual(theta[name], value, places=6)
-
-    def assert_reference_cov(self, cov):
-        np.testing.assert_allclose(cov.values, self.cov.values, rtol=1e-5)
-
-    @parameterized.expand(_IPOPT_SOLVERS)
-    def test_theta_est(self, name, make_solver):
-        pest = parmest.Estimator(
-            _rooney_biegler_exp_list(), obj_function="SSE", solver=make_solver()
-        )
-        self.assert_reference_estimate(*pest.theta_est())
-        # "ef_ipopt" uses the Estimator's solver
-        self.assert_reference_estimate(*pest.theta_est(solver="ef_ipopt"))
-
-    @parameterized.expand(_IPOPT_SOLVERS)
-    def test_cov_est(self, name, make_solver):
-        # cov_est uses the Estimator's solver by default
-        pest = parmest.Estimator(
-            _rooney_biegler_exp_list(), obj_function="SSE", solver=make_solver()
-        )
-        pest.theta_est()
-        self.assert_reference_cov(pest.cov_est())
-
-        # A solver object passed to cov_est
-        pest = parmest.Estimator(_rooney_biegler_exp_list(), obj_function="SSE")
-        pest.theta_est()
-        self.assert_reference_cov(pest.cov_est(solver=make_solver()))
-
-    @parameterized.expand(_IPOPT_SOLVERS)
-    def test_solver_options_restored(self, name, make_solver):
-        # solver_options are set on the solver for each solve, then the
-        # solver's own options are restored
-        solver = make_solver()
-        _solver_options_of(solver)["tol"] = 1e-7
-        pest = parmest.Estimator(
-            _rooney_biegler_exp_list(),
-            obj_function="SSE",
-            solver=solver,
-            solver_options={"tol": 1e-8, "max_iter": 500},
-        )
-        self.assert_reference_estimate(*pest.theta_est())
-        options = _solver_options_of(solver)
-        self.assertEqual({key: options[key] for key in options}, {"tol": 1e-7})
-
-        self.assert_reference_cov(pest.cov_est())
-        options = _solver_options_of(solver)
-        self.assertEqual({key: options[key] for key in options}, {"tol": 1e-7})
-
-        self.assert_reference_cov(pest.cov_est(solver=solver))
-        options = _solver_options_of(solver)
-        self.assertEqual({key: options[key] for key in options}, {"tol": 1e-7})
-
-    def test_newer_interface_infeasible_is_legacy(self):
-        # A fixed theta outside its bounds is provenInfeasible for the newer
-        # interface, reported with the legacy termination condition infeasible
-        exp_list = [
-            BoundedLinearThetaExperiment(x=x, y=y) for x, y in [(1.0, 2.0), (2.0, 3.0)]
-        ]
-        pest = parmest.Estimator(
-            exp_list, obj_function="SSE", solver=ContribSolverFactory("ipopt")
-        )
-        obj, theta, status = pest._Q_opt(theta_vals={"theta": 20.0}, fix_theta=True)
-        self.assertIsNone(obj)
-        self.assertEqual(theta, {"theta": 20.0})
-        self.assertEqual(status, pyo.TerminationCondition.infeasible)
-
-
-@unittest.skipIf(
-    not parmest.parmest_available,
-    "Cannot test parmest: required dependencies are missing",
-)
-class TestEstimatorSolverValidation(unittest.TestCase):
-    def test_invalid_solver(self):
-        exp_list = _rooney_biegler_exp_list()
-        for solver in ["ipopt", 3, ContribSolverFactory("gurobi_direct")]:
-            with self.assertRaisesRegex(
-                TypeError, "solver must be an ipopt solver object"
-            ):
-                parmest.Estimator(exp_list, obj_function="SSE", solver=solver)
-
-    def test_cov_est_invalid_solver(self):
-        pest = parmest.Estimator(_rooney_biegler_exp_list(), obj_function="SSE")
-        for solver in [3, ContribSolverFactory("gurobi_direct")]:
-            with self.assertRaisesRegex(
-                TypeError, "solver must be an ipopt solver object"
-            ):
-                pest.cov_est(solver=solver)
 
 
 if __name__ == "__main__":
