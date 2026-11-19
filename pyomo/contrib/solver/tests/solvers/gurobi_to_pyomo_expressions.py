@@ -109,13 +109,12 @@ def grb_nl_to_pyo_expr(opcodes, data, parents, var_map):
         if op == OPCODE_VARIABLE:
             node = var_map[dat]
         else:
-            fcn = grb_op_to_pyo[op]
             if dat.__class__ is list:
                 # Because we are walking the prefix notation in reverse,
                 # we are processing arguments right-to-left.  Reverse
                 # the arguments to recover the original argument ordering.
                 dat.reverse()
-            node = fcn(dat)
+            node = grb_op_to_pyo[op](dat)
         # Data starts off holding "-1" for any operators.  If `parent`
         # is anything other than -1, then that is pointing to an
         # operator (whose initial data entry will start as -1).  We can
