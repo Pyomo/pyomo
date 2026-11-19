@@ -2700,7 +2700,7 @@ class TestParmestMultistart(unittest.TestCase):
         result_off, _, _ = pest.theta_est_multistart(
             user_supplied_vals=starts, initialize_states=False
         )
-        self.assertEqual(list(result_off["initialization_termination"]), [""] * 2)
+        self.assertEqual(list(result_off["initialization_termination"]), [None] * 2)
         # Both settings reach the same optimum on this convex problem
         self.assertAlmostEqual(
             result.loc[0, "converged_theta"],
@@ -2835,6 +2835,7 @@ class TestParmestMultistart(unittest.TestCase):
             "converged_theta",
             "final_objective",
             "solver_termination",
+            "initialization_termination",
             "solve_time",
         ]
         self.assertEqual(list(table.columns), ["theta"] + result_columns)
@@ -3290,7 +3291,7 @@ class TestParmestProfileLikelihood(unittest.TestCase):
             n_grid=5,
             use_multistart_for_baseline=True,
             baseline_multistart_kwargs={
-                "n_restarts": 3,
+                "n_starts": 3,
                 "multistart_sampling_method": "uniform_random",
                 "seed": 7,
             },

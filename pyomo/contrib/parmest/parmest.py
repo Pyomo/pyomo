@@ -2782,7 +2782,7 @@ class Estimator:
         multistart_result: pd.DataFrame
             One row per start: starting and converged (``converged_<theta>``)
             theta values, ``final_objective``, ``solver_termination``,
-            ``initialization_termination`` (empty if initialize_states is
+            ``initialization_termination`` (None if initialize_states is
             False) and ``solve_time`` (seconds, including initialization).
         best_theta: dict or None
             Theta values of the best start. None if no start is optimal.

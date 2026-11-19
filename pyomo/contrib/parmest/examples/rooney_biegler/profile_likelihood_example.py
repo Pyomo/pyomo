@@ -37,7 +37,7 @@ def main():
         # Demonstrate baseline from multistart integration:
         use_multistart_for_baseline=True,
         baseline_multistart_kwargs={
-            "n_restarts": 5,
+            "n_starts": 5,
             "multistart_sampling_method": "uniform_random",
             "seed": 7,
         },
