@@ -24,6 +24,11 @@ from pyomo.common.dependencies import numpy as np, pandas as pd, scipy, matplotl
 from pyomo.common.fileutils import this_file_dir
 from pyomo.contrib.parmest.experiment import Experiment
 from pyomo.contrib.pynumero.asl import AmplInterface
+from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+    RooneyBieglerExperiment,
+)
+from pyomo.contrib.solver.common.base import SolverBase
+from pyomo.contrib.solver.common.factory import SolverFactory as ContribSolverFactory
 
 ipopt_available = pyo.SolverFactory("ipopt").available()
 pynumero_ASL_available = AmplInterface.available()
@@ -3473,6 +3478,134 @@ class TestSquareInitialization_RooneyBiegler_Deprecated(unittest.TestCase):
         )  # 0.5311 from the paper
 
         self.pest.diagnostic_mode = False
+
+
+# The three ipopt solver objects accepted by Estimator(solver=...)
+_IPOPT_SOLVERS = [
+    ("legacy_ipopt", lambda: pyo.SolverFactory("ipopt")),
+    ("legacy_ipopt_v2", lambda: pyo.SolverFactory("ipopt_v2")),
+    ("newer_interface_ipopt", lambda: ContribSolverFactory("ipopt")),
+]
+
+
+def _solver_options_of(solver):
+    # Options of a legacy solver, or of a newer-interface solver
+    if isinstance(solver, SolverBase):
+        return solver.config.solver_options
+    return solver.options
+
+
+def _rooney_biegler_exp_list():
+    data = pd.DataFrame(
+        data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
+        columns=["hour", "y"],
+    )
+    return [RooneyBieglerExperiment(data.loc[i, :]) for i in range(data.shape[0])]
+
+
+@unittest.skipIf(
+    not parmest.parmest_available,
+    "Cannot test parmest: required dependencies are missing",
+)
+@unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+class TestEstimatorSolverObject(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # Reference estimate and covariance with the default solver (ipopt_v2)
+        pest = parmest.Estimator(_rooney_biegler_exp_list(), obj_function="SSE")
+        cls.obj, cls.theta = pest.theta_est()
+        cls.cov = pest.cov_est()
+
+    def assert_reference_estimate(self, obj, theta):
+        self.assertAlmostEqual(obj, self.obj, places=6)
+        for name, value in self.theta.items():
+            self.assertAlmostEqual(theta[name], value, places=6)
+
+    def assert_reference_cov(self, cov):
+        np.testing.assert_allclose(cov.values, self.cov.values, rtol=1e-5)
+
+    @parameterized.expand(_IPOPT_SOLVERS)
+    def test_theta_est(self, name, make_solver):
+        pest = parmest.Estimator(
+            _rooney_biegler_exp_list(), obj_function="SSE", solver=make_solver()
+        )
+        self.assert_reference_estimate(*pest.theta_est())
+        # "ef_ipopt" uses the Estimator's solver
+        self.assert_reference_estimate(*pest.theta_est(solver="ef_ipopt"))
+
+    @parameterized.expand(_IPOPT_SOLVERS)
+    def test_cov_est(self, name, make_solver):
+        # cov_est uses the Estimator's solver by default
+        pest = parmest.Estimator(
+            _rooney_biegler_exp_list(), obj_function="SSE", solver=make_solver()
+        )
+        pest.theta_est()
+        self.assert_reference_cov(pest.cov_est())
+
+        # A solver object passed to cov_est
+        pest = parmest.Estimator(_rooney_biegler_exp_list(), obj_function="SSE")
+        pest.theta_est()
+        self.assert_reference_cov(pest.cov_est(solver=make_solver()))
+
+    @parameterized.expand(_IPOPT_SOLVERS)
+    def test_solver_options_restored(self, name, make_solver):
+        # solver_options are set on the solver for each solve, then the
+        # solver's own options are restored
+        solver = make_solver()
+        _solver_options_of(solver)["tol"] = 1e-7
+        pest = parmest.Estimator(
+            _rooney_biegler_exp_list(),
+            obj_function="SSE",
+            solver=solver,
+            solver_options={"tol": 1e-8, "max_iter": 500},
+        )
+        self.assert_reference_estimate(*pest.theta_est())
+        options = _solver_options_of(solver)
+        self.assertEqual({key: options[key] for key in options}, {"tol": 1e-7})
+
+        self.assert_reference_cov(pest.cov_est())
+        options = _solver_options_of(solver)
+        self.assertEqual({key: options[key] for key in options}, {"tol": 1e-7})
+
+        self.assert_reference_cov(pest.cov_est(solver=solver))
+        options = _solver_options_of(solver)
+        self.assertEqual({key: options[key] for key in options}, {"tol": 1e-7})
+
+    def test_newer_interface_infeasible_is_legacy(self):
+        # A fixed theta outside its bounds is provenInfeasible for the newer
+        # interface, reported with the legacy termination condition infeasible
+        exp_list = [
+            BoundedLinearThetaExperiment(x=x, y=y) for x, y in [(1.0, 2.0), (2.0, 3.0)]
+        ]
+        pest = parmest.Estimator(
+            exp_list, obj_function="SSE", solver=ContribSolverFactory("ipopt")
+        )
+        obj, theta, status = pest._Q_opt(theta_vals={"theta": 20.0}, fix_theta=True)
+        self.assertIsNone(obj)
+        self.assertEqual(theta, {"theta": 20.0})
+        self.assertEqual(status, pyo.TerminationCondition.infeasible)
+
+
+@unittest.skipIf(
+    not parmest.parmest_available,
+    "Cannot test parmest: required dependencies are missing",
+)
+class TestEstimatorSolverValidation(unittest.TestCase):
+    def test_invalid_solver(self):
+        exp_list = _rooney_biegler_exp_list()
+        for solver in ["ipopt", 3, ContribSolverFactory("gurobi_direct")]:
+            with self.assertRaisesRegex(
+                TypeError, "solver must be an ipopt solver object"
+            ):
+                parmest.Estimator(exp_list, obj_function="SSE", solver=solver)
+
+    def test_cov_est_invalid_solver(self):
+        pest = parmest.Estimator(_rooney_biegler_exp_list(), obj_function="SSE")
+        for solver in [3, ContribSolverFactory("gurobi_direct")]:
+            with self.assertRaisesRegex(
+                TypeError, "solver must be an ipopt solver object"
+            ):
+                pest.cov_est(solver=solver)
 
 
 if __name__ == "__main__":
