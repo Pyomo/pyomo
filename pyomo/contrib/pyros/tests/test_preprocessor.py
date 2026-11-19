@@ -2193,6 +2193,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         model_data.working_model.all_nonadjustable_variables = list(
             ep.first_stage_variables
         )
+        model_data.working_model.effective_uncertain_dimensions = [0]
 
         robust_infeasible = reformulate_state_var_independent_eq_cons(model_data)
 
@@ -2262,6 +2263,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         # we want only one of the constraints to be 'nonlinear'
         # change eq_con_2 to give a valid matching constraint
         wm.second_stage.equality_cons["eq_con_2"].set_value(m.u * (m.x1 - 1) == 0)
+        wm.effective_uncertain_dimensions = [0]
 
         with LoggingIntercept(level=logging.DEBUG) as LOG:
             robust_infeasible = reformulate_state_var_independent_eq_cons(model_data)
@@ -2438,6 +2440,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         model_data.working_model.all_nonadjustable_variables = list(
             ep.first_stage_variables
         )
+        model_data.working_model.effective_uncertain_dimensions = [0]
 
         with LoggingIntercept(level=logging.INFO) as LOG:
             robust_infeasible = reformulate_state_var_independent_eq_cons(model_data)
