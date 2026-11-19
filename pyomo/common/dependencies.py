@@ -1124,6 +1124,7 @@ with declare_modules_as_importable(globals()):
     multiprocessing, _ = attempt_import(
         'multiprocessing', callback=_finalize_multiprocessing
     )
+    ast, _ = attempt_import('ast')
     random, _ = attempt_import('random')
 
     # Necessary for minimum version checking for other optional dependencies

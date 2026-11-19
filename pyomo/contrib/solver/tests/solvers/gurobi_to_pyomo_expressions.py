@@ -69,7 +69,7 @@ class GurobiPyomoOpMap(defaultdict):
             {
                 GRB.OPCODE_PLUS: SumExpression,
                 GRB.OPCODE_MINUS: lambda args: SumExpression(
-                    [args[0], NegationExpression([args[1]])]
+                    [args[0], NegationExpression(args[1:])]
                 ),  # This is sum of negated term for us
                 GRB.OPCODE_UMINUS: NegationExpression,
                 GRB.OPCODE_MULTIPLY: _make_product,
