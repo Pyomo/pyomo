@@ -348,7 +348,7 @@ def find_library(libname, cwd=False, include_PATH=True, pathlist=None):
         List of paths to search for the file.  If None, then pathlist
         will default to the local Pyomo configuration library directory
         (and the local Pyomo binary directory if include_PATH is set)
-        and the contents of LD_LIBRARY_PATH.  If a string, then the
+        and the contents of ``LD_LIBRARY_PATH``.  If a string, then the
         string is split using os.pathsep.  [default: None]
 
     Notes
@@ -903,7 +903,6 @@ class Library(metaclass=_PathSingletonMeta):
     version='5.6.2',
 )
 def register_executable(name, validate=None):
-    # Setting to None will cause Executable to re-search the pathlist
     return Executable(name).rehash()
 
 
