@@ -314,7 +314,7 @@ def _system():
 
 
 def _path():
-    return (os.environ.get('PATH', '') or os.defpath).split(os.pathsep)
+    return filter(None, (os.environ.get('PATH', '') or os.defpath).split(os.pathsep))
 
 
 def find_library(libname, cwd=False, include_PATH=True, pathlist=None):
