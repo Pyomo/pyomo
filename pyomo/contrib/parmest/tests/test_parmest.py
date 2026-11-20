@@ -2405,28 +2405,27 @@ class TestEstimatorSolver(unittest.TestCase):
         ]
 
     def test_default_solver_is_ipopt_v2_with_solver_options(self):
-        with self.assertLogs("pyomo.contrib.parmest.parmest", level="WARNING") as log:
-            pest = parmest.Estimator(
-                self.exp_list, obj_function="SSE", solver_options={"max_iter": 50}
-            )
+        pest = parmest.Estimator(
+            self.exp_list, obj_function="SSE", solver_options={"max_iter": 50}
+        )
 
-        self.assertIn("`solver_options` argument is deprecated", log.output[0])
         self.assertIsInstance(pest.solver, type(pyo.SolverFactory("ipopt_v2")))
         self.assertEqual(pest.solver.options["max_iter"], 50)
 
-    def test_solver_with_solver_options_warns_and_sets_options(self):
+    def test_solver_object_with_solver_options_raises(self):
+        # solver_options are only for solver names; options for a solver
+        # object are set on the object
         solver = pyo.SolverFactory("ipopt")
-        with self.assertLogs("pyomo.contrib.parmest.parmest", level="WARNING") as log:
-            pest = parmest.Estimator(
+        with self.assertRaisesRegex(
+            ValueError, "solver_options can only be used with a solver name"
+        ):
+            parmest.Estimator(
                 self.exp_list,
                 obj_function="SSE",
                 solver_options={"max_iter": 50},
                 solver=solver,
             )
-
-        self.assertIn("`solver_options` argument is deprecated", log.output[0])
-        self.assertIs(pest.solver, solver)
-        self.assertEqual(solver.options["max_iter"], 50)
+        self.assertEqual(dict(solver.options), {})
 
     def test_solver_name(self):
         pest = parmest.Estimator(
@@ -2464,6 +2463,19 @@ class TestEstimatorSolver(unittest.TestCase):
 
         with self.assertRaisesRegex(RuntimeError, "maxIterations"):
             pest.theta_est()
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+    def test_theta_est_default_and_ef_ipopt_use_estimator_solver(self):
+        # theta_est's default (None) and "ef_ipopt" (kept for backward
+        # compatibility) both use the Estimator's solver
+        solver = pyo.SolverFactory("ipopt")
+        solver.options["max_iter"] = 0
+        pest = parmest.Estimator(self.exp_list, obj_function="SSE", solver=solver)
+
+        with self.assertRaisesRegex(RuntimeError, "maxIterations"):
+            pest.theta_est()
+        with self.assertRaisesRegex(RuntimeError, "maxIterations"):
+            pest.theta_est(solver="ef_ipopt")
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     def test_theta_est_solver_object_for_one_call(self):
