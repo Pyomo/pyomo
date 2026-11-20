@@ -248,8 +248,7 @@ class LinearStandardFormInfo:
         # needs)
         if format is None:
             deprecation_warning(
-                'LinearStandardFormInfo requires the format argument',
-                version="6.10.2.dev0",
+                'LinearStandardFormInfo requires the format argument', version="6.11.0"
             )
             row_types = set(_[1] for _ in rows)
             if BoundType.RANGE in row_types:
@@ -451,7 +450,7 @@ class _LinearStandardFormCompiler_impl:
             deprecation_warning(
                 "The `slack_form` and `mixed_form` parameters are deprecated.  "
                 "Please use `format` to specify the standard form representation",
-                version='6.10.2.dev0',
+                version='6.11.0',
             )
             count = sum(
                 (

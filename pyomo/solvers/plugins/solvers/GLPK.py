@@ -401,7 +401,9 @@ class GLPKSHELL(SystemCallSolver):
         elif pstat == 'f':
             soln = results.solution.add()
             soln.status = SolutionStatus.feasible
-            solv.termination_condition = TerminationCondition.optimal
+            # Do not override a time limit detected in the log file
+            if solv.termination_condition != TerminationCondition.maxTimeLimit:
+                solv.termination_condition = TerminationCondition.optimal
 
             # TODO: Should we have a gap value for LP solves?
             soln.gap = 0.0

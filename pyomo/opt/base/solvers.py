@@ -15,6 +15,7 @@ import shlex
 from typing import overload
 
 from pyomo.common import Factory
+from pyomo.common.dependencies import ast
 from pyomo.common.enums import SolverAPIVersion
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
@@ -436,8 +437,11 @@ class OptSolver:
         istr = istr.strip()
         if not istr:
             return ans
-        if istr[0] == "'" or istr[0] == '"':
-            istr = eval(istr)
+        if istr[0] in "'\"":
+            # Only unwrap if the entire string is a single quoted token
+            parts = shlex.split(istr)
+            if len(parts) == 1:
+                istr = parts[0]
         tokens = shlex.split(istr)
         for token in tokens:
             index = token.find('=')
@@ -446,8 +450,8 @@ class OptSolver:
                     "Solver options must have the form option=value: '%s'" % istr
                 )
             try:
-                val = eval(token[(index + 1) :])
-            except:
+                val = ast.literal_eval(token[(index + 1) :])
+            except (ValueError, SyntaxError, TypeError):
                 val = token[(index + 1) :]
             ans[token[:index]] = val
         return ans
