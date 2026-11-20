@@ -52,7 +52,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v7
       with:
-        python-version: 3.11
+        python-version: 3.12
     - name: Black Formatting Check
       run: |
         # Note v24.4.1 fails due to a bug in the parser. Project-level
@@ -130,14 +130,14 @@ jobs:
 
         # Note: verify that pymumps is available when changing conda python version
         - os: ubuntu-latest
-          python: 3.12
+          python: 3.13
           other: /conda
           TARGET: linux
           PYENV: conda
           PACKAGES: pytest-qt
 
         - os: ubuntu-latest
-          python: 3.11
+          python: 3.12
           other: /mpi
           mpi: 3
           TARGET: linux
@@ -146,43 +146,42 @@ jobs:
           PACKAGES: mpi4py
 
         - os: ubuntu-latest
-          python: 3.12
+          python: 3.13
           other: /cython
           setup_options: --with-cython
           TARGET: linux
           PYENV: pip
           PACKAGES: cython
 
-        # [13 May 26] Disabled until we can sort out the seg fault issue
-        #- os: windows-latest
-        #  python: '3.10'
-        #  other: /pip
-        #  TARGET: win
-        #  PYENV: pip
+        - os: windows-latest
+          python: 3.14
+          other: /pip
+          TARGET: win
+          PYENV: pip
 
         - os: ubuntu-latest
-          python: '3.10'
+          python: 3.11
           other: /slim
           slim: 2
           TARGET: linux
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.13
+          python: 3.14
           other: /nosolvers
           slim: 1
           TARGET: linux
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.11
+          python: 3.13
           other: /singletest
           category: "-m 'neos or importtest'"
           TARGET: linux
           PYENV: pip
 
         - os: ubuntu-latest
-          python: '3.10'
+          python: 3.11
           other: /pyutilib
           TARGET: linux
           PYENV: pip
@@ -194,7 +193,7 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.13
+          python: 3.14
           other: /rtd
           category: notests
           build_docs: 1
@@ -905,7 +904,7 @@ jobs:
 
 
   bare-python-env:
-    name: linux/3.10/bare-env
+    name: linux/3.11/bare-env
     needs: lint  # the linter job is a prerequisite for PRs
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -913,10 +912,10 @@ jobs:
     - name: Checkout Pyomo source
       uses: actions/checkout@v7
 
-    - name: Set up Python 3.10
+    - name: Set up Python 3.11
       uses: actions/setup-python@v7
       with:
-        python-version: '3.10'
+        python-version: 3.11
 
     - name: Install Pyomo
       run: |
@@ -982,10 +981,10 @@ jobs:
       with:
         path: artifacts
 
-    - name: Set up Python 3.12
+    - name: Set up Python 3.13
       uses: actions/setup-python@v7
       with:
-        python-version: 3.12
+        python-version: 3.13
 
     - name: Install Python Packages (pip)
       shell: bash # DO NOT REMOVE: see note above
