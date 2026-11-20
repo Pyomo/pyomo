@@ -860,7 +860,7 @@ jobs:
 
 
   bare-python-env:
-    name: linux/3.10/bare-env
+    name: linux/3.11/bare-env
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
