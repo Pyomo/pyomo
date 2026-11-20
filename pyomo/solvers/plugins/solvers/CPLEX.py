@@ -15,6 +15,7 @@ import logging
 import subprocess
 
 from pyomo.common import Executable
+from pyomo.common.dependencies import ast
 from pyomo.common.enums import maximize, minimize
 from pyomo.common.errors import ApplicationError
 from pyomo.common.tempfiles import TempfileManager
@@ -889,7 +890,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
             elif tokens[0].startswith("solutionStatusValue"):
                 pieces = tokens[0].split("=")
-                solution_status = eval(pieces[1])
+                solution_status = int(pieces[1].strip().strip('"'))
                 # solution status = 1 => optimal
                 # solution status = 3 => infeasible
                 if soln.status == SolutionStatus.unknown:
@@ -931,8 +932,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     time_limit_exceeded = True
             elif tokens[0].startswith("MIPNodes"):
                 if mip_problem:
-                    n = eval(
-                        eval((" ".join(tokens).split('=')[1]).strip())
+                    n = ast.literal_eval(
+                        ast.literal_eval((" ".join(tokens).split('=')[1]).strip())
                         .lstrip("\"")
                         .rstrip("\"")
                     )

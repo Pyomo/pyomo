@@ -401,7 +401,8 @@ class AMPLExternalFunction(ExternalFunction):
 
     def load_library(self):
         # Note that the library was located in __init__ and converted to
-        # an absolute path (including checking the CWD).  However, we
+        # an absolute path (the CWD is only checked if the library was
+        # explicitly specified relative to it, e.g., './lib.so').  However, we
         # previously tested that changing the environment (i.e.,
         # changing directories) between defining the ExternalFunction
         # and loading it would cause the library to still be correctly

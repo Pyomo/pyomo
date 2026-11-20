@@ -44,6 +44,7 @@ from pyomo.contrib.solver.solvers.gams import GAMS
 
 from pyomo.contrib.solver.solvers.ipopt import Ipopt
 from pyomo.contrib.solver.solvers.knitro.direct import KnitroDirectSolver
+from pyomo.contrib.solver.solvers.xpress import XpressDirect, XpressPersistent
 from pyomo.contrib.solver.tests.solvers import instances
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.core.expr.numeric_expr import LinearExpression
@@ -83,6 +84,8 @@ all_solvers = [
     ('gams', GAMS),
     ('knitro_direct', KnitroDirectSolver),
     ('multistart', MultiStart),
+    ('xpress_direct', XpressDirect),
+    ('xpress_persistent', XpressPersistent),
 ]
 mip_solvers = [
     ('gurobi_persistent', GurobiPersistent),
@@ -92,6 +95,8 @@ mip_solvers = [
     ('scip_direct', ScipDirect),
     ('scip_persistent', ScipPersistent),
     ('knitro_direct', KnitroDirectSolver),
+    ('xpress_direct', XpressDirect),
+    ('xpress_persistent', XpressPersistent),
 ]
 nlp_solvers = [
     ('gurobi_direct_minlp', GurobiDirectMINLP),
@@ -99,6 +104,8 @@ nlp_solvers = [
     ('scip_direct', ScipDirect),
     ('scip_persistent', ScipPersistent),
     ('knitro_direct', KnitroDirectSolver),
+    ('xpress_direct', XpressDirect),
+    ('xpress_persistent', XpressPersistent),
 ]
 qcp_solvers = [
     ('gurobi_persistent', GurobiPersistent),
@@ -107,6 +114,8 @@ qcp_solvers = [
     ('scip_direct', ScipDirect),
     ('scip_persistent', ScipPersistent),
     ('knitro_direct', KnitroDirectSolver),
+    ('xpress_direct', XpressDirect),
+    ('xpress_persistent', XpressPersistent),
 ]
 qp_solvers = qcp_solvers + [("highs", Highs)]
 miqcqp_solvers = [
