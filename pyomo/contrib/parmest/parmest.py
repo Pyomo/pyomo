@@ -65,6 +65,10 @@ from pyomo.opt.results.solver import assert_optimal_termination
 from pyomo.common.flags import NOTSET
 
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
+from pyomo.opt.base.solvers import UnknownSolver
+from pyomo.solvers.plugins.solvers.IPOPT import IPOPT
+from pyomo.contrib.solver.common.base import LegacySolverWrapper, SolverBase
+from pyomo.contrib.solver.solvers.ipopt import LegacyIpoptSolver
 
 import pyomo.contrib.parmest.utils as utils
 import pyomo.contrib.parmest.graphics as graphics
@@ -377,6 +381,47 @@ def _get_labeled_model(experiment):
         raise RuntimeError(f"Failed to clone labeled model: {exc}")
 
 
+def _get_solver(solver, solver_options=None):
+    """
+    Return a solver object from ``SolverFactory`` (``pyomo.opt``)
+
+    Parameters
+    ----------
+    solver : str or solver object
+        Solver name, e.g., 'ipopt', from which the solver is built internally
+        with ``SolverFactory``, or a solver object from ``SolverFactory``,
+        e.g., ``SolverFactory('ipopt')``
+    solver_options : dict, optional
+        Options set on a solver built from a name. Not allowed with a
+        solver object.
+
+    Returns
+    -------
+    solver : solver object
+    """
+    solver_name = solver
+    if isinstance(solver, str):
+        solver = SolverFactory(solver_name)
+        if isinstance(solver, UnknownSolver):
+            raise RuntimeError(f"Unknown solver: '{solver_name}'")
+    elif not hasattr(solver, "solve"):
+        raise TypeError("Expected a solver name, e.g., 'ipopt', or a solver object")
+    elif isinstance(solver, SolverBase) and not isinstance(solver, LegacySolverWrapper):
+        raise TypeError(
+            "Solvers from pyomo.contrib.solver are not supported yet. Use "
+            "SolverFactory from pyomo.opt, e.g., SolverFactory('ipopt_v2')."
+        )
+    if solver_options is not None:
+        if not isinstance(solver_name, str):
+            raise ValueError(
+                "solver_options can only be used with a solver name. Set the "
+                "options on the solver object instead."
+            )
+        for key in solver_options:
+            solver.options[key] = solver_options[key]
+    return solver
+
+
 def _format_outputs_index_as_tuple(index):
     """
     Formats the indices of indexed experiment outputs
@@ -556,8 +601,11 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee, solver_options)
     step : float
         Float used for relative perturbation of the parameters,
         e.g., step=0.02 is a 2% perturbation
-    solver : str
-        Solver name specified by the user, e.g., 'ipopt'
+    solver : str or solver object
+        Solver name, e.g., 'ipopt', from which the solver is built internally
+        with ``SolverFactory`` (``pyomo.opt``) and ``solver_options``, or a
+        solver object from ``SolverFactory``, e.g., ``SolverFactory('ipopt')``,
+        used as given
     tee : bool
         Boolean solver option to be passed for verbose output
     solver_options: dict
@@ -576,11 +624,8 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee, solver_options)
         param.fix(theta_vals[param.name])
 
     # re-solve the model with the estimated parameters
-    solver = pyo.SolverFactory(solver)
-
-    if solver_options is not None:
-        for key in solver_options:
-            solver.options[key] = solver_options[key]
+    if isinstance(solver, str):
+        solver = _get_solver(solver, solver_options)
 
     results = solver.solve(model, tee=tee)
     assert_optimal_termination(results)
@@ -669,8 +714,11 @@ def compute_covariance_matrix(
     step : float
         Float used for relative perturbation of the parameters,
         e.g., step=0.02 is a 2% perturbation
-    solver : str
-        Solver name specified by the user, e.g., 'ipopt'
+    solver : str or solver object
+        Solver name, e.g., 'ipopt', from which the solver is built internally
+        with ``SolverFactory`` (``pyomo.opt``) and ``solver_options``, or a
+        solver object from ``SolverFactory``, e.g., ``SolverFactory('ipopt')``,
+        used as given
     tee : bool
         Boolean solver option to be passed for verbose output
     estimated_var: float, optional
@@ -782,8 +830,11 @@ def _finite_difference_FIM(
     step : float
         Float used for relative perturbation of the parameters,
         e.g., step=0.02 is a 2% perturbation
-    solver : str
-        Solver name specified by the user, e.g., 'ipopt'
+    solver : str or solver object
+        Solver name, e.g., 'ipopt', from which the solver is built internally
+        with ``SolverFactory`` (``pyomo.opt``) and ``solver_options``, or a
+        solver object from ``SolverFactory``, e.g., ``SolverFactory('ipopt')``,
+        used as given
     tee : bool
         Boolean solver option to be passed for verbose output
     estimated_var: float or int, optional
@@ -869,8 +920,11 @@ def _kaug_FIM(
         Built-in objective function selected by the user, e.g., `SSE`
     theta_vals : dict
         Dictionary containing the estimates of the unknown parameters
-    solver : str
-        Solver name specified by the user, e.g., 'ipopt'
+    solver : str or solver object
+        Solver name, e.g., 'ipopt', from which the solver is built internally
+        with ``SolverFactory`` (``pyomo.opt``) and ``solver_options``, or a
+        solver object from ``SolverFactory``, e.g., ``SolverFactory('ipopt')``,
+        used as given
     tee : bool
         Boolean solver option to be passed for verbose output
     estimated_var: float or int, optional
@@ -899,10 +953,8 @@ def _kaug_FIM(
     for param in model.unknown_parameters:
         param.fix(theta_vals[param.name])
 
-    solver = pyo.SolverFactory(solver)
-    if solver_options is not None:
-        for key in solver_options:
-            solver.options[key] = solver_options[key]
+    if isinstance(solver, str):
+        solver = _get_solver(solver, solver_options)
     results = solver.solve(model, tee=tee)
     assert_optimal_termination(results)
 
@@ -1026,7 +1078,10 @@ class Estimator:
     diagnostic_mode: bool, optional
         If True, print diagnostics from the solver. Default is False.
     solver_options: dict, optional
-        Provides options to the solver (also the name of an attribute).
+        Provides options to the solver (also the name of an attribute). They
+        are set on solvers built from a name: the Estimator's solver and
+        solver names given to ``theta_est`` or ``cov_est``. Not allowed with
+        a solver object; set the options on the solver object instead.
         Default is None.
     regularization: string, optional
         Built-in regularization type ("L2"). If no regularization is
@@ -1043,6 +1098,15 @@ class Estimator:
     regularization_weight: float, optional
         Weighting factor for the regularization term. Used with
         ``regularization="L2"``. Default is 1.0.
+    solver: str or solver object, optional
+        A solver object specified by the user, e.g.,
+        ``SolverFactory('ipopt_v2')`` from ``pyomo.opt``, or a solver name,
+        e.g., 'ipopt', used to build the solver internally with
+        ``SolverFactory``, default=None. If not specified, default solver is
+        set to ``SolverFactory('ipopt_v2')``. The solver is used for every
+        solve, e.g., in ``theta_est``, ``objective_at_theta``, bootstrap and
+        the covariance calculation; ``theta_est`` and ``cov_est`` can be given
+        a different solver for one call.
     """
 
     # The singledispatchmethod decorator is used here as a deprecation
@@ -1063,6 +1127,7 @@ class Estimator:
         prior_FIM=None,
         theta_ref=None,
         regularization_weight=None,
+        solver=None,
     ):
 
         # check that we have a (non-empty) list of experiments
@@ -1120,6 +1185,11 @@ class Estimator:
         self.tee = tee
         self.diagnostic_mode = diagnostic_mode
         self.solver_options = solver_options
+
+        # use the default solver if no solver is given
+        if solver is None:
+            solver = "ipopt_v2"
+        self.solver = _get_solver(solver, solver_options)
 
         # Validate regularization options and defaults
         if self.regularization is None:
@@ -1478,7 +1548,7 @@ class Estimator:
         self,
         return_values=None,
         bootlist=None,
-        solver="ef_ipopt",
+        solver=None,
         theta_vals=None,
         fix_theta=False,
     ):
@@ -1510,8 +1580,13 @@ class Estimator:
         theta_vals : dict, optional
             Dictionary of theta values to set in the model. If None, use default values from experiment class.
             Default is None.
-        solver : str, optional
-            Solver to use for optimization. Default is "ef_ipopt".
+        solver : str or solver object, optional
+            Solver for this call only: a solver name, e.g., 'ipopt', used to
+            build the solver internally with ``SolverFactory`` (``pyomo.opt``)
+            and ``solver_options``, or a solver object from ``SolverFactory``,
+            e.g., ``SolverFactory('ipopt')``, used as given. Default is None
+            (the Estimator's solver). "ef_ipopt" is kept for backward
+            compatibility and also means the Estimator's solver.
         fix_theta : bool, optional
             If True, fix the theta values in the model. If False, leave them free.
             Default is False.
@@ -1557,17 +1632,15 @@ class Estimator:
         # Check solver and set options
         if solver == "k_aug":
             raise RuntimeError("k_aug no longer supported.")
-        if solver == "ef_ipopt":
-            sol = SolverFactory('ipopt')
+        if solver is None or solver == "ef_ipopt":
+            sol = self.solver
+        elif isinstance(solver, str):
+            sol = _get_solver(solver, self.solver_options)
         else:
-            raise RuntimeError("Unknown solver in Q_Opt=" + solver)
-        # Currently, parmest is only tested with ipopt via ef_ipopt
-        # No other pyomo solvers have been verified to work with parmest from current release
-        # to my knowledge.
-
-        if self.solver_options is not None:
-            for key in self.solver_options:
-                sol.options[key] = self.solver_options[key]
+            # A solver object is used as given for this call
+            sol = _get_solver(solver)
+        # Any solver from SolverFactory (pyomo.opt) can be used; the parmest
+        # tests compare ipopt, bonmin and couenne (TestEstimatorSolver).
 
         # Solve model without loading solution values until the termination
         # condition has been checked.
@@ -1649,8 +1722,10 @@ class Estimator:
         method : str
             Covariance calculation method specified by the user,
             e.g., 'finite_difference'
-        solver : str
-            Solver name specified by the user, e.g., 'ipopt'
+        solver : solver object
+            Solver from ``SolverFactory`` (``pyomo.opt``) used for the
+            re-solve and the covariance calculation. ``cov_est`` builds it
+            from a solver name if one is given.
         step : float
             Float used for relative perturbation of the parameters,
             e.g., step=0.02 is a 2% perturbation
@@ -1676,11 +1751,25 @@ class Estimator:
             # retrieve the independent variables (i.e., estimated parameters)
             ind_vars = list(self.ef_instance.parmest_theta.values())
 
+            # The reduced hessian is computed with its own ipopt solver. If the
+            # solver is ipopt, its options are passed on; otherwise, a warning
+            # is logged and solver_options are used.
+            if isinstance(solver, (IPOPT, LegacyIpoptSolver)):
+                reduced_hessian_options = {
+                    key: solver.options[key] for key in solver.options
+                }
+            else:
+                logger.warning(
+                    f"The 'reduced_hessian' method solves with ipopt, not with "
+                    f"the {type(solver).__name__} solver; it uses solver_options."
+                )
+                reduced_hessian_options = self.solver_options
+
             solve_result, inv_red_hes = (
                 inverse_reduced_hessian.inv_reduced_hessian_barrier(
                     self.ef_instance,
                     independent_variables=ind_vars,
-                    solver_options=self.solver_options,
+                    solver_options=reduced_hessian_options,
                     tee=self.tee,
                 )
             )
@@ -1702,7 +1791,7 @@ class Estimator:
                         param.fix(self.estimated_theta[param.name])
 
                 # re-solve the model with the estimated parameters
-                results = pyo.SolverFactory(solver).solve(model, tee=self.tee)
+                results = solver.solve(model, tee=self.tee)
                 assert_optimal_termination(results)
 
                 # choose and evaluate the sum of squared errors expression
@@ -1944,16 +2033,19 @@ class Estimator:
 
         return samplelist
 
-    def theta_est(
-        self, solver="ef_ipopt", return_values=[], calc_cov=NOTSET, cov_n=NOTSET
-    ):
+    def theta_est(self, solver=None, return_values=[], calc_cov=NOTSET, cov_n=NOTSET):
         """
         Parameter estimation using all scenarios in the data
 
         Parameters
         ----------
-        solver: str, optional
-            Currently only "ef_ipopt" is supported. Default is "ef_ipopt".
+        solver: str or solver object, optional
+            Solver for this call only: a solver name, e.g., 'ipopt', used to
+            build the solver internally with ``SolverFactory`` (``pyomo.opt``)
+            and ``solver_options``, or a solver object from ``SolverFactory``,
+            e.g., ``SolverFactory('ipopt')``, used as given. Default is None
+            (the Estimator's solver). "ef_ipopt" is kept for backward
+            compatibility and also means the Estimator's solver.
         return_values: list, optional
             List of Variable names, used to return values from the model
             for data reconciliation
@@ -1976,9 +2068,8 @@ class Estimator:
             Estimated values for theta
         var_values: pd.DataFrame
             Variable values for each variable name in
-            return_values (only for solver='ef_ipopt')
+            return_values
         """
-        assert isinstance(solver, str)
         assert isinstance(return_values, list)
         assert (calc_cov is NOTSET) or isinstance(calc_cov, bool)
 
@@ -1992,7 +2083,9 @@ class Estimator:
         else:
             calc_cov = False
 
-        # check if we are using deprecated parmest
+        # check if we are using deprecated parmest, which only knows "ef_ipopt"
+        if self.pest_deprecated is not None and solver is None:
+            solver = "ef_ipopt"
         if self.pest_deprecated is not None and calc_cov:
             return self.pest_deprecated.theta_est(
                 solver=solver,
@@ -2007,7 +2100,7 @@ class Estimator:
 
         return self._Q_opt(solver=solver, return_values=return_values, bootlist=None)
 
-    def cov_est(self, method="finite_difference", solver="ipopt", step=1e-3):
+    def cov_est(self, method="finite_difference", solver=None, step=1e-3):
         """
         Covariance matrix calculation using all scenarios in the data
 
@@ -2017,8 +2110,16 @@ class Estimator:
             Covariance calculation method. Options - 'finite_difference',
             'reduced_hessian', and 'automatic_differentiation_kaug'.
             Default is 'finite_difference'
-        solver : str, optional
-            Solver name, e.g., 'ipopt'. Default is 'ipopt'
+        solver : str or solver object, optional
+            Solver for this call only: a solver name, e.g., 'ipopt', used to
+            build the solver internally with ``SolverFactory`` (``pyomo.opt``)
+            and ``solver_options``, or a solver object from ``SolverFactory``,
+            e.g., ``SolverFactory('ipopt')``, used as given. Default is None
+            (the Estimator's solver). The
+            'reduced_hessian' method solves with its own ipopt
+            (``SolverFactory('ipopt')``): if the solver is ipopt (``'ipopt'``
+            or ``'ipopt_v2'``), its options are used; otherwise a warning is
+            logged and ``solver_options`` are used.
         step : float, optional
             Float used for relative perturbation of the parameters,
             e.g., step=0.02 is a 2% perturbation. Default is 1e-3
@@ -2028,9 +2129,15 @@ class Estimator:
         cov : pd.DataFrame
             Covariance matrix of the estimated parameters
         """
-        # check if the solver input is a string
-        if not isinstance(solver, str):
-            raise TypeError("Expected a string for the solver, e.g., 'ipopt'")
+        # use the Estimator's solver if no solver is given
+        if solver is None:
+            solver = self.solver
+        # build a solver from its name, with solver_options
+        elif isinstance(solver, str):
+            solver = _get_solver(solver, self.solver_options)
+        # a solver object is used as given
+        else:
+            solver = _get_solver(solver)
 
         # check if the method input is a string
         if not isinstance(method, str):
@@ -2317,7 +2424,7 @@ class Estimator:
     def objective_at_theta(self, theta_values=None, initialize_parmest_model=False):
         """
         Objective value for each theta, solving extensive form problem with
-        fixed theta values.
+        fixed theta values using the Estimator's solver.
         """
 
         if self.pest_deprecated is not None:
