@@ -441,6 +441,19 @@ def test_solver_cases(*args):
         # CUOPT
         #
         _cuopt_capabilities = set(['linear', 'integer'])
+        try:
+            from pyomo.solvers.plugins.solvers.cuopt_direct import (
+                CUOPTDirect,
+                cuopt_available,
+            )
+
+            bool(cuopt_available)
+            if CUOPTDirect._supports_quadratic_objective:
+                _cuopt_capabilities.add('quadratic_objective')
+            if CUOPTDirect._supports_quadratic_constraint:
+                _cuopt_capabilities.add('quadratic_constraint')
+        except ImportError:
+            pass
 
         _test_solver_cases['cuopt', 'python'] = initialize(
             name='cuopt',
