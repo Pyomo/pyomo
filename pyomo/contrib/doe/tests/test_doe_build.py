@@ -462,7 +462,7 @@ class TestDoeBuild(unittest.TestCase):
 
         count = 0
         for k, v in doe_obj.compute_FIM_model.measurement_error.items():
-            self.assertEqual(pyo.value(k), stuff[count])
+            self.assertEqual(v, stuff[count])
             count += 1
 
     def test_get_unknown_parameters_without_blocks(self):
