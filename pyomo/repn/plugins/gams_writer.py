@@ -66,6 +66,19 @@ _zero_one = {0, 1}
 _plusMinusOne = {-1, 1}
 
 
+def gams_ftoa(val, parenthesize_negative_values=False):
+    a = ftoa(val, parenthesize_negative_values)
+    # Python renders non-finite floats as nan/inf, which are not valid GAMS
+    # numeric literals: map them to GAMS's special values NA and INF
+    if a == 'nan':
+        return 'NA'
+    if a == '(-inf)':
+        return '(-INF)'
+    if a.endswith('inf'):
+        return a[:-3] + 'INF'
+    return a
+
+
 def _handle_PowExpression(visitor, node, values):
     # If the exponent is a positive integer, use the power() function.
     # Otherwise, use the ** operator.
@@ -119,14 +132,14 @@ class ToGamsVisitor(_ToStringVisitor):
         """
         if node.__class__ in native_types:
             try:
-                return True, ftoa(node, True)
+                return True, gams_ftoa(node, True)
             except TypeError:
                 return True, repr(node)
 
         if node.is_expression_type():
             # Special handling if NPV and semi-NPV types:
             if not node.is_potentially_variable():
-                return True, ftoa(node(), True)
+                return True, gams_ftoa(node(), True)
             if node.__class__ is EXPR.MonomialTermExpression:
                 return True, self._monomial_to_string(node)
             if node.__class__ is EXPR.LinearExpression:
@@ -154,7 +167,7 @@ class ToGamsVisitor(_ToStringVisitor):
         if node.is_fixed() and not (
             self.output_fixed_variables and node.is_potentially_variable()
         ):
-            return True, ftoa(node(), True)
+            return True, gams_ftoa(node(), True)
         else:
             assert node.is_variable_type()
             return True, self.smap.getSymbol(node)
@@ -164,7 +177,7 @@ class ToGamsVisitor(_ToStringVisitor):
         if const.__class__ not in native_types:
             const = value(const)
         if var.is_fixed() and not self.output_fixed_variables:
-            return ftoa(const * var.value, True)
+            return gams_ftoa(const * var.value, True)
         # Special handling: ftoa is slow, so bypass _to_string when this
         # is a trivial term
         if not const:
@@ -174,7 +187,7 @@ class ToGamsVisitor(_ToStringVisitor):
                 return '-' + self.smap.getSymbol(var)
             else:
                 return self.smap.getSymbol(var)
-        return ftoa(const, True) + '*' + self.smap.getSymbol(var)
+        return gams_ftoa(const, True) + '*' + self.smap.getSymbol(var)
 
     def _linear_to_string(self, node):
         values = [
@@ -182,13 +195,13 @@ class ToGamsVisitor(_ToStringVisitor):
                 self._monomial_to_string(arg)
                 if arg.__class__ is EXPR.MonomialTermExpression
                 else (
-                    ftoa(arg, True)
+                    gams_ftoa(arg, True)
                     if arg.__class__ in native_numeric_types
                     else (
                         self.smap.getSymbol(arg)
                         if arg.is_variable_type()
                         and (not arg.fixed or self.output_fixed_variables)
-                        else ftoa(value(arg), True)
+                        else gams_ftoa(value(arg), True)
                     )
                 )
             )
@@ -641,20 +654,20 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 constraint_names.append('%s' % cName)
                 ConstraintIO.write(
                     '%s.. %s =e= %s ;\n'
-                    % (constraint_names[-1], con_body_str, ftoa(ub, False))
+                    % (constraint_names[-1], con_body_str, gams_ftoa(ub, False))
                 )
             else:
                 if lb is not None:
                     constraint_names.append('%s_lo' % cName)
                     ConstraintIO.write(
                         '%s.. %s =l= %s ;\n'
-                        % (constraint_names[-1], ftoa(lb, False), con_body_str)
+                        % (constraint_names[-1], gams_ftoa(lb, False), con_body_str)
                     )
                 if ub is not None:
                     constraint_names.append('%s_hi' % cName)
                     ConstraintIO.write(
                         '%s.. %s =l= %s ;\n'
-                        % (constraint_names[-1], con_body_str, ftoa(ub, False))
+                        % (constraint_names[-1], con_body_str, gams_ftoa(ub, False))
                     )
 
         obj = list(model.component_data_objects(Objective, active=True, sort=sort))
@@ -700,7 +713,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
 
         for var in categorized_vars.fixed:
             output_file.write(
-                "%s.fx = %s;\n" % (var, ftoa(value(symbolMap.getObject(var)), False))
+                "%s.fx = %s;\n"
+                % (var, gams_ftoa(value(symbolMap.getObject(var)), False))
             )
         output_file.write("\n")
 
@@ -718,7 +732,9 @@ class ProblemWriter_gams(AbstractProblemWriter):
             lb, ub = var.bounds
             if category == 'positive':
                 if ub is not None:
-                    output_file.write("%s.up = %s;\n" % (var_name, ftoa(ub, False)))
+                    output_file.write(
+                        "%s.up = %s;\n" % (var_name, gams_ftoa(ub, False))
+                    )
             elif category == 'ints':
                 if lb is None:
                     warn_int_bounds = True
@@ -729,7 +745,9 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     )
                     output_file.write("%s.lo = -1.0E+100;\n" % (var_name))
                 elif lb != 0:
-                    output_file.write("%s.lo = %s;\n" % (var_name, ftoa(lb, False)))
+                    output_file.write(
+                        "%s.lo = %s;\n" % (var_name, gams_ftoa(lb, False))
+                    )
                 if ub is None:
                     warn_int_bounds = True
                     # GAMS has an option value called IntVarUp that is the
@@ -742,21 +760,33 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     )
                     output_file.write("%s.up = +1.0E+100;\n" % (var_name))
                 else:
-                    output_file.write("%s.up = %s;\n" % (var_name, ftoa(ub, False)))
+                    output_file.write(
+                        "%s.up = %s;\n" % (var_name, gams_ftoa(ub, False))
+                    )
             elif category == 'binary':
                 if lb != 0:
-                    output_file.write("%s.lo = %s;\n" % (var_name, ftoa(lb, False)))
+                    output_file.write(
+                        "%s.lo = %s;\n" % (var_name, gams_ftoa(lb, False))
+                    )
                 if ub != 1:
-                    output_file.write("%s.up = %s;\n" % (var_name, ftoa(ub, False)))
+                    output_file.write(
+                        "%s.up = %s;\n" % (var_name, gams_ftoa(ub, False))
+                    )
             elif category == 'reals':
                 if lb is not None:
-                    output_file.write("%s.lo = %s;\n" % (var_name, ftoa(lb, False)))
+                    output_file.write(
+                        "%s.lo = %s;\n" % (var_name, gams_ftoa(lb, False))
+                    )
                 if ub is not None:
-                    output_file.write("%s.up = %s;\n" % (var_name, ftoa(ub, False)))
+                    output_file.write(
+                        "%s.up = %s;\n" % (var_name, gams_ftoa(ub, False))
+                    )
             else:
                 raise KeyError('Category %s not supported' % category)
             if warmstart and var.value is not None:
-                output_file.write("%s.l = %s;\n" % (var_name, ftoa(var.value, False)))
+                output_file.write(
+                    "%s.l = %s;\n" % (var_name, gams_ftoa(var.value, False))
+                )
 
         if warn_int_bounds:
             logger.warning(

@@ -329,6 +329,45 @@ class Test(unittest.TestCase):
             ("x1*(-8.8) - x2", False),
         )
 
+    def test_nonfinite_var_to_string(self):
+        # Python renders non-finite floats as nan/inf, which are not valid
+        # GAMS numeric literals: they must map to GAMS's NA / INF
+        m = ConcreteModel()
+        m.x = Var()
+        m.z = Var()
+        lbl = NumericLabeler('x')
+        smap = SymbolMap(lbl)
+        tc = StorageTreeChecker(m)
+        m.z.fix(float('nan'))
+        self.assertEqual(
+            expression_to_string(m.x - m.z, tc, smap=smap), ("x1 + NA", False)
+        )
+        m.z.fix(float('inf'))
+        self.assertEqual(
+            expression_to_string(m.x - m.z, tc, smap=smap), ("x1 + (-INF)", False)
+        )
+        m.z.fix(float('-inf'))
+        self.assertEqual(
+            expression_to_string(m.x + m.z, tc, smap=smap), ("x1 + (-INF)", False)
+        )
+
+    def test_nonfinite_var_values_write_gams(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=float('nan'))
+        m.y = Var(initialize=float('inf'))
+        m.z = Var(initialize=2.5)
+        m.z.fix(float('-inf'))
+        m.obj = Objective(expr=m.x + m.y + m.z)
+        m.c = Constraint(expr=m.x + m.y >= 1)
+        outs = StringIO()
+        m.write(outs, format='gams', io_options=dict(warmstart=True))
+        out = outs.getvalue()
+        self.assertIn("x1.l = NA;", out)
+        self.assertIn("x2.l = INF;", out)
+        self.assertIn("+ (-INF)", out)
+        self.assertNotIn("nan", out)
+        self.assertNotIn("inf", out)
+
     def test_dnlp_to_string(self):
         m = ConcreteModel()
         m.x = Var()
