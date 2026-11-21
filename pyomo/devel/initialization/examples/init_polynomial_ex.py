@@ -53,6 +53,20 @@ def global_init_ex():
     return results.solution_status, m.x.value
 
 
+def multistart_init_ex():
+    m = build_model()
+    nlp_solver = SolverFactory('ipopt')
+    multistart_solver = SolverFactory('multistart')
+    multistart_solver.config.subsolver = nlp_solver
+    multistart_solver.config.iterations = 10
+    multistart_solver.config.break_on_solution = True
+
+    results = ini.initialize_with_multistart_opt(
+        nlp=m, nlp_solver=nlp_solver, multistart_solver=multistart_solver, seed=145
+    )
+    return results.solution_status, m.x.value
+
+
 def run_example(method='lp'):
     if method == 'lp':
         stat, x = lp_init_ex()
@@ -60,6 +74,8 @@ def run_example(method='lp'):
         stat, x = pwl_init_ex()
     elif method == 'global':
         stat, x = global_init_ex()
+    elif method == 'multistart':
+        stat, x = multistart_init_ex()
     else:
         raise ValueError(f"Unknown method: {method}")
 

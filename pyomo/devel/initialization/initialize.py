@@ -14,6 +14,9 @@ from typing import Optional
 from pyomo.core.base.block import BlockData
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.solver.common.base import SolverBase
+from pyomo.devel.initialization.multistart_init import (
+    _initialize_with_multistart_solver,
+)
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import Results
 from pyomo.contrib.solver.common.results import SolutionStatus
@@ -311,6 +314,91 @@ def initialize_with_global_opt(
     try:
         res = _initialize_with_global_solver(
             nlp=nlp, global_solver=global_solver, nlp_solver=nlp_solver
+        )
+    finally:
+        _cleanup(orig_var_data)
+
+    nlp_res = _retry_nlp_solve(nlp, nlp_solver)
+
+    return nlp_res
+
+
+def initialize_with_multistart_opt(
+    nlp: BlockData,
+    nlp_solver: SolverBase | None = None,
+    multistart_solver=None,
+    skip_initial_nlp_solve: bool = False,
+    default_bound: float = 1e8,
+    seed: int | None = None,
+    use_univariate_nonlinear_decomposition: bool = False,
+    aggressive_substitution: bool = True,
+) -> Results:
+    """
+    Attempt to initialize and subsequently solve the model given by ``nlp``.
+    The basic idea is to apply some method to find good initial values for
+    the variables and then try to solve the problem with ``nlp_solver``.
+
+    Parameters
+    ----------
+    nlp: BlockData
+        The pyomo model to be initialized.
+    nlp_solver: Optional[SolverBase]
+        A solver interface appropriate for NLPs.
+        Default: ipopt
+    multistart_solver: Optional[SolverBase]
+        A configured multistart solver (``SolverFactory('multistart')``).
+        Each start is solved with this solver's own ``subsolver``, not with
+        ``nlp_solver``.
+        Default: a multistart solver with Latin hypercube sampling,
+        ``seed=0`` and ``break_on_solution=True``
+    skip_initial_nlp_solve: bool
+        If True, the initial attempt at solving the NLP without initialization
+        will be skipped.
+    default_bound: float
+        All nonlinear variables without bounds will be given lower and upper
+        bounds of -default_bound and default_bound.
+    seed: int | None
+        Seed for the multistart sampler, to make the result deterministic.
+        If given, it is used instead of the seed set on ``multistart_solver``
+        for this call only. If None, the solver's own seed is used.
+    use_univariate_nonlinear_decomposition: bool
+        If True, the contrib.piecewise.univariate_nonlinear_decomposition
+        transformation is applied before the variables are bounded.
+    aggressive_substitution: bool
+        This is passed along to the contrib.piecewise.univariate_nonlinear_decomposition
+        transformation.
+
+    Returns
+    -------
+    res: pyomo.contrib.solver.common.results.Results
+        The results object obtained the last time the nlp_solver was used to
+        try and solve the model.
+    """
+
+    if nlp_solver is None:
+        nlp_solver = _get_solver('ipopt', 'local NLP solver')
+
+    if multistart_solver is None:
+        multistart_solver = SolverFactory("multistart")
+        multistart_solver.config.seed = 0
+        multistart_solver.config.sampling_method = "lhs"
+        multistart_solver.config.break_on_solution = True
+
+    if not skip_initial_nlp_solve:
+        res = _try_nlp_solve(nlp, nlp_solver)
+        if res.solution_status == SolutionStatus.optimal:
+            return res
+
+    orig_var_data = _setup(nlp)
+
+    try:
+        res = _initialize_with_multistart_solver(
+            nlp=nlp,
+            multistart_solver=multistart_solver,
+            seed=seed,
+            default_bound=default_bound,
+            use_univariate_nonlinear_decomposition=use_univariate_nonlinear_decomposition,
+            aggressive_substitution=aggressive_substitution,
         )
     finally:
         _cleanup(orig_var_data)
