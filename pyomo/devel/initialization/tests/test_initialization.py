@@ -19,6 +19,9 @@ from pyomo.devel.initialization.examples.init_polynomial_ex import (
     run_example,
 )
 from pyomo.devel.initialization.utils import get_solution_limit_options
+from pyomo.devel.initialization.bounds.bound_variables import (
+    bound_all_nonlinear_variables,
+)
 from pyomo.common import unittest
 from pyomo.common.dependencies import scipy_available
 from pyomo.contrib.solver.common.factory import SolverFactory
@@ -101,6 +104,22 @@ class TestExamples(unittest.TestCase):
 
 
 class TestInit(unittest.TestCase):
+    @unittest.skipUnless(highs.available(), 'highs is not available')
+    @unittest.skipUnless(ipopt.available(), 'ipopt is not available')
+    def test_pwl_log_at_zero_bound(self):
+        # The piecewise linear approximation used to evaluate log(x) at the
+        # bound x = 0 and raise "math domain error"
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(0, 10), initialize=0)
+        m.y = pyo.Var(initialize=0)
+        m.c = pyo.Constraint(expr=m.y == pyo.log(m.x) * m.x)
+        m.o = pyo.Objective(expr=(m.y - 3) ** 2)
+        res = ini.initialize_with_piecewise_linear_approximation(
+            m, nlp_solver=ipopt, mip_solver=highs, skip_initial_nlp_solve=True
+        )
+        self.assertEqual(res.solution_status, SolutionStatus.optimal)
+        self.assertAlmostEqual(pyo.value(m.y), 3, places=5)
+
     @unittest.skipUnless(highs.available(), 'highs is not available')
     @unittest.skipUnless(scipy_available, 'scipy is not available')
     def test_lp_init(self):
@@ -306,6 +325,67 @@ class TestInit(unittest.TestCase):
         ):
             wrong_solver = SolverFactory("multistart")
             get_solution_limit_options(wrong_solver)
+
+
+def _new_bounds(lb, ub, default_bound=1e8):
+    # x appears in one nonlinear constraint that gives FBBT no bounds on x,
+    # since z is free, so the result shows only what
+    # bound_all_nonlinear_variables does to the bounds
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var(bounds=(lb, ub))
+    m.y = pyo.Var(bounds=(1, 2))
+    m.z = pyo.Var()
+    m.c = pyo.Constraint(expr=m.z == m.x * m.y)
+    bound_all_nonlinear_variables(m, default_bound=default_bound)
+    return m.x.bounds
+
+
+class TestBoundAllNonlinearVariables(unittest.TestCase):
+    def test_default_bounds(self):
+        # Missing bounds, or bounds wider than default_bound, are replaced by
+        # -default_bound and default_bound. The final 1e-6 inward shift is
+        # within the tolerance used here.
+        cases = [
+            ((None, None), (-1e8, 1e8)),
+            ((None, 5), (-1e8, 5)),
+            ((-5, None), (-5, 1e8)),
+            ((-1e9, 1e9), (-1e8, 1e8)),
+        ]
+        for bounds, expected in cases:
+            with self.subTest(bounds=bounds):
+                lb, ub = _new_bounds(*bounds)
+                self.assertAlmostEqual(lb, expected[0], delta=1e-5)
+                self.assertAlmostEqual(ub, expected[1], delta=1e-5)
+
+    def test_bounds_beyond_default(self):
+        # When a variable's bounds lie entirely outside the default range,
+        # the missing bound is set equal to the existing one
+        self.assertEqual(_new_bounds(2e8, None), (2e8, 2e8))
+        self.assertEqual(_new_bounds(None, -2e8), (-2e8, -2e8))
+
+    def test_equal_bounds_unchanged(self):
+        self.assertEqual(_new_bounds(3, 3), (3, 3))
+
+    def test_inverted_bounds_raise(self):
+        # FBBT only checks variables in constraints, so inverted bounds on a
+        # variable that appears only in the objective must be caught here
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(5, 3))
+        m.y = pyo.Var(bounds=(0, 1))
+        m.c = pyo.Constraint(expr=m.y**2 <= 1)
+        m.o = pyo.Objective(expr=m.x**2 + m.y)
+        with self.assertRaisesRegex(RuntimeError, "invalid bounds for x"):
+            bound_all_nonlinear_variables(m)
+
+    def test_bounds_shifted_inward(self):
+        # Bounds move inward by min(1e-6, 1e-6 * (ub - lb)), so that later
+        # steps do not evaluate functions such as log(x) exactly at x = 0
+        lb, ub = _new_bounds(0, 1)
+        self.assertAlmostEqual(lb, 1e-6, places=15)
+        self.assertAlmostEqual(ub, 1 - 1e-6, places=12)
+        lb, ub = _new_bounds(0, 0.5)
+        self.assertAlmostEqual(lb, 5e-7, places=15)
+        self.assertAlmostEqual(ub, 0.5 - 5e-7, places=12)
 
 
 if __name__ == '__main__':
