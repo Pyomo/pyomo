@@ -11,7 +11,11 @@ import logging
 
 from pyomo.core.base.constraint import Constraint
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
-from pyomo.util.subsystems import TemporarySubsystemManager, generate_subsystem_blocks
+from pyomo.util.subsystems import (
+    generate_subsystem_blocks,
+    TemporarySubsystemManager,
+    copy_scaling_factors_to_block,
+)
 from pyomo.contrib.incidence_analysis.interface import (
     IncidenceGraphInterface,
     _generate_variables_in_constraints,
@@ -89,7 +93,13 @@ def generate_strongly_connected_components(
 
 
 def solve_strongly_connected_components(
-    block, *, solver=None, solve_kwds=None, use_calc_var=True, calc_var_kwds=None
+    block,
+    *,
+    solver=None,
+    solve_kwds=None,
+    use_calc_var=True,
+    calc_var_kwds=None,
+    copy_scaling_factors=False,
 ):
     """Solve a square system of variables and equality constraints by
     solving strongly connected components individually.
@@ -119,7 +129,8 @@ def solve_strongly_connected_components(
         square system solves
     calc_var_kwds: Dictionary
         Keyword arguments for calculate_variable_from_constraint
-
+    copy_scaling_factors: Bool
+        Whether to copy scaling factors to the temporary blocks before solving them.
     Returns
     -------
     List of results objects returned by each call to solve
@@ -129,6 +140,8 @@ def solve_strongly_connected_components(
         solve_kwds = {}
     if calc_var_kwds is None:
         calc_var_kwds = {}
+    if copy_scaling_factors and "scale_problem" not in calc_var_kwds:
+        calc_var_kwds["scale_problem"] = True
 
     igraph = IncidenceGraphInterface(
         block,
@@ -154,6 +167,8 @@ def solve_strongly_connected_components(
                     scc.vars[0], scc.cons[0], **calc_var_kwds
                 )
             else:
+                if copy_scaling_factors:
+                    copy_scaling_factors_to_block(block.model(), scc)
                 if solver is None:
                     var_names = [var.name for var in scc.vars.values()][:10]
                     con_names = [con.name for con in scc.cons.values()][:10]
