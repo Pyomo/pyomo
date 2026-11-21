@@ -243,7 +243,10 @@ def test_bad_view(qtbot):
 
 def test_qtconsole_app(qtbot):
     app = pv.QtApp()
-    # empty list to prevent picking up args from pytest
-    app.initialize([])
-    app.show_ui()
-    app.hide_ui()
+    try:
+        # empty list to prevent picking up args from pytest
+        app.initialize([])
+        app.show_ui()
+        app.hide_ui()
+    finally:
+        app.shutdown()
