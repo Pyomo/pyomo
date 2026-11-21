@@ -8,6 +8,7 @@
 # ____________________________________________________________________________________
 
 import os
+import subprocess
 import sys
 from os.path import dirname, abspath
 
@@ -454,6 +455,29 @@ class TestCBCUsingMock(unittest.TestCase):
             results.solver.statistics.branch_and_bound.number_of_created_subproblems,
             34776,
         )
+
+    def test_version_timeout(self):
+        cbc_shell = CBCSHELL()
+        self.assertEqual(cbc_shell._version_timeout, 5)
+        cbc_shell._version_timeout = 42
+        calls = []
+
+        def fake_run(cmd, **kwds):
+            calls.append(kwds['timeout'])
+            return subprocess.CompletedProcess(
+                cmd, 0, stdout="Version: 2.10.12\n", stderr=None
+            )
+
+        with (
+            unittest.mock.patch.object(cbc_shell, 'executable', return_value='cbc'),
+            unittest.mock.patch(
+                'pyomo.solvers.plugins.solvers.CBCplugin.subprocess.run',
+                side_effect=fake_run,
+            ),
+        ):
+            self.assertEqual(cbc_shell._get_version(), (2, 10, 12, 0))
+            self.assertTrue(cbc_shell._compiled_with_asl())
+        self.assertEqual(calls, [42, 42])
 
 
 if __name__ == "__main__":
