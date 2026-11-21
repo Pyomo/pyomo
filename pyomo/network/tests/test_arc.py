@@ -1986,6 +1986,39 @@ class TestArc(unittest.TestCase):
         m2.y.value = 1.25
         self.assertAlmostEqual(value(c.body), 0)
 
+    def test_expand_auto_connect(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.prt = Port()
+        m.prt.add(m.x, "a")
+        m.prt.connect_to(m.prt)
+        created_arc = m.find_component("prt_to_prt")
+        self.assertEqual(len(list(m.component_objects(Constraint))), 0)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 0)
+
+        TransformationFactory('network.expand_arcs').apply_to(m)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 1)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 1)
+        self.assertFalse(created_arc.active)
+        blk = m.component('prt_to_prt_expanded')
+        self.assertTrue(blk.active)
+        self.assertTrue(blk.component('a_equality').active)
+
+        os = StringIO()
+        blk.pprint(ostream=os)
+        self.assertEqual(
+            os.getvalue(),
+            """prt_to_prt_expanded : Size=1, Index=None, Active=True
+    1 Constraint Declarations
+        a_equality : Size=1, Index=None, Active=True
+            Key  : Lower : Body  : Upper : Active
+            None :   0.0 : x - x :   0.0 :   True
+
+    1 Declarations: a_equality
+""",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
