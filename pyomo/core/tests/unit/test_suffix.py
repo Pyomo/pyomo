@@ -151,6 +151,107 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(m.suffix_generator_fcn[m.y[2]], 100)
         self.assertEqual(m.suffix_generator_fcn[m.y[3]], 100)
 
+    def test_suffix_scalar_initialize(self):
+        # Regression test for #3323: a scalar initialize is a single
+        # value, stored under the None key (equivalent to constructing
+        # the Suffix and then assigning suffix[None] = value)
+        m = ConcreteModel()
+        m.bigM = Suffix(direction=Suffix.LOCAL, initialize=1000)
+        self.assertEqual(len(m.bigM), 1)
+        self.assertIn(None, m.bigM)
+        self.assertEqual(m.bigM[None], 1000)
+
+        # The explicit mapping form of the same value behaves the same
+        # (and mapping-based initialization is otherwise unchanged)
+        m.other = Suffix(direction=Suffix.LOCAL, initialize={None: 2000})
+        self.assertEqual(len(m.other), 1)
+        self.assertEqual(m.other[None], 2000)
+
+    def test_suffix_duck_typed_initialize(self):
+        # update_values() has historically accepted any object with a
+        # callable items() method and old-style sequences (defined
+        # only by __getitem__ and __len__); the scalar/container
+        # dispatch in construct() must keep treating those as
+        # containers, not as scalar values for the None key.
+        class ItemsOnly:
+            # .items() only: not a Mapping and not iterable
+            def __init__(self, pairs):
+                self._pairs = list(pairs)
+
+            def items(self):
+                return list(self._pairs)
+
+        class PairSequence:
+            # old-style sequence: no __iter__
+            def __init__(self, pairs):
+                self._pairs = list(pairs)
+
+            def __getitem__(self, i):
+                return self._pairs[i]
+
+            def __len__(self):
+                return len(self._pairs)
+
+        def make_rule(p):
+            # 1-argument rule returning the (fixed) container
+            return lambda blk: p
+
+        for container in (ItemsOnly, PairSequence):
+            for via_rule in (False, True):
+                m = ConcreteModel()
+                m.x = Var()
+                pairs = container([(m.x, 123)])
+                if via_rule:
+                    m.s = Suffix(direction=Suffix.LOCAL, rule=make_rule(pairs))
+                else:
+                    m.s = Suffix(direction=Suffix.LOCAL, initialize=pairs)
+                self.assertEqual(len(m.s), 1)
+                self.assertNotIn(None, m.s)
+                self.assertEqual(m.s[m.x], 123)
+
+    def test_suffix_rule_result_dispatch(self):
+        # A rule never goes through the contains_indices branch, so
+        # these exercise the mapping/scalar dispatch in construct()
+        # itself (a plain dict passed as initialize= is handled by
+        # the contains_indices branch instead): a rule returning a
+        # mapping is dispatched to update_values, while a rule
+        # returning a scalar stores the scalar under the None key.
+        m = ConcreteModel()
+        m.x = Var()
+        m.s_map = Suffix(
+            direction=Suffix.LOCAL, rule=lambda blk: ComponentMap([(m.x, 5)])
+        )
+        self.assertEqual(len(m.s_map), 1)
+        self.assertNotIn(None, m.s_map)
+        self.assertEqual(m.s_map[m.x], 5)
+
+        m.s_none_map = Suffix(direction=Suffix.LOCAL, rule=lambda blk: {None: 7})
+        self.assertEqual(len(m.s_none_map), 1)
+        self.assertEqual(m.s_none_map[None], 7)
+
+        m.s_scalar = Suffix(direction=Suffix.LOCAL, rule=lambda blk: 42)
+        self.assertEqual(len(m.s_scalar), 1)
+        self.assertEqual(m.s_scalar[None], 42)
+
+    def test_suffix_clear_value_none_key(self):
+        # clear_value(None) removes only the None-key entry, whether
+        # or not it is present, and leaves other entries alone.
+        m = ConcreteModel()
+        m.x = Var()
+        m.s = Suffix(direction=Suffix.LOCAL, initialize=1000)
+        m.s.set_value(m.x, 5)
+        self.assertEqual(len(m.s), 2)
+
+        m.s.clear_value(None)
+        self.assertNotIn(None, m.s)
+        self.assertEqual(len(m.s), 1)
+        self.assertEqual(m.s[m.x], 5)
+
+        # Clearing an absent None key is a no-op
+        m.s.clear_value(None)
+        self.assertEqual(len(m.s), 1)
+        self.assertEqual(m.s[m.x], 5)
+
     # test import_enabled
     def test_import_enabled(self):
         model = ConcreteModel()
