@@ -942,6 +942,11 @@ class IndexedVar(Var):
                 parent = self.parent_block()
                 for index, vardata in self.items():
                     vardata._domain = domain_rule(parent, index, self)
+            # Update the domain rule so that VarData objects created
+            # after this assignment (e.g., for non-dense Vars) are
+            # created with the new domain and not the domain that was
+            # specified when this Var was constructed.
+            self._rule_domain = domain_rule
         except:
             logger.error(
                 "%s is not a valid domain. Variable domains must be an "
