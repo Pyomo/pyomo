@@ -501,8 +501,9 @@ class UncertaintySet(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def dim(self):
         """
-        int : Dimension of the uncertainty set (number of uncertain
-        parameters in a corresponding optimization model of interest).
+        int : Ambient dimension of the uncertainty set, i.e.,
+        the number of coordinates used to specify a point in the
+        uncertainty set's ambient real space.
         """
         ...
 
@@ -1309,7 +1310,7 @@ class UncertaintySetList(MutableSequence):
 
     @property
     def dim(self):
-        """Dimension of all uncertainty sets contained in self."""
+        """Ambient dimension of all uncertainty sets contained in self."""
         return self._dim
 
 
@@ -1415,7 +1416,7 @@ class BoxSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension `N` of the box set.
+        int : Ambient dimension `N` of the box set.
         """
         return len(self.bounds)
 
@@ -1776,7 +1777,7 @@ class CardinalitySet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension `N` of the cardinality-constrained set.
+        int : Ambient dimension `N` of the cardinality-constrained set.
         """
         return len(self.origin)
 
@@ -2161,7 +2162,7 @@ class PolyhedralSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension `N` of the polyhedral set.
+        int : Ambient dimension `N` of the polyhedral set.
         """
         return len(self.coefficients_mat[0])
 
@@ -2528,7 +2529,7 @@ class BudgetSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension `N` of the budget set.
+        int : Ambient dimension `N` of the budget set.
         """
         return self.budget_membership_mat.shape[1]
 
@@ -2903,7 +2904,7 @@ class FactorModelSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension `N` of the factor model set.
+        int : Ambient dimension `N` of the factor model set.
         """
         return len(self.origin)
 
@@ -3314,7 +3315,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension `N` of the axis-aligned ellipsoidal set.
+        int : Ambient dimension `N` of the axis-aligned ellipsoidal set.
         """
         return len(self.center)
 
@@ -3712,7 +3713,7 @@ class EllipsoidalSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension `N` of the ellipsoidal set.
+        int : Ambient dimension `N` of the ellipsoidal set.
         """
         return len(self.center)
 
@@ -4018,7 +4019,7 @@ class DiscreteScenarioSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension `N` of the discrete scenario set.
+        int : Ambient dimension `N` of the discrete scenario set.
         """
         return len(self.scenarios[0])
 
@@ -4239,7 +4240,7 @@ class IntersectionSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the intersection set.
+        int : Ambient dimension of the intersection set.
         """
         return self.all_sets[0].dim
 
@@ -4553,7 +4554,7 @@ class CartesianProductSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the cartesian product set.
+        int : Ambient dimension of the Cartesian product set.
         """
         return sum(uset.dim for uset in self._all_sets)
 
