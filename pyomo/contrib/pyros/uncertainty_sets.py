@@ -3109,17 +3109,77 @@ class FactorModelSet(UncertaintySet):
                 # use tolerance conservatively
                 self.beta * self.number_of_factors >= UNCERTAINTY_SET_MEASURE_TOL
                 and (
+                    # full row rank
                     np.linalg.matrix_rank(self.psi_mat)
                     == self.psi_mat.shape[0]
                     >= self.psi_mat.shape[1]
                 )
             )
         elif set(fixed_coord_vals.keys()) == set(range(self.dim)):
-            # all coordinates fixed. check set nonempty,
-            # take 0D slice as true
+            # all coordinates fixed. check 0D slice is nonempty
             return self.point_in_set([fixed_coord_vals[idx] for idx in range(self.dim)])
-        else:
+        elif (
+            # for positive Lebesgue measure, it is necessary for
+            # the rows of psi_mat that correspond to unfixed coordinates
+            # to surjectively map the nullspace of the other rows
+            # of psi_mat. check ranks to determine this
+            np.linalg.matrix_rank(self.psi_mat)
+            != np.linalg.matrix_rank(self.psi_mat[list(fixed_coord_vals)])
+            + (self.dim - len(fixed_coord_vals))
+        ):
             return False
+        else:
+            # the nullspace rank check passed.
+            # now solve a slack maximization model to
+            # check that the latent factor space has an interior point
+            # even after fixing of some of the factor set's coordinates
+            m = ConcreteModel()
+            m.param_vars = Var(range(self.dim))
+            m.aux_vars = Var(range(self.number_of_factors))
+            m.slack_var = Var(domain=NonNegativeReals)
+            m.slack_obj = Objective(expr=m.slack_var, sense=maximize)
+
+            @m.Constraint(list(fixed_coord_vals.keys()))
+            def factor_eq_con(b, fixed_idx):
+                return (
+                    sum(
+                        psi_val * aux_var
+                        for psi_val, aux_var in zip(
+                            self.psi_mat[fixed_idx], b.aux_vars.values()
+                        )
+                    )
+                    == fixed_coord_vals[fixed_idx] - self.origin[fixed_idx]
+                )
+
+            @m.Constraint(range(self.number_of_factors))
+            def factor_slack_con_lb(b, fac_idx):
+                return -1 + b.slack_var <= b.aux_vars[fac_idx]
+
+            @m.Constraint(range(self.number_of_factors))
+            def factor_slack_con_ub(b, fac_idx):
+                return b.aux_vars[fac_idx] <= 1 - b.slack_var
+
+            @m.Constraint()
+            def factor_sum_slack_con_lb(b):
+                return -self.beta * self.number_of_factors + b.slack_var <= sum(
+                    b.aux_vars.values()
+                )
+
+            @m.Constraint()
+            def factor_sum_slack_con_ub(b):
+                return (
+                    sum(b.aux_vars.values())
+                    <= self.beta * self.number_of_factors - b.slack_var
+                )
+
+            res = config.global_solver.solve(m, load_solutions=False)
+            if not check_optimal_termination(res):
+                # can't confirm sufficiency
+                return False
+            else:
+                m.solutions.load_from(res)
+                # use tolerance conservatively
+                return m.slack_var.value >= UNCERTAINTY_SET_MEASURE_TOL
 
 
 class AxisAlignedEllipsoidalSet(UncertaintySet):

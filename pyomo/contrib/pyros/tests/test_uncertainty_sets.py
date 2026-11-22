@@ -1462,6 +1462,7 @@ class TestFactorModelSet(unittest.TestCase):
             fset._is_coordinate_fixed(config=Bunch()), [False, False, True]
         )
 
+    @unittest.skipUnless(baron_available, "BARON is not available.")
     def test_has_positive_measure(self):
         """
         Tests for FactorModelSet positive measure checks.
@@ -1483,11 +1484,49 @@ class TestFactorModelSet(unittest.TestCase):
                 Bunch()
             )
         )
-        # some but not all coordinates are fixed
-        self.assertFalse(
+        # some, but not all, coordinates fixed,
+        # rank check passes, and restricted latent domain has strictly
+        # feasible points
+        self.assertTrue(
             FactorModelSet([1, 1.5], 2, [[1, 2], [2, 1]], 1)._has_positive_measure(
+                Bunch(global_solver=SolverFactory("baron")), {0: 1}
+            )
+        )
+        # some, but not all, coordinates fixed,
+        # rank check passes, but fixing restricts latent factor domain
+        # to boundary points
+        self.assertFalse(
+            FactorModelSet([1, 1.5], 2, [[1, 0], [2, 1]], 1)._has_positive_measure(
+                Bunch(global_solver=SolverFactory("baron")), {0: 3}
+            )
+        )
+        # some, but not all, coordinates fixed,
+        # rank check passes, but fixing restricts latent factor domain
+        # to empty set (so slack model infeasible)
+        self.assertFalse(
+            FactorModelSet([1, 1.5], 2, [[1, 0], [2, 1]], 1)._has_positive_measure(
+                Bunch(global_solver=SolverFactory("baron")), {0: 4}
+            )
+        )
+        # some, but not all, coordinates fixed,
+        # rank check passes, but beta*F too small
+        # to allow latent space to have tolerated interior points
+        self.assertFalse(
+            FactorModelSet([1, 1.5], 2, [[1, 2], [2, 1]], 4.9e-9)._has_positive_measure(
+                Bunch(global_solver=SolverFactory("baron")), {0: 1}
+            )
+        )
+        # some, but not all, coordinates fixed, but rank check fails
+        self.assertFalse(
+            FactorModelSet([1, 1.5], 2, [[1, 2], [1, 2]], 1)._has_positive_measure(
                 Bunch(), {0: 1}
             )
+        )
+        # some, but not all, coordinates fixed, but rank check fails
+        self.assertFalse(
+            FactorModelSet(
+                [1, 1.5, 0], 2, [[1, 0], [1, 2], [2, 4]], 1
+            )._has_positive_measure(Bunch(), {0: 1})
         )
         # all coordinates are fixed to feasible point
         self.assertTrue(
