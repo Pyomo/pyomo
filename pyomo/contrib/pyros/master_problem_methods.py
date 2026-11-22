@@ -984,5 +984,5 @@ class MasterProblemData:
         ):
             return minimize_dr_vars(self)
         else:
-            # no need to polish if the DRs are already forced to be static
+            # static DRs are considered always already "polished"
             return None, True
