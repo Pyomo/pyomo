@@ -4786,8 +4786,6 @@ class CartesianProductSet(UncertaintySet):
         fixed_coord_idxs_arr = np.array(list(fixed_coord_vals.keys()))
         for start_dim, stop_dim, uset in self._iterate_over_all_sets():
             if not uset._has_positive_measure(
-                # TODO: neatest way to shallow copy and update
-                #       `uncertainty_set` to
                 config=config,
                 fixed_coord_vals={
                     idx - start_dim: fixed_coord_vals[idx]
