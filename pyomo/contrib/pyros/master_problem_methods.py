@@ -624,7 +624,7 @@ def get_master_dr_degree(master_data):
     ).shape[0] >= 2 + len(nom_scenario_blk.effective_uncertain_dimensions):
         # in this case, the sampled problem's
         # effective uncertain parameter realizations
-        # cannot be affinely dependent,
+        # are affinely dependent,
         # so the more expensive rank reduction check below will yield:
         return master_data.config.decision_rule_order
     else:
