@@ -1644,7 +1644,7 @@ class CardinalitySet(UncertaintySet):
                     "(if both arguments are passed positionally) "
                     "passed before `positive_deviation`."
                 ),
-                version="6.10.2.dev0",
+                version="6.11.0",
             )
             self.gamma = positive_deviation
             self.positive_deviation = gamma
@@ -4137,7 +4137,7 @@ class IntersectionSet(UncertaintySet):
                     f"In subsequent usage of {type(self).__name__}, "
                     "pass the operand uncertainty sets positionally."
                 ),
-                version="6.10.2.dev0",
+                version="6.11.0",
             )
             all_sets += tuple(kwargs.values())
         self.all_sets = all_sets
@@ -4480,7 +4480,7 @@ class CartesianProductSet(UncertaintySet):
             "pass each operand uncertainty set positionally; "
             f"see the {type(self).__name__} documentation."
         )
-        deprecation_version = "6.10.2.dev0"
+        deprecation_version = "6.11.0"
         deprecation_warning(msg=deprecation_msg, version=deprecation_version)
 
     @property

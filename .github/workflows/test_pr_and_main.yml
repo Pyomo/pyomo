@@ -52,7 +52,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v7
       with:
-        python-version: 3.11
+        python-version: 3.12
     - name: Black Formatting Check
       run: |
         # Note v24.4.1 fails due to a bug in the parser. Project-level
@@ -107,7 +107,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [ '3.10', 3.11, 3.12, 3.13, 3.14, 3.15 ]
+        python: [ 3.11, 3.12, 3.13, 3.14, 3.15 ]
         other: [""]
         category: [""]
 
@@ -130,58 +130,58 @@ jobs:
 
         # Note: verify that pymumps is available when changing conda python version
         - os: ubuntu-latest
-          python: 3.12
+          python: 3.13
           other: /conda
           TARGET: linux
           PYENV: conda
           PACKAGES: pytest-qt
 
         - os: ubuntu-latest
-          python: 3.11
+          python: 3.12
           other: /mpi
           mpi: 3
           TARGET: linux
-          PYENV: conda
-          PACKAGES: openmpi==*[build=h*] mpi4py
+          PYENV: pip
+          OS_PACKAGES: openmpi-bin libopenmpi-dev
+          PACKAGES: mpi4py
 
         - os: ubuntu-latest
-          python: 3.12
+          python: 3.13
           other: /cython
           setup_options: --with-cython
           TARGET: linux
           PYENV: pip
           PACKAGES: cython
 
-        # [13 May 26] Disabled until we can sort out the seg fault issue
-        #- os: windows-latest
-        #  python: '3.10'
-        #  other: /pip
-        #  TARGET: win
-        #  PYENV: pip
+        - os: windows-latest
+          python: 3.14
+          other: /pip
+          TARGET: win
+          PYENV: pip
 
         - os: ubuntu-latest
-          python: '3.10'
+          python: 3.11
           other: /slim
           slim: 2
           TARGET: linux
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.13
+          python: 3.14
           other: /nosolvers
           slim: 1
           TARGET: linux
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.11
+          python: 3.13
           other: /singletest
           category: "-m 'neos or importtest'"
           TARGET: linux
           PYENV: pip
 
         - os: ubuntu-latest
-          python: '3.10'
+          python: 3.11
           other: /pyutilib
           TARGET: linux
           PYENV: pip
@@ -193,7 +193,7 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.13
+          python: 3.14
           other: /rtd
           category: notests
           build_docs: 1
@@ -282,6 +282,9 @@ jobs:
         for pkg in bash pkg-config unixodbc freetds glpk ginac; do
             brew list $pkg 2>/dev/null || brew install $pkg
         done
+        if test -n "${{matrix.OS_PACKAGES}}"; then
+            brew install ${{matrix.OS_PACKAGES}}
+        fi
 
     - name: Update Linux
       if: matrix.TARGET == 'linux'
@@ -294,7 +297,7 @@ jobs:
         sudo apt-get update ca-certificates
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
             install libopenblas-dev gfortran liblapack-dev glpk-utils \
-            libginac-dev libjpeg-dev
+            libginac-dev libjpeg-dev ${{matrix.OS_PACKAGES}}
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
 
     - name: Update Windows
@@ -302,6 +305,9 @@ jobs:
       run: |
         echo "SETUPTOOLS_USE_DISTUTILS=local" >> $GITHUB_ENV
         choco install pkgconfiglite
+        if test -n "${{matrix.OS_PACKAGES}}"; then
+            choco install ${{matrix.OS_PACKAGES}}
+        fi
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
@@ -898,7 +904,7 @@ jobs:
 
 
   bare-python-env:
-    name: linux/3.10/bare-env
+    name: linux/3.11/bare-env
     needs: lint  # the linter job is a prerequisite for PRs
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -906,10 +912,10 @@ jobs:
     - name: Checkout Pyomo source
       uses: actions/checkout@v7
 
-    - name: Set up Python 3.10
+    - name: Set up Python 3.11
       uses: actions/setup-python@v7
       with:
-        python-version: '3.10'
+        python-version: 3.11
 
     - name: Install Pyomo
       run: |
@@ -975,10 +981,10 @@ jobs:
       with:
         path: artifacts
 
-    - name: Set up Python 3.12
+    - name: Set up Python 3.13
       uses: actions/setup-python@v7
       with:
-        python-version: 3.12
+        python-version: 3.13
 
     - name: Install Python Packages (pip)
       shell: bash # DO NOT REMOVE: see note above

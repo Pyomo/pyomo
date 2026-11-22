@@ -10,7 +10,6 @@
 import logging
 import sys
 from copy import deepcopy
-from pickle import PickleError
 from weakref import ref as weakref_ref
 
 import pyomo.common

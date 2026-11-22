@@ -1830,14 +1830,18 @@ def assignTestsNonIndexedParamTests(cls, problem_list):
     for val in problem_list:
         attrName = 'test_mutable_' + val[0] + '_expr'
         setattr(
-            cls, attrName, createNonIndexedParamMethod(eval(val[0]), val[1], val[2])
+            cls,
+            attrName,
+            createNonIndexedParamMethod(globals()[val[0]], val[1], val[2]),
         )
 
 
 def assignTestsIndexedParamTests(cls, problem_list):
     for val in problem_list:
         attrName = 'test_mutable_' + val[0] + '_expr'
-        setattr(cls, attrName, createIndexedParamMethod(eval(val[0]), val[1], val[2]))
+        setattr(
+            cls, attrName, createIndexedParamMethod(globals()[val[0]], val[1], val[2])
+        )
 
 
 intrinsic_test_list = [

@@ -66,6 +66,12 @@ with existing interfaces).
    * - SCIP (persistent)
      - ``scip_persistent``
      - ``scip_persistent``
+   * - XPRESS (direct)
+     - ``xpress_direct``
+     - ``xpress_direct_v2``
+   * - XPRESS (persistent)
+     - ``xpress_persistent``
+     - ``xpress_persistent_v2``
 
 Using the new interfaces through the legacy interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
