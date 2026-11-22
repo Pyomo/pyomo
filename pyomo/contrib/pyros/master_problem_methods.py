@@ -608,10 +608,25 @@ def get_master_dr_degree(master_data):
         return 0
 
     scenario_blks = master_data.master_model.scenarios
-    if len(scenario_blks) == 1:
+    if len(scenario_blks) == 1 or master_data.config.decision_rule_order == 0:
         return 0
     elif master_data.config.decision_rule_order == 1:
         return 1
+    elif np.unique(
+        np.array(
+            [
+                param.value
+                for blk in scenario_blks.values()
+                for param in blk.effective_uncertain_params
+            ]
+        ),
+        axis=0,
+    ).shape[0] >= 2 + len(nom_scenario_blk.effective_uncertain_dimensions):
+        # in this case, the sampled problem's
+        # effective uncertain parameter realizations
+        # cannot be affinely dependent,
+        # so the more expensive rank reduction check below will yield:
+        return master_data.config.decision_rule_order
     else:
         dr_eqn_coeffs_mat = np.empty(
             (
