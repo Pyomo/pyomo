@@ -2587,7 +2587,7 @@ class TestCardinalitySet(unittest.TestCase):
         self.assertFalse(
             CardinalitySet([0, 0], 9e-9, [1, 1], [1, 1])._has_positive_measure(Bunch())
         )
-        # nonzero deviations allowd
+        # nonzero deviations allowed
         self.assertTrue(
             CardinalitySet([0, 0], 1, [1e-8, 0], [0, 1])._has_positive_measure(Bunch())
         )

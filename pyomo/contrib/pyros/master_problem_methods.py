@@ -655,7 +655,7 @@ def higher_order_decision_rule_efficiency(master_data):
     """
     "Fix" a subset of the higher-order decision rule coefficients,
     based on the current state of the master problem's added
-    scenarios and whether there are decision-rule-variable-depedent
+    scenarios and whether there are decision-rule-variable-dependent
     equality constraints that were derived by the preprocessor's
     equality constraint reformulations.
 
