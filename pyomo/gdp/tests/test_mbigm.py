@@ -994,6 +994,24 @@ class LinearModelDecisionTreeExample(CommonTests):
 
         self.assertStructuredAlmostEqual(mbm.get_all_M_values(m), self.get_Ms(m))
 
+    @unittest.skipUnless(gurobi_direct_available, "Gurobi direct is not available")
+    @unittest.skipUnless(dill_available, "Dill is not available")
+    def test_skip_writing_references(self):
+        m = self.make_model()
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(
+            m,
+            reduce_bound_constraints=False,
+            threads=3,
+            process_start_method='spawn',
+            solver=SolverFactory('gurobi_direct_v2'),
+            skip_writing_references=True,
+        )
+        self.check_all_untightened_bounds_constraints(m, mbm)
+        self.check_linear_func_constraints(m, mbm)
+
+        self.assertStructuredAlmostEqual(mbm.get_all_M_values(m), self.get_Ms(m))
+
 
 @unittest.skipUnless(gurobi_available, "Gurobi is not available")
 class NestedDisjunctsInFlatGDP(unittest.TestCase):
