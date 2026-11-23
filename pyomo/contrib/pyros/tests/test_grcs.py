@@ -1664,7 +1664,7 @@ class RegressionTest(unittest.TestCase):
                 pyrosTerminationCondition.robust_optimal,
             },
         )
-        self.assertTrue(res.iterations <= 5)
+        self.assertLessEqual(res.iterations, 5)
 
     @unittest.skipUnless(scip_available, "Global NLP solver is not available.")
     def test_coefficient_matching_solve(self):
