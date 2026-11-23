@@ -899,6 +899,11 @@ def solve_master(master_data):
     master_soln : MasterResults
         Master problem solve results.
     """
+    # apply decision rule variable fixing here.
+    # note: the master feasibility and DR polishing models
+    #       are later cloned from the master model,
+    #       so the decision rule variable fixing
+    #       is implicitly applied to those, as well.
     higher_order_decision_rule_efficiency(master_data)
 
     feasibility_problem_results = None
