@@ -8,7 +8,6 @@
 # ____________________________________________________________________________________
 
 import logging
-import math
 
 # If the user has numpy then the collocation points and the a matrix for
 # the Runge-Kutta basis formulation will be calculated as needed.
@@ -155,31 +154,27 @@ def conv(a, b):
 
 
 def calc_cp(alpha, beta, k):
-    gamma = []
-    factorial = math.factorial
+    """Return shifted Jacobi roots (Gauss or right Radau interior nodes)."""
+    if k == 0:
+        return []
 
-    for i in range(k + 1):
-        num = factorial(alpha + k) * factorial(alpha + beta + k + i)
-        denom = factorial(alpha + i) * factorial(k - i) * factorial(i)
-        gamma.insert(i, num / denom)
-
-    poly = []
-    for i in range(k + 1):
-        if i == 0:
-            poly.insert(i, gamma[i])
-        else:
-            prod = [1]
-            j = 1
-            while j <= i:
-                prod = conv(prod, [1, -1])
-                j += 1
-            while len(poly) < len(prod):
-                poly.insert(0, 0)
-            prod = [gamma[i] * t for t in prod]
-            poly = [sum(pair) for pair in zip(poly, prod)]
-
-    cp = numpy.roots(poly)
-    return numpy.sort(cp).tolist()
+    # The Jacobi three-term recurrence gives a symmetric matrix whose
+    # eigenvalues are the roots on [-1, 1], without monomial coefficients.
+    ab = alpha + beta
+    n = numpy.arange(1, k, dtype=float)
+    t = 2 * n + ab
+    diagonal = numpy.empty(k)
+    diagonal[0] = (beta - alpha) / (ab + 2)
+    diagonal[1:] = (beta - alpha) * ab / (t * (t + 2))
+    off_diagonal = (2 / t) * numpy.sqrt(
+        n * (n + alpha) * (n + beta) * (n + ab) / ((t - 1) * (t + 1))
+    )
+    jacobi = (
+        numpy.diag(diagonal)
+        + numpy.diag(off_diagonal, 1)
+        + numpy.diag(off_diagonal, -1)
+    )
+    return ((numpy.linalg.eigvalsh(jacobi) + 1) / 2).tolist()
 
 
 # BLN: This is a legacy function that was used to calculate the collocation
@@ -212,46 +207,48 @@ def calc_cp(alpha, beta, k):
 #     return a
 
 
+def _barycentric_weights(nodes):
+    differences = nodes[:, None] - nodes
+    numpy.fill_diagonal(differences, 1)
+    log_weights = -numpy.log(numpy.abs(differences)).sum(axis=1)
+    signs = numpy.sign(differences).prod(axis=1)
+    weights = signs * numpy.exp(log_weights - log_weights.max())
+    return differences, weights
+
+
 def calc_adot(cp, order=1):
-    a = []
-    for i in range(len(cp)):
-        ptmp = []
-        tmp = 0
-        for j in range(len(cp)):
-            if j != i:
-                row = []
-                row.insert(0, 1 / (cp[i] - cp[j]))
-                row.insert(1, -cp[j] / (cp[i] - cp[j]))
-                ptmp.insert(tmp, row)
-                tmp += 1
-        p = [1]
-        for j in range(len(cp) - 1):
-            p = conv(p, ptmp[j])
-        pder = numpy.polyder(p, order)
-        arow = []
-        for j in range(len(cp)):
-            arow.append(float(numpy.polyval(pder, cp[j])))
-        a.append(arow)
-    return a
+    if order < 0:
+        raise ValueError("Order of derivative must be positive")
+    size = len(cp)
+    derivatives = numpy.eye(size)
+    if order == 0:
+        return derivatives.tolist()
+    if order >= size:
+        return numpy.zeros_like(derivatives).tolist()
+
+    differences, weights = _barycentric_weights(numpy.asarray(cp, dtype=float))
+    ratios = weights / weights[:, None]
+    # At each node, differentiate the barycentric basis recursively. The
+    # basis sums to one, so the derivative rows sum to zero.
+    for m in range(1, order + 1):
+        derivatives = (
+            m / differences * (ratios * derivatives.diagonal()[:, None] - derivatives)
+        )
+        numpy.fill_diagonal(derivatives, 0)
+        numpy.fill_diagonal(derivatives, -derivatives.sum(axis=1))
+    return derivatives.T.tolist()
 
 
 def calc_afinal(cp):
-    afinal = []
-    for i in range(len(cp)):
-        ptmp = []
-        tmp = 0
-        for j in range(len(cp)):
-            if j != i:
-                row = []
-                row.insert(0, 1 / (cp[i] - cp[j]))
-                row.insert(1, -cp[j] / (cp[i] - cp[j]))
-                ptmp.insert(tmp, row)
-                tmp += 1
-        p = [1]
-        for j in range(len(cp) - 1):
-            p = conv(p, ptmp[j])
-        afinal.append(float(numpy.polyval(p, 1.0)))
-    return afinal
+    if not len(cp):
+        return []
+    nodes = numpy.asarray(cp, dtype=float)
+    at_end = nodes == 1
+    if at_end.any():
+        return at_end.astype(float).tolist()
+    _, weights = _barycentric_weights(nodes)
+    values = weights / (1 - nodes)
+    return (values / values.sum()).tolist()
 
 
 @TransformationFactory.register(
