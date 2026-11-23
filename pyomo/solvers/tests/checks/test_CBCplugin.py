@@ -9,6 +9,7 @@
 
 import os
 import sys
+from unittest import mock
 from os.path import dirname, abspath
 
 import pyomo.common.unittest as unittest
@@ -27,7 +28,14 @@ from pyomo.environ import (
     maximize,
     minimize,
 )
-from pyomo.opt import SolverFactory, TerminationCondition, SolverStatus
+from pyomo.opt import (
+    SolverFactory,
+    SolverResults,
+    Solution,
+    SolutionStatus,
+    TerminationCondition,
+    SolverStatus,
+)
 from pyomo.solvers.plugins.solvers.CBCplugin import CBCSHELL
 
 cbc_available = SolverFactory('cbc', solver_io='lp').available(exception_flag=False)
@@ -440,6 +448,66 @@ class TestCBCUsingMock(unittest.TestCase):
             results.solver.statistics.branch_and_bound.number_of_created_subproblems,
             34776,
         )
+
+    def _process_soln_text(self, soln_text, suffixes=()):
+        cbc_shell = CBCSHELL()
+        cbc_shell._version = (2, 10, 12)
+        cbc_shell._suffixes = list(suffixes)
+        cbc_shell._soln_file = 'test.soln'
+        results = SolverResults()
+        # process_logfile() has already stored the (time limit) solution
+        results.solution.insert(Solution())
+        results.solution(0).status = SolutionStatus.stoppedByLimit
+        with mock.patch(
+            'pyomo.solvers.plugins.solvers.CBCplugin.open',
+            mock.mock_open(read_data=soln_text),
+            create=True,
+        ):
+            cbc_shell.process_soln_file(results)
+        return results
+
+    def test_process_soln_file_stopped_on_time(self):
+        results = self._process_soln_text(
+            "Stopped on time - objective value -3.00000000\n"
+            "      0 c_u_c_                   0.5                      0\n"
+            "      0 x                          1                      0\n"
+            "      1 y                       -0.5                      0\n"
+        )
+        self.assertEqual(len(results.solution), 1)
+        solution = results.solution(0)
+        self.assertEqual(solution.status, SolutionStatus.stoppedByLimit)
+        self.assertEqual(solution.variable['x']['Value'], 1)
+        self.assertEqual(solution.variable['y']['Value'], -0.5)
+
+    def test_process_soln_file_infeasible_variable(self):
+        # The "**" lines use the layout written by CBC for values that
+        # violate their bounds (see #4057)
+        results = self._process_soln_text(
+            "Stopped on time - objective value -3.00000000\n"
+            "      0 c_u_c_                     2                      0\n"
+            "      0 x                          1                      0\n"
+            "**       1 y                      2.5                      0\n"
+        )
+        self.assertEqual(len(results.solution), 0)
+        self.assertEqual(
+            results.solver.termination_message,
+            "Optimization terminated because the time expended exceeded the "
+            "value specified in the seconds parameter. CBC marked the values "
+            "in the solution file as infeasible.",
+        )
+
+    def test_process_soln_file_infeasible_first_row(self):
+        # A "**" on row 0 must not hide the start of the constraint
+        # section (see #4066)
+        for suffixes in ((), ('dual', 'rc')):
+            results = self._process_soln_text(
+                "Stopped on time - objective value -3.00000000\n"
+                "**       0 c_u_c_                     2                      0\n"
+                "      0 x                          1                      0\n"
+                "      1 y                        2.5                      0\n",
+                suffixes,
+            )
+            self.assertEqual(len(results.solution), 0)
 
     def test_process_logfile_gap_inf(self):
         cbc_shell = CBCSHELL()
