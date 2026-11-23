@@ -267,8 +267,10 @@ def _process_bilinear_constraints(block, v1, v2, var_values, bilinear_constrs):
     # TODO think about not using floats as indices in a set
     blk.valid_values = Set(initialize=sorted(var_values))
     blk.x_active = Var(blk.valid_values, domain=Binary, initialize=1)
+    # Inactive copies must allow zero even if v2's domain does not.
+    # The active copy inherits v2's domain through v_defn.
     blk.v_increment = Var(
-        blk.valid_values, domain=v2.domain, bounds=(v2.lb, v2.ub), initialize=v2.value
+        blk.valid_values, bounds=(min(0, v2.lb), max(0, v2.ub)), initialize=v2.value
     )
     blk.v_defn = Constraint(expr=v2 == summation(blk.v_increment))
 
@@ -281,6 +283,9 @@ def _process_bilinear_constraints(block, v1, v2, var_values, bilinear_constrs):
         return blk.v_increment[val] <= v2.ub * blk.x_active[val]
 
     blk.select_one_value = Constraint(expr=summation(blk.x_active) == 1)
+    blk.x_defn = Constraint(
+        expr=v1 == sum(val * blk.x_active[val] for val in blk.valid_values)
+    )
     # Categorize as case 1 or case 2
     for bilinear_constr in bilinear_constrs:
         # repn = generate_standard_repn(bilinear_constr.body)
