@@ -16,6 +16,7 @@ from io import StringIO
 from pyomo.environ import (
     ConcreteModel,
     AbstractModel,
+    Block,
     Var,
     Set,
     NonNegativeReals,
@@ -550,6 +551,68 @@ class TestPort(unittest.TestCase):
       c :     flow :    20
         : pressure :  3.14
 """,
+        )
+
+    def test_auto_connect(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.p1 = Port()
+        m.p1.add(m.x)
+        m.p2 = Port()
+        m.p2.add(m.y)
+        created_arc = m.p1.connect_to(m.p2)
+        # test name creation
+        created_arc_custom_name = m.p1.connect_to(m.p2, arc_name='custom_name')
+        self.assertIs(m.p1.x, m.x)
+        self.assertIs(m.p2.y, m.y)
+        self.assertIsNotNone(m.find_component('p1_to_p2'))
+        self.assertIs(created_arc, m.find_component('p1_to_p2'))
+        self.assertIsNotNone(m.find_component('custom_name'))
+        self.assertIs(created_arc_custom_name, m.find_component('custom_name'))
+
+    def test_auto_connect_with_block(self):
+        m = ConcreteModel()
+        m.block_a = Block()
+        m.block_b = Block()
+        m.block_a.x = Var()
+        m.block_b.y = Var()
+        m.block_a.p1 = Port()
+        m.block_a.p1.add(m.block_a.x)
+        m.block_b.p2 = Port()
+        m.block_b.p2.add(m.block_b.y)
+        created_arc = m.block_a.p1.connect_to(m.block_b.p2)
+        # test creation on diff block
+        created_arc_2 = m.block_a.p1.connect_to(m.block_b.p2, block=m.block_b)
+
+        self.assertIs(m.block_a.p1.x, m.block_a.x)
+        self.assertIs(m.block_b.p2.y, m.block_b.y)
+        self.assertIsNotNone(m.block_a.find_component('block_a_p1_to_block_b_p2'))
+        self.assertIsNotNone(m.block_b.find_component('block_a_p1_to_block_b_p2'))
+
+        self.assertIs(created_arc, m.block_a.find_component('block_a_p1_to_block_b_p2'))
+        self.assertIs(
+            created_arc_2, m.block_b.find_component('block_a_p1_to_block_b_p2')
+        )
+        # verify these are different objects
+        self.assertIsNot(created_arc, created_arc_2)
+
+    def test_auto_connect_with_indexed_block(self):
+        m = ConcreteModel()
+        m.block = Block([1, 2])
+        m.block[1].x = Var()
+        m.block[2].y = Var()
+        m.block[1].p1 = Port()
+        m.block[1].p1.add(m.block[1].x)
+        m.block[2].p2 = Port()
+        m.block[2].p2.add(m.block[2].y)
+        created_arc = m.block[1].p1.connect_to(m.block[2].p2)
+
+        self.assertIs(m.block[1].p1.x, m.block[1].x)
+        self.assertIs(m.block[2].p2.y, m.block[2].y)
+        self.assertIsNotNone(m.block[1].find_component('block_1_p1_to_block_2_p2'))
+        self.assertIs(
+            created_arc, m.block[1].find_component('block_1_p1_to_block_2_p2')
         )
 
 
