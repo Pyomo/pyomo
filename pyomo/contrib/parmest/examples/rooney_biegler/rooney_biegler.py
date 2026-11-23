@@ -43,8 +43,8 @@ def rooney_biegler_model(data, theta=None):
     if theta is None:
         theta = {'asymptote': 15, 'rate_constant': 0.5}
 
-    model.asymptote = pyo.Var(initialize=theta['asymptote'])
-    model.rate_constant = pyo.Var(initialize=theta['rate_constant'])
+    model.asymptote = pyo.Var(initialize=theta['asymptote'], bounds=(0.1, 100))
+    model.rate_constant = pyo.Var(initialize=theta['rate_constant'], bounds=(0, 10))
 
     # Fix the unknown parameters
     model.asymptote.fix()
