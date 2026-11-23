@@ -10,7 +10,17 @@
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import Var, Set, ConcreteModel, TransformationFactory, pyomo, Block
+from pyomo.environ import (
+    Var,
+    Set,
+    ConcreteModel,
+    TransformationFactory,
+    pyomo,
+    Block,
+    Constraint,
+    value,
+)
+from pyomo.common.dependencies import numpy, numpy_available, scipy, scipy_available
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
@@ -47,6 +57,71 @@ class TestCollocation(unittest.TestCase):
         m.v1 = Var(m.t)
         m.dv1 = DerivativeVar(m.v1)
         m.s = Set(initialize=[1, 2, 3], ordered=True)
+
+    @unittest.skipIf(
+        not numpy_available or not scipy_available, 'requires NumPy and SciPy'
+    )
+    def test_high_order_collocation_tables(self):
+        for scheme, alpha in [('LAGRANGE-RADAU', 1), ('LAGRANGE-LEGENDRE', 0)]:
+            for ncp in (20, 32):
+                with self.subTest(scheme=scheme, ncp=ncp):
+                    m = ConcreteModel()
+                    m.t = ContinuousSet(bounds=(0, 1))
+                    TransformationFactory('dae.collocation').apply_to(
+                        m, nfe=1, ncp=ncp, scheme=scheme
+                    )
+                    info = m.t.get_discretization_info()
+                    tau = numpy.array(info['tau_points'])
+                    count = ncp - alpha
+                    expected = (scipy.special.roots_jacobi(count, alpha, 0)[0] + 1) / 2
+                    expected = [0, *expected, 1] if alpha else [0, *expected]
+                    numpy.testing.assert_allclose(tau, expected, rtol=0, atol=8e-15)
+                    # Columns of the tables are derivatives at the nodes.
+                    for degree in (0, 1, 3, ncp):
+                        f = numpy.polynomial.Chebyshev.basis(degree, domain=[0, 1])
+                        values = f(tau)
+                        for order, key in ((1, 'adot'), (2, 'adotdot')):
+                            numpy.testing.assert_allclose(
+                                values @ info[key],
+                                f.deriv(order)(tau),
+                                rtol=2e-11,
+                                atol=3e-8,
+                            )
+                        if not alpha:
+                            self.assertAlmostEqual(
+                                values @ info['afinal'], f(1), places=11
+                            )
+
+    @unittest.skipIf(not numpy_available, 'requires NumPy')
+    def test_high_order_discretization_equations(self):
+        for scheme in ('LAGRANGE-RADAU', 'LAGRANGE-LEGENDRE'):
+            with self.subTest(scheme=scheme):
+                m = ConcreteModel()
+                m.t = ContinuousSet(initialize=[0, 2, 5])
+                m.x = Var(m.t)
+                m.dx = DerivativeVar(m.x)
+                m.ddx = DerivativeVar(m.x, wrt=(m.t, m.t))
+                TransformationFactory('dae.collocation').apply_to(
+                    m, nfe=2, ncp=20, scheme=scheme
+                )
+                # Match the method's reference nodes, before physical mesh
+                # coordinates were rounded by generate_colloc_points.
+                t = sorted(m.t)
+                n = 20 if scheme == 'LAGRANGE-RADAU' else 21
+                for i, (left, right) in enumerate(((0, 2), (2, 5))):
+                    tau = m.t.get_discretization_info()['tau_points']
+                    for j, node in enumerate(tau):
+                        point = t[i * n + j]
+                        q = left + (right - left) * node
+                        m.x[point].value = q**3 - 2 * q + 3
+                        m.dx[point].value = 3 * q**2 - 2
+                        m.ddx[point].value = 6 * q
+                m.x[5].value = 118
+                for component in m.component_objects(Constraint, active=True):
+                    for c in component.values():
+                        self.assertAlmostEqual(
+                            value(c.body), value(c.lower), delta=3e-8
+                        )
 
     # test collocation discretization with radau points
     # on var indexed by single ContinuousSet
