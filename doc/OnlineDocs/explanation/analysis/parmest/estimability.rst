@@ -9,7 +9,7 @@ parameters that cannot be reliably estimated from the available data due to limi
 model structure. If such parameters exist, the model may need to be reformulated, replaced with an
 alternative structure, or augmented with additional prior information. In parmest, estimability analysis can
 be performed using eigen-decomposition of the parameter covariance matrix, profile likelihood methods, or
-multi-start initialization routines.
+multistart optimization.
 
 Eigen-decomposition
 -------------------
@@ -39,10 +39,10 @@ determined by the model formulation, particularly in nonlinear systems.
 
    Detailed descriptions and example code for this method will be added in a future update.
 
-Multi-start Initialization
---------------------------
+Multistart Optimization
+-----------------------
 
-Multi-start initialization assesses parameter estimability by exploring a range of initial guesses. Because
+Multistart optimization assesses parameter estimability by exploring a range of initial guesses. Because
 parameter estimation problems are often nonlinear and may exhibit multiple local minima, different initializations
 can lead to different parameter estimates. By solving the estimation problem from multiple starting points, one can
 evaluate the robustness of the solution and identify potential issues related to non-convexity or non-identifiability.
@@ -50,6 +50,44 @@ Consistent convergence to a unique solution across initializations suggests that
 identifiable within the model formulation, whereas sensitivity to initialization indicates potential estimability
 issues.
 
-.. note::
+In parmest, multistart optimization is performed with
+:class:`~pyomo.contrib.parmest.parmest.Estimator.theta_est_multistart`, which solves the parameter estimation
+problem from several starting values and returns the best start that terminates optimally. The starting values are
+sampled between the parameter bounds, so every fitted parameter must have finite lower and upper bounds. The
+``multistart_sampling_method`` argument selects ``"uniform_random"`` (the default), ``"latin_hypercube"``, or
+``"sobol_sampling"`` (which works best when ``n_starts`` is a power of 2), and ``seed`` makes the starting values
+reproducible. Starting values can also be given directly with ``user_supplied_vals``. Using the data and
+:class:`~pyomo.contrib.parmest.experiment.Experiment` class from the :ref:`driversection` Section:
 
-   Detailed descriptions and example code for this method will be added in a future update.
+.. testsetup:: *
+    :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
+
+    # Data
+    import pandas as pd
+    data = pd.DataFrame(
+        data=[[1, 8.3], [2, 10.3], [3, 19.0],
+              [4, 16.0], [5, 15.6], [7, 19.8]],
+        columns=['hour', 'y'],
+    )
+
+    # Create the Experiment class
+    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import RooneyBieglerExperiment
+
+    exp_list = []
+    for i in range(data.shape[0]):
+        exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
+
+.. doctest::
+    :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
+
+    >>> import pyomo.contrib.parmest.parmest as parmest
+    >>> pest = parmest.Estimator(exp_list, obj_function="SSE")
+    >>> results, best_theta, best_obj = pest.theta_est_multistart(
+    ...     n_starts=8, multistart_sampling_method="latin_hypercube", seed=42
+    ... )
+
+``results`` is a Pandas DataFrame with one row per start: the starting and converged (``converged_<name>``)
+parameter values, the objective value, the solver termination condition, and the solve time. Comparing the
+converged values and objectives of the optimal starts shows whether the estimate depends on the initialization.
+The solution of the best start is kept in the :class:`~pyomo.contrib.parmest.parmest.Estimator` object, so
+methods such as :class:`~pyomo.contrib.parmest.parmest.Estimator.cov_est` can be called afterwards.
