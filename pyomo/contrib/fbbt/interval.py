@@ -205,6 +205,19 @@ def div(xl, xu, yl, yu, feasibility_tol):
     return mul(xl, xu, *inv(yl, yu, feasibility_tol))
 
 
+def pow_or_inf(x, y):
+    try:
+        z = x**y
+    except OverflowError:
+        if x > 0:
+            z = inf
+        else:
+            # 0**y never overflows, so x is negative here. power() only passes
+            # a negative x with an integer y, so the sign follows its parity.
+            z = -inf if y % 2 == 1 else inf
+    return z
+
+
 def power(xl, xu, yl, yu, feasibility_tol):
     """
     Compute bounds on x**y.
@@ -213,18 +226,18 @@ def power(xl, xu, yl, yu, feasibility_tol):
         # If x is always positive, things are simple. We only need to
         # worry about the sign of y.
         if yl < 0 < yu:
-            lb = min(xu**yl, xl**yu)
-            ub = max(xl**yl, xu**yu)
+            lb = min(pow_or_inf(xu, yl), pow_or_inf(xl, yu))
+            ub = max(pow_or_inf(xl, yl), pow_or_inf(xu, yu))
         elif yl >= 0:
-            lb = min(xl**yl, xl**yu)
-            ub = max(xu**yl, xu**yu)
+            lb = min(pow_or_inf(xl, yl), pow_or_inf(xl, yu))
+            ub = max(pow_or_inf(xu, yl), pow_or_inf(xu, yu))
         else:  # yu <= 0:
-            lb = min(xu**yl, xu**yu)
-            ub = max(xl**yl, xl**yu)
+            lb = min(pow_or_inf(xu, yl), pow_or_inf(xu, yu))
+            ub = max(pow_or_inf(xl, yl), pow_or_inf(xl, yu))
     elif xl == 0:
         if yl >= 0:
-            lb = min(xl**yl, xl**yu)
-            ub = max(xu**yl, xu**yu)
+            lb = min(pow_or_inf(xl, yl), pow_or_inf(xl, yu))
+            ub = max(pow_or_inf(xu, yl), pow_or_inf(xu, yu))
         elif yu <= 0:
             lb, ub = inv(
                 *power(xl, xu, *sub(0, 0, yl, yu), feasibility_tol), feasibility_tol
@@ -248,29 +261,29 @@ def power(xl, xu, yl, yu, feasibility_tol):
         if xu <= 0:
             if y < 0:
                 if y % 2 == 0:
-                    lb = xl**y
+                    lb = pow_or_inf(xl, y)
                     if xu == 0:
                         ub = inf
                     else:
-                        ub = xu**y
+                        ub = pow_or_inf(xu, y)
                 else:
                     if xu == 0:
                         lb = -inf
                         ub = inf
                     else:
-                        lb = xu**y
-                        ub = xl**y
+                        lb = pow_or_inf(xu, y)
+                        ub = pow_or_inf(xl, y)
             else:
                 if y % 2 == 0:
-                    lb = xu**y
-                    ub = xl**y
+                    lb = pow_or_inf(xu, y)
+                    ub = pow_or_inf(xl, y)
                 else:
-                    lb = xl**y
-                    ub = xu**y
+                    lb = pow_or_inf(xl, y)
+                    ub = pow_or_inf(xu, y)
         else:  # xu is positive
             if y < 0:
                 if y % 2 == 0:
-                    lb = min(xl**y, xu**y)
+                    lb = min(pow_or_inf(xl, y), pow_or_inf(xu, y))
                     ub = inf
                 else:
                     lb = -inf
@@ -279,10 +292,10 @@ def power(xl, xu, yl, yu, feasibility_tol):
                 if y % 2 == 0:
                     # xl is negative and xu is positive, so lb is 0
                     lb = 0
-                    ub = max(xl**y, xu**y)
+                    ub = max(pow_or_inf(xl, y), pow_or_inf(xu, y))
                 else:
-                    lb = xl**y
-                    ub = xu**y
+                    lb = pow_or_inf(xl, y)
+                    ub = pow_or_inf(xu, y)
     elif yl == yu:
         # the exponent has to be fractional, so x must be positive
         if xu < 0:

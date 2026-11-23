@@ -431,3 +431,37 @@ class TestInterval(IntervalTestBase, unittest.TestCase):
         self.atan = interval.atan
         self._inverse_power1 = interval._inverse_power1
         self._inverse_power2 = interval._inverse_power2
+
+    def test_pow_overflow(self):
+        # A bound on x**y too large for a float is inf, not an OverflowError
+        lb, ub = self.power(2, 1e200, 1, 2, 1e-8)
+        self.assertEqual(lb, 2)
+        self.assertEqual(ub, interval.inf)
+        lb, ub = self.power(0, 1e200, 1, 2, 1e-8)
+        self.assertEqual(lb, 0)
+        self.assertEqual(ub, interval.inf)
+        # Negative exponent: (1e-200)**-2 overflows
+        lb, ub = self.power(1e-200, 2, -2, -1, 1e-8)
+        self.assertEqual(lb, 0.25)
+        self.assertEqual(ub, interval.inf)
+        # Negative x with an integer exponent: the infinite bound has the sign
+        # of the true power, + for even exponents and - for odd ones
+        cases = [
+            ((-1e200, -1, 2), (1, interval.inf)),
+            ((-1e200, -1, 3), (-interval.inf, -1)),
+            ((-1e200, 5, 2), (0, interval.inf)),
+            ((-1e200, 5, 3), (-interval.inf, 125)),
+            ((-1, -1e-200, -2), (1, interval.inf)),
+            ((-1, -1e-200, -3), (-interval.inf, -1)),
+        ]
+        for (xl, xu, y), expected in cases:
+            with self.subTest(x=(xl, xu), y=y):
+                self.assertEqual(self.power(xl, xu, y, y, 1e-8), expected)
+
+    def test_pow_or_inf(self):
+        # Each branch, called directly
+        self.assertEqual(interval.pow_or_inf(2.0, 3.0), 8.0)
+        self.assertEqual(interval.pow_or_inf(1e200, 2.0), interval.inf)
+        # A negative x overflows to -inf for odd y and to +inf for even y
+        self.assertEqual(interval.pow_or_inf(-1e200, 3.0), -interval.inf)
+        self.assertEqual(interval.pow_or_inf(-1e200, 2.0), interval.inf)
