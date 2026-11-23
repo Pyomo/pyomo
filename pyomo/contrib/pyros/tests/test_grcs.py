@@ -1630,6 +1630,8 @@ class RegressionTest(unittest.TestCase):
     def test_quadratic_dr_fixing_rule_correct(self):
         m = ConcreteModel()
         m.q = Param(range(2), initialize=0, mutable=True)
+        # test consideration for effective uncertain parameters
+        m.qfix = Param(initialize=0, mutable=True)
         m.z = Var()
         m.obj = Objective(expr=m.z)
         m.con1 = Constraint(expr=m.z <= sum(q**2 for q in m.q.values()))
@@ -1639,8 +1641,9 @@ class RegressionTest(unittest.TestCase):
             model=m,
             first_stage_variables=[],
             second_stage_variables=m.z,
-            uncertain_params=m.q,
-            uncertainty_set=BoxSet([[-2, 2]] * len(m.q)),
+            uncertain_params=[m.q, m.qfix],
+            # define set to make only q effectively uncertain
+            uncertainty_set=BoxSet([[-2, 2]] * len(m.q) + [[0, 0]]),
             local_solver="ipopt",
             global_solver="baron",
             decision_rule_order=2,

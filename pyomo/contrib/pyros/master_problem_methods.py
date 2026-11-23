@@ -612,55 +612,39 @@ def get_master_dr_degree(master_data):
         return 0
     elif master_data.config.decision_rule_order == 1:
         return 1
-    elif np.unique(
-        np.array(
-            [
-                param.value
-                for blk in scenario_blks.values()
-                for param in blk.effective_uncertain_params
-            ]
-        ),
-        axis=0,
-    ).shape[0] >= 2 + len(nom_scenario_blk.effective_uncertain_dimensions):
-        # in this case, the sampled problem's
-        # effective uncertain parameter realizations
-        # are affinely dependent,
-        # so the more expensive rank reduction check below will yield:
-        return master_data.config.decision_rule_order
-    else:
-        dr_eqn_coeffs_mat = np.empty(
-            (
-                len(scenario_blks),
-                len(nom_scenario_blk.first_stage.decision_rule_vars[0]),
-            )
-        )
-        dr_eqn_term_powers = np.array(
-            [
-                nom_scenario_blk.dr_var_to_exponent_map[dr_var]
-                for dr_var in nom_scenario_blk.first_stage.decision_rule_vars[
-                    0
-                ].values()
-            ]
-        )
-        dr_eqn_coeffs_mat[:, 0] = 1
-        for blk_idx, blk in enumerate(master_data.master_model.scenarios.values()):
-            dr_expr = blk.second_stage.decision_rule_eqns[0].expr.args[0]
-            for term_expr in dr_expr.args[1:-1]:
-                param_factors, dr_var = term_expr.args[:-1], term_expr.args[-1]
-                dr_eqn_coeffs_mat[blk_idx, dr_var.index()] = value(prod(param_factors))
+    elif master_data.config.decision_rule_order == 2:
+        # restricting quadratic decision rules to affine rules
+        # is nonconservative if (and only if)
+        # the unique sampled problem scenarios are affinely independent.
+        # to avoid conservatism, it is safer to err on the side of
+        # allowing quadratic decision rules
 
-        dr_ranks_by_degree = np.array(
+        # note: we are erring on the side of caution by
+        # using a zero deduplication tolerance.
+        # allowing scenarios that are nearly equal increases the
+        # scenario count and leads rank-based checks
+        # to err on side of affirming affine dependence
+        unique_scenarios = np.unique(
             [
-                np.linalg.matrix_rank(dr_eqn_coeffs_mat[:, dr_eqn_term_powers <= deg])
-                for deg in range(master_data.config.decision_rule_order + 1)
-            ]
+                [param.value for param in blk.effective_uncertain_params]
+                for blk in scenario_blks.values()
+            ],
+            axis=0,
         )
-        # lowest degree for which there is no reduction in rank
-        # of the corresponding coefficient matrix of the
-        # unfixed DR expressions
-        return np.arange(master_data.config.decision_rule_order + 1)[
-            dr_ranks_by_degree == dr_ranks_by_degree[-1]
-        ][0]
+
+        return 1 + (
+            # too many "unique" scenarios for affine independence
+            len(unique_scenarios)
+            >= 2 + len(nom_scenario_blk.effective_uncertain_dimensions)
+            or
+            # rank check reveals affine dependence
+            np.linalg.matrix_rank(unique_scenarios[1:] - unique_scenarios[0])
+            != len(unique_scenarios) - 1
+        )
+    else:
+        raise ValueError(
+            f"Decision rule order {master_data.config.decision_rule_order} not supported."
+        )
 
 
 def higher_order_decision_rule_efficiency(master_data):
