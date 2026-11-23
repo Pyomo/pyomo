@@ -11,16 +11,13 @@ from typing import Tuple
 
 import pyomo.environ as pyo
 import pyomo.devel.initialization as ini
-from pyomo.devel.initialization.lp_approx_init import scipy_available
 from pyomo.devel.initialization.examples.init_polynomial_ex import (
-    lp_init_ex,
-    pwl_init_ex,
-    global_init_ex,
+    build_model,
     run_example,
 )
 from pyomo.devel.initialization.utils import get_solution_limit_options
 from pyomo.common import unittest
-from pyomo.common.dependencies import scipy_available
+from pyomo.common.dependencies import attempt_import, scipy_available
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import (
     SolutionStatus,
@@ -33,6 +30,9 @@ scip = SolverFactory('scip_direct')
 ipopt = SolverFactory('ipopt')
 highs = SolverFactory('highs')
 gurobi = SolverFactory('gurobi_direct_minlp')
+
+parameterized, param_available = attempt_import('parameterized')
+parameterized = parameterized.parameterized
 
 
 class MockNLPSolver(SolverBase):
@@ -72,30 +72,40 @@ class MockNLPSolver(SolverBase):
 @unittest.skipUnless(ipopt.available(), 'ipopt is not available')
 @unittest.skipUnless(scipy_available, 'scipy is not available')
 class TestExamples(unittest.TestCase):
-    @unittest.skipUnless(scip.available(), 'scip is not available')
-    def test_poly_global(self):
-        stat, x = global_init_ex()
+    # Each method with the extra solver it needs (multistart uses ipopt)
+    @parameterized.expand(
+        [('lp', highs), ('pwl', highs), ('global', scip), ('multistart', ipopt)]
+    )
+    def test_poly_example(self, method, solver):
+        if not solver.available():
+            self.skipTest(f'{solver.name} is not available')
+        stat, x = run_example(method=method)
         self.assertEqual(stat, SolutionStatus.optimal)
         self.assertAlmostEqual(x, -9.920159607881597)
 
-    @unittest.skipUnless(highs.available(), 'highs is not available')
-    def test_poly_pwl(self):
-        stat, x = pwl_init_ex()
-        self.assertEqual(stat, SolutionStatus.optimal)
-        self.assertAlmostEqual(x, -9.920159607881597)
+    def test_multistart_default_solver(self):
+        # No multistart_solver is passed, so the function builds its own
+        m = build_model()
+        res = ini.initialize_with_multistart_opt(nlp=m, skip_initial_nlp_solve=True)
+        self.assertEqual(res.solution_status, SolutionStatus.optimal)
+        self.assertAlmostEqual(m.x.value, -9.920159607881597)
 
-    @unittest.skipUnless(highs.available(), 'highs is not available')
-    def test_poly_lp(self):
-        stat, x = lp_init_ex()
-        self.assertEqual(stat, SolutionStatus.optimal)
-        self.assertAlmostEqual(x, -9.920159607881597)
+    def test_multistart_solver_config_not_modified(self):
+        # Settings for this call must not persist on the caller's solver
+        m = build_model()
+        multistart_solver = SolverFactory('multistart')
+        multistart_solver.config.seed = 7
+        ini.initialize_with_multistart_opt(
+            nlp=m,
+            multistart_solver=multistart_solver,
+            seed=145,
+            skip_initial_nlp_solve=True,
+        )
+        self.assertEqual(multistart_solver.config.seed, 7)
+        self.assertTrue(multistart_solver.config.load_solutions)
+        self.assertTrue(multistart_solver.config.raise_exception_on_nonoptimal_result)
 
-    @unittest.skipUnless(highs.available(), 'highs is not available')
-    def test_run_example_and_unknown_method(self):
-        stat, x = run_example(method='lp')
-        self.assertEqual(stat, SolutionStatus.optimal)
-        self.assertAlmostEqual(x, -9.920159607881597)
-
+    def test_run_example_unknown_method(self):
         with self.assertRaises(ValueError):
             run_example(method='unknown')
 
@@ -309,6 +319,7 @@ class TestInit(unittest.TestCase):
 
 
 if __name__ == '__main__':
+
     import logging
 
     logging.basicConfig(level=logging.INFO)

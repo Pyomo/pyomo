@@ -13,22 +13,31 @@ from itertools import product
 from io import StringIO
 
 import pyomo.common.unittest as unittest
+from pyomo.common.dependencies import attempt_import, numpy_available, scipy_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.multistart.high_conf_stop import should_stop
-from pyomo.contrib.multistart.reinit import strategies
+from pyomo.contrib.multistart.multi import SamplingManager
+from pyomo.contrib.multistart.reinit import reinitialize_variables, strategies
 from pyomo.environ import (
     ConcreteModel,
     Constraint,
     NonNegativeReals,
     Objective,
-    SolverFactory,
     Var,
     maximize,
     sin,
     value,
 )
+from pyomo.contrib.solver.common.factory import SolverFactory
+from pyomo.contrib.solver.solvers.ipopt import Ipopt
+from pyomo.contrib.solver.common.util import NoOptimalSolutionError
+from pyomo.contrib.solver.common.results import TerminationCondition
+
+parameterized, param_available = attempt_import('parameterized')
+parameterized = parameterized.parameterized
 
 
+@unittest.skipIf(not numpy_available, "Numpy not available")
 @unittest.skipIf(not SolverFactory('ipopt').available(), "IPOPT not available")
 class MultistartTests(unittest.TestCase):
     """
@@ -87,6 +96,9 @@ class MultistartTests(unittest.TestCase):
         m.x = Var(domain=NonNegativeReals)
         m.obj = Objective(expr=m.x)
         output = StringIO()
+        # x has no upper bound, so no start can be sampled for it. Instead of
+        # raising, reinitialization skips x with a warning and returns None,
+        # and the solve finishes from x's current value.
         with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.WARNING):
             SolverFactory('multistart').solve(m)
             self.assertIn(
@@ -101,15 +113,38 @@ class MultistartTests(unittest.TestCase):
         m.obj = Objective(expr=m.x)
         SolverFactory('multistart').solve(m)
 
+    def test_no_obj(self):
+        m = ConcreteModel()
+        m.x = Var()
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.WARNING):
+            try:
+                SolverFactory('multistart').solve(m)
+            except:
+                pass
+            self.assertIn(
+                "No objective found in the provided model. The solver will "
+                "stop if it finds a feasible solution before completing "
+                "the total number of iterations.",
+                output.getvalue().strip(),
+            )
+
     def test_model_infeasible(self):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 1))
         m.c = Constraint(expr=m.x >= 2)
         m.o = Objective(expr=m.x)
-        SolverFactory('multistart').solve(m, iterations=2)
+
+        with self.assertRaises(NoOptimalSolutionError):
+            SolverFactory('multistart').solve(m, iterations=2)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.WARNING):
-            SolverFactory('multistart').solve(m, iterations=-1, HCS_max_iterations=3)
+            SolverFactory('multistart').solve(
+                m,
+                iterations=-1,
+                HCS_max_iterations=3,
+                raise_exception_on_nonoptimal_result=False,
+            )
             self.assertIn(
                 "High confidence stopping rule was unable to "
                 "complete after 3 iterations.",
@@ -134,18 +169,138 @@ class MultistartTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "multiple active objectives"):
             SolverFactory('multistart').solve(m)
 
-    def test_no_obj(self):
-        m = ConcreteModel()
-        m.x = Var()
-        with self.assertRaisesRegex(RuntimeError, "no active objective"):
-            SolverFactory('multistart').solve(m)
+    def test_model_not_modified(self):
+        # The solver must not attach attributes to the user's model or objective
+        m = build_model()
+        m._vars_list = 'user attribute'
+        SolverFactory('multistart').solve(m, iterations=2)
+        self.assertEqual(m._vars_list, 'user attribute')
+        self.assertFalse(hasattr(m.objtv, 'sign'))
 
-    def test_const_obj(self):
+    def test_HCS_requires_rand_strategy(self):
+        m = build_model()
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.INFO):
+            with self.assertRaisesRegex(ValueError, "requires rand strategy"):
+                SolverFactory('multistart').solve(m, iterations=-1, strategy='midpoint')
+        # The settings are checked before the initial solve
+        self.assertNotIn("Running initial solve", output.getvalue())
+
+    def test_unsupported_sampling_method(self):
         m = ConcreteModel()
-        m.x = Var()
-        m.o = Objective(expr=5)
-        with self.assertRaisesRegex(RuntimeError, "constant objective"):
-            SolverFactory('multistart').solve(m)
+        m.x = Var(bounds=(0, 1))
+        m.obj = Objective(expr=m.x)
+        with self.assertRaises(ValueError):
+            SolverFactory('multistart').solve(m, sampling_method="dummy")
+
+    def test_unsupported_solver_type(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 1))
+        m.obj = Objective(expr=m.x)
+        bad_solver = {"solver": "dummy"}
+        # Provided during init
+        with self.assertRaises(TypeError):
+            SolverFactory('multistart', subsolver=bad_solver).solve(m)
+        # Provided with config
+        with self.assertRaises(TypeError):
+            solver = SolverFactory('multistart')
+            solver.config.subsolver = bad_solver
+            solver.solve(m)
+        # Provided during solve
+        with self.assertRaises(TypeError):
+            SolverFactory('multistart').solve(m, subsolver=bad_solver)
+
+    def test_solver_object_matches_solver_string(self):
+        nlp_solver = Ipopt()
+        solver_str = "ipopt"
+        seed = 145
+
+        fresh_model = build_model()
+
+        m1 = fresh_model.clone()
+        results_obj_obj = SolverFactory('multistart', subsolver=nlp_solver).solve(
+            m1, seed=seed
+        )
+        m2 = fresh_model.clone()
+        results_obj_str = SolverFactory('multistart', subsolver=solver_str).solve(
+            m2, seed=seed
+        )
+        self.assertAlmostEqual(
+            results_obj_obj.incumbent_objective, results_obj_str.incumbent_objective
+        )
+
+    @parameterized.expand(
+        ["uniform", "latin_hypercube", "sobol"],
+        name_func=lambda f, n, p: f"{f.__name__}_{p.args[0]}",
+    )
+    # skipIf must be inside expand to apply to the generated tests
+    @unittest.skipIf(not scipy_available, "Scipy not available")
+    def test_sampling_methods(self, method):
+        # For the simple model, check all sampling methods converge
+        m = build_model()
+        res = SolverFactory("multistart").solve(m, sampling_method=method, seed=145)
+        self.assertEqual(
+            res.termination_condition, TerminationCondition.convergenceCriteriaSatisfied
+        )
+
+    @parameterized.expand(
+        ["latin_hypercube", "sobol"],
+        name_func=lambda f, n, p: f"{f.__name__}_{p.args[0]}",
+    )
+    @unittest.skipIf(not scipy_available, "Scipy not available")
+    def test_sampled_starts_cover_all_strata(self, method):
+        # Over n starts, each variable lands once in each 1/n of its range.
+        # This holds only if every start is one point of one LHS/Sobol set.
+        n = 8
+        m = ConcreteModel()
+        m.x = Var(range(3), bounds=(0, 1))
+        var_list = list(m.x.values())
+        config = SolverFactory('multistart').config
+        sampler = SamplingManager(method, seed=0, n_points=n)
+        starts = []
+        for _ in range(n):
+            reinitialize_variables(var_list, config, sampler)
+            starts.append([v.value for v in var_list])
+        for k in range(len(var_list)):
+            self.assertEqual(len({int(s[k] * n) for s in starts}), n)
+
+    def test_HCS_requires_uniform_sampling(self):
+        # The stopping rule assumes independent random starts
+        m = build_model()
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.INFO):
+            with self.assertRaisesRegex(ValueError, "requires random_uniform"):
+                SolverFactory('multistart').solve(
+                    m, iterations=-1, sampling_method='latin_hypercube'
+                )
+        # The settings are checked before the initial solve
+        self.assertNotIn("Running initial solve", output.getvalue())
+
+    def test_break_on_solution_initial_solve(self):
+        # A feasible initial solve is the first solution, so no other starts run
+        m = build_model()
+        res = SolverFactory('multistart').solve(m, break_on_solution=True, seed=1)
+        self.assertEqual(res.feasible_iter_list, [0])
+        self.assertEqual(
+            res.incumbent_objective, res.feasible_solution_list[0].incumbent_objective
+        )
+
+    def test_max_time_limit(self):
+        simple_model = build_model()
+        output = StringIO()
+
+        with LoggingIntercept(output, 'pyomo.contrib.multistart', logging.WARNING):
+            res = SolverFactory('multistart').solve(
+                simple_model,
+                raise_exception_on_nonoptimal_result=False,
+                time_limit=1e-6,
+            )
+            self.assertIn(
+                "Time limit reached after 0 iterations.", output.getvalue().strip()
+            )
+            self.assertEqual(
+                res.termination_condition, TerminationCondition.maxTimeLimit
+            )
 
 
 def build_model():
