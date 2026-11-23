@@ -12,6 +12,8 @@ import pyomo.dae as dae
 from pyomo.common.dependencies import networkx_available
 from pyomo.common.dependencies import scipy_available
 from pyomo.common.collections import ComponentSet, ComponentMap
+from pyomo.util.calc_var_value import calculate_variable_from_constraint
+from pyomo.util.subsystems import copy_scaling_factors_to_block
 from pyomo.contrib.incidence_analysis.scc_solver import (
     TemporarySubsystemManager,
     generate_strongly_connected_components,
@@ -21,7 +23,24 @@ from pyomo.contrib.incidence_analysis.tests.models_for_testing import (
     make_gas_expansion_model,
     make_dynamic_model,
 )
+from pyomo.contrib.solver.solvers.ipopt import Ipopt
 import pyomo.common.unittest as unittest
+
+
+def _make_example_model():
+    m = pyo.ConcreteModel()
+    m.w = pyo.Var(initialize=1)
+    m.x = pyo.Var(initialize=2)
+    m.y = pyo.Var(initialize=3)
+    m.z = pyo.Var(initialize=4)
+
+    m.eqn1 = pyo.Constraint(expr=m.w**2 == 4)
+    m.eqn2 = pyo.Constraint(expr=m.w + m.x + m.y == 3)
+    m.eqn3 = pyo.Constraint(expr=m.w + 3 * m.x - m.y == 5)
+    m.eqn4 = pyo.Constraint(expr=m.z == m.y**2 + m.y - 2)
+
+    # This model has a solution w=2, x=1, y=0, z=-2
+    return m
 
 
 @unittest.skipUnless(scipy_available, "SciPy is not available")
@@ -194,7 +213,7 @@ class TestGenerateSCC(unittest.TestCase):
             with TemporarySubsystemManager(to_fix=inputs):
                 # We have a much easier time testing the SCCs generated
                 # in this test.
-                t = m.time[i + 2]
+                t = m.time.at(i + 2)
                 t_prev = m.time.prev(t)
 
                 con_set = ComponentSet(
@@ -261,7 +280,7 @@ class TestGenerateSCC(unittest.TestCase):
             generate_strongly_connected_components(constraints, variables)
         ):
             with TemporarySubsystemManager(to_fix=inputs):
-                t = m.time[i + 2]
+                t = m.time.at(i + 2)
                 t_prev = m.time.prev(t)
 
                 con_set = ComponentSet(
@@ -324,7 +343,7 @@ class TestGenerateSCC(unittest.TestCase):
                 #   algebraic -> derivative -> differential -> algebraic -> ...
                 idx = i // 3
                 mod = i % 3
-                t = m.time[idx + 1]
+                t = m.time.at(idx + 1)
                 if t != time.last():
                     t_next = m.time.next(t)
 
@@ -497,6 +516,87 @@ class TestSolveSCC(unittest.TestCase):
         self.assertAlmostEqual(m.x[1].value, 0.56714329)
         self.assertAlmostEqual(m.x[2].value, 3.21642835)
         self.assertEqual(m.x[3].value, 1.0)
+
+    def _meta_copy_scaling_factors(self, copy_scaling_factors, scale_problem):
+        """
+        Parameterized test function to ensure that submodel settings are
+        getting set as expected.
+        """
+        if copy_scaling_factors is None:
+            expected_copy_scaling_factors = False
+        else:
+            expected_copy_scaling_factors = copy_scaling_factors
+
+        if scale_problem is None:
+            expected_scale_problem = expected_copy_scaling_factors
+        else:
+            expected_scale_problem = scale_problem
+
+        m = _make_example_model()
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        m.scaling_factor[m.x] = 5
+        m.scaling_factor[m.eqn3] = 47
+
+        mock_calculate_variable_from_constraint = unittest.mock.MagicMock(
+            spec=calculate_variable_from_constraint
+        )
+
+        def wrap_cvfc(variable, constraint, **kwargs):
+            assert kwargs["scale_problem"] == expected_scale_problem
+            return calculate_variable_from_constraint(variable, constraint, kwargs)
+
+        mock_calculate_variable_from_constraint
+
+        mock_IPOPT = unittest.mock.MagicMock(Ipopt, autospec=True)
+
+        def solve_two_by_two(blk, **kwargs):
+            if expected_copy_scaling_factors is True:
+                assert len(blk.scaling_factor) == 2
+                assert blk.scaling_factor[m.x] == 5
+                assert blk.scaling_factor[m.eqn3] == 47
+            else:
+                assert not hasattr(blk, "scaling_factor")
+            m.x.set_value(1)
+            m.y.set_value(0)
+            # Creating a Results object or a mocked version
+            # thereof doesn't provide much benefit here.
+            return "Solve Successful"
+
+        mock_IPOPT.solve.side_effect = solve_two_by_two
+
+        if scale_problem is None:
+            calc_var_kwds = {}
+        else:
+            calc_var_kwds = {"scale_problem": scale_problem}
+
+        with (
+            unittest.mock.patch(
+                "pyomo.contrib.incidence_analysis.scc_solver.calculate_variable_from_constraint",
+                new=mock_calculate_variable_from_constraint,
+            ) as mock_calc_var_from_con,
+            unittest.mock.patch(
+                "pyomo.contrib.incidence_analysis.scc_solver.copy_scaling_factors_to_block",
+                spec=copy_scaling_factors_to_block,
+                wraps=copy_scaling_factors_to_block,
+            ) as mock_copy_sf,
+        ):
+            solve_strongly_connected_components(
+                m,
+                solver=mock_IPOPT,
+                calc_var_kwds=calc_var_kwds,
+                copy_scaling_factors=copy_scaling_factors,
+            )
+            assert mock_calc_var_from_con.call_count == 2
+            if expected_copy_scaling_factors is True:
+                assert mock_copy_sf.call_count == 1
+
+    def test_copy_scaling_factors(self):
+        for copy_scaling_factors in [True, False, None]:
+            for scale_problem in [True, False, None]:
+                self._meta_copy_scaling_factors(
+                    copy_scaling_factors=copy_scaling_factors,
+                    scale_problem=scale_problem,
+                )
 
 
 @unittest.skipUnless(scipy_available, "SciPy is not available")
