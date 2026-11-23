@@ -8,6 +8,8 @@
 # ____________________________________________________________________________________
 
 import io
+import subprocess
+import sys
 from textwrap import dedent
 
 import pyomo.common.unittest as unittest
@@ -15,6 +17,7 @@ import pyomo.core.tests.examples.pmedian_concrete as pmedian_concrete
 import pyomo.environ as pyo
 
 from pyomo.contrib.latex_printer import latex_printer
+from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.collections.component_map import ComponentMap
 from pyomo.environ import (
@@ -292,6 +295,153 @@ class TestLatexPrinter(unittest.TestCase):
         """)
 
         self.assertEqual('\n' + pstr + '\n', bstr)
+
+    @unittest.skipUnless(numpy_available, "numpy is not available")
+    def test_latexPrinter_numpyConstants(self):
+        # Regression test for #3325: NumPy scalar constants (e.g.,
+        # from models built using pandas data) are valid constant
+        # leaf nodes in Pyomo expressions and should be printed as
+        # numbers instead of raising a DeveloperError.
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+
+        # numpy integer constant as a standalone term in a sum
+        m.con_int = pyo.Constraint(expr=m.x + np.int64(7) >= 1)
+        pstr = latex_printer(m.con_int)
+        bstr = dedent(r"""
+        \begin{equation} 
+             1 \leq x + 7 
+        \end{equation} 
+        """)
+        self.assertEqual('\n' + pstr + '\n', bstr)
+
+        # numpy float constant as a standalone term in a sum
+        m.con_float = pyo.Constraint(expr=m.y + np.float32(1.5) <= 10)
+        pstr = latex_printer(m.con_float)
+        bstr = dedent(r"""
+        \begin{equation} 
+             y + 1.5 \leq 10 
+        \end{equation} 
+        """)
+        self.assertEqual('\n' + pstr + '\n', bstr)
+
+        # numpy integer constant as an exponent
+        m.con_pow = pyo.Constraint(expr=m.x ** np.int64(2) <= 4)
+        pstr = latex_printer(m.con_pow)
+        bstr = dedent(r"""
+        \begin{equation} 
+             x^{2} \leq 4 
+        \end{equation} 
+        """)
+        self.assertEqual('\n' + pstr + '\n', bstr)
+
+        # numpy integer constant as a monomial coefficient: on the
+        # left of a product (np.int64(3) * x) Pyomo's expression
+        # construction converts the coefficient to a native Python
+        # int, but on the right it reaches the printer as a NumPy
+        # type (this is how the model in #3325 was built)
+        m.con_monomial = pyo.Constraint(expr=m.x * np.int64(3) <= 10)
+        pstr = latex_printer(m.con_monomial)
+        bstr = dedent(r"""
+        \begin{equation} 
+             3 x \leq 10 
+        \end{equation} 
+        """)
+        self.assertEqual('\n' + pstr + '\n', bstr)
+
+        # the remaining NumPy scalar numeric types should also print
+        for numeric_type in (
+            np.int8,
+            np.int16,
+            np.int32,
+            np.uint8,
+            np.uint64,
+            np.float16,
+            np.float64,
+        ):
+            m.con = pyo.Constraint(expr=m.x + numeric_type(3) >= 0)
+            self.assertIn('x + 3', latex_printer(m.con))
+            del m.con
+
+        # extended-precision floats (np.longdouble, aliased as
+        # np.float128 on some platforms) are registered as well
+        m.con = pyo.Constraint(expr=m.x + np.longdouble(1.5) >= 0)
+        self.assertIn('x + 1.5', latex_printer(m.con))
+        del m.con
+
+    @unittest.skipUnless(numpy_available, "numpy is not available")
+    def test_latexPrinter_lateNumpyRegistration(self):
+        # When printing a block, the printer builds its expression
+        # visitor before templatizing the constraints, and a
+        # constraint rule is only executed (importing NumPy) by that
+        # templatization -- so NumPy types can enter
+        # native_numeric_types after the visitor was constructed.
+        # They must still be printable.  This needs a fresh
+        # interpreter: once NumPy has been imported, its types are
+        # registered before the visitor is built and the timing
+        # cannot be observed.
+        cmd = """
+import pyomo.environ as pyo
+from pyomo.common.numeric_types import native_numeric_types
+from pyomo.contrib.latex_printer import latex_printer
+
+# Precondition: no NumPy types are registered yet in this interpreter
+assert not any(t.__module__ == 'numpy' for t in native_numeric_types)
+
+m = pyo.ConcreteModel()
+m.S = pyo.Set(dimen=1)
+m.x = pyo.Var()
+
+def _rule(mdl, i):
+    import numpy as np
+    return mdl.x + np.float64(1.5) <= 10
+
+m.c = pyo.Constraint(m.S, rule=_rule)
+print(latex_printer(m))
+"""
+        rc = subprocess.run(
+            [sys.executable, '-c', cmd],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        self.assertEqual(rc.returncode, 0, msg=rc.stderr)
+        self.assertIn('x + 1.5', rc.stdout)
+
+    def test_latexPrinter_customRegisteredNumericType(self):
+        # Types registered by users with RegisterNumericType() (with
+        # no NumPy involved) must also be printable.  Run in a fresh
+        # interpreter so the registration, which is process-global,
+        # cannot leak into other tests.
+        cmd = """
+import pyomo.environ as pyo
+from pyomo.common.numeric_types import RegisterNumericType
+from pyomo.contrib.latex_printer import latex_printer
+
+class CustomScalar:
+    def __init__(self, value):
+        self._value = float(value)
+    def __float__(self):
+        return self._value
+    def __str__(self):
+        return str(self._value)
+
+RegisterNumericType(CustomScalar)
+
+m = pyo.ConcreteModel()
+m.x = pyo.Var()
+m.con = pyo.Constraint(expr=m.x + CustomScalar(7) >= 1)
+print(latex_printer(m.con))
+"""
+        rc = subprocess.run(
+            [sys.executable, '-c', cmd],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        self.assertEqual(rc.returncode, 0, msg=rc.stderr)
+        self.assertIn('x + 7.0', rc.stdout)
 
     def test_latexPrinter_simpleExpression(self):
         m = generate_model()
