@@ -361,6 +361,24 @@ for _test in ('MILP_unbounded', 'MILP_unbounded_kernel'):
         lambda v: True,
         "cuopt does not differentiate between unbounded and infeasible status",
     )
+# MIQP_simple_kernel inherits description "MIQP_simple".
+SkipTests['cuopt', 'python', 'MIQP_simple'] = (
+    lambda v: True,
+    "cuOpt does not support mixed-integer quadratic problems",
+)
+# MIQCP_simple_kernel inherits description "MIQCP_simple".
+SkipTests['cuopt', 'python', 'MIQCP_simple'] = (
+    lambda v: True,
+    "cuOpt does not support mixed-integer problems with quadratic constraints",
+)
+# cuOpt only accepts quadratic constraints that are either convex
+# or exactly of the form sum(x_i^2) - y^2 <= 0.
+for _test in ('QCP_simple', 'QCP_simple_nosuffixes'):
+    SkipTests['cuopt', 'python', _test] = (
+        lambda v: True,
+        "cuOpt only accepts convex quadratic constraints or standard-form "
+        "second-order cones",
+    )
 
 
 def generate_scenarios(arg=None):
