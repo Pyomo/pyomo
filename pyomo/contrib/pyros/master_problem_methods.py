@@ -633,13 +633,17 @@ def get_master_dr_degree(master_data):
         )
 
         return 1 + (
-            # too many "unique" scenarios for affine independence
-            len(unique_scenarios)
-            >= 2 + len(nom_scenario_blk.effective_uncertain_dimensions)
-            or
-            # rank check reveals affine dependence
-            np.linalg.matrix_rank(unique_scenarios[1:] - unique_scenarios[0])
-            != len(unique_scenarios) - 1
+            # singleton set is always affinely independent
+            len(unique_scenarios) > 1
+            and (
+                # too many "unique" scenarios for affine independence
+                len(unique_scenarios)
+                >= 2 + len(nom_scenario_blk.effective_uncertain_dimensions)
+                or
+                # rank check reveals affine dependence
+                np.linalg.matrix_rank(unique_scenarios[1:] - unique_scenarios[0])
+                != len(unique_scenarios) - 1
+            )
         )
     else:
         raise ValueError(

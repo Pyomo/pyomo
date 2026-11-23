@@ -545,6 +545,15 @@ class TestHigherOrderDecisionRuleEfficiency(unittest.TestCase):
         self.assertFalse(decision_rule_vars[1].fixed)
         self.assertTrue(decision_rule_vars[2].fixed)
 
+        master_data.master_model.scenarios[1, 0].uncertain_params[0].set_value(0.4)
+        # only one unique scenario: no rank loss if affine DR used
+        higher_order_decision_rule_efficiency(master_data)
+        self.assertFalse(decision_rule_vars[0].fixed)
+        self.assertFalse(decision_rule_vars[1].fixed)
+        self.assertTrue(decision_rule_vars[2].fixed)
+
+        master_data.master_model.scenarios[1, 0].uncertain_params[0].set_value(-0.4)
+
         add_scenario_block_to_master_problem(
             master_data.master_model,
             scenario_idx=[2, 0],
