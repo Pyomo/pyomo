@@ -11,7 +11,7 @@
 Functions for construction and solution of the PyROS master problem.
 """
 
-import numpy as np
+from pyomo.common.dependencies import numpy as np
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import TransformationFactory
