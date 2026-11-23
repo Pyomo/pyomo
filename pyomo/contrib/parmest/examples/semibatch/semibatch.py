@@ -8,8 +8,7 @@
 # ____________________________________________________________________________________
 """
 Semibatch model, based on Nicholson et al. (2018). pyomo.dae: A modeling and
-automatic discretization framework for optimization with di
-erential and
+automatic discretization framework for optimization with differential and
 algebraic equations. Mathematical Programming Computation, 10(2), 187-223.
 """
 

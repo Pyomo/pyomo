@@ -49,10 +49,13 @@ Pyomo was formerly released as the Coopr software library.
 
 Pyomo is available under the BSD License - see the 
 [`LICENSE.md`](https://github.com/Pyomo/pyomo/blob/main/LICENSE.md) file.
+Some modules contain software derived from other projects; see the
+[`THIRD_PARTY_NOTICES.md`](https://github.com/Pyomo/pyomo/blob/main/THIRD_PARTY_NOTICES.md)
+file for their licenses.
 
 Pyomo is currently tested with the following Python implementations:
 
-* CPython: 3.10, 3.11, 3.12, 3.13, 3.14, 3.15
+* CPython: 3.11, 3.12, 3.13, 3.14, 3.15
 * PyPy: 3.11
 
 _Testing and support policy_:

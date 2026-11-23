@@ -1580,18 +1580,15 @@ class Grammar(object):
 
         # Look for literal tokens
         for n, s in enumerate(syms):
-            if s[0] in "'\"":
-                try:
-                    c = eval(s)
-                    if (len(c) > 1):
-                        raise GrammarError('%s:%d: Literal token %s in rule %r may only be a single character' %
-                                           (file, line, s, prodname))
-                    if c not in self.Terminals:
-                        self.Terminals[c] = []
-                    syms[n] = c
-                    continue
-                except SyntaxError:
-                    pass
+            if s[0] in "'\"" and len(s) >= 2 and s[-1] == s[0]:
+                c = s[1:-1]
+                if (len(c) > 1):
+                    raise GrammarError('%s:%d: Literal token %s in rule %r may only be a single character' %
+                                       (file, line, s, prodname))
+                if c not in self.Terminals:
+                    self.Terminals[c] = []
+                syms[n] = c
+                continue
             if not _is_identifier.match(s) and s != '%prec':
                 raise GrammarError('%s:%d: Illegal name %r in rule %r' % (file, line, s, prodname))
 

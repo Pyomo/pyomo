@@ -616,13 +616,6 @@ class GurobiDirectMINLP(GurobiDirectBase):
         super().__init__(**kwds)
         self._var_map = None
 
-    def available(self):
-        if self._available is None:
-            if super().available():
-                if self.version() >= (14,):
-                    self.__class__._available = Availability.BadVersion
-        return self._available
-
     def _pyomo_gurobi_var_iter(self):
         return self._var_map.items()
 
