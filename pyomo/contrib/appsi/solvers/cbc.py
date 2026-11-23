@@ -97,11 +97,44 @@ class Cbc(PersistentSolver):
             stderr=subprocess.STDOUT,
             universal_newlines=True,
         )
-        version = results.stdout.splitlines()[1]
-        version = version.split(':')[1]
-        version = version.strip()
-        version = tuple(int(i) for i in version.split('.'))
-        return version
+        # Supported banner formats (examples covered by the version tests):
+        #   Welcome to the CBC MILP Solver
+        #   Version: 2.10.10
+        #
+        #   CBC 2.10.12 (git:146ce89)
+        #   Cbc version 2.10.12
+        #   Version: 2.10.12-devel
+        #   CBC devel (git:146ce89)
+        #   Version: devel
+        #   Version: Trunk
+        # Match prefixes without regard to case and ignore leading whitespace.
+        # Development versions (devel/trunk) compare newer than numeric releases.
+        for line in results.stdout.splitlines():
+            line = line.strip()
+            if line.lower().startswith('version:'):
+                version = line.split(':', 1)[1].strip()
+            elif line.lower().startswith('cbc '):
+                version = line.split(None, 1)[1].strip()
+                if version.lower().startswith('version '):
+                    version = version.split(None, 1)[1].strip()
+            else:
+                continue
+
+            if not version:
+                break
+            version = version.split()[0]
+            if version.lower() in ('devel', 'trunk'):
+                return (float('inf'),) * 3
+            # A release may include a suffix, e.g., "2.10.12-devel".
+            version = version.split('-', 1)[0]
+            try:
+                version = tuple(int(i) for i in version.split('.'))
+            except ValueError:
+                break
+            return version
+        raise RuntimeError(
+            f'Could not determine CBC version from solver output:\n{results.stdout}'
+        )
 
     def lp_filename(self):
         if self._filename is None:
