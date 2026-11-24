@@ -2,6 +2,97 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.11.0   (19 Nov 2026)
+-------------------------------------------------------------------------------
+
+SIGNIFICANT CHANGE NOTICE
+
+- This will be the last release to support Python 3.10
+- This is the first release to be tested against Python 3.15
+
+CHANGELOG
+
+- General
+  - Add support for Python 3.15 (#4054)
+  - Replace `eval()` with explicit parsing (#4090)
+  - Keep threading.Lock when multiprocessing.Lock() cannot be created (#4068)
+  - Improve ComponentMap / ComponentSet (#3970)
+  - Support reusable 'var_cache' within the `IdentifyVariableVisitor` (#3966)
+  - Typo corrections (#4035, #3988, #4109)
+  - Add pixi environment directory to .gitignore (#4025)
+  - Update license and notice files (#4110)
+  - Remove unused development file accidentally included in repo (#4112)
+  - Remove CWD from Executable and Library search paths (#4108)
+- Core
+  - Remove expression `_args_` tuple (#4022)
+  - Ranged LinearStandardFormCompiler (#3960)
+  - Fix UnboundLocalError for InvalidNumber * zero-constant products (#4063)
+  - Fix default/initialize receiving the `Param` instead of the block (#4080)
+  - Resolve dynamic initialization of Param values (#4048)
+  - Fix extremely slow sparse_keys() call for unsorted sparse params (#3971)
+  - Disable automatic use of pickle in ComponentUID (#4105)
+- DAE
+  - Fix dae collocation name conflict (#4089)
+- Documentation
+  - Add PyROS paper preprint to Pyomo docs reference list (#3992)
+  - Correct broken URLs (#4079, #4062, #4021, #4004)
+- Solver Interfaces
+  - Correct several incorrect legacy solver termination conditions (#4099)
+  - Fix reduced costs dropped by legacy results (#3978)
+  - HiGHs objective fix (#4091)
+  - HiGHS: support partial MIP warm starts (#4047, #4046)
+  - Make GAMS fail loudly when active SOSConstraints are present (#4093)
+  - Correctly pass logfile to GAMS (#4042)
+  - Baron writer: resolve bug for x^y when both variable (#4087)
+  - Track Gurobi 14 Nonlinear API changes (#4083, #4104)
+  - Fix attribute names in Gurobi persistent error messages (#4064)
+  - Track changes to Xpress API from 9.9 and 10.0 releases (#4072)
+  - Add `license_is_valid` for `knitroampl` (#4059)
+  - KNITROAMPL: change executable logic (#3979)
+  - Support trivial constraints in SCIP interfaces (#4001)
+  - Fix cuOpt solver version parsing (#4027)
+  - New z3-solver version fix (#4055)
+  - Add v2 Xpress direct and persistent solver interfaces (#3987)
+- Testing
+  - Fix intermittent MPI build issues (#4092)
+  - Test updates: `dill` availability, new `pytest` comparison (#4067)
+  - Adjust ipopt version tests to be less flaky (#4050)
+  - Updates to support new MUMPS versions (#4053)
+  - Add GHA dependency for pillow builds on pypy (#4049)
+  - Upgrade actions to newest versions (#4045)
+  - Revert pypy pin and skip stalled tests (#4002)
+  - Move `cplex` and `docplex` to pypi-only installs (#3984)
+- Contributed Packages
+  - cp: Fix import bug (#4069)
+  - DoE: In `FIMExternalGreyBox` convert complex jac/hes to float (#4056)
+  - GDPopt: Add LBB relaxed NLP node solver (#4012)
+  - GDPopt: Fix LBB time-limit results/solver error handling (#4010, #4041)
+  - GDPopt: Fix convex affine cut slope (#4011)
+  - GDPopt: Fix LOA maximization objective sense (#3986)
+  - GDPopt: Fix misplaced zero-division guard in relative_gap (#4071)
+  - GDPopt: Make GDP enumeration lazy (#4031)
+  - GDPopt/MindtPy: Fix non-rigorous crossed bound results (#4013)
+  - GDPopt/MindtPy: Convert `time_limit` to float (#4058)
+  - initialization: Extend pwl approximation init method (#4028)
+  - initialization: Fix bug to return solve with bounded nlp (#3991)
+  - MindtPy: Track dual bound with no good cuts (#4038)
+  - MindtPy: Update documentation (#3964)
+  - parmest: Make objectives consistent, add 1/2 to SSE (#4074)
+  - parmest: Support preserving domain during param_to_var conversion (#4075)
+  - parmest: Fixed bugs in cov_est function and Estimator class (#3980)
+  - piecewise: Support convexity/concavity and pigraph/hypograph
+    transformation (#3989)
+  - piecewise: Handle single-segment "piecewise" linear functions (#3990)
+  - piecewise: Support evaluating PiecewiseLinearExpression objects (#4007)
+  - PyROS: Update UncertaintySet implementations (#4043)
+  - PyROS: Update (usage of) `UncertaintySet` validation routines (#4000)
+  - PyROS: Convert `UncertaintySet` subclass docstrings to raw strings (#4077)
+  - PyROS: Modify uncertainty set docs/logs (#3975)
+  - PyROS: Pause the GC so it doesn't impact timing tests (#4081)
+  - viewer: Fix issue with displaying numpy scalars (#4008)
+  - viewer: Add menu items to set font (#4006)
+
+-------------------------------------------------------------------------------
 Pyomo 6.10.1   (04 Jun 2026)
 -------------------------------------------------------------------------------
 

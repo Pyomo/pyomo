@@ -792,6 +792,7 @@ class TestComponentUID(unittest.TestCase):
         self.assertEqual(len(buf), 4)
 
     def test_pickle_index(self):
+        _allow_pickle = ComponentUID.EnablePickle
         m = ConcreteModel()
         m.b = Block(Any)
 
@@ -812,37 +813,80 @@ class TestComponentUID(unittest.TestCase):
         idx = _Foo(1, 'a')
         m.b[idx].x = Var()
         cuid = ComponentUID(m.b[idx].x)
-        # Note that the pickle string for namedtuple changes between
-        # Python 2, 3, and pypy, so we will just check the non-pickle
-        # data part
-        self.assertRegex(str(cuid), r"^b\[\|b?(['\"]).*\.\1\]\.x$")
-
         self.assertIs(cuid.find_component_on(m), m.b[idx].x)
-        tmp = ComponentUID(str(cuid))
-        self.assertIsNot(cuid, tmp)
-        self.assertEqual(cuid, tmp)
-        self.assertIs(tmp.find_component_on(m), m.b[idx].x)
-        tmp = pickle.loads(pickle.dumps(cuid))
-        self.assertIsNot(cuid, tmp)
-        self.assertEqual(cuid, tmp)
-        self.assertIs(tmp.find_component_on(m), m.b[idx].x)
+        try:
+            ComponentUID.EnablePickle = True
+            # Note that the pickle string for namedtuple changes between
+            # Python 2, 3, and pypy, so we will just check the non-pickle
+            # data part
+            self.assertRegex(str(cuid), r"^b\[\|b?(['\"]).*\.\1\]\.x$")
+            tmp = ComponentUID(str(cuid))
+            self.assertIsNot(cuid, tmp)
+            self.assertEqual(cuid, tmp)
+            self.assertIs(tmp.find_component_on(m), m.b[idx].x)
+            tmp = pickle.loads(pickle.dumps(cuid))
+            self.assertIsNot(cuid, tmp)
+            self.assertEqual(cuid, tmp)
+            self.assertIs(tmp.find_component_on(m), m.b[idx].x)
+
+            ComponentUID.EnablePickle = False
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "Attempting to serialize a ComponentUID containing an object "
+                "of type _Foo for which no Serializer is registered and the "
+                "general use of `pickle` is disabled by ComponentUID.EnablePickle.",
+            ):
+                str(cuid)
+
+            def _serializer(x):
+                if isinstance(x, str):
+                    a, b = x.split(':')
+                    return _Foo(int(a), b)
+                else:
+                    return f"{x.x}:{x.yy}"
+
+            ComponentUID.Serializer[_Foo.__name__] = _serializer
+            self.assertEqual(str(cuid), "b[!'_Foo':'1:a'].x")
+            tmp = ComponentUID(str(cuid))
+            self.assertIsNot(cuid, tmp)
+            self.assertEqual(cuid, tmp)
+            self.assertIs(tmp.find_component_on(m), m.b[idx].x)
+            tmp = pickle.loads(pickle.dumps(cuid))
+            self.assertIsNot(cuid, tmp)
+            self.assertEqual(cuid, tmp)
+            self.assertIs(tmp.find_component_on(m), m.b[idx].x)
+        finally:
+            ComponentUID.EnablePickle = _allow_pickle
+            ComponentUID.Serializer.pop(_Foo.__name__, None)
 
         idx = datetime(1, 2, 3)
         m.b[idx].x = Var()
         cuid = ComponentUID(m.b[idx].x)
-        # Note that the pickle string for namedtuple changes between
-        # Python 2, 3, and pypy, so we will just check the non-pickle
-        # data part
-        self.assertRegex(str(cuid), r"^b\[\|b?(['\"]).*\.\1\]\.x$")
         self.assertIs(cuid.find_component_on(m), m.b[idx].x)
-        tmp = ComponentUID(str(cuid))
-        self.assertIsNot(cuid, tmp)
-        self.assertEqual(cuid, tmp)
-        self.assertIs(tmp.find_component_on(m), m.b[idx].x)
-        tmp = pickle.loads(pickle.dumps(cuid))
-        self.assertIsNot(cuid, tmp)
-        self.assertEqual(cuid, tmp)
-        self.assertIs(tmp.find_component_on(m), m.b[idx].x)
+        try:
+            ComponentUID.EnablePickle = False
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "Attempting to serialize a ComponentUID containing an object "
+                "of type datetime for which no Serializer is registered and the "
+                "general use of `pickle` is disabled by ComponentUID.EnablePickle.",
+            ):
+                str(cuid)
+            ComponentUID.EnablePickle = True
+            # Note that the pickle string for namedtuple changes between
+            # Python 2, 3, and pypy, so we will just check the non-pickle
+            # data part
+            self.assertRegex(str(cuid), r"^b\[\|b?(['\"]).*\.\1\]\.x$")
+            tmp = ComponentUID(str(cuid))
+            self.assertIsNot(cuid, tmp)
+            self.assertEqual(cuid, tmp)
+            self.assertIs(tmp.find_component_on(m), m.b[idx].x)
+            tmp = pickle.loads(pickle.dumps(cuid))
+            self.assertIsNot(cuid, tmp)
+            self.assertEqual(cuid, tmp)
+            self.assertIs(tmp.find_component_on(m), m.b[idx].x)
+        finally:
+            ComponentUID.EnablePickle = _allow_pickle
 
         self.assertEqual(len(m.b), 3)
 

@@ -436,7 +436,9 @@ class TestAMPLExternalFunction(unittest.TestCase):
         LIB = 'test_pyomo_external_gsl.dll'
 
         model = ConcreteModel()
-        model.gamma = ExternalFunction(library=LIB, function="gsl_sf_gamma")
+        model.gamma = ExternalFunction(
+            library=os.path.join('.', LIB), function="gsl_sf_gamma"
+        )
         model.x = Var(initialize=3, bounds=(1e-5, None))
         model.o = Objective(expr=model.gamma(model.x))
 
