@@ -4006,6 +4006,26 @@ class TestCartesianProductSet(unittest.TestCase):
             # second box set invalid due to failed bounds
             CartesianProductSet(bset, BoxSet([[1, 0], [0, 0]])).validate(CONFIG)
 
+    def test_cartesian_product_discrete(self):
+        """
+        Confirm Cartesian product with discrete operands is not supported.
+        """
+        cpset = CartesianProductSet(BoxSet([[1, 2]]), DiscreteScenarioSet([(1,), (2,)]))
+        exc_str = "CartesianProductSet.*undefined geometry"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            _ = cpset.geometry
+        with self.assertRaisesRegex(ValueError, exc_str):
+            _ = cpset.is_scenario_based
+
+        # no support even if all operands are scenario-based
+        cpset2 = CartesianProductSet(
+            DiscreteScenarioSet([(0.5, 1)]), DiscreteScenarioSet([(1,), (2,)])
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            _ = cpset2.geometry
+        with self.assertRaisesRegex(ValueError, exc_str):
+            _ = cpset2.is_scenario_based
+
     @unittest.skipUnless(baron_available, "BARON not available")
     def test_is_coordinate_fixed(self):
         """
