@@ -1081,6 +1081,14 @@ class UncertaintySet(metaclass=abc.ABCMeta):
         return [_values_close(lb, ub) for lb, ub in param_bounds]
 
     @property
+    def is_scenario_based(self):
+        """
+        bool : Return True if the uncertainty set is
+        scenario-based (discrete), False otherwise.
+        """
+        return self.geometry == Geometry.DISCRETE_SCENARIOS
+
+    @property
     def scenarios(self):
         """
         list[tuple[numbers.Real, ...]] : If the uncertainty
@@ -4212,11 +4220,23 @@ class CartesianProductSet(UncertaintySet):
     @property
     def geometry(self):
         """
-        Geometry : Geometry of the Cartesian product set,
-        assuming that there are no discrete sets.
+        Geometry : Geometry of the Cartesian product set.
         See the `Geometry` class documentation.
+
+        Raises
+        ------
+        ValueError
+            If any of the uncertainty set operands of `self`
+            is scenario-based.
         """
-        return Geometry(max(uset.geometry.value for uset in self._all_sets))
+        uset_geometries = [uset.geometry for uset in self._all_sets]
+        if any(geom == Geometry.DISCRETE_SCENARIOS for geom in uset_geometries):
+            raise ValueError(
+                f"{type(self).__name__!r} instance has an undefined geometry, "
+                "since there is an operand with geometry "
+                f"{Geometry.DISCRETE_SCENARIOS!r}."
+            )
+        return Geometry(max(geom.value for geom in uset_geometries))
 
     @property
     def _PARAMETER_BOUNDS_EXACT(self):

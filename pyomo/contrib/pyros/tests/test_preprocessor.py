@@ -2340,7 +2340,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         uncertainty works as expected.
         """
         model_data = self.setup_test_model_data(
-            uncertainty_set=DiscreteScenarioSet([[0], [0.7]])
+            uncertainty_set=DiscreteScenarioSet([[0], [0.7], [0.7]])
         )
 
         model_data.config.decision_rule_order = 1
