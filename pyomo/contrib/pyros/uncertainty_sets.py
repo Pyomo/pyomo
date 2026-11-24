@@ -1066,7 +1066,7 @@ class UncertaintySet(metaclass=abc.ABCMeta):
 
         def _values_close(a, b):
             return math.isclose(
-                a, b, rel_tol=PARAM_IS_CERTAIN_ABS_TOL, abs_tol=PARAM_IS_CERTAIN_REL_TOL
+                a, b, rel_tol=PARAM_IS_CERTAIN_REL_TOL, abs_tol=PARAM_IS_CERTAIN_ABS_TOL
             )
 
         param_bounds = self.parameter_bounds
