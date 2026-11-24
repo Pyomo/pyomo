@@ -185,10 +185,10 @@ class SeparationSolveCallResults:
         True if subsolvers found to be unable to solve separation
         problem of interest, False otherwise.
     discrete_set_scenario_index : None or int, optional
-        If discrete set used to solve the problem, index of
-        `violating_param_realization` as listed in the
-        `scenarios` attribute of a ``DiscreteScenarioSet``
-        instance. If discrete set not used, pass None.
+        If scenario-based (discrete) set used to solve the problem,
+        index of `violating_param_realization` in the list of unique
+        scenarios comprising the uncertainty set.
+        If scenario-based set not used, pass None.
     backup_solver_used : bool, optional
         True if a backup solver was used, False otherwise.
 
@@ -335,7 +335,7 @@ class SeparationLoopResults:
         object in `self` corresponding to maximally violating
         separation problem solution.
     all_discrete_scenarios_exhausted : bool, optional
-        For problems with discrete uncertainty sets,
+        For problems with scenario-based uncertainty sets,
         True if all scenarios were explicitly accounted for in master
         (which occurs if there have been
         as many PyROS iterations as there are scenarios in the set)
@@ -351,7 +351,7 @@ class SeparationLoopResults:
     worst_case_ss_ineq_con : None or ConstraintData
         Worst-case second-stage inequality constraint.
     all_discrete_scenarios_exhausted : bool
-        True if all scenarios of the discrete set were exhausted
+        True if all scenarios of the scenario-based set were exhausted
         already explicitly accounted for in the master problems,
         False otherwise.
     """
@@ -624,8 +624,7 @@ class SeparationResults:
     @property
     def all_discrete_scenarios_exhausted(self):
         """
-        bool : For problems where the uncertainty set is of type
-        DiscreteScenarioSet,
+        bool : For problems where the uncertainty set is scenario-based,
         True if last master problem solved explicitly
         accounts for all scenarios in the uncertainty set,
         False otherwise.

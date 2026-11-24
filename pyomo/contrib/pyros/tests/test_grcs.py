@@ -493,7 +493,9 @@ class TestPyROSSolveDiscreteSet(unittest.TestCase):
         """
         m = build_leyffer()
 
-        discrete_set = DiscreteScenarioSet(scenarios=[[0.25], [1.125], [2]])
+        discrete_set = DiscreteScenarioSet(
+            scenarios=[[0.25], [1.125], [2], [2], [1.125]]
+        )
 
         global_solver = SolverFactory("baron")
         pyros_solver = SolverFactory("pyros")
@@ -1558,7 +1560,9 @@ class RegressionTest(unittest.TestCase):
         m = build_leyffer_two_cons()
 
         # Define the uncertainty set
-        discrete_scenarios = DiscreteScenarioSet(scenarios=[[0.25], [2.0], [1.125]])
+        discrete_scenarios = DiscreteScenarioSet(
+            scenarios=[[0.25], [2.0], [1.125], [0.25]]
+        )
 
         # Instantiate the PyROS solver
         pyros_solver = SolverFactory("pyros")

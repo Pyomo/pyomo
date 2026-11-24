@@ -31,7 +31,6 @@ from pyomo.contrib.pyros.solve_data import (
     SeparationLoopResults,
     SeparationResults,
 )
-from pyomo.contrib.pyros.uncertainty_sets import Geometry
 from pyomo.contrib.pyros.util import (
     ABS_CON_CHECK_FEAS_TOL,
     call_solver,
@@ -304,10 +303,6 @@ def solve_separation_problem(separation_data, master_data):
     run_local = not config.bypass_local_separation
     run_global = config.bypass_local_separation
 
-    uncertainty_set_is_discrete = (
-        config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS
-    )
-
     if run_local:
         local_separation_loop_results = perform_separation_loop(
             separation_data=separation_data,
@@ -316,7 +311,7 @@ def solve_separation_problem(separation_data, master_data):
         )
         run_global = not (
             local_separation_loop_results.found_violation
-            or uncertainty_set_is_discrete
+            or config.uncertainty_set.is_scenario_based
             or local_separation_loop_results.subsolver_error
             or local_separation_loop_results.time_out
             or config.bypass_global_separation
@@ -441,8 +436,8 @@ def get_worst_discrete_separation_solution(
         violations by separation solution.
     discrete_solve_results : DiscreteSeparationSolveCallResults
         Separation problem solutions corresponding to the
-        uncertain parameter scenarios listed in
-        ``config.uncertainty_set.scenarios``.
+        unique uncertain parameter scenarios comprising
+        ``config.uncertainty_set``.
 
     Returns
     -------
@@ -586,13 +581,10 @@ def perform_separation_loop(separation_data, master_data, solve_globally):
         ss_ineq_cons=all_ss_ineq_constraints,
     )
     sorted_priority_groups = separation_data.separation_priority_groups
-    uncertainty_set_is_discrete = (
-        config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS
-    )
 
-    if uncertainty_set_is_discrete:
+    if config.uncertainty_set.is_scenario_based:
         all_scenarios_exhausted = len(separation_data.idxs_of_master_scenarios) == len(
-            config.uncertainty_set.scenarios
+            separation_data.discrete_uncertainty_scenarios
         )
         if all_scenarios_exhausted:
             # robustness certified: entire uncertainty set already
@@ -666,7 +658,7 @@ def perform_separation_loop(separation_data, master_data, solve_globally):
 
             # solve separation problem for
             # this second-stage inequality constraint
-            if uncertainty_set_is_discrete:
+            if config.uncertainty_set.is_scenario_based:
                 solve_call_results = get_worst_discrete_separation_solution(
                     ss_ineq_con=ss_ineq_con,
                     config=config,
@@ -731,7 +723,7 @@ def perform_separation_loop(separation_data, master_data, solve_globally):
         if worst_case_ss_ineq_con is not None:
             # take note of chosen separation solution
             worst_case_res = all_solve_call_results[worst_case_ss_ineq_con]
-            if uncertainty_set_is_discrete:
+            if config.uncertainty_set.is_scenario_based:
                 separation_data.idxs_of_master_scenarios.append(
                     worst_case_res.discrete_set_scenario_index
                 )
@@ -905,7 +897,7 @@ def initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data)
 
     # for discrete uncertainty sets, the uncertain parameters
     # have already been addressed
-    if config.uncertainty_set.geometry != Geometry.DISCRETE_SCENARIOS:
+    if not config.uncertainty_set.is_scenario_based:
         param_vars = sep_model.uncertainty.uncertain_param_var_list
         param_values = separation_data.points_added_to_master[worst_master_block_idx]
         for param_var, val in zip(param_vars, param_values):
@@ -926,12 +918,11 @@ def initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data)
         ss_ineq_con_name_repr = get_con_name_repr(
             separation_model=sep_model, con=ss_ineq_con_to_maximize, with_obj_name=True
         )
-        uncertainty_set_is_discrete = (
-            config.uncertainty_set.geometry is Geometry.DISCRETE_SCENARIOS
-        )
         for con in sep_model.component_data_objects(Constraint, active=True):
             lslack, uslack = con.lslack(), con.uslack()
-            if (lslack < -tol or uslack < -tol) and not uncertainty_set_is_discrete:
+            if (
+                lslack < -tol or uslack < -tol
+            ) and not config.uncertainty_set.is_scenario_based:
                 config.progress_logger.debug(
                     f"Initial point for separation of second-stage ineq constraint "
                     f"{ss_ineq_con_name_repr} violates the model constraint "
@@ -1200,18 +1191,17 @@ def discrete_solve(
     )
 
     # skip scenarios already added to most recent master problem
-    master_scenario_idxs = separation_data.idxs_of_master_scenarios
     scenario_idxs_to_separate = [
         idx
-        for idx, _ in enumerate(config.uncertainty_set.scenarios)
-        if idx not in master_scenario_idxs
+        for idx, _ in enumerate(separation_data.discrete_uncertainty_scenarios)
+        if idx not in separation_data.idxs_of_master_scenarios
     ]
 
     solve_call_results_dict = {}
     for idx, scenario_idx in enumerate(scenario_idxs_to_separate):
         # fix uncertain parameters to scenario value
         # hence, no need to activate uncertainty set constraints
-        scenario = config.uncertainty_set.scenarios[scenario_idx]
+        scenario = separation_data.discrete_uncertainty_scenarios[scenario_idx]
         for param, coord_val in zip(uncertain_param_vars, scenario):
             param.fix(coord_val)
 
@@ -1285,12 +1275,10 @@ class SeparationProblemData:
         values corresponding to the associated uncertain parameter
         realization.
     idxs_of_master_scenarios : None or list of int
-        If ``config.uncertainty_set`` is of type
-        :class:`~pyomo.contrib.pyros.uncertainty_sets.DiscreteScenarioSet`,
-        then this attribute is a list
-        of ints, each entry of which is a list index for
-        an entry in the ``scenarios`` attribute of the
-        uncertainty set. Otherwise, this attribute is set to None.
+        If ``config.uncertainty_set`` is scenario-based,
+        then this attribute is a list of positional indices
+        for the unique scenarios comprising the set,
+        as recorded in ``model_data.discrete_uncertainty_scenarios``.
     """
 
     def __init__(self, model_data):
@@ -1312,14 +1300,18 @@ class SeparationProblemData:
             ]
         }
 
-        if config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS:
-            self.idxs_of_master_scenarios = [
-                config.uncertainty_set.scenarios.index(
-                    tuple(config.nominal_uncertain_param_vals)
-                )
-            ]
-        else:
-            self.idxs_of_master_scenarios = None
+        self.discrete_uncertainty_scenarios = model_data.discrete_uncertainty_scenarios
+        self.idxs_of_master_scenarios = None
+        if config.uncertainty_set.is_scenario_based:
+            inf_norms_to_nominal = np.linalg.norm(
+                (
+                    np.array(model_data.discrete_uncertainty_scenarios)
+                    - np.array(config.nominal_uncertain_param_vals)
+                ),
+                axis=1,
+                ord=np.inf,
+            )
+            self.idxs_of_master_scenarios = [np.argmin(inf_norms_to_nominal)]
 
         self.separation_priority_groups = group_ss_ineq_constraints_by_priority(self)
 

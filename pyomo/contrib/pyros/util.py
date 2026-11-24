@@ -23,7 +23,7 @@ import os
 import timeit
 
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.common.dependencies import scipy as sp
+from pyomo.common.dependencies import numpy as np, scipy as sp
 from pyomo.common.flags import NOTSET
 from pyomo.common.errors import ApplicationError, InvalidValueError
 from pyomo.common.log import Preformatted
@@ -1072,6 +1072,8 @@ class ModelData:
     ----------
     original_model : ConcreteModel
         Original user-provided model.
+    config : ConfigDict
+        PyROS solver options.
     timing : TimingData
         Main timing data object.
 
@@ -1105,6 +1107,47 @@ class ModelData:
         self.separation_priority_suffix_finder = SuffixFinder(
             name="pyros_separation_priority", default=NOTSET
         )
+
+    @property
+    def config(self):
+        """
+        ConfigDict : PyROS solver options stored in `self`.
+        Whenever this attribute is set,
+        ``self.discrete_uncertainty_scenarios`` is also updated.
+        """
+        return self._config
+
+    @config.setter
+    def config(self, val):
+        self._config = config = val
+        # store the discrete scenarios comprising
+        # the config's uncertainty set now.
+        # this way, in a PyROS solve context,
+        # the unique scenarios won't need to be recalculated later
+        uncertainty_set_available = (
+            config is not None and config.uncertainty_set is not None
+        )
+        if uncertainty_set_available and config.uncertainty_set.is_scenario_based:
+            scenarios = self.config.uncertainty_set.scenarios
+            num_decimals = round(-np.log10(POINT_IN_UNCERTAINTY_SET_TOL))
+            _, uniq_indices = np.unique(
+                np.round(scenarios, num_decimals), axis=0, return_index=True
+            )
+            self._discrete_uncertainty_scenarios = [
+                scenarios[idx] for idx in uniq_indices
+            ]
+        else:
+            self._discrete_uncertainty_scenarios = None
+
+    @property
+    def discrete_uncertainty_scenarios(self):
+        """
+        None or list[tuple[numbers.Real, ...]] : If the uncertainty
+        set in ``self.config`` is scenario-based, the
+        unique scenarios that comprise ``config.uncertainty_set``,
+        as of the point ``self.config`` was last updated.
+        """
+        return self._discrete_uncertainty_scenarios
 
     def preprocess(self, user_var_partitioning):
         """
@@ -2473,7 +2516,7 @@ def check_time_limit_reached(timing_data, config):
 
 def _reformulate_eq_con_scenario_uncertainty(
     model_data,
-    discrete_set,
+    discrete_uncertainty_scenarios,
     ss_eq_con,
     ss_eq_con_index,
     ss_var_id_to_dr_expr_map,
@@ -2494,8 +2537,8 @@ def _reformulate_eq_con_scenario_uncertainty(
     ----------
     model_data : ModelData
         Model data object, with mostly preprocessed working model.
-    discrete_set : UncertaintySet
-        Uncertainty set with scenario-based geometry.
+    discrete_scenarios : 2D numpy.ndarray
+        Rows are scenarios comprising the discrete uncertainty set.
     ss_eq_con : ConstraintData
         Second-stage equality constraint to be reformulated.
         Expected to be a member of
@@ -2524,8 +2567,7 @@ def _reformulate_eq_con_scenario_uncertainty(
         else working_model.first_stage.dr_independent_equality_cons
     )
 
-    scenarios_enum = enumerate(discrete_set.scenarios)
-    for sc_idx, scenario in scenarios_enum:
+    for sc_idx, scenario in enumerate(discrete_uncertainty_scenarios):
         indexed_con_to_update[f"scenario_{sc_idx}_{ss_eq_con_index}"] = (
             replace_expressions(
                 expr=con_expr_after_dr_substitution,
@@ -2819,12 +2861,14 @@ def reformulate_state_var_independent_eq_cons(model_data):
             uncertain_params_in_con or second_stage_vars_in_con
         )
         if coefficient_matching_applicable:
-            if config.uncertainty_set.geometry.name == "DISCRETE_SCENARIOS":
+            if config.uncertainty_set.is_scenario_based:
                 _reformulate_eq_con_scenario_uncertainty(
                     model_data=model_data,
                     ss_eq_con=con,
                     ss_eq_con_index=con_idx,
-                    discrete_set=config.uncertainty_set,
+                    discrete_uncertainty_scenarios=(
+                        model_data.discrete_uncertainty_scenarios
+                    ),
                     ss_var_id_to_dr_expr_map=ss_var_id_to_dr_expr_map,
                     all_dr_vars_set=all_dr_vars_set,
                 )
