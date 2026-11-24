@@ -125,6 +125,7 @@ class TestBoxSet(unittest.TestCase):
             new_bounds, bset.bounds, err_msg="BoxSet bounds not as expected"
         )
 
+        self.assertFalse(bset.is_scenario_based)
         with self.assertRaises(NotImplementedError):
             _ = bset.scenarios
 
@@ -536,6 +537,10 @@ class TestBudgetSet(unittest.TestCase):
         buset.origin = [1, 0, -1.5]
         np.testing.assert_allclose([1, 0, -1.5], buset.origin)
 
+        self.assertFalse(buset.is_scenario_based)
+        with self.assertRaises(NotImplementedError):
+            _ = buset.scenarios
+
     def test_error_on_budget_set_dim_change(self):
         """
         BudgetSet dimension is considered immutable.
@@ -887,6 +892,10 @@ class TestFactorModelSet(unittest.TestCase):
         exc_str = r"beta.*not a finite numeric value"
         with self.assertRaisesRegex(ValueError, exc_str):
             fset.beta = float("inf")
+
+        self.assertFalse(fset.is_scenario_based)
+        with self.assertRaises(NotImplementedError):
+            _ = fset.scenarios
 
     def test_error_on_factor_model_set_dim_change(self):
         """
@@ -1351,6 +1360,7 @@ class TestIntersectionSet(unittest.TestCase):
         exc_str = r"Uncertainty set.*not reducible.*scenarios"
         with self.assertRaisesRegex(ValueError, exc_str):
             iset.scenarios
+        self.assertFalse(iset.is_scenario_based)
 
         # confirm that the old constructor interface still works
         with LoggingIntercept(level=logging.WARNING) as LOG_KW:
@@ -1920,6 +1930,7 @@ class TestIntersectionSet(unittest.TestCase):
         )
 
         # test behavior resembles that of discrete set
+        self.assertTrue(iset.is_scenario_based)
         self.assertIs(iset.geometry, Geometry.DISCRETE_SCENARIOS)
         np.testing.assert_allclose(iset.scenarios, [[1.5, 1.5], [2, 1.5]])
 
@@ -1994,6 +2005,10 @@ class TestCardinalitySet(unittest.TestCase):
         exc_str = r"gamma.*not a finite numeric value"
         with self.assertRaisesRegex(ValueError, exc_str):
             cset.gamma = float("inf")
+
+        self.assertFalse(cset.is_scenario_based)
+        with self.assertRaises(NotImplementedError):
+            _ = cset.scenarios
 
     def test_cardinality_constructor_args_order(self):
         """
@@ -2345,6 +2360,7 @@ class TestDiscreteScenarioSet(unittest.TestCase):
 
         # check defined attributes/methods inherited from base class
         self.assertIs(dset.geometry, Geometry.DISCRETE_SCENARIOS)
+        self.assertTrue(dset.is_scenario_based)
         self.assertEqual(dset.type, "discrete")
         self.assertEqual(dset.dim, 3)
         self.assertEqual(dset.compute_auxiliary_uncertain_param_vals([0] * 3).size, 0)
@@ -2566,6 +2582,10 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
             aset.half_lengths,
             err_msg=("AxisAlignedEllipsoidalSet half lengths update not as expected"),
         )
+
+        self.assertFalse(aset.is_scenario_based)
+        with self.assertRaises(NotImplementedError):
+            _ = aset.scenarios
 
     def test_error_on_axis_aligned_dim_change(self):
         """
@@ -2831,6 +2851,10 @@ class TestEllipsoidalSet(unittest.TestCase):
         exc_str = r"scale.*not a finite numeric value"
         with self.assertRaisesRegex(ValueError, exc_str):
             eset.scale = float("inf")
+
+        self.assertFalse(eset.is_scenario_based)
+        with self.assertRaises(NotImplementedError):
+            _ = eset.scenarios
 
     def test_normal_construction_and_update_gaussian_conf_lvl(self):
         """
@@ -3235,6 +3259,10 @@ class TestPolyhedralSet(unittest.TestCase):
         # check updates work
         np.testing.assert_allclose([[1, 0, 1], [1, 1, 1.5]], pset.coefficients_mat)
         np.testing.assert_allclose([3, 4], pset.rhs_vec)
+
+        self.assertFalse(pset.is_scenario_based)
+        with self.assertRaises(NotImplementedError):
+            _ = pset.scenarios
 
     def test_error_on_polyhedral_set_dim_change(self):
         """

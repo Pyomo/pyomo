@@ -1081,6 +1081,14 @@ class UncertaintySet(metaclass=abc.ABCMeta):
         return [_values_close(lb, ub) for lb, ub in param_bounds]
 
     @property
+    def is_scenario_based(self):
+        """
+        bool : Return True if the uncertainty set is
+        scenario-based (discrete), False otherwise.
+        """
+        return self.geometry == Geometry.DISCRETE_SCENARIOS
+
+    @property
     def scenarios(self):
         """
         list[tuple[numbers.Real, ...]] : If the uncertainty
