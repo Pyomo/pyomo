@@ -478,7 +478,7 @@ class TestBoxSet(unittest.TestCase):
         )
 
         # test the tolerances
-        box_set.bounds = [(1, 2), (2, 2 - 2e-4), (3, 4)]
+        box_set.bounds = [(1, 2), (2 - 2e-4, 2), (3, 4)]
         self.assertEqual(
             box_set._is_coordinate_fixed(config=Bunch()), [False, True, False]
         )
