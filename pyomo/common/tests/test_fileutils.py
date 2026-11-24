@@ -16,6 +16,7 @@ import stat
 import sys
 import tempfile
 import subprocess
+import re
 
 from io import StringIO
 
@@ -29,14 +30,20 @@ from pyomo.common.fileutils import (
     find_file,
     find_library,
     find_executable,
+    PathData,
     PathManager,
+    _PathSingletonMeta,
     _system,
     _path,
     _exeExt,
     _libExt,
+    Executable,
     ExecutableData,
     import_file,
     to_legal_filename,
+    register_executable,
+    registered_executable,
+    unregister_executable,
 )
 from pyomo.common.download import FileDownloader
 
@@ -144,7 +151,14 @@ class TestFileUtils(unittest.TestCase):
     def test_path(self):
         orig_path = os.environ.get('PATH', None)
         if orig_path:
-            self.assertEqual(os.pathsep.join(_path()), os.environ['PATH'])
+            # Weirdly, there are test platforms that have PATH
+            # environments wit consecutive delimiters (i.e.,
+            # "path1::path2:...").  _path() will remove them, so we need
+            # to update the orig_path, too:
+            self.assertEqual(
+                os.pathsep.join(_path()),
+                re.sub(os.pathsep + "+", os.pathsep, os.environ['PATH']),
+            )
         os.environ.pop('PATH', None)
         self.assertEqual(os.pathsep.join(_path()), os.defpath)
         # NOTE: PATH restored by tearDown()
@@ -289,12 +303,12 @@ class TestFileUtils(unittest.TestCase):
         open(os.path.join(config_bindir, f_in_configbin), 'w').close()
 
         self._check_file(
-            find_library(f_in_cwd_ldlib_path),
+            find_library(f_in_cwd_ldlib_path, cwd=True),
             os.path.join(self.tmpdir, f_in_cwd_ldlib_path),
         )
         self._check_file(
             os.path.join(ldlibdir, f_in_cwd_ldlib_path),
-            find_library(f_in_cwd_ldlib_path, cwd=False),
+            find_library(f_in_cwd_ldlib_path),
         )
         self._check_file(
             os.path.join(ldlibdir, f_in_ldlib_extension) + libExt,
@@ -374,18 +388,20 @@ class TestFileUtils(unittest.TestCase):
         self._make_exec(os.path.join(config_bindir, f_in_configbin))
 
         found = find_executable(f_in_cwd_notexe)
+        self.assertIsNone(found)
+        found = find_executable(f_in_cwd_notexe, cwd=True)
         if _system() in ('windows', 'cygwin'):
             self._check_file(found, os.path.join(self.tmpdir, f_in_cwd_notexe))
         else:
             self.assertIsNone(found)
 
         self._check_file(
-            find_executable(f_in_cwd_ldlib_path),
+            find_executable(f_in_cwd_ldlib_path, cwd=True),
             os.path.join(self.tmpdir, f_in_cwd_ldlib_path),
         )
         self._check_file(
             os.path.join(pathdir, f_in_cwd_ldlib_path),
-            find_executable(f_in_cwd_ldlib_path, cwd=False),
+            find_executable(f_in_cwd_ldlib_path),
         )
         self._check_file(
             find_executable(f_in_path_extension),
@@ -411,7 +427,7 @@ class TestFileUtils(unittest.TestCase):
         self.assertIsNone(find_executable(f_in_configbin, pathlist=pathdir))
 
     def test_PathManager(self):
-        Executable = PathManager(find_executable, ExecutableData)
+        PM = PathManager(find_executable, ExecutableData)
         self.tmpdir = os.path.abspath(tempfile.mkdtemp())
 
         envvar.PYOMO_CONFIG_DIR = self.tmpdir
@@ -431,71 +447,91 @@ class TestFileUtils(unittest.TestCase):
         self._make_exec(os.path.join(config_bindir, f_in_cfg))
 
         # Test availability
-        self.assertTrue(Executable(f_in_path).available())
-        if not Executable(f_in_path):
-            self.fail("Expected casting Executable(f_in_path) to bool=True")
+        self.assertTrue(PM(f_in_path).available())
+        if not PM(f_in_path):
+            self.fail("Expected casting PM(f_in_path) to bool=True")
 
         # Test getting the path to the executable
-        self._check_file(Executable(f_in_path).path(), os.path.join(pathdir, f_in_path))
-        self._check_file("%s" % Executable(f_in_path), os.path.join(pathdir, f_in_path))
-        self._check_file(
-            Executable(f_in_path).executable, os.path.join(pathdir, f_in_path)
-        )
+        self._check_file(PM(f_in_path).path(), os.path.join(pathdir, f_in_path))
+        self._check_file("%s" % PM(f_in_path), os.path.join(pathdir, f_in_path))
+        self._check_file(PM(f_in_path).executable, os.path.join(pathdir, f_in_path))
 
         # Test the above for a nonexistent file
-        self.assertFalse(Executable(f_in_tmp).available())
-        if Executable(f_in_tmp):
-            self.fail("Expected casting Executable(f_in_tmp) to bool=False")
-        self.assertIsNone(Executable(f_in_tmp).path())
-        self.assertEqual("%s" % Executable(f_in_tmp), "")
-        self.assertIsNone(Executable(f_in_tmp).executable)
+        self.assertFalse(PM(f_in_tmp).available())
+        if PM(f_in_tmp):
+            self.fail("Expected casting PM(f_in_tmp) to bool=False")
+        self.assertIsNone(PM(f_in_tmp).path())
+        self.assertEqual("%s" % PM(f_in_tmp), "")
+        self.assertIsNone(PM(f_in_tmp).executable)
 
         # If we override the pathlist, then we will not find the CONFIGDIR
-        Executable.pathlist = []
-        self.assertFalse(Executable(f_in_cfg).available())
-        Executable.pathlist.append(config_bindir)
+        PM._pathlist = []
+        self.assertFalse(PM(f_in_cfg).available())
+        PM._pathlist.append(config_bindir)
         # and adding it won't change things (status is cached)
-        self.assertFalse(Executable(f_in_cfg).available())
+        self.assertFalse(PM(f_in_cfg).available())
         # until we tell the manager to rehash the executables
-        Executable.rehash()
-        self.assertTrue(Executable(f_in_cfg).available())
-        self.assertEqual(
-            Executable(f_in_cfg).path(), os.path.join(config_bindir, f_in_cfg)
-        )
+        PM.rehash()
+        self.assertTrue(PM(f_in_cfg).available())
+        self.assertEqual(PM(f_in_cfg).path(), os.path.join(config_bindir, f_in_cfg))
         # Note that if we clear the pathlist, then the current value of
         # CONFIGDIR will be honored
-        Executable.pathlist = None
-        Executable.rehash()
-        self.assertTrue(Executable(f_in_cfg).available())
-        self.assertEqual(
-            Executable(f_in_cfg).path(), os.path.join(config_bindir, f_in_cfg)
-        )
+        PM._pathlist = None
+        PM.rehash()
+        self.assertTrue(PM(f_in_cfg).available())
+        self.assertEqual(PM(f_in_cfg).path(), os.path.join(config_bindir, f_in_cfg))
 
         # Another file that doesn't exist
         f_in_path2 = 'f_in_path2'
         f_loc = os.path.join(pathdir, f_in_path2)
-        self.assertFalse(Executable(f_in_path2).available())
+        self.assertFalse(PM(f_in_path2).available())
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.common', logging.WARNING):
-            Executable(f_in_path2).executable = f_loc
+            PM(f_in_path2).executable = f_loc
             self.assertIn(
                 "explicitly setting the path for '%s' to an "
                 "invalid object or nonexistent location ('%s')" % (f_in_path2, f_loc),
                 output.getvalue(),
             )
-        self.assertFalse(Executable(f_in_path2).available())
+        self.assertFalse(PM(f_in_path2).available())
         self._make_exec(os.path.join(pathdir, f_in_path2))
-        self.assertFalse(Executable(f_in_path2).available())
-        Executable(f_in_path2).rehash()
-        self.assertTrue(Executable(f_in_path2).available())
+        self.assertFalse(PM(f_in_path2).available())
+        PM(f_in_path2).rehash()
+        self.assertTrue(PM(f_in_path2).available())
 
         # And disabling it will "remove" it
-        Executable(f_in_path2).disable()
-        self.assertFalse(Executable(f_in_path2).available())
-        self.assertIsNone(Executable(f_in_path2).path())
-        Executable(f_in_path2).rehash()
-        self.assertTrue(Executable(f_in_path2).available())
-        self.assertEqual(Executable(f_in_path2).path(), f_loc)
+        PM(f_in_path2).disable()
+        self.assertFalse(PM(f_in_path2).available())
+        self.assertIsNone(PM(f_in_path2).path())
+        PM(f_in_path2).rehash()
+        self.assertTrue(PM(f_in_path2).available())
+        self.assertEqual(PM(f_in_path2).path(), f_loc)
+
+    def test_PM_search_override(self):
+        ans = []
+
+        def _finder(libname, cwd, include_PATH, pathlist):
+            ans.clear()
+            ans.extend((libname, cwd, include_PATH, pathlist))
+
+        class Tester(metaclass=_PathSingletonMeta):
+
+            _manager = PathManager(_finder, PathData)
+
+            def __new__(cls, path):
+                return cls._manager(path)
+
+        self.assertFalse(Tester('test1'))
+        self.assertEqual(ans, ['test1', False, True, None])
+        self.assertEqual(
+            ans, ['test1', Tester.cwd, Tester.include_PATH, Tester.pathlist]
+        )
+
+        Tester.cwd = True
+        Tester.include_PATH = False
+        Tester.pathlist = ['aaa', 'bbb']
+        self.assertFalse(Tester('test2'))
+        self.assertEqual(ans, ['test2', True, False, ['aaa', 'bbb']])
 
     def test_to_legal_filename(self):
         self.assertEqual('abc', to_legal_filename('abc'))
@@ -528,3 +564,49 @@ class TestFileUtils(unittest.TestCase):
         self.assertEqual(
             'a_b_c', to_legal_filename(''.join(['a', chr(0), 'b', chr(7), 'c']), True)
         )
+
+    def test_deprecations(self):
+        self.tmpdir = os.path.abspath(tempfile.mkdtemp())
+        envvar.PYOMO_CONFIG_DIR = self.tmpdir
+
+        fname = 'test_exe'
+
+        with LoggingIntercept() as LOG:
+            self.assertIsNone(register_executable(fname))
+        self.assertIn(
+            "pyomo.common.register_executable(name) has been deprecated",
+            LOG.getvalue().replace('\n', ' '),
+        )
+        with LoggingIntercept() as LOG:
+            self.assertIsNone(registered_executable(fname))
+        self.assertIn(
+            "pyomo.common.registered_executable(name) has been deprecated",
+            LOG.getvalue().replace('\n', ' '),
+        )
+
+        self._make_exec(os.path.join(self.tmpdir, fname))
+
+        with LoggingIntercept() as LOG:
+            self.assertIsNone(register_executable(fname))
+        self.assertIn(
+            "pyomo.common.register_executable(name) has been deprecated",
+            LOG.getvalue().replace('\n', ' '),
+        )
+        with LoggingIntercept() as LOG:
+            pth = Executable(fname).get_path()
+        self.assertIn("get_path() is deprecated", LOG.getvalue())
+
+        with LoggingIntercept() as LOG:
+            self.assertEqual(registered_executable(fname), pth)
+        self.assertIn(
+            "pyomo.common.registered_executable(name) has been deprecated",
+            LOG.getvalue().replace('\n', ' '),
+        )
+
+        with LoggingIntercept() as LOG:
+            self.assertIsNone(unregister_executable(fname))
+        self.assertIn(
+            "pyomo.common.unregister_executable(name) has been deprecated",
+            LOG.getvalue().replace('\n', ' '),
+        )
+        self.assertIsNone(Executable(fname).path())

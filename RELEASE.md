@@ -1,21 +1,35 @@
-We are pleased to announce the release of Pyomo 6.10.1.
+We are pleased to announce the release of Pyomo 6.11.0.
 
 Pyomo is a collection of Python software packages that supports a
 diverse set of optimization capabilities for formulating and analyzing
 optimization models.
 
-The following are highlights of the 6.10 release series:
+The following are highlights of the 6.11 release series:
 
-- Removed support for Python 3.9
-- Removed hard dependency on `ply`
-- New Model Observer package
-- New `initialization` module for nonconvex, nonlinear problems
+- Add support for Python 3.15
+- Updates to support new solver versions including XPRESS 10.0,
+  Gurobi 14.0, and HiGHS 1.16
+- Significant improvement in expression system performance including
+  lower memory usage and faster model construction
 - New solver interfaces:
-  - `gams_v2` solver, writer, and solution loader
-  - `cuopt` direct solver interface
-  - `scip` direct and persistent solver interfaces
+  - `xpress` direct and persistent v2 solver interfaces
   - v2: Ongoing solver interface refactor
 - ...and of course numerous minor bug fixes and performance enhancements
+
+This release introduces two backwards incompatible changes in default
+behaviors in order to make Pyomo more conservative and secure:
+
+- **The current working directory is no longer searched by default when
+  locating solver executables and shared libraries.** If you rely on a
+  solver or library located in your working directory, either specify
+  it with an explicit relative or absolute path (e.g.,
+  `SolverFactory('ipopt', executable='./ipopt')` or
+  `ExternalFunction(library='./mylib.so', ...)`), or add the directory
+  to your `PATH` / `LD_LIBRARY_PATH`.
+- **`ComponentUID` no longer uses `pickle` automatically.** Models that
+  use custom (non-builtin) types in component indices and then build
+  `ComponentUID`s will need to either re-enable pickle support or
+  register a serializer/deserializer for their type.
 
 A full list of updates and changes is available in the
 [`CHANGELOG.md`](https://github.com/Pyomo/pyomo/blob/main/CHANGELOG.md).

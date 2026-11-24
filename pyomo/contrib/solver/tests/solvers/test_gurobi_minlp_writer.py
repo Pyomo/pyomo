@@ -46,15 +46,17 @@ from pyomo.contrib.solver.solvers.gurobi.gurobi_direct_minlp import (
     GurobiDirectMINLP,
     GurobiMINLPVisitor,
     GRB,
-    gurobipy,
-    gurobipy_available,
 )
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.results import TerminationCondition
-from pyomo.contrib.solver.tests.solvers.test_gurobi_minlp_walker import CommonTest
-
-if gurobipy_available and not GurobiDirectMINLP().available():
-    gurobipy_available = False
+from pyomo.contrib.solver.tests.solvers.test_gurobi_minlp_walker import (
+    CommonTest,
+    gurobipy,
+    gurobipy_14_available,
+    old_gurobipy_available,
+    Gurobi14TestMixIn,
+    OldGurobiTestMixIn,
+)
 
 
 def make_model():
@@ -76,9 +78,7 @@ def make_model():
     return m
 
 
-@unittest.skipUnless(gurobipy_available, "Gurobipy 12 is not available")
-@unittest.pytest.mark.solver("gurobi_direct_minlp")
-class TestGurobiMINLPWriter(CommonTest):
+class GurobiMINLPWriterTests:
     def test_small_model(self):
         grb_model = gurobipy.Model()
         visitor = GurobiMINLPVisitor(grb_model, symbolic_solver_labels=True)
@@ -88,6 +88,7 @@ class TestGurobiMINLPWriter(CommonTest):
         grb_model, var_map, obj, grb_cons, pyo_cons = WriterFactory(
             'gurobi_minlp'
         ).write(m, symbolic_solver_labels=True)
+        reverse_var_map = {grb_var: pyo_var for pyo_var, grb_var in var_map.items()}
 
         self.assertEqual(len(var_map), 7)
         x1 = var_map[m.x1]
@@ -106,7 +107,7 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(len(lin_constrs), 2)
         quad_constrs = grb_model.getQConstrs()
         self.assertEqual(len(quad_constrs), 1)
-        nonlinear_constrs = grb_model.getGenConstrs()
+        nonlinear_constrs = self.get_nonlinear_constraints(grb_model)
         self.assertEqual(len(nonlinear_constrs), 2)
 
         ## linear constraints
@@ -148,47 +149,23 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(c2_expr.getCoeff(0), 1)
 
         ## general nonlinear constraints
-        obj_cons = nonlinear_constrs[0]
-        res_var, opcode, data, parent = grb_model.getGenConstrNLAdv(obj_cons)
-        self.assertEqual(len(opcode), 2)  # two nodes in the expression tree
-        self.assertEqual(opcode[0], GRB.OPCODE_LOG)
-        # log has no data
-        self.assertEqual(parent[0], -1)  # it's the root
-        self.assertEqual(opcode[1], GRB.OPCODE_VARIABLE)
-        self.assertIs(data[1], x1)
-        self.assertEqual(parent[1], 0)
 
-        # we can check that res_var is the objective
+        # auxiliary variable is the objective
         self.assertEqual(grb_model.ModelSense, 1)  # minimizing
         obj = grb_model.getObjective()
         self.assertEqual(obj.size(), 1)
         self.assertEqual(obj.getCoeff(0), 1)
-        self.assertIs(obj.getVar(0), res_var)
+        obj_aux = obj.getVar(0)
+
+        obj_cons = nonlinear_constrs[0]
+        self.check_grb_expr_tree(
+            grb_model, obj_cons, obj_aux, log(m.x1), reverse_var_map, m
+        )
 
         c1 = nonlinear_constrs[1]
-        res_var, opcode, data, parent = grb_model.getGenConstrNLAdv(c1)
-        # This is where we link into the linear inequality constraint
-        self.assertIs(res_var, aux_var)
-        # test the tree for the expression x3  + (- (2 ** x2))
-        self.assertEqual(len(opcode), 6)
-        self.assertEqual(opcode[0], GRB.OPCODE_PLUS)
-        # plus has no data
-        self.assertEqual(parent[0], -1)  # root
-        self.assertEqual(opcode[1], GRB.OPCODE_VARIABLE)
-        self.assertIs(data[1], x3)
-        self.assertEqual(parent[1], 0)
-        self.assertEqual(opcode[2], GRB.OPCODE_UMINUS)  # negation
-        # negation has no data
-        self.assertEqual(parent[2], 0)
-        self.assertEqual(opcode[3], GRB.OPCODE_POW)
-        # pow has no data
-        self.assertEqual(parent[3], 2)
-        self.assertEqual(opcode[4], GRB.OPCODE_CONSTANT)
-        self.assertEqual(data[4], 2)
-        self.assertEqual(parent[4], 3)
-        self.assertEqual(opcode[5], GRB.OPCODE_VARIABLE)
-        self.assertIs(data[5], x2)
-        self.assertEqual(parent[5], 3)
+        self.check_grb_expr_tree(
+            grb_model, c1, aux_var, m.x3 + (-(2.0**m.x2)), reverse_var_map, m
+        )
 
     def test_write_NPV_negation_in_RHS(self):
         m = ConcreteModel()
@@ -212,7 +189,7 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(len(lin_constrs), 1)
         quad_constrs = grb_model.getQConstrs()
         self.assertEqual(len(quad_constrs), 0)
-        nonlinear_constrs = grb_model.getGenConstrs()
+        nonlinear_constrs = self.get_nonlinear_constraints(grb_model)
         self.assertEqual(len(nonlinear_constrs), 0)
 
         # constraint
@@ -258,7 +235,7 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(len(lin_constrs), 1)
         quad_constrs = grb_model.getQConstrs()
         self.assertEqual(len(quad_constrs), 0)
-        nonlinear_constrs = grb_model.getGenConstrs()
+        nonlinear_constrs = self.get_nonlinear_constraints(grb_model)
         self.assertEqual(len(nonlinear_constrs), 0)
 
         # constraint
@@ -303,7 +280,7 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(len(lin_constrs), 0)
         quad_constrs = grb_model.getQConstrs()
         self.assertEqual(len(quad_constrs), 2)
-        nonlinear_constrs = grb_model.getGenConstrs()
+        nonlinear_constrs = self.get_nonlinear_constraints(grb_model)
         self.assertEqual(len(nonlinear_constrs), 0)
 
         # constraint 1
@@ -367,7 +344,7 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(len(lin_constrs), 2)
         quad_constrs = grb_model.getQConstrs()
         self.assertEqual(len(quad_constrs), 0)
-        nonlinear_constrs = grb_model.getGenConstrs()
+        nonlinear_constrs = self.get_nonlinear_constraints(grb_model)
         self.assertEqual(len(nonlinear_constrs), 2)
 
         c1 = lin_constrs[0]
@@ -390,28 +367,24 @@ class TestGurobiMINLPWriter(CommonTest):
 
         # log(x)**2 + y
         g1 = nonlinear_constrs[0]
-        aux_var, opcode, data, parent = grb_model.getGenConstrNLAdv(g1)
-        self.assertIs(aux_var, aux1)
-        assertExpressionsEqual(
-            self,
-            grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map),
-            log(m.x) ** 2 + m.y,
+        self.check_grb_expr_tree(
+            grb_model, g1, aux1, log(m.x) ** 2 + m.y, reverse_var_map, m
         )
 
         # log(x)**2 + y + y**3 + log(x + y)
         g2 = nonlinear_constrs[1]
-        aux_var, opcode, data, parent = grb_model.getGenConstrNLAdv(g2)
-        self.assertIs(aux_var, aux2)
-        pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
-        assertExpressionsEqual(
-            self,
-            pyo_expr,
+        self.check_grb_expr_tree(
+            grb_model,
+            g2,
+            aux2,
             SumExpression(
                 (
                     SumExpression((SumExpression((log(m.x) ** 2, m.y)), m.y**3.0)),
                     log(SumExpression((m.x, m.y))),
                 )
             ),
+            reverse_var_map,
+            m,
         )
 
         # objective
@@ -469,7 +442,7 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(len(lin_constrs), 1)
         quad_constrs = grb_model.getQConstrs()
         self.assertEqual(len(quad_constrs), 0)
-        nonlinear_constrs = grb_model.getGenConstrs()
+        nonlinear_constrs = self.get_nonlinear_constraints(grb_model)
         self.assertEqual(len(nonlinear_constrs), 1)
 
         # this is the auxiliary variable equality
@@ -484,18 +457,16 @@ class TestGurobiMINLPWriter(CommonTest):
 
         # this is the nonlinear equality
         c = nonlinear_constrs[0]
-        res_var, opcode, data, parent = grb_model.getGenConstrNLAdv(c)
-        # This is where we link into the linear inequality constraint
-        self.assertIs(res_var, aux_var)
         reverse_var_map = {grb_v: pyo_v for pyo_v, grb_v in var_map.items()}
-        pyo_expr = grb_nl_to_pyo_expr(opcode, data, parent, reverse_var_map)
-
-        assertExpressionsEqual(
-            self,
-            pyo_expr,
+        self.check_grb_expr_tree(
+            grb_model,
+            c,
+            aux_var,
             ProductExpression(
                 (ProductExpression((MonomialTermExpression((0.0, m.x1)), m.x2)), m.x3)
             ),
+            reverse_var_map,
+            m,
         )
 
         opt = SolverFactory('gurobi_direct_minlp')
@@ -575,3 +546,15 @@ class TestGurobiMINLPWriter(CommonTest):
             + "disj",
         ):
             results = SolverFactory('gurobi_direct_minlp').solve(m)
+
+
+@unittest.skipUnless(gurobipy_14_available, "Gurobipy >= 14 is not available")
+@unittest.pytest.mark.solver("gurobi_direct_minlp")
+class TestGurobi14MINLPWriter(GurobiMINLPWriterTests, CommonTest, Gurobi14TestMixIn):
+    pass
+
+
+@unittest.skipUnless(old_gurobipy_available, "Gurobipy >= 12 and < 14 is not available")
+@unittest.pytest.mark.solver("gurobi_direct_minlp")
+class TestOldGurobiMINLPWriter(GurobiMINLPWriterTests, CommonTest, OldGurobiTestMixIn):
+    pass

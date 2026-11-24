@@ -18,8 +18,8 @@
 #     .coin-or/projDesc.xml
 #
 major = 6
-minor = 10
-micro = 2
+minor = 12
+micro = 0
 # releaselevel = 'final'
 serial = 0
 

@@ -16,7 +16,7 @@ from pyomo.core.base import Constraint, Var, value, Objective
 from pyomo.opt import ProblemFormat, SolverFactory
 
 import pyomo.common
-from pyomo.common.dependencies import pathlib
+from pyomo.common.dependencies import ast, pathlib
 from pyomo.common.collections import Bunch
 from pyomo.common.tee import TeeStream
 
@@ -107,8 +107,11 @@ class _GAMSSolver:
         istr = istr.strip()
         if not istr:
             return ans
-        if istr[0] == "'" or istr[0] == '"':
-            istr = eval(istr)
+        if istr[0] in "'\"":
+            # Only unwrap if the entire string is a single quoted token
+            parts = shlex.split(istr)
+            if len(parts) == 1:
+                istr = parts[0]
         tokens = shlex.split(istr)
         for token in tokens:
             index = token.find('=')
@@ -117,8 +120,8 @@ class _GAMSSolver:
                     "Solver options must have the form option=value: '%s'" % istr
                 )
             try:
-                val = eval(token[(index + 1) :])
-            except:
+                val = ast.literal_eval(token[(index + 1) :])
+            except (ValueError, SyntaxError, TypeError):
                 val = token[(index + 1) :]
             ans[token[:index]] = val
         return ans
@@ -514,8 +517,16 @@ class GAMSDirect(_GAMSSolver):
             soln.status = SolutionStatus.feasible
         elif modelstat == 8:
             # 'Integer solution model found'
-            results.solver.termination_condition = TerminationCondition.optimal
-            soln.status = SolutionStatus.optimal
+            # It was reported in Issue 2452 that this logic overrides what
+            # was set in the solvestat check a few lines up.
+            # The solution is NOT optimal, nor is the termination_condition.
+            # So we add a bit of logic here to NOT override the existing
+            # termination_condition and instead set the status to feasible.
+            if results.solver.termination_condition is None:
+                results.solver.termination_condition = TerminationCondition.optimal
+                soln.status = SolutionStatus.optimal
+            else:
+                soln.status = SolutionStatus.feasible
         elif modelstat == 9:
             results.solver.termination_condition = (
                 TerminationCondition.intermediateNonInteger
@@ -1089,8 +1100,16 @@ class GAMSShell(_GAMSSolver):
             soln.status = SolutionStatus.feasible
         elif modelstat == 8:
             # 'Integer solution model found'
-            results.solver.termination_condition = TerminationCondition.optimal
-            soln.status = SolutionStatus.optimal
+            # It was reported in Issue 2452 that this logic overrides what
+            # was set in the solvestat check a few lines up.
+            # The solution is NOT optimal, nor is the termination_condition.
+            # So we add a bit of logic here to NOT override the existing
+            # termination_condition and instead set the status to feasible.
+            if results.solver.termination_condition is None:
+                results.solver.termination_condition = TerminationCondition.optimal
+                soln.status = SolutionStatus.optimal
+            else:
+                soln.status = SolutionStatus.feasible
         elif modelstat == 9:
             results.solver.termination_condition = (
                 TerminationCondition.intermediateNonInteger
