@@ -1626,7 +1626,7 @@ class RegressionTest(unittest.TestCase):
             msg="Returned termination condition is not return robust_optimal.",
         )
 
-    @unittest.skipUnless(baron_available, "BARON is not available.")
+    @unittest.skipUnless(baron_license_is_valid, "BARON is not available and licensed.")
     def test_quadratic_dr_fixing_rule_correct(self):
         m = ConcreteModel()
         m.q = Param(range(2), initialize=0, mutable=True)
