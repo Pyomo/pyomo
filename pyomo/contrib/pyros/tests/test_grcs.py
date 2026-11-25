@@ -1626,6 +1626,46 @@ class RegressionTest(unittest.TestCase):
             msg="Returned termination condition is not return robust_optimal.",
         )
 
+    @unittest.skipUnless(baron_license_is_valid, "BARON is not available and licensed.")
+    def test_quadratic_dr_fixing_rule_correct(self):
+        m = ConcreteModel()
+        m.q = Param(range(2), initialize=0, mutable=True)
+        # test consideration for effective uncertain parameters
+        m.qfix = Param(initialize=0, mutable=True)
+        m.z = Var()
+        m.obj = Objective(expr=m.z)
+        m.con1 = Constraint(expr=m.z <= sum(q**2 for q in m.q.values()))
+        m.con2 = Constraint(expr=m.z >= -sum((q + 2) ** 2 for q in m.q.values()) + 1)
+        m.con3 = Constraint(expr=m.z >= -sum((q - 2) ** 2 for q in m.q.values()) + 1)
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=[],
+            second_stage_variables=m.z,
+            uncertain_params=[m.q, m.qfix],
+            # define set to make only q effectively uncertain
+            uncertainty_set=BoxSet([[-2, 2]] * len(m.q) + [[0, 0]]),
+            local_solver="ipopt",
+            global_solver="baron",
+            decision_rule_order=2,
+            objective_focus="worst_case",
+            solve_master_globally=True,
+            bypass_local_separation=True,
+            robust_feasibility_tolerance=1e-4,
+            # to confirm the DR fixing rule is correct,
+            # just need to confirm robust infeasible termination
+            # does not occur before this many iterations.
+            # test is otherwise expensive
+            max_iter=5,
+        )
+        self.assertIn(
+            res.pyros_termination_condition,
+            {
+                pyrosTerminationCondition.max_iter,
+                pyrosTerminationCondition.robust_optimal,
+            },
+        )
+        self.assertLessEqual(res.iterations, 5)
+
     @unittest.skipUnless(scip_available, "Global NLP solver is not available.")
     def test_coefficient_matching_solve(self):
         # Write the deterministic Pyomo model
@@ -2137,6 +2177,96 @@ class RegressionTest(unittest.TestCase):
         )
         self.assertEqual(results2.iterations, 0)
         self.assertEqual(results2.final_objective_value, None)
+
+    @unittest.skipUnless(scip_available, "SCIP is not available.")
+    def test_coefficient_matching_measure_0_set(self):
+        ndim = 2
+        m = ConcreteModel()
+        m.q = Param(range(ndim), initialize=0, mutable=True)
+        m.x = Var(range(ndim), initialize=0, bounds=(-2, 2))
+        m.obj = Objective(expr=m.x[0])
+        m.certain_eq = Constraint(expr=sum(m.x.values()) == 0)
+        m.p = Param(initialize=0, mutable=True)
+        m.uncertain_eq = Constraint(
+            # this constraint is subject to coefficient matching,
+            # since there are no state variables and there are
+            # uncertain parameters.
+            expr=sum(m.q[idx] * m.x[idx] for idx in range(ndim))
+            == 0
+        )
+
+        with LoggingIntercept(level=logging.DEBUG) as LOG:
+            res = SolverFactory("pyros").solve(
+                model=m,
+                first_stage_variables=m.x,
+                second_stage_variables=[],
+                uncertain_params=m.q,
+                # this set is a line segment (1D), so it
+                # has no interior points.
+                # therefore, coefficient matching
+                # of the above equality constraint
+                # should not take place
+                uncertainty_set=PolyhedralSet(
+                    lhs_coefficients_mat=np.vstack(
+                        [
+                            np.hstack(
+                                [np.ones(ndim - 1)[:, np.newaxis], -np.eye(ndim - 1)]
+                            ),
+                            -np.hstack(
+                                [np.ones(ndim - 1)[:, np.newaxis], -np.eye(ndim - 1)]
+                            ),
+                            np.eye(ndim),
+                            -np.eye(ndim),
+                        ]
+                    ),
+                    rhs_vec=np.hstack(
+                        [
+                            np.zeros(ndim - 1),
+                            np.zeros(ndim - 1),
+                            np.ones(ndim),
+                            np.zeros(ndim),
+                        ]
+                    ),
+                ),
+                local_solver="scip",
+                global_solver="scip",
+            )
+        debug_msgs = LOG.getvalue()
+        self.assertRegex(
+            debug_msgs,
+            (
+                r".*Equality constraint.*eq_con.*state.*independent.*as a polynomial.*"
+                r".*but the specified uncertainty set does not meet conditions"
+            ),
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_feasible
+        )
+        # if coefficient matching occurred, the objective would have
+        # been equal to 0
+        self.assertEqual(res.final_objective_value, -2)
+        self.assertEqual(res.iterations, 1)
+        self.assertEqual(m.x[0].value, -2)
+        self.assertEqual(m.x[1].value, 2)
+
+        # run again, now with box set,
+        # to confirm coefficient matching causes x = 0
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=BoxSet([[0, 1]] * len(m.q)),
+            local_solver="scip",
+            global_solver="scip",
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_feasible
+        )
+        self.assertEqual(res.iterations, 1)
+        self.assertEqual(res.final_objective_value, 0)
+        self.assertEqual(m.x[0].value, 0)
+        self.assertEqual(m.x[1].value, 0)
 
     @unittest.skipUnless(ipopt_available, "IPOPT not available")
     def test_pyros_certain_params_ipopt_degrees_of_freedom(self):

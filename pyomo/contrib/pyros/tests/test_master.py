@@ -55,7 +55,9 @@ baron_license_is_valid = _baron.license_is_valid()
 logger = logging.getLogger(__name__)
 
 
-def build_simple_model_data(objective_focus="worst_case", decision_rule_order=1):
+def build_simple_model_data(
+    objective_focus="worst_case", decision_rule_order=1, uncertain_eq_con=False
+):
     """
     Test construction of master problem.
     """
@@ -65,7 +67,13 @@ def build_simple_model_data(objective_focus="worst_case", decision_rule_order=1)
     m.x2 = Var(bounds=[-1000, 1000], initialize=1)
     m.x3 = Var(bounds=[-1000, 1000], initialize=-3)
     m.con = Constraint(expr=exp(m.u - 1) - m.x1 - m.x2 * m.u - m.x3 * m.u**2 <= 0)
-    m.eq_con = Constraint(expr=m.x2 - 1 == 0)
+    if uncertain_eq_con:
+        # this will be coefficient matched if x2
+        # is not a state variable
+        m.eq_con = Constraint(expr=m.x2 - m.u == 0)
+    else:
+        # this makes x2 effectively first-stage
+        m.eq_con = Constraint(expr=m.x2 - 1 == 0)
 
     m.obj = Objective(expr=m.x1 + m.x2 / 2 + m.x3 / 3)
 
@@ -479,74 +487,129 @@ class TestHigherOrderDecisionRuleEfficiency(unittest.TestCase):
     Test efficiency for decision rules.
     """
 
-    def test_higher_order_decision_rule_efficiency(self):
+    def test_higher_order_decision_rule_efficiency_affine_dr(self):
+        """
+        Test higher-order decision rule efficiency.
+        """
+        model_data = build_simple_model_data(decision_rule_order=1)
+        master_model = construct_initial_master_problem(model_data)
+        master_data = Bunch(master_model=master_model, config=model_data.config)
+        decision_rule_vars = master_data.master_model.scenarios[
+            0, 0
+        ].first_stage.decision_rule_vars[0]
+
+        # only one scenario block, so enforce static DR
+        higher_order_decision_rule_efficiency(master_data)
+        self.assertFalse(decision_rule_vars[0].fixed)
+        self.assertTrue(decision_rule_vars[1].fixed)
+
+        add_scenario_block_to_master_problem(
+            master_data.master_model,
+            scenario_idx=[1, 0],
+            param_realization=[-0.4],
+            from_block=master_data.master_model.scenarios[0, 0],
+            clone_first_stage_components=False,
+        )
+        # more than one block, so allow affine DR
+        higher_order_decision_rule_efficiency(master_data)
+        self.assertFalse(decision_rule_vars[0].fixed)
+        self.assertFalse(decision_rule_vars[1].fixed)
+
+    def test_higher_order_decision_rule_efficiency_quad_dr(self):
         """
         Test higher-order decision rule efficiency.
         """
         model_data = build_simple_model_data(decision_rule_order=2)
         master_model = construct_initial_master_problem(model_data)
-        master_data = Bunch(
-            master_model=master_model, iteration=0, config=model_data.config
-        )
+        master_data = Bunch(master_model=master_model, config=model_data.config)
         decision_rule_vars = master_data.master_model.scenarios[
             0, 0
         ].first_stage.decision_rule_vars[0]
 
-        for iter_num in range(4):
-            master_data.iteration = iter_num
-            higher_order_decision_rule_efficiency(master_data)
-            self.assertFalse(
-                decision_rule_vars[0].fixed,
-                msg=(
-                    f"DR Var {decision_rule_vars[1].name!r} should not "
-                    f"be fixed by efficiency in iteration {iter_num}"
-                ),
-            )
-            if iter_num == 0:
-                self.assertTrue(
-                    decision_rule_vars[1].fixed,
-                    msg=(
-                        f"DR Var {decision_rule_vars[1].name!r} should "
-                        f"be fixed by efficiency in iteration {iter_num}"
-                    ),
-                )
-                self.assertTrue(
-                    decision_rule_vars[2].fixed,
-                    msg=(
-                        f"DR Var {decision_rule_vars[2].name!r} should "
-                        f"be fixed by efficiency in iteration {iter_num}"
-                    ),
-                )
-            elif iter_num <= len(master_data.config.uncertain_params):
-                self.assertFalse(
-                    decision_rule_vars[1].fixed,
-                    msg=(
-                        f"DR Var {decision_rule_vars[1].name!r} should not "
-                        f"be fixed by efficiency in iteration {iter_num}"
-                    ),
-                )
-                self.assertTrue(
-                    decision_rule_vars[2].fixed,
-                    msg=(
-                        f"DR Var {decision_rule_vars[2].name!r} should "
-                        f"be fixed by efficiency in iteration {iter_num}"
-                    ),
-                )
-            else:
-                self.assertFalse(
-                    decision_rule_vars[1].fixed,
-                    msg=(
-                        f"DR Var {decision_rule_vars[1].name!r} should not "
-                        f"be fixed by efficiency in iteration {iter_num}"
-                    ),
-                )
-                self.assertFalse(
-                    decision_rule_vars[2].fixed,
-                    msg=(
-                        f"DR Var {decision_rule_vars[2].name!r} should not "
-                        f"be fixed by efficiency in iteration {iter_num}"
-                    ),
-                )
+        # only one scenario block, so enforce static DR
+        higher_order_decision_rule_efficiency(master_data)
+        self.assertFalse(decision_rule_vars[0].fixed)
+        self.assertTrue(decision_rule_vars[1].fixed)
+        self.assertTrue(decision_rule_vars[2].fixed)
+
+        add_scenario_block_to_master_problem(
+            master_data.master_model,
+            scenario_idx=[1, 0],
+            param_realization=[-0.4],
+            from_block=master_data.master_model.scenarios[0, 0],
+            clone_first_stage_components=False,
+        )
+        # two scenario blocks: no rank loss if affine DR used
+        higher_order_decision_rule_efficiency(master_data)
+        self.assertFalse(decision_rule_vars[0].fixed)
+        self.assertFalse(decision_rule_vars[1].fixed)
+        self.assertTrue(decision_rule_vars[2].fixed)
+
+        master_data.master_model.scenarios[1, 0].uncertain_params[0].set_value(0.4)
+        # only one unique scenario: no rank loss if affine DR used
+        higher_order_decision_rule_efficiency(master_data)
+        self.assertFalse(decision_rule_vars[0].fixed)
+        self.assertFalse(decision_rule_vars[1].fixed)
+        self.assertTrue(decision_rule_vars[2].fixed)
+
+        master_data.master_model.scenarios[1, 0].uncertain_params[0].set_value(-0.4)
+
+        add_scenario_block_to_master_problem(
+            master_data.master_model,
+            scenario_idx=[2, 0],
+            param_realization=[0.0],
+            from_block=master_data.master_model.scenarios[0, 0],
+            clone_first_stage_components=False,
+        )
+        # with this combo of parameter realizations,
+        # there is rank reduction if affine DR used,
+        # so use quadratic DR
+        higher_order_decision_rule_efficiency(master_data)
+        self.assertFalse(decision_rule_vars[0].fixed)
+        self.assertFalse(decision_rule_vars[1].fixed)
+        self.assertFalse(decision_rule_vars[2].fixed)
+
+        master_data.master_model.scenarios[2, 0].uncertain_params[0].set_value(0.4)
+        # with this new combo of parameter realizations,
+        # there is no rank reduction if affine DR used,
+        # so use affine DR
+        higher_order_decision_rule_efficiency(master_data)
+        self.assertFalse(decision_rule_vars[0].fixed)
+        self.assertFalse(decision_rule_vars[1].fixed)
+        self.assertTrue(decision_rule_vars[2].fixed)
+
+    def test_higher_order_decision_rule_efficiency_d_eq_cons(self):
+        """
+        Test higher-order decision rule efficiency
+        when there are d-dependent equality constraints
+        """
+        model_data = build_simple_model_data(
+            decision_rule_order=2, uncertain_eq_con=True
+        )
+        master_model = construct_initial_master_problem(model_data)
+        master_data = Bunch(master_model=master_model, config=model_data.config)
+        decision_rule_vars = master_data.master_model.scenarios[
+            0, 0
+        ].first_stage.decision_rule_vars[0]
+        # since there are d-dependent constraints
+        # due to coefficient matching,
+        # all DR variables are unfixed
+        higher_order_decision_rule_efficiency(master_data)
+        self.assertFalse(decision_rule_vars[0].fixed)
+        self.assertFalse(decision_rule_vars[1].fixed)
+        self.assertFalse(decision_rule_vars[2].fixed)
+
+        add_scenario_block_to_master_problem(
+            master_data.master_model,
+            scenario_idx=[1, 0],
+            param_realization=[-0.4],
+            from_block=master_data.master_model.scenarios[0, 0],
+            clone_first_stage_components=False,
+        )
+        higher_order_decision_rule_efficiency(master_data)
+        self.assertFalse(decision_rule_vars[0].fixed)
+        self.assertFalse(decision_rule_vars[1].fixed)
+        self.assertFalse(decision_rule_vars[2].fixed)
 
 
 class TestSolveMaster(unittest.TestCase):

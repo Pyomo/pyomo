@@ -35,6 +35,7 @@ from pyomo.contrib.pyros.util import (
     PARAM_IS_CERTAIN_ABS_TOL,
     PARAM_IS_CERTAIN_REL_TOL,
     POINT_IN_UNCERTAINTY_SET_TOL,
+    UNCERTAINTY_SET_MEASURE_TOL,
     copy_docstring,
     standardize_component_data,
 )
@@ -43,6 +44,7 @@ from pyomo.core.base import (
     ConcreteModel,
     ConstraintList,
     NonNegativeReals,
+    Objective,
     Var,
     VarData,
     maximize,
@@ -499,8 +501,9 @@ class UncertaintySet(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def dim(self):
         """
-        int : Dimension of the uncertainty set (number of uncertain
-        parameters in a corresponding optimization model of interest).
+        int : Ambient dimension of the uncertainty set, i.e.,
+        the number of coordinates used to specify a point in the
+        uncertainty set's ambient real space.
         """
         ...
 
@@ -1091,6 +1094,34 @@ class UncertaintySet(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
+    def _has_positive_measure(self, config, fixed_coord_vals=None):
+        """
+        Return True if a specified axis-aligned slice/section
+        of the uncertainty set is known to have a positive
+        Lebesgue measure (hypervolume) in the space of unfixed
+        coordinates, False otherwise.
+
+        A sufficient condition is that the slice of the set
+        has an interior point in the unfixed coordinate space.
+        This is usually the condition that is checked, in practice.
+
+        Parameters
+        ----------
+        config : ConfigDict
+            PyROS solver options.
+        fixed_coord_vals : dict, optional
+            Maps the positional indices of fixed coordinates
+            to the values to which to fix the coordinates.
+
+        Returns
+        -------
+        bool
+        """
+        if fixed_coord_vals and set(fixed_coord_vals.keys()) == set(range(self.dim)):
+            return self.point_in_set([fixed_coord_vals[idx] for idx in range(self.dim)])
+        else:
+            return False
+
 
 class UncertaintySetList(MutableSequence):
     """
@@ -1279,7 +1310,7 @@ class UncertaintySetList(MutableSequence):
 
     @property
     def dim(self):
-        """Dimension of all uncertainty sets contained in self."""
+        """Ambient dimension of all uncertainty sets contained in self."""
         return self._dim
 
 
@@ -1385,7 +1416,7 @@ class BoxSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension `N` of the box set.
+        int : Ambient dimension `N` of the box set.
         """
         return len(self.bounds)
 
@@ -1464,6 +1495,36 @@ class BoxSet(UncertaintySet):
         for lb, ub in bounds_arr:
             if lb > ub:
                 raise ValueError(f"Lower bound {lb} exceeds upper bound {ub}")
+
+    @copy_docstring(UncertaintySet._has_positive_measure)
+    def _has_positive_measure(self, config, fixed_coord_vals=None):
+        if fixed_coord_vals is None:
+            fixed_coord_vals = {}
+        fixed_coords = list(fixed_coord_vals.keys())
+        unfixed_coords = list(
+            filter(lambda idx: idx not in set(fixed_coords), range(self.dim))
+        )
+        lower_bounds, upper_bounds = self.bounds[:, 0], self.bounds[:, 1]
+        return (
+            # slice is nonempty: fixed coordinate lower bounds
+            # are satisfied
+            np.all(
+                lower_bounds[fixed_coords] - POINT_IN_UNCERTAINTY_SET_TOL
+                <= np.array(list(fixed_coord_vals.values()))
+            )
+            # slice is nonempty: fixed coordinate upper bounds
+            # are satisfied
+            and np.all(
+                np.array(list(fixed_coord_vals.values()))
+                <= upper_bounds[fixed_coords] + POINT_IN_UNCERTAINTY_SET_TOL
+            )
+            # all unfixed coordinates can deviate strictly from bounds.
+            # use tolerance conservatively
+            and np.all(
+                upper_bounds[unfixed_coords] - lower_bounds[unfixed_coords]
+                >= UNCERTAINTY_SET_MEASURE_TOL
+            )
+        )
 
 
 class CardinalitySet(UncertaintySet):
@@ -1716,7 +1777,7 @@ class CardinalitySet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension `N` of the cardinality-constrained set.
+        int : Ambient dimension `N` of the cardinality-constrained set.
         """
         return len(self.origin)
 
@@ -1908,6 +1969,52 @@ class CardinalitySet(UncertaintySet):
                 f"(provided value {self.gamma})"
             )
 
+    @copy_docstring(UncertaintySet._has_positive_measure)
+    def _has_positive_measure(self, config, fixed_coord_vals=None):
+        if fixed_coord_vals is None:
+            fixed_coord_vals = {}
+        fixed_coords = list(fixed_coord_vals.keys())
+        unfixed_coords = list(
+            filter(lambda idx: idx not in set(fixed_coords), range(self.dim))
+        )
+        aux_vals = self.compute_auxiliary_uncertain_param_vals(
+            point=[
+                (
+                    self.origin[idx]
+                    if idx in set(unfixed_coords)
+                    else fixed_coord_vals[idx]
+                )
+                for idx in range(self.dim)
+            ]
+        )
+        aux_pos_vals, aux_neg_vals = aux_vals[: self.dim], aux_vals[self.dim :]
+        max_unfixed_coord_devs = np.max(
+            [
+                self.positive_deviation[unfixed_coords],
+                self.negative_deviation[unfixed_coords],
+            ],
+            axis=0,
+        )
+        return (
+            # auxiliary values for the fixed coordinates are feasible
+            # (otherwise, the slice is empty)
+            np.all(aux_pos_vals[fixed_coords] >= -POINT_IN_UNCERTAINTY_SET_TOL)
+            and np.all(aux_pos_vals[fixed_coords] <= 1 + POINT_IN_UNCERTAINTY_SET_TOL)
+            and np.all(aux_neg_vals[fixed_coords] >= -POINT_IN_UNCERTAINTY_SET_TOL)
+            and np.all(aux_neg_vals[fixed_coords] <= 1 + POINT_IN_UNCERTAINTY_SET_TOL)
+            # nonzero deviations allowed for individual unfixed coordinates.
+            # use tolerance conservatively
+            and np.all(max_unfixed_coord_devs >= UNCERTAINTY_SET_MEASURE_TOL)
+            # nonzero deviations of unfixed coordinates
+            # are not disallowed due to effective gamma.
+            # use tolerance conservatively
+            and (
+                self.gamma
+                - (aux_pos_vals[fixed_coords] + aux_neg_vals[fixed_coords]).sum()
+                >= UNCERTAINTY_SET_MEASURE_TOL
+            )
+        )
+
 
 class PolyhedralSet(UncertaintySet):
     r"""
@@ -2055,7 +2162,7 @@ class PolyhedralSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension `N` of the polyhedral set.
+        int : Ambient dimension `N` of the polyhedral set.
         """
         return len(self.coefficients_mat[0])
 
@@ -2145,6 +2252,40 @@ class PolyhedralSet(UncertaintySet):
 
         # boundedness check
         super().validate(config)
+
+    @copy_docstring(UncertaintySet._has_positive_measure)
+    def _has_positive_measure(self, config, fixed_coord_vals=None):
+        # in case all coordinates are fixed
+        if fixed_coord_vals and set(fixed_coord_vals.keys()) == set(range(self.dim)):
+            return self.point_in_set([fixed_coord_vals[idx] for idx in range(self.dim)])
+
+        if fixed_coord_vals is None:
+            fixed_coord_vals = {}
+
+        # set up and solve optimization problem to check for interior point
+        model = ConcreteModel()
+        model.param_vars = Var(range(self.dim))
+        model.slack_var = Var(domain=NonNegativeReals)
+        model.slack_obj = Objective(expr=model.slack_var, sense=maximize)
+        uq = self.set_as_constraint(block=model, uncertain_params=model.param_vars)
+        for con in uq.uncertainty_cons:
+            if con.lower is not None:
+                raise ValueError(
+                    f"{type(self)} constraint {con.name} has unexpected "
+                    "lower bound expression."
+                )
+            con.set_value((None, con.body + model.slack_var, con.upper))
+        for fixed_idx, fixed_val in fixed_coord_vals.items():
+            model.param_vars[fixed_idx].fix(fixed_val)
+        res = config.global_solver.solve(model, load_solutions=False)
+        if check_optimal_termination(res):
+            model.solutions.load_from(res)
+            # sufficient for presence of interior point.
+            # use tolerance conservatively
+            return model.slack_var.value >= UNCERTAINTY_SET_MEASURE_TOL
+        else:
+            # since solver does not let us know if there is interior point
+            return False
 
 
 class BudgetSet(UncertaintySet):
@@ -2388,7 +2529,7 @@ class BudgetSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension `N` of the budget set.
+        int : Ambient dimension `N` of the budget set.
         """
         return self.budget_membership_mat.shape[1]
 
@@ -2506,6 +2647,42 @@ class BudgetSet(UncertaintySet):
                     f"Entry {entry} of attribute 'budget_rhs_vec' is "
                     "negative. Ensure all entries are nonnegative"
                 )
+
+    @copy_docstring(UncertaintySet._has_positive_measure)
+    def _has_positive_measure(self, config, fixed_coord_vals=None):
+        if fixed_coord_vals is None:
+            fixed_coord_vals = {}
+        fixed_coords = list(fixed_coord_vals.keys())
+        fixed_coord_vals_arr = np.array(list(fixed_coord_vals.values()))
+        unfixed_coords = list(
+            filter(lambda idx: idx not in set(fixed_coords), range(self.dim))
+        )
+        is_unfixed_budget_mat_row_zeros = np.all(
+            self.budget_membership_mat[:, unfixed_coords] == 0, axis=1
+        )
+        effective_rhs_vec = self.budget_rhs_vec - self.budget_membership_mat[
+            :, fixed_coords
+        ] @ (fixed_coord_vals_arr - self.origin[fixed_coords])
+        return (
+            # slice is nonempty: fixed coordinates are not below origin
+            np.all(
+                fixed_coord_vals_arr
+                >= self.origin[fixed_coords] - POINT_IN_UNCERTAINTY_SET_TOL
+            )
+            # slice is nonempty: budget constraints involving only
+            # fixed coordinates are satisfiable
+            and np.all(
+                effective_rhs_vec[is_unfixed_budget_mat_row_zeros]
+                >= -POINT_IN_UNCERTAINTY_SET_TOL
+            )
+            # budgets allow unfixed coordinates to have
+            # nonzero deviations from set's origin.
+            # use tolerance conservatively
+            and np.all(
+                effective_rhs_vec[~is_unfixed_budget_mat_row_zeros]
+                >= UNCERTAINTY_SET_MEASURE_TOL
+            )
+        )
 
 
 class FactorModelSet(UncertaintySet):
@@ -2727,7 +2904,7 @@ class FactorModelSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension `N` of the factor model set.
+        int : Ambient dimension `N` of the factor model set.
         """
         return len(self.origin)
 
@@ -2925,6 +3102,86 @@ class FactorModelSet(UncertaintySet):
                 f"and 1 inclusive (provided value {beta})"
             )
 
+    @copy_docstring(UncertaintySet._has_positive_measure)
+    def _has_positive_measure(self, config, fixed_coord_vals=None):
+        if not fixed_coord_vals:
+            # no coordinates fixed
+            return (
+                # use tolerance conservatively
+                self.beta * self.number_of_factors >= UNCERTAINTY_SET_MEASURE_TOL
+                and (
+                    # full row rank
+                    np.linalg.matrix_rank(self.psi_mat)
+                    == self.psi_mat.shape[0]
+                    >= self.psi_mat.shape[1]
+                )
+            )
+        elif set(fixed_coord_vals.keys()) == set(range(self.dim)):
+            # all coordinates fixed. check 0D slice is nonempty
+            return self.point_in_set([fixed_coord_vals[idx] for idx in range(self.dim)])
+        elif (
+            # for positive Lebesgue measure, it is necessary for
+            # the rows of psi_mat that correspond to unfixed coordinates
+            # to surjectively map the nullspace of the other rows
+            # of psi_mat. check ranks to determine this
+            np.linalg.matrix_rank(self.psi_mat)
+            != np.linalg.matrix_rank(self.psi_mat[list(fixed_coord_vals)])
+            + (self.dim - len(fixed_coord_vals))
+        ):
+            return False
+        else:
+            # the nullspace rank check passed.
+            # now solve a slack maximization model to
+            # check that the latent factor space has an interior point
+            # even after fixing of some of the factor set's coordinates
+            m = ConcreteModel()
+            m.param_vars = Var(range(self.dim))
+            m.aux_vars = Var(range(self.number_of_factors))
+            m.slack_var = Var(domain=NonNegativeReals)
+            m.slack_obj = Objective(expr=m.slack_var, sense=maximize)
+
+            @m.Constraint(list(fixed_coord_vals.keys()))
+            def factor_eq_con(b, fixed_idx):
+                return (
+                    sum(
+                        psi_val * aux_var
+                        for psi_val, aux_var in zip(
+                            self.psi_mat[fixed_idx], b.aux_vars.values()
+                        )
+                    )
+                    == fixed_coord_vals[fixed_idx] - self.origin[fixed_idx]
+                )
+
+            @m.Constraint(range(self.number_of_factors))
+            def factor_slack_con_lb(b, fac_idx):
+                return -1 + b.slack_var <= b.aux_vars[fac_idx]
+
+            @m.Constraint(range(self.number_of_factors))
+            def factor_slack_con_ub(b, fac_idx):
+                return b.aux_vars[fac_idx] <= 1 - b.slack_var
+
+            @m.Constraint()
+            def factor_sum_slack_con_lb(b):
+                return -self.beta * self.number_of_factors + b.slack_var <= sum(
+                    b.aux_vars.values()
+                )
+
+            @m.Constraint()
+            def factor_sum_slack_con_ub(b):
+                return (
+                    sum(b.aux_vars.values())
+                    <= self.beta * self.number_of_factors - b.slack_var
+                )
+
+            res = config.global_solver.solve(m, load_solutions=False)
+            if not check_optimal_termination(res):
+                # can't confirm sufficiency
+                return False
+            else:
+                m.solutions.load_from(res)
+                # use tolerance conservatively
+                return m.slack_var.value >= UNCERTAINTY_SET_MEASURE_TOL
+
 
 class AxisAlignedEllipsoidalSet(UncertaintySet):
     r"""
@@ -3058,7 +3315,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension `N` of the axis-aligned ellipsoidal set.
+        int : Ambient dimension `N` of the axis-aligned ellipsoidal set.
         """
         return len(self.center)
 
@@ -3159,6 +3416,56 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
                     f"Entry {half_len} of 'half_lengths' "
                     "is negative. All half-lengths must be nonnegative"
                 )
+
+    @copy_docstring(UncertaintySet._has_positive_measure)
+    def _has_positive_measure(self, config, fixed_coord_vals=None):
+        if fixed_coord_vals is None:
+            fixed_coord_vals = {}
+        fixed_coords = list(fixed_coord_vals.keys())
+        fixed_coord_vals_arr = np.array(list(fixed_coord_vals.values()))
+        resolved_coords = np.full(self.dim, np.nan)
+        resolved_coords[fixed_coords] = fixed_coord_vals_arr
+        is_fixed_zero_half_len = np.logical_and(
+            self.half_lengths == 0, np.isin(np.arange(self.dim), fixed_coords)
+        )
+        is_fixed_nonzero_half_len = np.logical_and(
+            self.half_lengths > 0, np.isin(np.arange(self.dim), fixed_coords)
+        )
+        unfixed_coords = list(
+            filter(lambda idx: idx not in set(fixed_coords), range(self.dim))
+        )
+        return (
+            # slice is nonempty:
+            # fixed coordinates for which half-lengths are zero
+            # are equal to the central values (LB)
+            np.all(
+                self.center[is_fixed_zero_half_len] - POINT_IN_UNCERTAINTY_SET_TOL
+                <= resolved_coords[is_fixed_zero_half_len]
+            )
+            # slice is nonempty:
+            # fixed coordinates for which half-lengths are zero
+            # are equal to the central values (UB)
+            and np.all(
+                resolved_coords[is_fixed_zero_half_len]
+                <= self.center[is_fixed_zero_half_len] + POINT_IN_UNCERTAINTY_SET_TOL
+            )
+            # half-lengths don't prevent nonzero deviations of
+            # unfixed coordinates from center.
+            # use tolerance conservatively
+            and np.all(self.half_lengths[unfixed_coords] >= UNCERTAINTY_SET_MEASURE_TOL)
+            # fixed coordinates don't prevent nonzero deviations of
+            # unfixed coordinates from center.
+            # use tolerance conservatively
+            and (
+                (
+                    resolved_coords[is_fixed_nonzero_half_len]
+                    - self.center[is_fixed_nonzero_half_len]
+                )
+                ** 2
+                / self.half_lengths[is_fixed_nonzero_half_len] ** 2
+            ).sum()
+            <= 1 - UNCERTAINTY_SET_MEASURE_TOL
+        )
 
 
 class EllipsoidalSet(UncertaintySet):
@@ -3406,7 +3713,7 @@ class EllipsoidalSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension `N` of the ellipsoidal set.
+        int : Ambient dimension `N` of the ellipsoidal set.
         """
         return len(self.center)
 
@@ -3583,6 +3890,48 @@ class EllipsoidalSet(UncertaintySet):
             else:
                 raise
 
+    @copy_docstring(UncertaintySet._has_positive_measure)
+    def _has_positive_measure(self, config, fixed_coord_vals=None):
+        # in case all coordinates fixed
+        if fixed_coord_vals and set(fixed_coord_vals.keys()) == set(range(self.dim)):
+            return self.point_in_set([fixed_coord_vals[idx] for idx in range(self.dim)])
+
+        if not fixed_coord_vals:
+            # trivial case
+            return self.scale >= UNCERTAINTY_SET_MEASURE_TOL
+
+        fixed_coords = list(fixed_coord_vals.keys())
+        fixed_coord_vals_arr = np.array(list(fixed_coord_vals.values()))
+        unfixed_coords = list(
+            filter(lambda idx: idx not in set(fixed_coords), range(self.dim))
+        )
+
+        inv_shape_cho_factor, lower = sp.linalg.cho_factor(
+            self.shape_matrix, lower=True
+        )
+        inv_shape_mat = sp.linalg.cho_solve(
+            (inv_shape_cho_factor, lower), np.eye(self.dim)
+        )
+
+        mat_unf_unf = inv_shape_mat[np.ix_(unfixed_coords, unfixed_coords)]
+        mat_unf_fix = inv_shape_mat[np.ix_(unfixed_coords, fixed_coords)]
+        mat_fix_unf = inv_shape_mat[np.ix_(fixed_coords, unfixed_coords)]
+        mat_fix_fix = inv_shape_mat[np.ix_(fixed_coords, fixed_coords)]
+
+        fixed_coord_devs = fixed_coord_vals_arr - self.center[fixed_coords]
+
+        inv_mat_uu_cho_factor, lower_uu = sp.linalg.cho_factor(mat_unf_unf, lower=True)
+        inv_mat_unf_unf = sp.linalg.cho_solve(
+            (inv_mat_uu_cho_factor, lower_uu), np.eye(mat_unf_unf.shape[0])
+        )
+        return (
+            fixed_coord_devs
+            @ (mat_fix_fix - mat_fix_unf @ inv_mat_unf_unf @ mat_unf_fix)
+            @ fixed_coord_devs
+            # apply tolerance conservatively
+            <= self.scale - UNCERTAINTY_SET_MEASURE_TOL
+        )
+
 
 class DiscreteScenarioSet(UncertaintySet):
     r"""
@@ -3670,7 +4019,7 @@ class DiscreteScenarioSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension `N` of the discrete scenario set.
+        int : Ambient dimension `N` of the discrete scenario set.
         """
         return len(self.scenarios[0])
 
@@ -3891,7 +4240,7 @@ class IntersectionSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the intersection set.
+        int : Ambient dimension of the intersection set.
         """
         return self.all_sets[0].dim
 
@@ -4205,7 +4554,7 @@ class CartesianProductSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the cartesian product set.
+        int : Ambient dimension of the Cartesian product set.
         """
         return sum(uset.dim for uset in self._all_sets)
 
@@ -4429,3 +4778,24 @@ class CartesianProductSet(UncertaintySet):
             finally:
                 # ensure the config's state ultimately remains unchanged
                 config.nominal_uncertain_param_vals = full_nom_param_vals
+
+    @copy_docstring(UncertaintySet._has_positive_measure)
+    def _has_positive_measure(self, config, fixed_coord_vals=None):
+        if fixed_coord_vals is None:
+            fixed_coord_vals = {}
+        fixed_coord_idxs_arr = np.array(list(fixed_coord_vals.keys()))
+        for start_dim, stop_dim, uset in self._iterate_over_all_sets():
+            if not uset._has_positive_measure(
+                config=config,
+                fixed_coord_vals={
+                    idx - start_dim: fixed_coord_vals[idx]
+                    for idx in fixed_coord_idxs_arr[
+                        np.logical_and(
+                            fixed_coord_idxs_arr >= start_dim,
+                            fixed_coord_idxs_arr < stop_dim,
+                        )
+                    ]
+                },
+            ):
+                return False
+        return True

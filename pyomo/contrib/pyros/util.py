@@ -70,6 +70,7 @@ COEFF_MATCH_ABS_TOL = 0
 ABS_CON_CHECK_FEAS_TOL = 1e-5
 PRETRIANGULAR_VAR_COEFF_TOL = 1e-6
 POINT_IN_UNCERTAINTY_SET_TOL = 1e-8
+UNCERTAINTY_SET_MEASURE_TOL = 1e-8
 DR_POLISHING_PARAM_PRODUCT_ZERO_TOL = 1e-10
 
 TIC_TOC_SOLVE_TIME_ATTR = "pyros_tic_toc_time"
@@ -2622,7 +2623,8 @@ def _reformulate_eq_con_continuous_uncertainty(
     visitor = setup_quadratic_expression_visitor(wrt=originally_unfixed_vars)
     expr_repn = visitor.walk_expression(con_expr_after_all_substitutions)
 
-    if expr_repn.nonlinear is not None:
+    effective_unc_set_is_matchable = None
+    if not (expr_is_matchable := expr_repn.nonlinear is None):
         config.progress_logger.debug(
             f"Equality constraint {ss_eq_con.name!r} "
             "is state-variable independent, but cannot be written "
@@ -2634,7 +2636,29 @@ def _reformulate_eq_con_continuous_uncertainty(
             "of this constraint."
             "Recasting to two inequality constraints."
         )
+    elif not (
+        effective_unc_set_is_matchable := config.uncertainty_set._has_positive_measure(
+            config=config,
+            fixed_coord_vals={
+                idx: config.nominal_uncertain_param_vals[idx]
+                for idx in filter(
+                    lambda cidx: cidx
+                    not in set(working_model.effective_uncertain_dimensions),
+                    range(config.uncertainty_set.dim),
+                )
+            },
+        )
+    ):
+        config.progress_logger.info(
+            f"Equality constraint {ss_eq_con.name!r} "
+            "is state-variable independent and can be written "
+            "as a polynomial in the uncertain parameters, "
+            "but the specified uncertainty set does not meet conditions for "
+            "exactness of a coefficient matching reformulation. "
+            "Recasting to two inequality constraints."
+        )
 
+    if not (expr_is_matchable and effective_unc_set_is_matchable):
         # keeping this constraint as an equality is not appropriate,
         # as it effectively constrains the uncertain parameters
         # in the separation problems, since the effective DOF
