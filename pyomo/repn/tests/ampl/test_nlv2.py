@@ -1225,6 +1225,38 @@ G0 4    #OBJ
             )
         )
 
+    def test_sos_orphaned_variable_raises(self):
+        # Regression test for issue #3719: a variable that appears only
+        # in an SOS constraint (never in the objective or any other
+        # constraint) must produce a clear ValueError, not a KeyError.
+        m = pyo.ConcreteModel()
+        m.lam = pyo.Var(range(4), domain=pyo.Binary)
+        m.const_sos = pyo.SOSConstraint(sos=1, var=m.lam, weights=list(range(4)))
+        OUT = io.StringIO()
+        with self.assertRaisesRegex(
+            ValueError,
+            r"SOSConstraint 'const_sos' contains variable 'lam\[0\]' "
+            r"that does not appear in the model objective or any other "
+            r"constraint",
+        ):
+            nl_writer.NLWriter().write(m, OUT)
+
+    def test_sos_linked_variable_writes(self):
+        # Regression test for issue #3719: when SOS variables also appear
+        # in a constraint (or objective) the NL writer must succeed.
+        m = pyo.ConcreteModel()
+        m.lam = pyo.Var(range(4), domain=pyo.Binary)
+        m.const_sos = pyo.SOSConstraint(sos=1, var=m.lam, weights=list(range(4)))
+        # Link every lam variable into a real constraint so it enters var_map.
+        m.link = pyo.Constraint(expr=sum(m.lam[i] for i in range(4)) == 1)
+        m.obj = pyo.Objective(expr=m.lam[0])
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nl_writer.NLWriter().write(m, OUT)
+        self.assertEqual(LOG.getvalue(), "")
+        # The output must be non-empty and contain the SOS suffix block.
+        self.assertIn("S0", OUT.getvalue())
+
     @unittest.skipUnless(numpy_available, "test requires numpy")
     def test_nonfloat_constants(self):
         import pyomo.environ as pyo
