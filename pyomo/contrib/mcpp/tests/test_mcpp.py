@@ -34,6 +34,7 @@ from pyomo.core import (
     log,
 )
 from pyomo.core.expr import identify_variables
+from pyomo.core.expr.numeric_expr import SumExpression
 
 
 @unittest.skipIf(not mcpp_available(), "MC++ is not available")
@@ -119,6 +120,47 @@ class TestMcCormick(unittest.TestCase):
         mc_expr = mc(-2)
         self.assertEqual(mc_expr.lower(), -2)
         self.assertEqual(mc_expr.upper(), -2)
+
+    def test_named_expression_root_matches_expr(self):
+        # Regression test for #4085: a named Expression at the root used
+        # to raise AssertionError (or, under python -O, release the root
+        # result early and report bounds from reused memory).
+        m = ConcreteModel()
+        m.x = Var(bounds=(1, 2), initialize=1.5)
+        m.y = Var(bounds=(0, 3), initialize=1)
+        m.e = Expression(expr=m.x * m.y)
+        expected = mc(m.e.expr)
+        actual = mc(m.e)
+        # Allocate more MC++ objects so a prematurely released root
+        # result would be overwritten before we read it.
+        others = [mc(m.x + i) for i in range(10)]
+        self.assertEqual(actual.lower(), expected.lower())
+        self.assertEqual(actual.upper(), expected.upper())
+        self.assertEqual(actual.convex(), expected.convex())
+        self.assertEqual(actual.concave(), expected.concave())
+        self.assertEqual((actual.lower(), actual.upper()), (0, 6))
+
+    def test_named_expression(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(1, 2), initialize=1.5)
+        m.y = Var(bounds=(0, 3), initialize=1)
+        m.e = Expression(expr=m.x * m.y)
+        m.nested = Expression(expr=m.e)
+        m.ex = Expression(expr=m.x)
+        for name, expr, ref in (
+            ("nested", m.nested, m.e.expr),
+            ("multiply by one", 1 * m.e, m.e.expr),
+            ("add zero", m.e + 0, m.e.expr),
+            ("single-term sum", SumExpression([m.e.expr]), m.e.expr),
+            ("named var", m.ex, m.x),
+        ):
+            with self.subTest(name=name):
+                expected = mc(ref)
+                actual = mc(expr)
+                self.assertEqual(actual.lower(), expected.lower())
+                self.assertEqual(actual.upper(), expected.upper())
+                self.assertEqual(actual.concave(), expected.concave())
+                self.assertEqual(actual.convex(), expected.convex())
 
     def test_linear_expression(self):
         m = ConcreteModel()
