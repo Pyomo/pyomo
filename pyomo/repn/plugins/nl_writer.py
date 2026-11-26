@@ -838,16 +838,23 @@ class _NLWriter_impl:
 
         # We need to check the SOS constraints before finalizing the
         # variable order because the SOS constraint *could* reference a
-        # variable not yet seen in the model.
+        # variable not yet seen in the model.  If a variable appears only
+        # in an SOS constraint and nowhere else (no objective, no other
+        # constraint) the NL format cannot represent it correctly, so we
+        # raise a descriptive error rather than producing a corrupt file.
         for block in component_map[SOSConstraint]:
             for sos in block.component_data_objects(
                 SOSConstraint, active=True, descend_into=False, sort=sorter
             ):
                 for v in sos.variables:
                     if id(v) not in var_map:
-                        _id = id(v)
-                        var_map[_id] = v
-                        con_vars_linear.add(_id)
+                        raise ValueError(
+                            f"SOSConstraint '{sos.name}' contains variable "
+                            f"'{v.name}' that does not appear in the model "
+                            f"objective or any other constraint. The NL "
+                            f"writer requires all SOS variables to be "
+                            f"referenced elsewhere in the model."
+                        )
 
         obj_vars = obj_vars_linear | obj_vars_nonlinear
         con_vars = con_vars_linear | con_vars_nonlinear
