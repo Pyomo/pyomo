@@ -374,9 +374,11 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         return self.mcpp.newVar(lb, var_val, ub, self.num_vars, var_idx)
 
     def finalizeResult(self, node_result):
-        # Note, the node_result should NOT be in self.refs
-        #    self.refs.remove(node_result)
-        assert node_result not in self.refs
+        # Some nodes (named Expressions, single-term sums) return their
+        # child's result unchanged, so the root result may already be in
+        # self.refs.  McCormick takes ownership of the root result and
+        # releases it in __del__, so it must not be released here.
+        self.refs.discard(node_result)
         for r in self.refs:
             self.mcpp.release(r)
         return node_result
