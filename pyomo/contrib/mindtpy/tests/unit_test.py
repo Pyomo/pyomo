@@ -17,6 +17,7 @@ from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_OA_config
 from pyomo.contrib.mindtpy.cut_generation import add_affine_cuts
+from pyomo.contrib.mindtpy.global_outer_approximation import MindtPy_GOA_Solver
 from pyomo.contrib.mindtpy.tests.minlp5_simple import Minlp5Simple
 from pyomo.contrib.mindtpy.util import add_var_bound, set_var_valid_value
 from pyomo.environ import (
@@ -110,6 +111,19 @@ class UnitTestMindtPy(unittest.TestCase):
         self.assertEqual(
             solver_object.working_model.y.upper, solver_object.config.integer_var_bound
         )
+
+    def test_goa_does_not_force_mcpp_objective_bounds(self):
+        # Regression test for #4086: MC++ objective bounds allocate O(n^2)
+        # memory, so GOA leaves use_mcpp at its default (FBBT bounds).
+        solver = MindtPy_GOA_Solver()
+        solver.config = solver.CONFIG()
+        solver.check_config()
+        self.assertFalse(solver.config.use_mcpp)
+
+        solver = MindtPy_GOA_Solver()
+        solver.config = solver.CONFIG({'use_mcpp': True})
+        solver.check_config()
+        self.assertTrue(solver.config.use_mcpp)
 
     @unittest.skipIf(not mcpp_available(), "MC++ is not available")
     def test_goa_affine_cut_uses_convex_slope_for_upper_cut(self):

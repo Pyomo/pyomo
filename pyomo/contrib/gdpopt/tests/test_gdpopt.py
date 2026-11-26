@@ -11,6 +11,7 @@
 
 from contextlib import redirect_stdout
 from io import StringIO
+from unittest.mock import patch
 import logging
 from pyomo.common.timing import default_timer
 from math import fabs
@@ -33,8 +34,12 @@ from pyomo.contrib.gdpopt.create_oa_subproblems import (
 )
 import pyomo.contrib.gdpopt.tests.common_tests as ct
 from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
-from pyomo.contrib.gdpopt.util import is_feasible, time_code
-from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
+from pyomo.contrib.gdpopt.util import (
+    is_feasible,
+    move_nonlinear_objective_to_constraints,
+    time_code,
+)
+from pyomo.contrib.mcpp.pyomo_mcpp import MCPP_visitor, mcpp_available
 from pyomo.contrib.gdpopt.solve_discrete_problem import (
     solve_MILP_discrete_problem,
     distinguish_mip_infeasible_or_unbounded,
@@ -101,6 +106,29 @@ class TestGDPoptUnit(unittest.TestCase):
         config.bound_tolerance = 1e-6
         config.logger = logging.getLogger(__name__)
         return config
+
+    def test_nonlinear_objective_bound_uses_interval_bounds(self):
+        # Regression test for #4086: bounding the epigraph variable with
+        # MC++ allocates O(n^2) memory, so GDPopt uses FBBT instead.
+        for sense, lb, ub in ((minimize, 0, None), (maximize, None, 6)):
+            with self.subTest(sense=sense):
+                m = ConcreteModel()
+                m.x = Var(bounds=(1, 2))
+                m.y = Var(bounds=(0, 3))
+                m.obj = Objective(expr=m.x * m.y, sense=sense)
+                m.util = Block()
+                m.util.algebraic_variable_list = []
+                with patch.object(
+                    MCPP_visitor,
+                    '__init__',
+                    side_effect=AssertionError('MC++ should not be used'),
+                ):
+                    move_nonlinear_objective_to_constraints(
+                        m.util, logging.getLogger(__name__)
+                    )
+                self.assertEqual(m.util.objective_value.lb, lb)
+                self.assertEqual(m.util.objective_value.ub, ub)
+                self.assertFalse(m.obj.active)
 
     def test_loa_crossed_bounds_are_not_reported_as_global_optimal(self):
         solver = GDP_LOA_Solver()
