@@ -42,7 +42,6 @@ class MindtPy_GOA_Solver(_MindtPyAlgorithm):
         """Validate and normalize GOA-specific configuration values."""
         config = self.config
         config.add_slack = False
-        config.use_mcpp = True
         config.equality_relaxation = False
         config.use_fbbt = True
         # add_no_good_cuts is True by default in GOA

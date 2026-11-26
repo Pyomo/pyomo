@@ -17,7 +17,6 @@ from pyomo.common import timing
 from pyomo.common.collections import ComponentSet
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
-from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.core import (
     Block,
     Constraint,
@@ -120,17 +119,13 @@ def move_nonlinear_objective_to_constraints(util_block, logger):
     logger.info("Objective is nonlinear. Moving it to constraint set.")
 
     util_block.objective_value = Var(domain=Reals, initialize=0)
-    if mcpp_available():
-        mc_obj = McCormick(discrete_obj.expr)
-        util_block.objective_value.setub(mc_obj.upper())
-        util_block.objective_value.setlb(mc_obj.lower())
+    # Use interval bounds (FBBT).  MC++ gives the same interval bounds but
+    # allocates O(n^2) memory for n variables (see #4086).
+    lb, ub = compute_bounds_on_expr(discrete_obj.expr)
+    if discrete_obj.sense == minimize:
+        util_block.objective_value.setlb(lb)
     else:
-        # Use Pyomo's contrib.fbbt package
-        lb, ub = compute_bounds_on_expr(discrete_obj.expr)
-        if discrete_obj.sense == minimize:
-            util_block.objective_value.setlb(lb)
-        else:
-            util_block.objective_value.setub(ub)
+        util_block.objective_value.setub(ub)
 
     if discrete_obj.sense == minimize:
         util_block.objective_constr = Constraint(

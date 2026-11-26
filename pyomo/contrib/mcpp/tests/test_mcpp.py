@@ -16,7 +16,12 @@ from io import StringIO
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.dependencies.matplotlib import pyplot as plt
-from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, mcpp_available, MCPP_Error
+from pyomo.contrib.mcpp.pyomo_mcpp import (
+    McCormick as mc,
+    MCPP_visitor,
+    mcpp_available,
+    MCPP_Error,
+)
 from pyomo.core import (
     ConcreteModel,
     Expression,
@@ -119,6 +124,46 @@ class TestMcCormick(unittest.TestCase):
         mc_expr = mc(-2)
         self.assertEqual(mc_expr.lower(), -2)
         self.assertEqual(mc_expr.upper(), -2)
+
+    def test_sum_releases_partial_sums(self):
+        # Regression test for #4086: the partial sums built for a
+        # SumExpression were never released.
+        m = ConcreteModel()
+        m.x = Var(range(5), bounds=(1, 2), initialize=1.5)
+        e = sum(m.x[i] * m.x[(i + 1) % 5] for i in range(5))
+        self.assertEqual(e.nargs(), 5)
+
+        visitor = MCPP_visitor(e)
+        lib = visitor.mcpp
+        live = set()
+
+        class TrackAllocations:
+            def __getattr__(self, name):
+                fcn = getattr(lib, name)
+                if name == 'release':
+
+                    def release(ptr):
+                        live.discard(ptr)
+                        return fcn(ptr)
+
+                    return release
+                if name in ('add', 'multiply', 'newConstant', 'negation'):
+
+                    def allocate(*args):
+                        ptr = fcn(*args)
+                        live.add(ptr)
+                        return ptr
+
+                    return allocate
+                return fcn
+
+        visitor.mcpp = TrackAllocations()
+        ans = visitor.walk_expression()
+        try:
+            # Only the returned result should still be allocated
+            self.assertEqual(live, {ans})
+        finally:
+            lib.release(ans)
 
     def test_linear_expression(self):
         m = ConcreteModel()

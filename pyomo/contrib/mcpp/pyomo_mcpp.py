@@ -252,8 +252,13 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             ans = self.mcpp.multiply(data[0], data[1])
         elif isinstance(node, SumExpression):
             ans = data[0]
-            for arg in data[1:]:
-                ans = self.mcpp.add(ans, arg)
+            for i, arg in enumerate(data[1:]):
+                partial = ans
+                ans = self.mcpp.add(partial, arg)
+                # Each add returns a new object.  Release the previous
+                # partial sum (but not data[0], which is in self.refs).
+                if i:
+                    self.mcpp.release(partial)
         elif isinstance(node, PowExpression):
             if type(node.arg(1)) == int:
                 ans = self.mcpp.try_binary_fcn(self.mcpp.power, data[0], data[1])
